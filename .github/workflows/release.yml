@@ -121,23 +121,58 @@ jobs:
       #  3. The CLI actually PRINTS. 1.0.0's only launcher was GUI-subsystem, which on Windows has
       #     no stdout, so every verb ran and discarded its output. Nothing caught it because
       #     nothing ever ran the CLI.
-      - name: Verify the Windows app image
+      # Verified against the INSTALLED msi, not an intermediate build directory. packageMsi
+      # builds into a jpackage temp image and leaves no app image behind (packageDmg does, which
+      # is what misled the first version of this step), and --add-launcher is scoped to packageMsi
+      # by task name so an intermediate would not carry pgpony-cli.exe regardless.
+      #
+      # Installing also makes this the clean-machine install that D13 never performed — the msi
+      # goes in silently, gets inspected, and the job fails if any of it is wrong.
+      - name: Install the msi and verify it
         shell: pwsh
         run: |
-          $img = (Get-ChildItem build/compose/binaries/main/app -Directory | Select-Object -First 1).FullName
-          Write-Host "app image: $img"
+          $msi = (Resolve-Path PGPony-windows.msi).Path
+          Write-Host "installing $msi"
+          $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/norestart' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "msiexec failed with exit code $($p.ExitCode)" }
+
+          $img = 'C:\Program Files\PGPony'
+          if (-not (Test-Path $img)) {
+            Write-Host 'Program Files contents:'
+            Get-ChildItem 'C:\Program Files' -Directory | Select-Object -ExpandProperty Name
+            throw "installed app not found at $img"
+          }
+          Write-Host "installed at $img"
+
+          # 1. java.smartcardio in the bundled runtime. D12 warned that a wrong module name would
+          #    silently drop card support from the jlink image; 1.0.0 verified the macOS image and
+          #    not Windows, on the assumption one platform covered all three.
           $rel = Get-Content (Join-Path $img 'runtime/release') -Raw
           if ($rel -notmatch 'java\.smartcardio') { throw 'java.smartcardio is MISSING from the bundled runtime' }
           Write-Host 'java.smartcardio: present'
+
+          # 2. Both launchers. pgpony-cli.exe comes from --add-launcher through freeArgs, which
+          #    degrades to a silent no-op if that property ever moves.
           foreach ($exe in 'PGPony.exe', 'pgpony-cli.exe') {
             if (-not (Test-Path (Join-Path $img $exe))) { throw "launcher missing: $exe" }
           }
           Write-Host 'both launchers: present'
+
+          # 3. The CLI actually PRINTS. 1.0.0 shipped only a GUI-subsystem launcher, which on
+          #    Windows has no stdout, so every verb ran and discarded its output. Nothing caught
+          #    it because nothing ever ran the CLI.
           $out = & (Join-Path $img 'pgpony-cli.exe') version 2>&1 | Out-String
           Write-Host "pgpony-cli version -> '$($out.Trim())'"
           if ([string]::IsNullOrWhiteSpace($out)) {
             throw 'pgpony-cli.exe printed nothing - the console subsystem was not applied'
           }
+
+          # 4. card-info runs. It reports no readers on a runner, which is correct and fine; what
+          #    matters is that it does not crash and that smartcardio resolved at runtime.
+          $ci = & (Join-Path $img 'pgpony-cli.exe') card-info 2>&1 | Out-String
+          Write-Host "pgpony-cli card-info ->"
+          Write-Host $ci
+          if ($ci -match 'MISSING from this runtime') { throw 'smartcardio did not resolve at runtime' }
 
       - uses: actions/upload-artifact@v4
         with:
