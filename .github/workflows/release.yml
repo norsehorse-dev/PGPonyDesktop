@@ -40,6 +40,17 @@ jobs:
           ./gradlew packageDeb
           cp build/compose/binaries/main/deb/pgpony_*_amd64.deb PGPony-linux.deb
 
+      # jpackage writes its real error to a log file and Gradle only prints the path, so a
+      # failure here otherwise says nothing but "exit code 1". Without this the only way to see
+      # what jpackage actually objected to is to guess and re-tag.
+      - name: jpackage logs on failure
+        if: failure()
+        run: |
+          for f in build/compose/logs/packageDeb/*.txt; do
+            echo "===== $f ====="
+            cat "$f"
+          done
+
       # build.gradle.kts injects --linux-package-deps through the jpackage task's freeArgs, and
       # that lookup degrades to a silent no-op if the property ever moves. A green build proves
       # nothing here; this is the check that would notice, and hardware keys are dead without it.

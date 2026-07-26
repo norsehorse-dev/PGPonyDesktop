@@ -239,7 +239,11 @@ tasks.matching { it.name == "packageDeb" }.configureEach {
     val free = runCatching { property("freeArgs") }.getOrNull()
     if (free is ListProperty<*>) {
         @Suppress("UNCHECKED_CAST")
-        (free as ListProperty<String>).addAll("--linux-package-deps", "pcscd, libpcsclite1")
+        // NO SPACE after the comma. jpackage is invoked as `jpackage @argfile`, and a Java
+        // argfile splits on whitespace unless the value is quoted — so "pcscd, libpcsclite1"
+        // arrives as three tokens and jpackage rejects `libpcsclite1` as an unknown option,
+        // failing packageDeb outright. Debian's Depends field accepts a comma with no space.
+        (free as ListProperty<String>).addAll("--linux-package-deps", "pcscd,libpcsclite1")
     }
 }
 
