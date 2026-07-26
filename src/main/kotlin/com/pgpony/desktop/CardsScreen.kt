@@ -203,6 +203,11 @@ fun CardsScreen(state: DesktopState) {
                 title = tr("d_cards_no_reader_title"),
                 message = listOfNotNull(
                     tr("d_cards_no_reader_detected"),
+                    // When PC/SC itself failed, name it. "Nothing is plugged in" and "the smart
+                    // card service is not running" are the same empty list to every caller but
+                    // completely different problems to the person reading this screen — and the
+                    // second one is unfixable by plugging something in.
+                    DesktopCardReader.lastListError?.let { tr("d_cards_pcsc_error", it) },
                     tr("d_cards_no_reader_linux").takeIf {
                         System.getProperty("os.name").lowercase().contains("linux")
                     }

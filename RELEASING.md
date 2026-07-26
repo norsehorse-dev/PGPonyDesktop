@@ -103,7 +103,7 @@ gh release download v1.0.0 --repo norsehorse-dev/PGPonyDesktop --dir .
 cp /Users/kevinstewart/Apps/PGPonyDesktop/build/compose/binaries/main/dmg/PGPony-*.dmg \
    PGPony-macOS.dmg
 
-sha256sum PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi > SHA256SUMS
+shasum -a 256 PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi > SHA256SUMS
 cat SHA256SUMS
 for f in PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi SHA256SUMS; do
   gpg --armor --detach-sign "$f"
@@ -111,7 +111,7 @@ done
 for f in PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi SHA256SUMS; do
   gpg --verify "$f.asc" "$f"
 done
-sha256sum -c SHA256SUMS
+shasum -a 256 -c SHA256SUMS
 ```
 
 Verify before publishing, not after. A signature that does not check out is worse than none.
@@ -159,9 +159,13 @@ ssh apps 'sudo cp /tmp/desktop.json /var/www/pgpony/downloads/desktop.json \
 Artifacts:
 
 - [ ] `gpg --verify` each `.asc`, and `SHA256SUMS.asc` against `SHA256SUMS`
-- [ ] `sha256sum -c SHA256SUMS` passes
+- [ ] `shasum -a 256 -c SHA256SUMS` passes (macOS has no `sha256sum`; the format is identical,
+      so Linux users verifying later can still use `sha256sum -c`)
 - [ ] the published checksums match what `downloads/desktop.json` claims
 - [ ] `dpkg-deb -f PGPony-linux.deb Depends` mentions `pcsc`
+- [ ] a CLI verb PRINTS on every OS — `pgpony version`. 1.0.0 shipped a Windows build whose only
+      launcher was GUI-subsystem, so the whole CLI was silent there and no check noticed
+- [ ] `pgpony card-info` reports the expected readers on every OS
 
 macOS:
 

@@ -97,6 +97,35 @@ jobs:
           ./gradlew.bat packageMsi
           Copy-Item build/compose/binaries/main/msi/PGPony-*.msi PGPony-windows.msi
 
+      # Three assertions, each for a bug that shipped in 1.0.0 while the build was green.
+      #
+      #  1. java.smartcardio in the bundled runtime. D12 warned that a wrong module name would
+      #     silently drop card support from the jlink image; the macOS image was verified and
+      #     Windows was not, on the assumption that one platform covered all three.
+      #  2. Both launchers present. The console pgpony.exe comes from --add-launcher, and if that
+      #     freeArgs injection ever stops resolving it degrades to a silent no-op — exactly the
+      #     failure mode --linux-package-deps has.
+      #  3. The CLI actually PRINTS. 1.0.0's only launcher was GUI-subsystem, which on Windows has
+      #     no stdout, so every verb ran and discarded its output. Nothing caught it because
+      #     nothing ever ran the CLI.
+      - name: Verify the Windows app image
+        shell: pwsh
+        run: |
+          $img = (Get-ChildItem build/compose/binaries/main/app -Directory | Select-Object -First 1).FullName
+          Write-Host "app image: $img"
+          $rel = Get-Content (Join-Path $img 'runtime/release') -Raw
+          if ($rel -notmatch 'java\.smartcardio') { throw 'java.smartcardio is MISSING from the bundled runtime' }
+          Write-Host 'java.smartcardio: present'
+          foreach ($exe in 'PGPony.exe', 'pgpony.exe') {
+            if (-not (Test-Path (Join-Path $img $exe))) { throw "launcher missing: $exe" }
+          }
+          Write-Host 'both launchers: present'
+          $out = & (Join-Path $img 'pgpony.exe') version 2>&1 | Out-String
+          Write-Host "pgpony version -> '$($out.Trim())'"
+          if ([string]::IsNullOrWhiteSpace($out)) {
+            throw 'pgpony.exe printed nothing - the console subsystem was not applied'
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: msi

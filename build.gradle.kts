@@ -171,7 +171,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Msi)
             packageName = "PGPony"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
             description = "OpenPGP on the desktop — encrypt, decrypt, sign, verify, manage keys"
             vendor = "NorseHorse"
             copyright = "Copyright 2026 NorseHorse"
@@ -244,6 +244,27 @@ tasks.matching { it.name == "packageDeb" }.configureEach {
         // arrives as three tokens and jpackage rejects `libpcsclite1` as an unknown option,
         // failing packageDeb outright. Debian's Depends field accepts a comma with no space.
         (free as ListProperty<String>).addAll("--linux-package-deps", "pcscd,libpcsclite1")
+    }
+}
+
+// 1.0.1 — the Windows CLI had no console. jpackage builds a GUI-subsystem executable, and a
+// GUI-subsystem process on Windows has no stdout, so every `pgpony <verb>` ran and silently
+// discarded its output: a documented 1.0 feature that did nothing on one of three platforms.
+// Nothing caught it because the release checklist never exercised the CLI on any OS.
+//
+// Compose's windows { console = true } is the WRONG fix — it makes the GUI app console-subsystem
+// too, so a black window flashes up behind it. jpackage's --add-launcher builds a SECOND
+// executable from its own properties file, so pgpony.exe gets win-console=true while PGPony.exe
+// stays windowless. Scoped to packageMsi: win-console means nothing elsewhere, and an extra
+// launcher on macOS and Linux is clutter (both already have a console).
+tasks.matching { it.name == "packageMsi" }.configureEach {
+    val free = runCatching { property("freeArgs") }.getOrNull()
+    if (free is ListProperty<*>) {
+        @Suppress("UNCHECKED_CAST")
+        (free as ListProperty<String>).addAll(
+            "--add-launcher",
+            "pgpony=" + project.file("packaging/pgpony-cli.properties").absolutePath
+        )
     }
 }
 

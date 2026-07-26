@@ -43,6 +43,9 @@ object Cli {
     fun run(args: Array<String>): Int {
         val verb = args.firstOrNull() ?: return usage()
         val rest = args.drop(1)
+        // Handled before withRepo on purpose: a diagnostic must not need the keyring, and must
+        // still answer while the GUI is running and holding the database.
+        if (verb == "card-info") return cardInfo()
         return try {
             withRepo { repo ->
                 when (verb) {
@@ -387,6 +390,38 @@ object Cli {
 
     // ── Output helpers ──────────────────────────────────────────────────
 
+    /**
+     * `pgpony card-info` — what the PC/SC layer can see, and why it cannot see anything.
+     *
+     * Exists because a Windows "no reader detected" report was undiagnosable without walking the
+     * user through PowerShell. Deliberately English and unlocalized like the rest of the CLI, so
+     * a pasted diagnostic reads the same in every bug report.
+     */
+    private fun cardInfo(): Int {
+        val readers = DesktopCardReader.listReaders()
+        val failure = DesktopCardReader.lastListError
+        out("os        ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})")
+        out("java       ${System.getProperty("java.version")} (${System.getProperty("java.vendor")})")
+        // If java.smartcardio is missing from a packaged runtime, listReaders() fails here rather
+        // than at startup — so report whether the module resolved at all, which is otherwise only
+        // discoverable by grepping the jlink image's release file.
+        val moduleOk = runCatching { Class.forName("javax.smartcardio.TerminalFactory") }.isSuccess
+        out("smartcardio ${if (moduleOk) "present" else "MISSING from this runtime"}")
+        if (failure != null) {
+            err("PC/SC unavailable: $failure")
+            return ExitCode.FAILED
+        }
+        if (readers.isEmpty()) {
+            out("readers    none attached")
+            return ExitCode.OK
+        }
+        out("readers    ${readers.size}")
+        readers.forEach { r ->
+            out("  ${r.name}  [${if (r.cardPresent) "card present" else "empty"}]")
+        }
+        return ExitCode.OK
+    }
+
     private fun out(msg: String) = println(msg)
     private fun err(msg: String) = System.err.println("pgpony: $msg")
 
@@ -406,6 +441,7 @@ object Cli {
               export    [--secret] [-a] [-o out] <key>
               list-keys [--secret]
               gen-key   --name <n> --email <e> [--algo ed25519] [--expires <days>]
+              card-info                        report the PC/SC readers this build can see
 
             Common options:
               -a, --armor            ASCII-armored output

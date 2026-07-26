@@ -766,4 +766,7 @@
     <string name="d_settings_updates_download">Download</string>
     <string name="d_settings_updates_auto">Check automatically once a day</string>
 
+    <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
+    <string name="d_cards_pcsc_error">PC/SC reported: %1$s</string>
+
 </resources>

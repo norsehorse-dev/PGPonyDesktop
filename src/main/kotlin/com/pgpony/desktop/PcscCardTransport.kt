@@ -56,15 +56,38 @@ object DesktopCardReader {
     data class ReaderInfo(val name: String, val cardPresent: Boolean)
 
     /**
+     * Why the last [listReaders] call came back empty, or null when it succeeded.
+     *
+     * An empty list is ambiguous and that ambiguity shipped: a machine with nothing plugged in
+     * and a machine whose PC/SC layer threw look identical to every caller, so 1.0.0 rendered
+     * both as one sentence about no reader being detected. A Windows bug report where the module
+     * was present, the service running and the reader recognised by the OS could not be taken
+     * any further, because the only fact that would have identified it was discarded here.
+     *
+     * Plain @Volatile rather than Compose state: the UI reads it immediately after calling
+     * [listReaders], in the same recomposition, so there is nothing to observe.
+     */
+    @Volatile
+    var lastListError: String? = null
+        private set
+
+    /**
      * The attached PC/SC readers. Empty (never throws) when the PC/SC layer is unavailable —
      * on Linux that usually means pcscd isn't running; macOS and Windows ship the service
-     * natively.
+     * natively. Check [lastListError] to tell "none attached" from "PC/SC failed".
      */
     fun listReaders(): List<ReaderInfo> = try {
-        TerminalFactory.getDefault().terminals().list().map { t ->
+        val found = TerminalFactory.getDefault().terminals().list().map { t ->
             ReaderInfo(t.name, runCatching { t.isCardPresent }.getOrDefault(false))
         }
+        lastListError = null
+        found
     } catch (e: Exception) {
+        // The SCARD_* name IS the diagnosis, and the callers' never-throws contract is kept.
+        // SCARD_E_NO_SERVICE (the resource manager is not running) and
+        // SCARD_E_NO_READERS_AVAILABLE (it is running and has nothing) are different problems
+        // with different fixes, and both used to arrive as the same empty list.
+        lastListError = e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
         emptyList()
     }
 

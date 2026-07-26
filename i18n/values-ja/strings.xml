@@ -613,4 +613,7 @@
     <string name="d_settings_updates_download">ダウンロード</string>
     <string name="d_settings_updates_auto">1 日 1 回自動的に確認する</string>
 
+    <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
+    <string name="d_cards_pcsc_error">PC/SC の報告: %1$s</string>
+
 </resources>
