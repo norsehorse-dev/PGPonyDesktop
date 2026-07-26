@@ -1,0 +1,205 @@
+name: Release
+
+# Cut a release by pushing a version tag:
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Builds a signed + notarized .dmg (macOS runner), a .deb (Ubuntu runner) and an .msi (Windows
+# runner), renames them to the stable names the website links to, then signs every artifact and a
+# SHA256SUMS manifest with the NorseHorse release key and publishes the GitHub Release.
+#
+# Ported from RelayPonyDesktop's release.yml, which is the proven pipeline. The differences are
+# deliberate and listed here so the divergence stays visible:
+#   - the PGP signing job (RelayPony ships no .asc files; a PGP app signing its own releases is
+#     the whole point of this one)
+#   - the deb carries a pcsc dependency, set from build.gradle.kts, not from here
+#
+# The workflow triggers ONLY on tag pushes. There is no pull_request trigger, which is what keeps
+# the signing secrets unreachable from a fork PR on a public repository — do not add one.
+#
+# Repository secrets required (Settings -> Secrets and variables -> Actions):
+#   MACOS_CERT_P12_BASE64   Developer ID Application cert + key, exported .p12, base64-encoded
+#   MACOS_CERT_PASSWORD     the password set when exporting that .p12
+#   KEYCHAIN_PASSWORD       any throwaway string — password for the temporary CI keychain
+#   MACOS_SIGN_IDENTITY     the cert's full NAME, not its SHA-1 hash (Compose looks it up by name)
+#   NOTARIZATION_APPLE_ID   Apple ID email
+#   NOTARIZATION_PASSWORD   app-specific password from appleid.apple.com, no trailing spaces
+#   NOTARIZATION_TEAM_ID    team ID
+#   PGP_RELEASE_KEY_BASE64  the release SIGNING SUBKEY, exported alone and base64-encoded
+#   PGP_RELEASE_PASSPHRASE  that subkey's passphrase
+#
+# Export the signing subkey alone — never the primary. The primary stays offline, and what a
+# hosted runner can reach stays revocable without burning the identity:
+#   gpg --export-secret-subkeys --armor <SUBKEY_ID>! | base64 | pbcopy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  macos:
+    name: Signed + notarized dmg (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Import Developer ID certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import "$RUNNER_TEMP/cert.p12" -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -d user -s build.keychain login.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Build and notarize dmg
+        env:
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+          NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+        run: |
+          chmod +x gradlew
+          ./gradlew notarizeDmg -Pcompose.desktop.mac.notarization.teamID="$NOTARIZATION_TEAM_ID"
+          cp build/compose/binaries/main/dmg/PGPony-*.dmg PGPony-macOS.dmg
+
+      # Proves the notarization ticket is actually stapled rather than merely requested.
+      - name: Validate stapled ticket
+        run: xcrun stapler validate PGPony-macOS.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: PGPony-macOS.dmg
+
+  linux:
+    name: deb (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: sudo apt-get update && sudo apt-get install -y fakeroot
+      - name: Build deb
+        run: |
+          chmod +x gradlew
+          ./gradlew packageDeb
+          cp build/compose/binaries/main/deb/pgpony_*_amd64.deb PGPony-linux.deb
+
+      # build.gradle.kts injects --linux-package-deps through the jpackage task's freeArgs, which
+      # degrades to a no-op if that property ever disappears. This is the check that would notice.
+      - name: Verify deb declares its pcsc dependency
+        run: |
+          dpkg-deb -f PGPony-linux.deb Depends
+          dpkg-deb -f PGPony-linux.deb Depends | grep -q pcsc
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: PGPony-linux.deb
+
+  windows:
+    name: msi (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Ensure WiX Toolset 3.x (jpackage needs candle.exe/light.exe)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
+            choco install wixtoolset -y --no-progress
+            $wix = Get-ChildItem 'C:\Program Files (x86)' -Filter 'WiX Toolset v3*' -Directory | Select-Object -Last 1
+            if ($wix) { Join-Path $wix.FullName 'bin' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8 }
+          }
+      - name: Build msi
+        shell: pwsh
+        run: |
+          ./gradlew.bat packageMsi
+          Copy-Item build/compose/binaries/main/msi/PGPony-*.msi PGPony-windows.msi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msi
+          path: PGPony-windows.msi
+
+  release:
+    name: Sign and publish GitHub Release
+    needs: [macos, linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          mv artifacts/dmg/PGPony-macOS.dmg dist/
+          mv artifacts/deb/PGPony-linux.deb dist/
+          mv artifacts/msi/PGPony-windows.msi dist/
+          ls -l dist
+
+      - name: Import release signing subkey
+        env:
+          PGP_RELEASE_KEY_BASE64: ${{ secrets.PGP_RELEASE_KEY_BASE64 }}
+        run: |
+          echo "$PGP_RELEASE_KEY_BASE64" | base64 --decode | gpg --batch --import
+          gpg --list-secret-keys --keyid-format=long
+
+      # SHA256SUMS is generated from inside dist/ so the manifest holds bare filenames and
+      # `sha256sum -c SHA256SUMS` works wherever a user unpacks it.
+      #
+      # The passphrase goes in on a file descriptor, never as an argv flag — the same rule the
+      # pgpony CLI itself enforces (--passphrase-env / --passphrase-fd / prompt, never a plain
+      # flag), and for the same reason: argv is readable by any other process on the box.
+      - name: Sign artifacts and checksum manifest
+        env:
+          PGP_RELEASE_PASSPHRASE: ${{ secrets.PGP_RELEASE_PASSPHRASE }}
+        run: |
+          cd dist
+          sha256sum PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi > SHA256SUMS
+          cat SHA256SUMS
+          for f in PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi SHA256SUMS; do
+            printf '%s' "$PGP_RELEASE_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback \
+              --passphrase-fd 0 --armor --detach-sign "$f"
+          done
+          ls -l
+
+      # A signature that does not verify is worse than none, so verify before publishing.
+      - name: Verify every signature
+        run: |
+          cd dist
+          for f in PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi SHA256SUMS; do
+            gpg --verify "$f.asc" "$f"
+          done
+          sha256sum -c SHA256SUMS
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            dist/PGPony-macOS.dmg dist/PGPony-macOS.dmg.asc \
+            dist/PGPony-linux.deb dist/PGPony-linux.deb.asc \
+            dist/PGPony-windows.msi dist/PGPony-windows.msi.asc \
+            dist/SHA256SUMS dist/SHA256SUMS.asc \
+            --repo "${{ github.repository }}" \
+            --title "PGPony Desktop ${{ github.ref_name }}" \
+            --generate-notes

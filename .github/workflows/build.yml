@@ -1,0 +1,48 @@
+name: Build
+
+# Every push and pull request: compile, run the full unit suite, and audit the six locales.
+# RelayPonyDesktop has no equivalent lane — it only builds on a tag — which means a broken main
+# there is invisible until release day. PGPony carries a 444-test suite and a strict i18n audit,
+# so both run on every change instead.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+# A newer push to the same branch makes an in-flight run pointless; don't pay for it.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, test, i18n audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Build and test
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+
+      # The gated harnesses (-DrunInterop, -DrunNetwork) stay OFF here on purpose: they need a gpg
+      # binary, live keyservers and real network traffic, none of which belong in a per-push lane.
+      - name: i18n audit
+        run: python3 tools/i18n-audit.py --layer i18n --strict
+
+      # Test XML carries whatever a test printed in <system-out>, which is the cheapest way to
+      # diagnose a failure that does not reproduce locally.
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test-results/test/

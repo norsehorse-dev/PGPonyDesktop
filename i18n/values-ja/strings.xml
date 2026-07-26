@@ -1,0 +1,604 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PGPony Desktop — desktop-owned strings, Japanese.
+
+  Terminology follows the vendored Android translation (キーリング, 鍵サーバー, クリップボード,
+  パスフレーズ) and its ですます register, so the same app does not read differently on the two
+  platforms. Machine-translated for D11 and queued for the native review triage tracked as
+  PGPonyAndroid 4.1.0 §10 — correct freely, this file is desktop-owned and is never overwritten
+  by a vendor sync.
+
+  Japanese has no plural distinction, so <plurals> carries only `other` here — the same shape as
+  the vendored Android ja file. trQuantity() falls back to `other` for every count.
+
+  A key missing here falls back to the English in ../values/strings.xml.
+-->
+<resources>
+
+    <string name="d_nav_crypto">暗号化</string>
+    <string name="d_nav_cards">ハードウェア鍵</string>
+
+    <string name="d_settings_section_network">ネットワーク</string>
+    <string name="d_settings_proxy_title">プロキシ</string>
+    <string name="d_settings_proxy_off">直接接続</string>
+    <string name="d_settings_proxy_tor">Tor（ローカルデーモン、%1$s:%2$d）</string>
+    <string name="d_settings_proxy_custom">カスタム SOCKS プロキシ</string>
+    <string name="d_settings_proxy_tor_note">このマシンで Tor デーモンが動作している必要があります。Tor Browser（起動中）でも tor サービスでも、いずれも %1$s:%2$d で待ち受けます。</string>
+    <string name="d_status_proxy_set">プロキシを設定しました: %1$s</string>
+
+    <string name="d_settings_keyservers_title">鍵サーバー（検索順）</string>
+    <string name="d_keyservers_lookup">検索</string>
+    <string name="d_keyservers_publish">公開</string>
+    <string name="d_keyservers_first_party"> · 自社</string>
+    <string name="d_keyservers_remove">サーバーを削除</string>
+    <string name="d_keyservers_add">サーバーを追加…</string>
+    <string name="d_keyservers_note">検索は（WKD の後に）有効なサーバーへ順に問い合わせます。公開では、公開を有効にした各サーバーが選択肢として表示されます。keys.openpgp.org はメールアドレスを検証しますが、v6 鍵や PQC 鍵を拒否する場合があります。keys.pgpony.app は PGPony が作成するすべての鍵の種類を受け付けます。</string>
+    <string name="d_keyservers_add_title">鍵サーバーを追加</string>
+    <string name="d_keyservers_add_url_label">ベース URL（スキーム + ホスト、末尾のスラッシュなし）</string>
+    <string name="d_keyservers_add_note">サーバーは keys.openpgp.org の VKS API に対応している必要があります。VKS がない場合、PGPony は公開に HKP（/pks/add）を使用します。</string>
+    <string name="d_status_keyserver_added">鍵サーバー %1$s を追加しました</string>
+    <string name="d_settings_autorefresh">鍵サーバーから鍵を自動更新する（起動中は 12 時間ごと）</string>
+
+    <string name="d_settings_backup_export">キーリングをバックアップ…</string>
+    <string name="d_settings_backup_restore">バックアップから復元…</string>
+    <string name="d_settings_backup_note">.pgpony 形式は PGPony for iOS および Android でも復元できます。OpenKeychain のバックアップも復元できます。</string>
+    <string name="d_settings_subtitle">このコンピューターの PGPony に適用される設定です。</string>
+    <string name="d_settings_network_note">プロキシ、鍵サーバー、鍵の自動更新。</string>
+    <string name="d_settings_appearance_note">テーマと言語。どちらもすぐに反映されます。</string>
+
+    <string name="d_settings_pass_show_tab">パスワードストアのタブを表示する</string>
+    <string name="d_settings_pass_note">標準の pass ストア（.gpg ファイルと受信者を示す .gpg-id ファイルからなるフォルダ）を閲覧し、ソフトウェア鍵またはハードウェア鍵を使ってキーリングでエントリを復号します。読み取り専用で、PGPony がストアに書き込むことはありません。</string>
+    <string name="d_settings_pass_default_location">既定の場所:</string>
+    <plurals name="d_settings_pass_status_configured">
+        <item quantity="other">%1$d 件のストアを設定済みです。パスワードストアのタブで管理できます。</item>
+    </plurals>
+    <string name="d_settings_pass_status_exists">このフォルダは存在します。パスワードストアのタブで追加してください。</string>
+    <string name="d_settings_pass_status_none">ここにはまだストアがありません。PASSWORD_STORE_DIR を設定していればそちらが使われます。設定していない場合は、パスワードストアのタブで任意のフォルダを追加してください。</string>
+
+    <string name="d_settings_clipboard_autoclear">コピーした秘密情報を自動的に消去する</string>
+    <string name="d_settings_clipboard_seconds_label">秒</string>
+    <string name="d_settings_clipboard_note">5〜600 秒。タイマーは、クリップボードに PGPony が入れた内容がまだ残っている場合にのみ消去します。ほかのものをコピーしていれば、クリップボードには手を触れません。なお、クリップボードマネージャーや同期サービス（KDE Klipper、Windows のクラウドクリップボード、macOS のユニバーサルクリップボード）が、PGPony の手の届かない場所に控えを残す場合があります。</string>
+    <string name="d_status_clipboard_seconds">クリップボードは %1$d 秒後に消去されます</string>
+
+    <string name="d_settings_language_system">システム（%1$s）</string>
+    <string name="d_settings_language_note">ウィンドウ全体がすぐに切り替わります。再起動は不要です。鍵やファイルに由来するテキストは保存されているとおりに表示され、翻訳されることはありません。</string>
+
+    <string name="d_settings_section_storage">ストレージ</string>
+    <string name="d_settings_storage_data_folder">データフォルダ:</string>
+    <string name="d_settings_storage_note">鍵のメタデータは pgpony.db にあります（PGPony for Android と同じ Room スキーマです）。ASCII アーマー化された鍵データは keys/ 以下に、鍵の半分ごとに 1 ファイル、モード 0600 で保存されます。秘密鍵は保存時も鍵自身のパスフレーズ（S2K）で保護されたままで、ストレージ側で独自の暗号化を追加することはありません。</string>
+
+    <string name="d_settings_about_version">PGPony Desktop %1$s</string>
+    <string name="d_settings_about_note">PGPony for Android と同じ OpenPGP エンジンと Room スキーマです（書き直しではなく移植しています）。</string>
+    <string name="d_about_title">PGPony について</string>
+    <string name="d_about_links">リンク</string>
+
+    <string name="d_common_apply">適用</string>
+    <string name="d_common_add">追加</string>
+    <string name="d_common_clear_now">今すぐ消去</string>
+    <string name="d_common_remove">削除</string>
+
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
+    <string name="d_settings_storage_open_folder">フォルダを開く</string>
+    <string name="d_settings_storage_copy_path">パスをコピー</string>
+
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
+    <string name="d_settings_about_repo">GitHub のソースコード</string>
+    <string name="d_settings_about_repo_note">デスクトップ版のソースコードは 1.0 リリースと同時に公開します。Android アプリと共通の暗号コアはすでに公開されています。</string>
+    <string name="d_settings_about_issues">問題を報告</string>
+    <string name="d_settings_about_website">PGPony のウェブサイト</string>
+    <string name="d_settings_about_runtime_label">実行環境:</string>
+    <string name="d_settings_about_copy_diagnostics">コピー</string>
+
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
+    <!-- The app NAMES and the platform lists next to them are proper nouns and stay in English
+         in every locale; only these sentences are translated. -->
+    <string name="d_settings_section_apps">NorseHorse のほかのアプリ</string>
+    <string name="d_settings_apps_note">同じ開発者によるほかのアプリです。リンクはブラウザーで開きます。</string>
+    <string name="d_app_pgpony_desc">どの端末でも同じ鍵束。スマートフォンからデスクトップまで、OpenPGP エンジンもバックアップ形式も共通です。</string>
+    <string name="d_app_carrierpony_desc">OpenPGP によるエンドツーエンド暗号化のメッセージとファイル送信。アカウントも電話番号も不要です。</string>
+    <string name="d_app_agepony_desc">age をベースにしたファイル暗号化と分離署名。GitHub のユーザー名宛てに暗号化し、セキュリティキーで署名できます。</string>
+    <string name="d_app_quorumpony_desc">秘密情報を複数のバックアップカードに分割します。一定枚数を集めれば復元でき、1 枚だけでは何も分かりません。</string>
+    <string name="d_app_relaypony_desc">Wi-Fi 経由で端末から端末へ直接ファイルを送ります。エンドツーエンドで暗号化され、間にサーバーは入りません。</string>
+    <string name="d_app_burnpony_desc">自動的に消える暗号化メモ。端末上で封をし、読まれた後に削除されます。</string>
+
+    <!-- ── Status line ───────────────────────────────────── -->
+    <string name="d_status_copied">クリップボードにコピーしました。</string>
+    <!-- %1$s the address or path that could not be opened -->
+    <string name="d_status_open_failed">%1$s を開けませんでした。代わりにクリップボードにコピーしました。</string>
+
+    <string name="d_crypto_tab_files">ファイル</string>
+    <string name="d_crypto_fileop_sign">署名（分離）</string>
+    <string name="d_crypto_fileop_verify">検証（分離）</string>
+    <string name="d_crypto_err_generic">操作に失敗しました</string>
+    <string name="d_crypto_add_files">ファイルを追加…</string>
+    <string name="d_crypto_drop_hint">…またはウィンドウ内の任意の場所にファイルをドロップ</string>
+    <string name="d_crypto_no_files">ファイルが選択されていません。</string>
+    <string name="d_crypto_no_files_title">ファイルがまだありません</string>
+    <string name="d_crypto_result_ok">成功</string>
+    <string name="d_crypto_result_failed">失敗</string>
+    <string name="d_crypto_signer_pass_label">署名鍵のパスフレーズ（保護されていない場合は空欄）</string>
+    <string name="d_crypto_armor_gpg">ASCII アーマー（バイナリ .gpg ではなく .asc）</string>
+    <string name="d_crypto_armor_sig">ASCII アーマー（バイナリ .sig ではなく .asc）</string>
+    <string name="d_crypto_decrypt_pass_label">鍵またはメッセージのパスフレーズ</string>
+    <string name="d_crypto_decrypt_files_note">復号したファイルは、メッセージに元の名前が含まれていればそれを復元し、既存のファイルを上書きすることはありません。</string>
+    <string name="d_crypto_sign_as_colon">署名者:</string>
+    <string name="d_crypto_verify_files_hint">内容ファイルが隣にある（拡張子を除いた同じ名前の）.sig/.asc 署名を選ぶか、署名と内容のちょうど 2 つのファイルを選んでください。</string>
+    <string name="d_crypto_err_no_pairing">署名と内容の対応が見つかりません — 上のヒントを参照してください</string>
+    <string name="d_crypto_err_no_signer">署名に使える鍵ペアがありません</string>
+    <string name="d_crypto_files_done">%1$d/%2$d 件のファイルを処理しました</string>
+    <string name="d_crypto_files_partial">%1$d/%2$d 件成功しました — ファイルごとの結果を確認してください</string>
+    <string name="d_crypto_run_op">%1$s を実行</string>
+    <string name="d_crypto_input_verify">クリア署名されたメッセージ、またはアーマー付き署名</string>
+    <string name="d_crypto_encrypt_with">暗号化の方法:</string>
+    <string name="d_crypto_with_public_keys">公開鍵</string>
+    <string name="d_crypto_attach_files">ファイルを添付…</string>
+    <string name="d_crypto_clear_attachments">添付を解除</string>
+    <string name="d_crypto_bundle_note">PGP/MIME バンドルとして送信されます — 本文 + %1$d 件の添付を 1 つの暗号化された multipart/mixed にまとめます。</string>
+    <string name="d_crypto_err_card_or_recipient_load">受信者またはカードの鍵を読み込めませんでした</string>
+    <string name="d_crypto_card_sign_encrypt_title">%1$s で署名して暗号化</string>
+    <string name="d_crypto_hardware_key">ハードウェアキー</string>
+    <string name="d_crypto_err_pubkey_missing">\"%1$s\" の公開鍵を読み込めませんでした — 保存されている鍵素材が見つかりません。キーリングからその項目を削除し、公開鍵を再インポートしてください。</string>
+    <string name="d_crypto_err_signer_load">署名鍵 %1$s を読み込めませんでした — 何も暗号化されていません。（署名せずに送るには「署名者」のチェックを外してください。）</string>
+    <string name="d_crypto_banner_encrypted">%1$d 人の受信者に暗号化しました</string>
+    <string name="d_crypto_banner_encrypted_card">%1$d 人の受信者に暗号化し、カード上で %2$s として署名しました</string>
+    <string name="d_crypto_banner_encrypted_pass">パスフレーズで暗号化しました</string>
+    <string name="d_crypto_banner_signed_as">、%1$s（%2$s）として署名</string>
+    <string name="d_crypto_banner_unsigned">、未署名</string>
+    <string name="d_crypto_banner_bundle_suffix"> · %1$d 件の添付を含むバンドル</string>
+    <string name="d_crypto_banner_attach_suffix"> · 添付 %1$d 件</string>
+    <string name="d_crypto_banner_signer_suffix"> — %1$s</string>
+    <string name="d_crypto_banner_keyid_suffix">（鍵 ID %1$s）</string>
+    <string name="d_crypto_decrypt_note">アーマー付きメッセージまたは PGP/MIME の .eml 全体を受け付けます — バンドルの添付は出力の横に表示されます。</string>
+    <string name="d_crypto_card_decrypt_title">%1$s で復号</string>
+    <string name="d_crypto_banner_decrypted_card_verified">カード上で復号 · 署名を検証しました</string>
+    <string name="d_crypto_banner_decrypted_card_unknown">カード上で復号 · 署名者はキーリングにありません</string>
+    <string name="d_crypto_banner_decrypted_card_unsigned">カード上で復号 · 署名なし</string>
+    <string name="d_crypto_banner_decrypted_verified">復号しました · 署名を検証しました</string>
+    <string name="d_crypto_banner_decrypted_unknown">復号しました · キーリングにない鍵で署名されています</string>
+    <string name="d_crypto_banner_decrypted_unsigned">復号しました · 署名なし</string>
+    <string name="d_crypto_detached_toggle">分離署名（署名のみ、本文は別のまま）</string>
+    <string name="d_crypto_clear_signed">クリア署名</string>
+    <string name="d_crypto_err_card_pubkey">カードの公開鍵を読み込めませんでした</string>
+    <string name="d_crypto_card_sign_title">%1$s で署名</string>
+    <string name="d_crypto_banner_signed_card">%1$s（カード上） · %2$s</string>
+    <string name="d_crypto_banner_signed">%1$s · %2$s</string>
+    <string name="d_crypto_err_signer_ring">署名者の秘密鍵リングを読み込めませんでした</string>
+    <string name="d_crypto_verify_hint">クリア署名されたメッセージを上に貼り付けてください。分離署名の場合は、署名を上に、元のテキストを下に貼り付けます。</string>
+    <string name="d_crypto_detached_content_label">元のテキスト（分離署名の検証時のみ）</string>
+    <string name="d_crypto_err_detached_needs_text">分離署名です — 元のテキストを 2 つ目の欄に貼り付けてください</string>
+    <string name="d_crypto_err_is_encrypted">これは暗号化されたメッセージです — 「復号」タブを使ってください</string>
+    <string name="d_crypto_err_no_framing">認識できる PGP 署名の構造が見つかりません</string>
+    <string name="d_crypto_banner_verified">署名を検証しました — %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_invalid">署名が無効です — 内容が署名と一致しません</string>
+    <string name="d_crypto_banner_unknown_signer">キーリングにない鍵で署名されています — 検証するには署名者の公開鍵をインポートしてください</string>
+    <string name="d_crypto_banner_no_signature">入力に署名が見つかりません</string>
+    <string name="d_crypto_output">出力</string>
+    <string name="d_crypto_attachment_meta">%1$s · %2$d バイト</string>
+    <string name="d_common_save_as">保存…</string>
+    <string name="d_crypto_copy_output">出力をコピー</string>
+    <string name="d_crypto_save_eml">.eml を保存…</string>
+    <string name="d_status_saved">%1$s を保存しました</string>
+    <string name="d_status_saved_bytes">%1$s を保存しました（%2$d バイト）</string>
+    <string name="d_crypto_cancelled">キャンセルしました</string>
+    <string name="d_crypto_no_signer_available">利用できる鍵ペアがありません</string>
+    <string name="d_crypto_card_sign_files">%2$s で %1$d 件のファイルに署名</string>
+    <string name="d_crypto_card_sign_encrypt_files">%2$s で %1$d 件のファイルに署名して暗号化</string>
+    <string name="d_crypto_card_decrypt_files">%2$s で %1$d 件のファイルを復号</string>
+
+    <string name="d_pass_store_unreadable">%1$s を読み取れません — 移動されたか、マウントされていないか、読み取れなくなっています。</string>
+    <string name="d_pass_not_a_store">読み取れるパスワードストアではありません: %1$s</string>
+    <string name="d_pass_store_added">パスワードストアを追加しました — %1$s</string>
+    <string name="d_pass_choose_store">ストアを選択</string>
+    <string name="d_pass_add_store">ストアを追加…</string>
+    <string name="d_pass_store_title">パスワードストア</string>
+    <string name="d_pass_use_default">~/.password-store を使う</string>
+    <string name="d_pass_rescan">再スキャン</string>
+    <string name="d_pass_empty_title">パスワードストアがまだありません</string>
+    <string name="d_pass_select_entry_title">何も選択されていません</string>
+    <string name="d_pass_store_removed">%1$s を PGPony から削除しました（フォルダーはそのままです）</string>
+    <string name="d_pass_choose_folder">パスワードストアのフォルダーを選択</string>
+    <string name="d_pass_search_label">エントリーを検索</string>
+    <string name="d_pass_no_entries">エントリーがありません。</string>
+    <plurals name="d_pass_match_count">
+        <item quantity="other">%1$d 件</item>
+    </plurals>
+    <string name="d_pass_up">1 つ上のフォルダーへ</string>
+    <string name="d_pass_select_entry">復号するエントリーを選択してください。</string>
+    <string name="d_pass_empty_intro">PGPony に `pass` ストア — OpenPGP で暗号化された .gpg ファイルのフォルダー、つまり標準的な password-store ツールが使う構成 — を指定してください。</string>
+    <string name="d_pass_empty_detail">ストアはその場で読み取られるため、それを同期しているもの（git、Syncthing、Nextcloud など）はそのまま動き続けます。PGPony は読み取るだけで、フォルダー内に書き込んだり、移動したり、暗号化し直したりすることはありません。エントリーは開いたときに 1 件ずつ復号され、ツリーの閲覧ではファイル名しか読み取りません。</string>
+    <string name="d_pass_entry_missing">エントリーのファイルが見つからないか、読み取れません。</string>
+    <string name="d_pass_no_matching_key">このエントリーを開ける鍵がキーリングにありません。暗号化先の秘密鍵をインポートするか、その鍵を保持しているハードウェアキーをペアリングしてください。</string>
+    <string name="d_pass_decrypting">復号しています…</string>
+    <string name="d_pass_card_entry">このエントリーはハードウェアキー宛てに暗号化されています。</string>
+    <string name="d_pass_card_key_missing">このエントリーに対応するペアリング済みのカード鍵がキーリングにありません。</string>
+    <string name="d_pass_card_decrypt_title">%2$s で %1$s を復号</string>
+    <string name="d_pass_card_failed">ハードウェアキーでの復号に失敗しました: %1$s</string>
+    <string name="d_pass_encrypted_to">暗号化先: %1$s</string>
+    <string name="d_common_reveal">表示</string>
+    <string name="d_common_hide">隠す</string>
+    <string name="d_pass_password_copied">パスワードをコピーしました</string>
+    <string name="d_pass_password_copied_clearing">パスワードをコピーしました — クリップボードは %1$d 秒後に消去されます</string>
+    <string name="d_pass_copy_password">パスワードをコピー</string>
+    <string name="d_pass_clipboard_countdown">クリップボードは %1$d 秒後に消去されます</string>
+    <string name="d_pass_fields">フィールド</string>
+    <string name="d_pass_field_copied">%1$s をコピーしました</string>
+    <string name="d_pass_copy_field">%1$s をコピー</string>
+    <string name="d_pass_lock">ロック</string>
+    <string name="d_pass_relock_note">%1$d 秒後に自動でロックされます。</string>
+    <string name="d_pass_otp_unparsable">この URI からはコードを生成できません — TOTP の URI ではないか、シークレットが正しい Base32 ではありません。このエントリーには認証アプリを使ってください。</string>
+    <string name="d_pass_otp_uri_copied">otpauth URI をコピーしました</string>
+    <string name="d_pass_copy_uri">URI をコピー</string>
+    <string name="d_pass_otp_no_provider">この JVM には HMAC-%1$s プロバイダーがないため、ここではコードを生成できません。</string>
+    <string name="d_pass_code_copied">コードをコピーしました</string>
+    <string name="d_pass_code_copied_clearing">コードをコピーしました — クリップボードは %1$d 秒後に消去されます</string>
+    <string name="d_pass_copy_code">ワンタイムコードをコピー</string>
+    <string name="d_pass_otp_rolls_in">%1$d 秒後に更新</string>
+    <string name="d_pass_otp_meta">%1$s — %2$s、%3$d 桁、%4$d 秒</string>
+    <string name="d_pass_show_uri">設定用 URI を表示</string>
+    <string name="d_pass_hide_uri">設定用 URI を隠す</string>
+    <string name="d_pass_copy_setup_uri">設定用 URI をコピー</string>
+
+    <string name="d_cards_subtitle">USB 接続の OpenPGP スマートカード — YubiKey 5、Token2、Nitrokey 3 など。秘密鍵はカード内にとどまり、このコンピューターに触れることはありません。</string>
+    <string name="d_cards_reader_label">リーダー:</string>
+    <string name="d_cards_no_reader">リーダーが見つかりません</string>
+    <string name="d_cards_reader_with_card">%1$s · カードあり</string>
+    <string name="d_cards_read_card">カードを読み取る</string>
+    <string name="d_cards_no_reader_detected">PC/SC リーダーが検出されません。キーを接続してください（キー自体がリーダーとして認識されます）。</string>
+    <string name="d_cards_no_reader_linux">Linux では pcscd をインストールして起動してください。</string>
+    <string name="d_cards_section_reader">リーダー</string>
+    <string name="d_cards_no_reader_title">リーダーが検出されません</string>
+    <string name="d_cards_no_card_title">カードをまだ読み取っていません</string>
+    <string name="d_cards_no_card_body">ハードウェアキーを接続して「カードを読み取る」を選んでください。PGPony はカードの公開スロットを読み取るだけで、カードには何も書き込みません。</string>
+    <string name="d_cards_aid">AID %1$s</string>
+    <string name="d_cards_pin_tries">残り PIN 試行回数 — ユーザー: %1$d · 管理者: %2$d</string>
+    <string name="d_cards_paired">ペアリング完了 — キーリングの項目: %1$s</string>
+    <string name="d_cards_pair">キーリングとペアリング</string>
+    <string name="d_cards_keygen_open">カード上で鍵を生成…</string>
+    <string name="d_cards_pair_note">ペアリングすると、カードがキーリングに記録され、そのカード宛にメッセージを暗号化したり、復号や署名をハードウェア経由で行えるようになります。カードの公開鍵証明書がすでにキーリングにある場合（インポート済み、または鍵サーバーから取得済み）、ペアリングはその項目に紐付きます。オフライン主鍵の構成にも対応します。</string>
+    <string name="d_cards_keygen_done">カード上で生成してペアリングしました — %1$s。公開鍵をエクスポートして必ずバックアップしてください。秘密鍵はカードから取り出せません。</string>
+    <string name="d_cards_change_pin_open">PIN を変更…</string>
+    <string name="d_cards_change_admin_open">管理者 PIN を変更…</string>
+    <string name="d_cards_unblock_open">PIN のブロックを解除…</string>
+    <string name="d_cards_reset_open">初期化…</string>
+    <string name="d_cards_pin_cache_title">PIN のキャッシュ</string>
+    <string name="d_cards_pin_cache_toggle">操作が成功したあとユーザー PIN を記憶する</string>
+    <string name="d_cards_pin_cache_keep_for">保持時間:</string>
+    <string name="d_cards_pin_cache_custom_seconds">%1$d 秒</string>
+    <string name="d_cards_pin_held_no_timer">PIN を保持中（時間制限なし）</string>
+    <string name="d_cards_pin_cache_note">メモリ上にのみ保持し、ディスクには書き込みません。PIN を間違えたとき、アプリを終了したとき、「今すぐ消去」を押したときに破棄されます。管理者 PIN はキャッシュされません。</string>
+    <string name="d_cards_new_pin_min6">新しい PIN（6 桁以上）</string>
+    <string name="d_cards_new_admin_min8">新しい管理者 PIN（8 桁以上）</string>
+    <string name="d_cards_new_user_pin_min6">新しいユーザー PIN（6 桁以上）</string>
+    <string name="d_cards_pin_retry_warning">入力を間違えると試行回数を消費します。回数を超えるとカードがブロックされます。</string>
+    <string name="d_cards_reset_warning">カード上のすべての鍵を消去し、両方の PIN を初期値（123456 / 12345678）に戻します。カード上で生成した鍵は復元できません。この操作は取り消せません。</string>
+    <string name="d_cards_reset_type_prompt">確認のため %1$s と入力してください</string>
+    <string name="d_cards_reset_confirm">カードを消去</string>
+    <string name="d_cards_keygen_warning">Ed25519 署名鍵と Cv25519 暗号化鍵をカード上で生成します。カードの署名スロットと復号スロットを上書きします。秘密鍵はハードウェアから出ることはなく、バックアップもできません。カードを失えば鍵も失われます。</string>
+    <string name="d_cards_expires_colon">有効期限:</string>
+    <string name="d_cards_keygen_ack">カードの鍵が上書きされ、バックアップできないことを理解しました</string>
+    <string name="d_common_working">処理中…</string>
+
+    <string name="d_keydetail_no_user_id">(ユーザー ID なし)</string>
+    <string name="d_keydetail_badge_secret">秘密鍵</string>
+    <string name="d_keydetail_badge_card">カード</string>
+    <string name="d_keydetail_badge_expired">期限切れ</string>
+    <string name="d_keydetail_copy_fingerprint">フィンガープリントをコピー</string>
+    <string name="d_keydetail_status_fingerprint_copied">フィンガープリントをコピーしました</string>
+    <string name="d_keydetail_key_id">鍵 ID</string>
+    <string name="d_keydetail_make_default_signing">既定の署名鍵にする</string>
+    <string name="d_keydetail_section_keys">鍵 (%1$d)</string>
+    <string name="d_keydetail_subkey">サブ鍵</string>
+    <string name="d_keydetail_subkey_meta">%1$s · 作成 %2$s</string>
+    <string name="d_keydetail_subkey_meta_expires">%1$s · 作成 %2$s · 有効期限 %3$s</string>
+    <string name="d_keydetail_copy_public">公開鍵をコピー</string>
+    <string name="d_keydetail_export_public">公開鍵をエクスポート…</string>
+    <string name="d_keydetail_show_qr">QR を表示…</string>
+    <string name="d_keydetail_export_secret">秘密鍵をエクスポート…</string>
+    <string name="d_keydetail_status_pub_copied">公開鍵をコピーしました — %1$s</string>
+    <string name="d_keydetail_err_no_public_armor">保存された公開鍵の ASCII アーマーがありません</string>
+    <string name="d_keydetail_secret_export_note">エクスポートした秘密鍵はパスフレーズ保護 (S2K) を保ったままです。</string>
+    <string name="d_keydetail_refresh_servers">鍵サーバーから更新</string>
+    <string name="d_keydetail_danger_zone">危険な操作</string>
+    <string name="d_keydetail_save_dialog_title">鍵をエクスポート</string>
+    <string name="d_keydetail_status_exported">%1$s をエクスポートしました</string>
+    <string name="d_keydetail_status_nothing_to_export">エクスポートするものがありません</string>
+    <string name="d_keydetail_qr_title">公開鍵の QR</string>
+    <string name="d_keydetail_qr_hint">別のデバイスの PGPony で読み取ると %1$s をインポートできます。</string>
+    <string name="d_keydetail_qr_too_large">この鍵は QR コードに収まらないほど大きいため、代わりに .asc ファイルをエクスポートして共有してください。</string>
+    <string name="d_keydetail_qr_no_material">表示できる公開鍵データがありません。</string>
+    <string name="d_keydetail_qr_save_png">PNG を保存…</string>
+    <string name="d_keydetail_status_qr_saved">QR を保存しました — %1$s</string>
+    <string name="d_keydetail_expiry_never">有効期限なし</string>
+    <string name="d_keydetail_expiry_date_label">有効期限 (YYYY-MM-DD)</string>
+    <string name="d_keydetail_expiry_note">鍵の自己証明とサブ鍵のバインディングを署名し直します。</string>
+    <string name="d_keydetail_revoke_title">%1$s を失効させる</string>
+    <string name="d_keydetail_revoke_warning">失効させると、この鍵は新しい署名と暗号化に使えなくなります。過去のメッセージは引き続き復号できます。この操作は取り消せません。</string>
+    <string name="d_keydetail_revoke_ack">この操作を取り消せないことを理解しました</string>
+    <string name="d_common_edit_ellipsis">編集…</string>
+    <string name="d_common_add_ellipsis">追加…</string>
+    <string name="d_common_rendering">生成中…</string>
+
+
+    <!-- ═══ Keyring repository (D11b) ════════════════ -->
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
+    <plurals name="d_import_summary_blocks">
+        <item quantity="other">%1$d ブロック: %2$s</item>
+    </plurals>
+    <plurals name="d_import_summary_added">
+        <item quantity="other">%1$d 件を追加</item>
+    </plurals>
+    <plurals name="d_import_summary_upgraded">
+        <item quantity="other">、%1$d 件を鍵ペアに更新</item>
+    </plurals>
+    <plurals name="d_import_summary_merged">
+        <item quantity="other">、%1$d 件に新しい鍵素材を統合</item>
+    </plurals>
+    <plurals name="d_import_summary_already">
+        <item quantity="other">、%1$d 件はすでに鍵束にあり</item>
+    </plurals>
+    <plurals name="d_import_summary_failed">
+        <item quantity="other">、%1$d 件失敗</item>
+    </plurals>
+
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
+    <string name="d_repo_err_no_card_keys">このカードに OpenPGP 鍵が見つかりません</string>
+    <string name="d_repo_err_key_not_found">鍵が見つかりません: %1$s</string>
+    <string name="d_repo_err_revoke_public_only">公開鍵のみの鍵は失効できません — 署名には秘密鍵が必要です</string>
+    <string name="d_repo_err_secret_ring_load">%1$s の秘密鍵リングを読み込めませんでした</string>
+    <string name="d_repo_err_public_ring_load">%1$s の公開鍵リングを読み込めませんでした</string>
+    <string name="d_repo_err_no_public_ring">生成された鍵から公開鍵リングが得られませんでした</string>
+    <string name="d_repo_err_card_row_missing">生成されたカード鍵がインポート後に見つかりません</string>
+    <string name="d_repo_err_expiry_public_only">公開鍵のみの鍵では有効期限を変更できません — 再署名には秘密鍵が必要です。</string>
+    <string name="d_repo_err_expiry_card">この鍵はハードウェアキー上にあります — 有効期限の変更はまだここでは対応していません。</string>
+
+    <!-- ═══ Window shell: tray, menu bar, status line (D11b) ═══ -->
+    <!-- ── Status line ── -->
+    <string name="d_list_separator">、</string>
+    <string name="d_status_migrated_legacy">以前の鍵束を移行しました — %1$s</string>
+    <string name="d_status_autorefresh">鍵サーバーの自動更新: %1$s</string>
+    <string name="d_status_import">インポート — %1$s</string>
+    <string name="d_status_generating">%1$s 鍵を生成しています…</string>
+    <string name="d_status_generated">生成しました: %1$s — %2$s</string>
+    <string name="d_status_generate_failed">生成に失敗しました: %1$s</string>
+    <string name="d_status_deleted">削除しました: %1$s</string>
+    <string name="d_status_trust_set">信頼度を %1$s に設定しました — %2$s</string>
+    <string name="d_status_expiration_removed">有効期限を削除しました — この鍵は期限切れになりません</string>
+    <string name="d_status_expiration_updated">有効期限を更新しました</string>
+    <string name="d_status_expiration_failed">有効期限の変更に失敗しました: %1$s</string>
+    <string name="d_status_revoked">失効しました: %1$s (%2$s)</string>
+    <string name="d_status_checking_servers">鍵サーバーを確認しています — %1$s…</string>
+    <string name="d_status_refresh_not_published">有効な鍵サーバーのどこにも公開されていません</string>
+    <string name="d_status_refresh_also_merged">（新しい鍵素材も統合しました）</string>
+    <string name="d_status_refresh_key_missing">鍵束に鍵が見つかりません</string>
+    <plurals name="d_status_files_dropped">
+        <item quantity="other">%1$d 件のファイルをドロップしました</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_revoked">
+        <item quantity="other">%1$d 件の鍵が上流で失効</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_updated">
+        <item quantity="other">%1$d 件の鍵を更新</item>
+    </plurals>
+
+    <!-- ── Tray + expiration notifications ── -->
+    <string name="d_tray_open">PGPony を開く</string>
+    <string name="d_tray_quit">PGPony を終了</string>
+    <string name="d_notif_key_expiring">PGPony — 鍵の有効期限が近づいています</string>
+    <string name="d_notif_key_expiration">PGPony — 鍵の有効期限</string>
+
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
+    <string name="d_menu_file">ファイル</string>
+    <string name="d_menu_file_mnemonic">F</string>
+    <string name="d_menu_goto_keyring">鍵束へ移動（インポート）</string>
+    <string name="d_menu_restore_backup">バックアップから復元…</string>
+    <string name="d_menu_quit">終了</string>
+    <string name="d_menu_keys">鍵</string>
+    <string name="d_menu_keys_mnemonic">K</string>
+    <string name="d_menu_new_key">新しい鍵…</string>
+    <string name="d_menu_hardware_keys">ハードウェアキー</string>
+    <string name="d_menu_message">メッセージ</string>
+    <string name="d_menu_message_mnemonic">M</string>
+    <string name="d_menu_help">ヘルプ</string>
+    <string name="d_menu_help_mnemonic">H</string>
+    <string name="d_menu_about">PGPony について</string>
+    <string name="d_menu_encrypt_decrypt">暗号化 / 復号</string>
+
+    <!-- ═══ Batch 1: key generation, cards, key refresh, expiry (D11b) ═══ -->
+    <!-- ── Generate-key dialog. The algorithm names themselves (Ed25519, RSA 4096) are
+         spec names and stay untranslated — only the one-line hints are keys. ── -->
+    <string name="d_gen_hint_ed25519">推奨 — 現代的でコンパクト、どこでも使えます</string>
+    <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id 保護。最新のツールに最適です</string>
+    <string name="d_gen_hint_pq_v6">ポスト量子（IETF ドラフト、v6）— ML-KEM-768 + X25519</string>
+    <string name="d_gen_hint_pq_librepgp">ポスト量子（LibrePGP）— GnuPG 2.5 と相互運用できます</string>
+    <string name="d_gen_hint_rsa4096">大きく低速。旧来のソフトウェアとの互換性は最大です</string>
+    <string name="d_gen_hint_rsa2048">旧来のソフトウェアとの互換性のためだけ</string>
+    <string name="d_gen_no_passphrase_warning">パスフレーズなし：秘密鍵はこのコンピューターに保護されないまま保存されます。</string>
+
+    <!-- ── Card dialog + PC/SC transport errors. The reader name is an argument; the
+         quotes around it are per-locale. ── -->
+    <string name="d_cards_choose_reader">リーダーを選択</string>
+    <string name="d_cards_rescan">再スキャン</string>
+    <string name="d_cards_pin_pw1">カード PIN（PW1）</string>
+    <string name="d_cards_talking_touch">ハードウェアキーと通信中… タッチ確認がある場合は、今タッチしてください。</string>
+    <string name="d_cards_pin_scope_note">PIN はキー上のこの操作 1 回だけを許可します。秘密がハードウェアの外に出ることはありません。</string>
+    <string name="d_common_run">実行</string>
+    <string name="d_card_err_unplugged">操作中にハードウェアキーが取り外されました</string>
+    <string name="d_card_err_io">カードの入出力に失敗しました: %1$s</string>
+    <string name="d_card_err_connect">「%1$s」のカードに接続できませんでした: %2$s</string>
+    <string name="d_card_err_no_service">利用できるスマートカードサービスがありません</string>
+    <string name="d_card_err_pcscd_hint">（pcscd はインストールされ、実行中ですか？）</string>
+    <string name="d_card_err_detail_suffix">（%1$s）</string>
+    <string name="d_card_err_reader_gone">リーダー「%1$s」は接続されていません。</string>
+    <string name="d_card_err_no_card">「%1$s」にカードがありません — ハードウェアキーを挿入するか、接続し直してください。</string>
+
+    <!-- ── Key server refresh failures ── -->
+    <string name="d_refresh_err_no_servers">検索が有効な鍵サーバーが設定されていません</string>
+    <string name="d_refresh_err_server_prefix">%1$s: %2$s</string>
+    <string name="d_refresh_err_parse">鍵サーバーの応答を解析できませんでした: %1$s</string>
+
+    <!-- ── Expiration reminders. The WHOLE headline is a key with the key name as an
+         argument; concatenating a name and a phrase would freeze English word order. ── -->
+    <string name="d_expiry_headline_expired">%1$s は有効期限が切れています</string>
+    <string name="d_expiry_headline_today">%1$s は今日で期限切れになります</string>
+    <string name="d_expiry_headline_tomorrow">%1$s は明日で期限切れになります</string>
+    <plurals name="d_expiry_headline_days">
+        <item quantity="other">%2$s は %1$d 日後に期限切れになります</item>
+    </plurals>
+
+    <!-- ═══ Batch 2: backup service + backup dialogs (D11b) ═══ -->
+    <!-- ── Backup/restore engine errors. The four d_backup_detail_* values are the
+         inner cause spliced into d_backup_err_corrupt, so they are sentence fragments. ── -->
+    <string name="d_backup_err_not_a_backup">このファイルは PGPony のバックアップではありません</string>
+    <string name="d_backup_err_wrong_code">そのリカバリーコードではバックアップを解除できませんでした</string>
+    <string name="d_backup_err_corrupt">バックアップが破損しています: %1$s</string>
+    <string name="d_backup_err_empty_keyring">バックアップする鍵がありません</string>
+    <string name="d_backup_detail_unreadable_archive">読み取れないアーカイブ</string>
+    <string name="d_backup_detail_empty_archive">空のアーカイブ</string>
+    <string name="d_backup_detail_no_keys">バックアップに鍵が見つかりません</string>
+    <string name="d_backup_detail_integrity">整合性チェックに失敗しました</string>
+    <string name="d_restore_unreadable_block">読み取れない鍵ブロック</string>
+
+    <!-- ── Restore summary clauses. Each clause carries its OWN leading separator so a
+         locale can choose its own punctuation; the added clause never has one. ── -->
+    <plurals name="d_restore_summary_added">
+        <item quantity="other">%1$d 件追加</item>
+    </plurals>
+    <plurals name="d_restore_summary_upgraded">
+        <item quantity="other">、%1$d 件を鍵ペアに更新</item>
+    </plurals>
+    <plurals name="d_restore_summary_updated">
+        <item quantity="other">、%1$d 件更新</item>
+    </plurals>
+    <plurals name="d_restore_summary_unchanged">
+        <item quantity="other">、%1$d 件は最新</item>
+    </plurals>
+    <plurals name="d_restore_summary_failed">
+        <item quantity="other">、%1$d 件は復元できません</item>
+    </plurals>
+
+    <!-- ── Export/restore dialogs. The merge-report section labels reuse the Android
+         restore_* keys verbatim. ── -->
+    <string name="d_backup_export_title">鍵束をバックアップ</string>
+    <string name="d_backup_export_intro">鍵束のすべて — 秘密鍵はそれぞれのパスフレーズ保護のままです。ファイル全体はこのリカバリーコードで封印されます:</string>
+    <string name="d_backup_code_copied">リカバリーコードをコピーしました</string>
+    <string name="d_backup_reenter_warning">紙に書くかパスワードマネージャーに保存してください — これがないとバックアップは開けません。続けるにはもう一度入力してください:</string>
+    <string name="d_backup_save_action">バックアップを保存…</string>
+    <string name="d_backup_saved_status">バックアップを保存しました — %1$s</string>
+    <string name="d_backup_failed">バックアップに失敗しました</string>
+    <string name="d_backup_save_dialog_title">バックアップを保存</string>
+    <string name="d_restore_title">バックアップを復元</string>
+    <string name="d_restore_choose_file">バックアップファイルを選択…</string>
+    <string name="d_restore_kind_pgpony">PGPony バックアップ</string>
+    <string name="d_restore_kind_okc">OpenKeychain バックアップ</string>
+    <string name="d_restore_code_label_okc">バックアップコード（9×4 桁）</string>
+    <string name="d_restore_note">復元は、すでに保有している秘密鍵を上書きすることはありません。</string>
+    <string name="d_restore_done_status">復元しました — %1$s</string>
+    <string name="d_restore_status">復元 — %1$s</string>
+    <string name="d_restore_failed">復元に失敗しました</string>
+    <string name="d_restore_open_dialog_title">バックアップを選択</string>
+
+    <!-- ═══ Batch 2: key-server dialogs + keyring screen (D11b) ═══ -->
+    <!-- ── Key-server search. The query label, the Search button and its in-progress
+         label come from the Android layer; only desktop-specific copy is minted here. ── -->
+    <string name="d_search_servers_title">鍵サーバーを検索</string>
+    <string name="d_search_lookup_order">検索順序: WKD（受信者自身のメールドメイン）→ 設定済みのサーバー → keys.openpgp.org。</string>
+    <string name="d_search_none">鍵が見つかりません（WKD、設定済みのサーバー、keys.openpgp.org）。</string>
+    <string name="d_search_unparseable">(解析できません)</string>
+    <string name="d_search_failed">検索に失敗しました: %1$s</string>
+    <string name="d_search_found_via">%1$s 経由で見つかりました</string>
+    <string name="d_search_trust_warning">インポートすると、この鍵は信頼「不明」として追加されます — 利用する前に所有者とフィンガープリントを照合してください。</string>
+    <string name="d_search_again">再検索</string>
+    <string name="d_common_import">インポート</string>
+
+    <!-- ── Publish. Each outcome is a WHOLE sentence: the server label leads in English
+         but not in every locale, so the label is an argument rather than a prefix. ── -->
+    <string name="d_publish_title">公開鍵を公開</string>
+    <string name="d_publish_no_servers">公開が有効なサーバーがありません — 設定 → ネットワーク で有効にしてください。</string>
+    <string name="d_publish_may_not_accept">%1$s 鍵を受け付けない可能性があります</string>
+    <string name="d_publish_warning">アップロードされるのは公開鍵だけです。鍵サーバーは公開された恒久的なディレクトリであり、公開の取り消しは困難です。</string>
+    <string name="d_publish_in_progress">公開中…</string>
+    <string name="d_publish_outcome_ok">%1$s: 公開しました ✓</string>
+    <string name="d_publish_outcome_pending"> — %1$s に確認メールを送信しました（メール内のリンクをクリックするとメールアドレスで検索できるようになります）</string>
+    <string name="d_publish_outcome_rejected">%1$s: 拒否されました（HTTP %2$d） — このサーバーは %3$s 鍵を受け付けていないようです</string>
+    <string name="d_publish_outcome_failed">%1$s: 失敗 — %2$s</string>
+
+    <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
+         entry is a compile-time constant and cannot hold a translated string. ── -->
+    <string name="d_keyring_search_servers">サーバーを検索…</string>
+    <string name="d_keyring_paste_armor">ASCII アーマーを貼り付け…</string>
+    <string name="d_keyring_import_file">ファイルをインポート…</string>
+    <string name="d_keyring_import_qr">QR をインポート…</string>
+    <string name="d_keyring_search_placeholder">名前・メール・フィンガープリントを検索</string>
+    <string name="d_keyring_sort_label">並び替え: %1$s</string>
+    <string name="d_keyring_sort_recent">最近</string>
+    <string name="d_keyring_sort_name">名前</string>
+    <string name="d_keyring_sort_algorithm">アルゴリズム</string>
+    <string name="d_keyring_empty_title">鍵がまだありません</string>
+    <string name="d_keyring_empty_body">鍵ペアを生成するか、鍵ファイル（.asc、.gpg）をインポートするか、ASCII アーマーのブロックを貼り付けてください。</string>
+    <string name="d_keyring_no_matches_title">一致するものがありません</string>
+    <string name="d_keyring_no_matches_body">鍵束に「%1$s」に一致するものはありません。名前、メールアドレス、またはフィンガープリントの一部で検索してください。</string>
+    <string name="d_keyring_clear_search">検索をクリア</string>
+    <string name="d_keyring_err_no_public_armor_for">%1$s の公開鍵の ASCII アーマーが保存されていません</string>
+    <string name="d_keyring_qr_none_found">%1$s に QR コードが見つかりません</string>
+    <string name="d_keyring_qr_not_a_key">その QR コードは OpenPGP 鍵ではありません</string>
+    <string name="d_keyring_delete_secret_warning">\n\n秘密鍵も含まれます。バックアップがないと、この鍵宛てに暗号化されたメッセージは読めなくなります。</string>
+    <string name="d_keyring_cd_copy_public">公開鍵をコピー</string>
+    <string name="d_keyring_cd_delete">鍵を削除</string>
+    <string name="d_keyring_meta_line">作成 %1$s%2$s · 鍵 ID %3$s</string>
+    <string name="d_keyring_meta_expires"> · 有効期限 %1$s</string>
+    <string name="d_keyring_import_file_dialog">鍵ファイルをインポート</string>
+    <string name="d_keyring_qr_dialog">QR 画像を選択</string>
+    <plurals name="d_keyring_key_count">
+        <item quantity="other">%1$d 件の鍵</item>
+    </plurals>
+    <plurals name="d_keyring_match_count">
+        <item quantity="other">%1$d 件一致</item>
+    </plurals>
+
+    <!-- ═══ Batch 2: file crypto outcomes (D11b) ═══ -->
+    <!-- ── FileOutcome.detail — every one of these is shown verbatim in the results list,
+         so they are whole sentences rather than assembled fragments. ── -->
+    <string name="d_file_err_recipient_ring">受信者の鍵束を読み込めませんでした: %1$s</string>
+    <string name="d_file_err_signing_key">署名鍵を読み込めませんでした: %1$s</string>
+    <string name="d_file_signed_suffix">、署名済み</string>
+    <string name="d_file_err_encrypt">暗号化に失敗しました</string>
+    <string name="d_file_err_decrypt">復号に失敗しました</string>
+    <string name="d_file_sig_written">分離署名を書き出しました</string>
+    <string name="d_file_sig_written_card">分離署名を書き出しました（ハードウェアキー）</string>
+    <string name="d_file_err_sign">署名に失敗しました</string>
+    <string name="d_file_err_card_sign">ハードウェアキーでの署名に失敗しました</string>
+    <string name="d_file_err_card_decrypt">ハードウェアキーでの復号に失敗しました</string>
+    <plurals name="d_file_encrypted_to">
+        <item quantity="other">%1$d 人の受信者に暗号化しました</item>
+    </plurals>
+    <plurals name="d_file_encrypted_to_card">
+        <item quantity="other">%1$d 人の受信者に暗号化し、署名しました（ハードウェアキー）</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle">
+        <item quantity="other">バンドルを復号しました → %1$d 個のファイル</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle_card">
+        <item quantity="other">バンドルを復号しました（ハードウェアキー） → %1$d 個のファイル</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes">
+        <item quantity="other">%1$d バイトを復号しました</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes_card">
+        <item quantity="other">%1$d バイトを復号しました（ハードウェアキー）</item>
+    </plurals>
+
+    <!-- ── The signature note appended to a decrypt outcome. It carries its OWN leading
+         separator; the XML reader does not trim, so the leading spaces here are load-bearing.
+         ja uses a full-width middle dot and full-width parentheses. ── -->
+    <string name="d_file_sig_verified">・署名を検証しました</string>
+    <string name="d_file_sig_unheld">・保有していない鍵で署名されています</string>
+    <string name="d_file_sig_id_suffix">（%1$s）</string>
+
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">署名を検証しました — %1$s &lt;%2$s&gt;・%3$s</string>
+    <string name="d_file_verify_invalid">署名が無効です — 内容が署名と一致しません</string>
+    <string name="d_file_verify_unknown_signer">鍵束にない鍵で署名されています</string>
+    <string name="d_file_verify_unsigned">署名が見つかりません</string>
+    <string name="d_file_err_verify">検証に失敗しました</string>
+
+</resources>

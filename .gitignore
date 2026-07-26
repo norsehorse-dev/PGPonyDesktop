@@ -1,0 +1,24 @@
+build/
+.gradle/
+.kotlin/
+.idea/
+*.iml
+.DS_Store
+_to_delete/
+
+# Local working notes — not part of the published source.
+CLAUDE.md
+
+# The wrapper jar MUST be committed — CI runs ./gradlew and cannot bootstrap without it. This
+# negation is defensive: a global or ancestor ignore matching *.jar would otherwise drop it
+# silently, and the failure would surface on a runner rather than here.
+!gradle/wrapper/gradle-wrapper.jar
+
+# Nothing secret belongs in this repo. Signing identities, notarization credentials and the PGP
+# release key all come from the environment (build.gradle.kts) or from CI secrets; these patterns
+# are a backstop, not the policy.
+local.properties
+keystore.properties
+*.p12
+*.jks
+*.keystore

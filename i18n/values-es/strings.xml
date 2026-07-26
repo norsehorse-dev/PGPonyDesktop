@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PGPony Desktop — desktop-owned strings, Spanish.
+
+  Terminology follows the vendored Android translation (llavero, servidor de claves,
+  portapapeles, frase de contraseña) and its informal address (tú/tu), so the same app does not
+  read differently on the two platforms. Machine-translated for D11 and queued for the native
+  review triage tracked as PGPonyAndroid 4.1.0 §10 — correct freely, this file is desktop-owned
+  and is never overwritten by a vendor sync.
+
+  A key missing here falls back to the English in ../values/strings.xml.
+-->
+<resources>
+
+    <string name="d_nav_crypto">Cifrar</string>
+    <string name="d_nav_cards">Claves de hardware</string>
+
+    <string name="d_settings_section_network">Red</string>
+    <string name="d_settings_proxy_title">Proxy</string>
+    <string name="d_settings_proxy_off">Conexión directa</string>
+    <string name="d_settings_proxy_tor">Tor (servicio local, %1$s:%2$d)</string>
+    <string name="d_settings_proxy_custom">Proxy SOCKS personalizado</string>
+    <string name="d_settings_proxy_tor_note">Requiere un servicio Tor en este equipo: tanto el Navegador Tor (mientras está abierto) como el servicio tor escuchan en %1$s:%2$d.</string>
+    <string name="d_status_proxy_set">Proxy establecido: %1$s</string>
+
+    <string name="d_settings_keyservers_title">Servidores de claves (orden de búsqueda)</string>
+    <string name="d_keyservers_lookup">Buscar</string>
+    <string name="d_keyservers_publish">Publicar</string>
+    <string name="d_keyservers_first_party"> · propio</string>
+    <string name="d_keyservers_remove">Quitar servidor</string>
+    <string name="d_keyservers_add">Añadir servidor…</string>
+    <string name="d_keyservers_note">La búsqueda consulta los servidores activados en orden (después de WKD); al publicar se ofrece cada servidor habilitado para publicar. keys.openpgp.org verifica direcciones de correo, pero puede rechazar claves v6 y PQC; keys.pgpony.app acepta todos los tipos de clave que crea PGPony.</string>
+    <string name="d_keyservers_add_title">Añadir servidor de claves</string>
+    <string name="d_keyservers_add_url_label">URL base (esquema + host, sin barra final)</string>
+    <string name="d_keyservers_add_note">El servidor debería hablar la API VKS de keys.openpgp.org; donde no haya VKS, PGPony recurre a HKP (/pks/add) para publicar.</string>
+    <string name="d_status_keyserver_added">Servidor de claves %1$s añadido</string>
+    <string name="d_settings_autorefresh">Actualizar claves desde los servidores automáticamente (cada 12 horas mientras la app esté abierta)</string>
+
+    <string name="d_settings_backup_export">Respaldar llavero…</string>
+    <string name="d_settings_backup_restore">Restaurar copia de seguridad…</string>
+    <string name="d_settings_backup_note">El formato .pgpony se restaura también en PGPony para iOS y Android; las copias de OpenKeychain también funcionan.</string>
+    <string name="d_settings_subtitle">Todo lo que se aplica a PGPony en este equipo.</string>
+    <string name="d_settings_network_note">Proxy, servidores de claves y actualización automática de claves.</string>
+    <string name="d_settings_appearance_note">Tema e idioma. Ambos se aplican de inmediato.</string>
+
+    <string name="d_settings_pass_show_tab">Mostrar la pestaña Almacén de contraseñas</string>
+    <string name="d_settings_pass_note">Explora un almacén `pass` estándar —una carpeta de archivos .gpg con archivos .gpg-id de destinatarios— y descifra las entradas con tu llavero, con clave de software o de hardware. Solo lectura: PGPony nunca escribe en el almacén.</string>
+    <string name="d_settings_pass_default_location">Ubicación predeterminada:</string>
+    <plurals name="d_settings_pass_status_configured">
+        <item quantity="one">%1$d almacén configurado: gestiónalo en la pestaña Almacén de contraseñas.</item>
+        <item quantity="other">%1$d almacenes configurados: gestiónalos en la pestaña Almacén de contraseñas.</item>
+    </plurals>
+    <string name="d_settings_pass_status_exists">Esta carpeta existe: añádela en la pestaña Almacén de contraseñas.</string>
+    <string name="d_settings_pass_status_none">Todavía no hay ningún almacén aquí. Se respeta PASSWORD_STORE_DIR si lo has definido; si no, añade cualquier carpeta en la pestaña Almacén de contraseñas.</string>
+
+    <string name="d_settings_clipboard_autoclear">Borrar automáticamente los secretos copiados</string>
+    <string name="d_settings_clipboard_seconds_label">Segundos</string>
+    <string name="d_settings_clipboard_note">De 5 a 600 segundos. El temporizador solo borra el portapapeles si todavía contiene lo que puso PGPony: si has copiado otra cosa, tu portapapeles se queda intacto. Ten en cuenta además que un gestor de portapapeles o un servicio de sincronización (KDE Klipper, portapapeles en la nube de Windows, Portapapeles Universal de macOS) puede conservar una copia fuera del alcance de PGPony.</string>
+    <string name="d_status_clipboard_seconds">El portapapeles se borra en %1$d s</string>
+
+    <string name="d_settings_language_system">Sistema (%1$s)</string>
+    <string name="d_settings_language_note">Toda la ventana cambia al instante, sin reiniciar. El texto que procede de tus claves o de tus archivos se muestra tal como está guardado y nunca se traduce.</string>
+
+    <string name="d_settings_section_storage">Almacenamiento</string>
+    <string name="d_settings_storage_data_folder">Carpeta de datos:</string>
+    <string name="d_settings_storage_note">Los metadatos de las claves están en pgpony.db (el mismo esquema de Room que PGPony para Android); el material de clave en armadura ASCII está en keys/, un archivo por mitad de clave, con modo 0600. Las claves secretas conservan en reposo la protección de su propia frase de contraseña (S2K): el almacenamiento no añade cifrado propio.</string>
+
+    <string name="d_settings_about_version">PGPony Desktop %1$s</string>
+    <string name="d_settings_about_note">El mismo motor OpenPGP y el mismo esquema de Room que PGPony para Android (portado, no reescrito).</string>
+    <string name="d_about_title">Acerca de PGPony</string>
+    <string name="d_about_links">Enlaces</string>
+
+    <string name="d_common_apply">Aplicar</string>
+    <string name="d_common_add">Añadir</string>
+    <string name="d_common_clear_now">Borrar ahora</string>
+    <string name="d_common_remove">Quitar</string>
+
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
+    <string name="d_settings_storage_open_folder">Abrir carpeta</string>
+    <string name="d_settings_storage_copy_path">Copiar ruta</string>
+
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
+    <string name="d_settings_about_repo">Código fuente en GitHub</string>
+    <string name="d_settings_about_repo_note">El código del escritorio se publica con la versión 1.0. La aplicación de Android y los núcleos criptográficos compartidos ya son públicos.</string>
+    <string name="d_settings_about_issues">Informar de un problema</string>
+    <string name="d_settings_about_website">Sitio web de PGPony</string>
+    <string name="d_settings_about_runtime_label">Entorno:</string>
+    <string name="d_settings_about_copy_diagnostics">Copiar</string>
+
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
+    <!-- The app NAMES and the platform lists next to them are proper nouns and stay in English
+         in every locale; only these sentences are translated. -->
+    <string name="d_settings_section_apps">Más de NorseHorse</string>
+    <string name="d_settings_apps_note">El resto de la familia, del mismo desarrollador. Los enlaces se abren en tu navegador.</string>
+    <string name="d_app_pgpony_desc">El mismo llavero en todas partes: un solo motor OpenPGP y un solo formato de copia de seguridad, del móvil al escritorio.</string>
+    <string name="d_app_carrierpony_desc">Mensajes y transferencia de archivos cifrados de extremo a extremo con OpenPGP. Sin cuenta y sin número de teléfono.</string>
+    <string name="d_app_agepony_desc">Cifrado de archivos y firma separada sobre age. Cifra para un nombre de usuario de GitHub y firma con una llave de seguridad.</string>
+    <string name="d_app_quorumpony_desc">Reparte un secreto entre varias tarjetas de respaldo. Un número mínimo lo recupera; una sola no revela nada.</string>
+    <string name="d_app_relaypony_desc">Envía archivos directamente de un dispositivo a otro por Wi-Fi. Cifrado de extremo a extremo, sin servidores por medio.</string>
+    <string name="d_app_burnpony_desc">Notas cifradas que se autodestruyen: se sellan en tu dispositivo y desaparecen tras leerlas.</string>
+
+    <!-- ── Status line ───────────────────────────────────── -->
+    <string name="d_status_copied">Copiado al portapapeles.</string>
+    <!-- %1$s the address or path that could not be opened -->
+    <string name="d_status_open_failed">No se pudo abrir %1$s; la dirección está en tu portapapeles.</string>
+
+    <string name="d_crypto_tab_files">Archivos</string>
+    <string name="d_crypto_fileop_sign">Firmar (separada)</string>
+    <string name="d_crypto_fileop_verify">Verificar (separada)</string>
+    <string name="d_crypto_err_generic">La operación falló</string>
+    <string name="d_crypto_add_files">Añadir archivos…</string>
+    <string name="d_crypto_drop_hint">…o suelta archivos en cualquier parte de la ventana</string>
+    <string name="d_crypto_no_files">Ningún archivo seleccionado.</string>
+    <string name="d_crypto_no_files_title">No hay archivos en la cola</string>
+    <string name="d_crypto_result_ok">OK</string>
+    <string name="d_crypto_result_failed">ERROR</string>
+    <string name="d_crypto_signer_pass_label">Frase de contraseña del firmante (vacía si no está protegida)</string>
+    <string name="d_crypto_armor_gpg">Armadura ASCII (.asc en vez de .gpg binario)</string>
+    <string name="d_crypto_armor_sig">Armadura ASCII (.asc en vez de .sig binario)</string>
+    <string name="d_crypto_decrypt_pass_label">Frase de contraseña de la clave o del mensaje</string>
+    <string name="d_crypto_decrypt_files_note">Los archivos descifrados recuperan el nombre original del mensaje cuando está presente y nunca sobrescriben archivos existentes.</string>
+    <string name="d_crypto_sign_as_colon">Firmar como:</string>
+    <string name="d_crypto_verify_files_hint">Selecciona una firma .sig/.asc cuyo archivo de contenido esté junto a ella (el mismo nombre sin la extensión), o exactamente dos archivos: la firma y el contenido.</string>
+    <string name="d_crypto_err_no_pairing">No se encontró ninguna correspondencia entre firma y contenido — mira la indicación de arriba</string>
+    <string name="d_crypto_err_no_signer">No hay ningún par de claves para firmar</string>
+    <string name="d_crypto_files_done">%1$d/%2$d archivo(s) procesado(s)</string>
+    <string name="d_crypto_files_partial">%1$d/%2$d con éxito — mira los resultados por archivo</string>
+    <string name="d_crypto_run_op">Ejecutar %1$s</string>
+    <string name="d_crypto_input_verify">Mensaje firmado en claro o firma con armadura</string>
+    <string name="d_crypto_encrypt_with">Cifrar con:</string>
+    <string name="d_crypto_with_public_keys">Claves públicas</string>
+    <string name="d_crypto_attach_files">Adjuntar archivos…</string>
+    <string name="d_crypto_clear_attachments">Quitar adjuntos</string>
+    <string name="d_crypto_bundle_note">Se envía como un paquete PGP/MIME: cuerpo + %1$d adjunto(s) dentro de un único multipart/mixed cifrado.</string>
+    <string name="d_crypto_err_card_or_recipient_load">No se pudo cargar un destinatario o la clave de la tarjeta</string>
+    <string name="d_crypto_card_sign_encrypt_title">Firmar y cifrar en %1$s</string>
+    <string name="d_crypto_hardware_key">clave de hardware</string>
+    <string name="d_crypto_err_pubkey_missing">No se pudo cargar la clave pública de \"%1$s\" — falta su material de clave almacenado. Elimina esa entrada del llavero y vuelve a importar la clave pública.</string>
+    <string name="d_crypto_err_signer_load">No se pudo cargar la clave de firma %1$s — no se cifró nada. (Desmarca «Firmar como» para enviar sin firma.)</string>
+    <string name="d_crypto_banner_encrypted">Cifrado para %1$d destinatario(s)</string>
+    <string name="d_crypto_banner_encrypted_card">Cifrado para %1$d destinatario(s), firmado en la tarjeta como %2$s</string>
+    <string name="d_crypto_banner_encrypted_pass">Cifrado con frase de contraseña</string>
+    <string name="d_crypto_banner_signed_as">, firmado como %1$s (%2$s)</string>
+    <string name="d_crypto_banner_unsigned">, SIN FIRMAR</string>
+    <string name="d_crypto_banner_bundle_suffix"> · paquete con %1$d adjunto(s)</string>
+    <string name="d_crypto_banner_attach_suffix"> · %1$d adjunto(s)</string>
+    <string name="d_crypto_banner_signer_suffix"> — %1$s</string>
+    <string name="d_crypto_banner_keyid_suffix"> (ID de clave %1$s)</string>
+    <string name="d_crypto_decrypt_note">Acepta un mensaje con armadura o un .eml PGP/MIME completo: los paquetes muestran sus adjuntos junto a la salida.</string>
+    <string name="d_crypto_card_decrypt_title">Descifrar en %1$s</string>
+    <string name="d_crypto_banner_decrypted_card_verified">Descifrado en la tarjeta · firma VERIFICADA</string>
+    <string name="d_crypto_banner_decrypted_card_unknown">Descifrado en la tarjeta · el firmante no está en tu llavero</string>
+    <string name="d_crypto_banner_decrypted_card_unsigned">Descifrado en la tarjeta · sin firma</string>
+    <string name="d_crypto_banner_decrypted_verified">Descifrado · firma VERIFICADA</string>
+    <string name="d_crypto_banner_decrypted_unknown">Descifrado · firmado con una clave que no está en tu llavero</string>
+    <string name="d_crypto_banner_decrypted_unsigned">Descifrado · sin firma</string>
+    <string name="d_crypto_detached_toggle">Firma separada (solo la firma, el texto queda aparte)</string>
+    <string name="d_crypto_clear_signed">Firmado en claro</string>
+    <string name="d_crypto_err_card_pubkey">No se pudo cargar la clave pública de la tarjeta</string>
+    <string name="d_crypto_card_sign_title">Firmar en %1$s</string>
+    <string name="d_crypto_banner_signed_card">%1$s en la tarjeta · %2$s</string>
+    <string name="d_crypto_banner_signed">%1$s · %2$s</string>
+    <string name="d_crypto_err_signer_ring">No se pudo cargar el llavero secreto del firmante</string>
+    <string name="d_crypto_verify_hint">Pega arriba un mensaje firmado en claro. Para una firma separada, pega la firma arriba y el texto original abajo.</string>
+    <string name="d_crypto_detached_content_label">Texto original (solo para verificación separada)</string>
+    <string name="d_crypto_err_detached_needs_text">Firma separada — pega el texto original en el segundo campo</string>
+    <string name="d_crypto_err_is_encrypted">Este es un mensaje cifrado — usa la pestaña Descifrar</string>
+    <string name="d_crypto_err_no_framing">No se encontró ninguna estructura de firma PGP reconocible</string>
+    <string name="d_crypto_banner_verified">Firma VERIFICADA — %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_invalid">Firma NO VÁLIDA — el contenido no coincide con la firma</string>
+    <string name="d_crypto_banner_unknown_signer">Firmado con una clave que no está en tu llavero — importa la clave pública del firmante para verificar</string>
+    <string name="d_crypto_banner_no_signature">No se encontró ninguna firma en la entrada</string>
+    <string name="d_crypto_output">Salida</string>
+    <string name="d_crypto_attachment_meta">%1$s · %2$d bytes</string>
+    <string name="d_common_save_as">Guardar…</string>
+    <string name="d_crypto_copy_output">Copiar salida</string>
+    <string name="d_crypto_save_eml">Guardar .eml…</string>
+    <string name="d_status_saved">%1$s guardado</string>
+    <string name="d_status_saved_bytes">%1$s guardado (%2$d bytes)</string>
+    <string name="d_crypto_cancelled">Cancelado</string>
+    <string name="d_crypto_no_signer_available">No hay ningún par de claves disponible</string>
+    <string name="d_crypto_card_sign_files">Firmar %1$d archivo(s) en %2$s</string>
+    <string name="d_crypto_card_sign_encrypt_files">Firmar y cifrar %1$d archivo(s) en %2$s</string>
+    <string name="d_crypto_card_decrypt_files">Descifrar %1$d archivo(s) en %2$s</string>
+
+    <string name="d_pass_store_unreadable">No se puede leer %1$s: se movió, no está montada o ya no es legible.</string>
+    <string name="d_pass_not_a_store">No es un almacén de contraseñas legible: %1$s</string>
+    <string name="d_pass_store_added">Almacén de contraseñas añadido: %1$s</string>
+    <string name="d_pass_choose_store">Elegir almacén</string>
+    <string name="d_pass_add_store">Añadir almacén…</string>
+    <string name="d_pass_store_title">Almacén de contraseñas</string>
+    <string name="d_pass_use_default">Usar ~/.password-store</string>
+    <string name="d_pass_rescan">Volver a escanear</string>
+    <string name="d_pass_empty_title">Aún no hay almacén de contraseñas</string>
+    <string name="d_pass_select_entry_title">Nada seleccionado</string>
+    <string name="d_pass_store_removed">Se quitó %1$s de PGPony (la carpeta queda intacta)</string>
+    <string name="d_pass_choose_folder">Elegir la carpeta del almacén de contraseñas</string>
+    <string name="d_pass_search_label">Buscar entradas</string>
+    <string name="d_pass_no_entries">Sin entradas.</string>
+    <plurals name="d_pass_match_count">
+        <item quantity="one">%1$d coincidencia</item>
+        <item quantity="other">%1$d coincidencias</item>
+    </plurals>
+    <string name="d_pass_up">Subir una carpeta</string>
+    <string name="d_pass_select_entry">Selecciona una entrada para descifrarla.</string>
+    <string name="d_pass_empty_intro">Indica a PGPony un almacén `pass`: una carpeta con archivos .gpg cifrados con OpenPGP, la estructura que usan las herramientas estándar de password-store.</string>
+    <string name="d_pass_empty_detail">El almacén se lee en su sitio, así que lo que lo sincronice (git, Syncthing, Nextcloud) sigue funcionando. PGPony solo lee: nunca escribe, mueve ni vuelve a cifrar nada de la carpeta. Las entradas se descifran de una en una, cuando las abres; al explorar el árbol solo se leen los nombres de archivo.</string>
+    <string name="d_pass_entry_missing">El archivo de la entrada falta o no se puede leer.</string>
+    <string name="d_pass_no_matching_key">Ninguna clave de tu llavero puede abrir esta entrada. Importa la clave secreta a la que está cifrada o vincula la llave hardware que la contiene.</string>
+    <string name="d_pass_decrypting">Descifrando…</string>
+    <string name="d_pass_card_entry">Esta entrada está cifrada a una llave hardware.</string>
+    <string name="d_pass_card_key_missing">La clave de tarjeta vinculada a esta entrada no está en tu llavero.</string>
+    <string name="d_pass_card_decrypt_title">Descifrar %1$s en %2$s</string>
+    <string name="d_pass_card_failed">Falló el descifrado con la llave hardware: %1$s</string>
+    <string name="d_pass_encrypted_to">Cifrado para: %1$s</string>
+    <string name="d_common_reveal">Mostrar</string>
+    <string name="d_common_hide">Ocultar</string>
+    <string name="d_pass_password_copied">Contraseña copiada</string>
+    <string name="d_pass_password_copied_clearing">Contraseña copiada: el portapapeles se borra en %1$d s</string>
+    <string name="d_pass_copy_password">Copiar contraseña</string>
+    <string name="d_pass_clipboard_countdown">El portapapeles se borra en %1$d s</string>
+    <string name="d_pass_fields">Campos</string>
+    <string name="d_pass_field_copied">%1$s copiado</string>
+    <string name="d_pass_copy_field">Copiar %1$s</string>
+    <string name="d_pass_lock">Bloquear</string>
+    <string name="d_pass_relock_note">Se bloquea sola tras %1$d s.</string>
+    <string name="d_pass_otp_unparsable">PGPony no puede generar códigos a partir de este URI: no es un URI TOTP o su secreto no es base32 válido. Usa tu aplicación de autenticación para esta entrada.</string>
+    <string name="d_pass_otp_uri_copied">URI otpauth copiado</string>
+    <string name="d_pass_copy_uri">Copiar URI</string>
+    <string name="d_pass_otp_no_provider">Esta JVM no tiene un proveedor HMAC-%1$s, así que el código no se puede generar aquí.</string>
+    <string name="d_pass_code_copied">Código copiado</string>
+    <string name="d_pass_code_copied_clearing">Código copiado: el portapapeles se borra en %1$d s</string>
+    <string name="d_pass_copy_code">Copiar el código de un solo uso</string>
+    <string name="d_pass_otp_rolls_in">cambia en %1$d s</string>
+    <string name="d_pass_otp_meta">%1$s — %2$s, %3$d dígitos, %4$d s</string>
+    <string name="d_pass_show_uri">Mostrar el URI de configuración</string>
+    <string name="d_pass_hide_uri">Ocultar el URI de configuración</string>
+    <string name="d_pass_copy_setup_uri">Copiar el URI de configuración</string>
+
+    <string name="d_cards_subtitle">Tarjetas inteligentes OpenPGP por USB — YubiKey 5, Token2, Nitrokey 3 y similares. Los secretos viven en la llave y nunca tocan este equipo.</string>
+    <string name="d_cards_reader_label">Lector:</string>
+    <string name="d_cards_no_reader">No se encontró ningún lector</string>
+    <string name="d_cards_reader_with_card">%1$s · tarjeta presente</string>
+    <string name="d_cards_read_card">Leer tarjeta</string>
+    <string name="d_cards_no_reader_detected">No se detectó ningún lector PC/SC. Conecta la llave (se presenta como su propio lector).</string>
+    <string name="d_cards_no_reader_linux">En Linux, instala e inicia pcscd.</string>
+    <string name="d_cards_section_reader">Lector</string>
+    <string name="d_cards_no_reader_title">No se detectó ningún lector</string>
+    <string name="d_cards_no_card_title">Aún no se ha leído ninguna tarjeta</string>
+    <string name="d_cards_no_card_body">Conecta la llave de hardware y elige «Leer tarjeta». PGPony solo lee las ranuras públicas de la tarjeta: no escribe nada en ella.</string>
+    <string name="d_cards_aid">AID %1$s</string>
+    <string name="d_cards_pin_tries">Intentos de PIN restantes — usuario: %1$d · admin: %2$d</string>
+    <string name="d_cards_paired">Emparejada — entrada del llavero: %1$s</string>
+    <string name="d_cards_pair">Emparejar con el llavero</string>
+    <string name="d_cards_keygen_open">Generar claves en la tarjeta…</string>
+    <string name="d_cards_pair_note">El emparejamiento registra la tarjeta en tu llavero para que los mensajes puedan dirigirse a ella y el descifrado y la firma pasen por el hardware. Si el certificado de clave pública de la tarjeta ya está en tu llavero (impórtalo o descárgalo de un servidor de claves), el emparejamiento se enlaza con esa entrada, incluidos los esquemas con clave principal sin conexión.</string>
+    <string name="d_cards_keygen_done">Generadas en la tarjeta y emparejadas — %1$s. Exporta la clave pública y haz una COPIA DE SEGURIDAD; las claves secretas no pueden salir de la tarjeta.</string>
+    <string name="d_cards_change_pin_open">Cambiar PIN…</string>
+    <string name="d_cards_change_admin_open">Cambiar PIN de admin…</string>
+    <string name="d_cards_unblock_open">Desbloquear PIN…</string>
+    <string name="d_cards_reset_open">Restablecer de fábrica…</string>
+    <string name="d_cards_pin_cache_title">Caché del PIN</string>
+    <string name="d_cards_pin_cache_toggle">Recordar el PIN de usuario tras una operación correcta</string>
+    <string name="d_cards_pin_cache_keep_for">Conservar durante:</string>
+    <string name="d_cards_pin_cache_custom_seconds">%1$d s</string>
+    <string name="d_cards_pin_held_no_timer">PIN retenido (sin temporizador)</string>
+    <string name="d_cards_pin_cache_note">Solo en memoria: nunca se escribe en disco. Un PIN incorrecto, cerrar la aplicación o «Borrar ahora» lo descartan. El PIN de admin nunca se guarda en caché.</string>
+    <string name="d_cards_new_pin_min6">PIN nuevo (mín. 6)</string>
+    <string name="d_cards_new_admin_min8">Nuevo PIN de admin (mín. 8)</string>
+    <string name="d_cards_new_user_pin_min6">Nuevo PIN de usuario (mín. 6)</string>
+    <string name="d_cards_pin_retry_warning">Las entradas incorrectas consumen intentos: tras demasiados, la tarjeta se bloquea.</string>
+    <string name="d_cards_reset_warning">Esto BORRA todas las claves de la tarjeta y restablece ambos PIN a sus valores predeterminados (123456 / 12345678). Las claves generadas en la tarjeta son irrecuperables. No se puede deshacer.</string>
+    <string name="d_cards_reset_type_prompt">Escribe %1$s para confirmar</string>
+    <string name="d_cards_reset_confirm">Borrar tarjeta</string>
+    <string name="d_cards_keygen_warning">Genera una clave de firma Ed25519 y una clave de cifrado Cv25519 EN la tarjeta. SOBRESCRIBE las ranuras de firma y descifrado de la tarjeta. Las claves privadas nunca salen del hardware y NO se pueden respaldar: si pierdes la tarjeta, pierdes las claves.</string>
+    <string name="d_cards_expires_colon">Caduca:</string>
+    <string name="d_cards_keygen_ack">Entiendo que esto sobrescribe las claves de la tarjeta y que no se pueden respaldar</string>
+    <string name="d_common_working">Trabajando…</string>
+
+    <string name="d_keydetail_no_user_id">(sin ID de usuario)</string>
+    <string name="d_keydetail_badge_secret">SECRETA</string>
+    <string name="d_keydetail_badge_card">TARJETA</string>
+    <string name="d_keydetail_badge_expired">CADUCADA</string>
+    <string name="d_keydetail_copy_fingerprint">Copiar huella digital</string>
+    <string name="d_keydetail_status_fingerprint_copied">Huella digital copiada</string>
+    <string name="d_keydetail_key_id">ID de clave</string>
+    <string name="d_keydetail_make_default_signing">Usar como clave de firma predeterminada</string>
+    <string name="d_keydetail_section_keys">Claves (%1$d)</string>
+    <string name="d_keydetail_subkey">Subclave</string>
+    <string name="d_keydetail_subkey_meta">%1$s · Creada %2$s</string>
+    <string name="d_keydetail_subkey_meta_expires">%1$s · Creada %2$s · Caduca %3$s</string>
+    <string name="d_keydetail_copy_public">Copiar pública</string>
+    <string name="d_keydetail_export_public">Exportar pública…</string>
+    <string name="d_keydetail_show_qr">Mostrar QR…</string>
+    <string name="d_keydetail_export_secret">Exportar secreta…</string>
+    <string name="d_keydetail_status_pub_copied">Clave pública copiada — %1$s</string>
+    <string name="d_keydetail_err_no_public_armor">No hay armadura pública almacenada</string>
+    <string name="d_keydetail_secret_export_note">Las claves secretas exportadas conservan su protección por frase de contraseña (S2K).</string>
+    <string name="d_keydetail_refresh_servers">Actualizar desde los servidores de claves</string>
+    <string name="d_keydetail_danger_zone">Zona de peligro</string>
+    <string name="d_keydetail_save_dialog_title">Exportar clave</string>
+    <string name="d_keydetail_status_exported">%1$s exportado</string>
+    <string name="d_keydetail_status_nothing_to_export">Nada que exportar</string>
+    <string name="d_keydetail_qr_title">QR de clave pública</string>
+    <string name="d_keydetail_qr_hint">Escanéalo con PGPony en otro dispositivo para importar %1$s.</string>
+    <string name="d_keydetail_qr_too_large">Esta clave es demasiado grande para un código QR — exporta el archivo .asc y compártelo en su lugar.</string>
+    <string name="d_keydetail_qr_no_material">No hay material de clave pública que mostrar.</string>
+    <string name="d_keydetail_qr_save_png">Guardar PNG…</string>
+    <string name="d_keydetail_status_qr_saved">QR guardado — %1$s</string>
+    <string name="d_keydetail_expiry_never">No caduca nunca</string>
+    <string name="d_keydetail_expiry_date_label">Caduca el (YYYY-MM-DD)</string>
+    <string name="d_keydetail_expiry_note">Vuelve a firmar la autocertificación de la clave y los enlaces de las subclaves.</string>
+    <string name="d_keydetail_revoke_title">Revocar %1$s</string>
+    <string name="d_keydetail_revoke_warning">La revocación marca esta clave como inservible para nuevas firmas y cifrado. Los mensajes anteriores siguen siendo descifrables. Esto no se puede deshacer.</string>
+    <string name="d_keydetail_revoke_ack">Entiendo que esto no se puede deshacer</string>
+    <string name="d_common_edit_ellipsis">Editar…</string>
+    <string name="d_common_add_ellipsis">Añadir…</string>
+    <string name="d_common_rendering">Generando…</string>
+
+
+    <!-- ═══ Keyring repository (D11b) ════════════════ -->
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
+    <plurals name="d_import_summary_blocks">
+        <item quantity="one">%1$d bloque: %2$s</item>
+        <item quantity="other">%1$d bloques: %2$s</item>
+    </plurals>
+    <plurals name="d_import_summary_added">
+        <item quantity="one">%1$d añadida</item>
+        <item quantity="other">%1$d añadidas</item>
+    </plurals>
+    <plurals name="d_import_summary_upgraded">
+        <item quantity="one">, %1$d ampliada a par de claves</item>
+        <item quantity="other">, %1$d ampliadas a pares de claves</item>
+    </plurals>
+    <plurals name="d_import_summary_merged">
+        <item quantity="one">, %1$d fusionada con material nuevo</item>
+        <item quantity="other">, %1$d fusionadas con material nuevo</item>
+    </plurals>
+    <plurals name="d_import_summary_already">
+        <item quantity="one">, %1$d ya en el llavero</item>
+        <item quantity="other">, %1$d ya en el llavero</item>
+    </plurals>
+    <plurals name="d_import_summary_failed">
+        <item quantity="one">, %1$d fallida</item>
+        <item quantity="other">, %1$d fallidas</item>
+    </plurals>
+
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
+    <string name="d_repo_err_no_card_keys">No se encontraron claves OpenPGP en esta tarjeta</string>
+    <string name="d_repo_err_key_not_found">Clave no encontrada: %1$s</string>
+    <string name="d_repo_err_revoke_public_only">No se puede revocar una clave solo pública — se necesita la clave privada para firmar</string>
+    <string name="d_repo_err_secret_ring_load">No se pudo cargar el anillo de claves secretas de %1$s</string>
+    <string name="d_repo_err_public_ring_load">No se pudo cargar el anillo de claves públicas de %1$s</string>
+    <string name="d_repo_err_no_public_ring">La clave generada no produjo ningún anillo de claves públicas</string>
+    <string name="d_repo_err_card_row_missing">No se encontró la clave de tarjeta generada después de la importación</string>
+    <string name="d_repo_err_expiry_public_only">No se puede editar la caducidad de una clave solo pública — se necesita la clave privada para volver a firmar.</string>
+    <string name="d_repo_err_expiry_card">Esta clave está en una llave de hardware — cambiar su caducidad todavía no se admite aquí.</string>
+
+    <!-- ═══ Window shell: tray, menu bar, status line (D11b) ═══ -->
+    <!-- ── Status line ── -->
+    <string name="d_list_separator">, </string>
+    <string name="d_status_migrated_legacy">Llavero antiguo migrado — %1$s</string>
+    <string name="d_status_autorefresh">Actualización automática del servidor de claves: %1$s</string>
+    <string name="d_status_import">Importación — %1$s</string>
+    <string name="d_status_generating">Generando clave %1$s…</string>
+    <string name="d_status_generated">Generada: %1$s — %2$s</string>
+    <string name="d_status_generate_failed">Error al generar: %1$s</string>
+    <string name="d_status_deleted">Eliminada: %1$s</string>
+    <string name="d_status_trust_set">Confianza establecida en %1$s — %2$s</string>
+    <string name="d_status_expiration_removed">Caducidad eliminada — la clave nunca caduca</string>
+    <string name="d_status_expiration_updated">Caducidad actualizada</string>
+    <string name="d_status_expiration_failed">Error al editar la caducidad: %1$s</string>
+    <string name="d_status_revoked">Revocada: %1$s (%2$s)</string>
+    <string name="d_status_checking_servers">Consultando servidores de claves — %1$s…</string>
+    <string name="d_status_refresh_not_published">No publicada en ningún servidor de claves activado</string>
+    <string name="d_status_refresh_also_merged"> (también se fusionó material nuevo)</string>
+    <string name="d_status_refresh_key_missing">Clave no encontrada en el llavero</string>
+    <plurals name="d_status_files_dropped">
+        <item quantity="one">%1$d archivo soltado</item>
+        <item quantity="other">%1$d archivos soltados</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_revoked">
+        <item quantity="one">%1$d clave REVOCADA en el servidor</item>
+        <item quantity="other">%1$d claves REVOCADAS en el servidor</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_updated">
+        <item quantity="one">%1$d clave actualizada</item>
+        <item quantity="other">%1$d claves actualizadas</item>
+    </plurals>
+
+    <!-- ── Tray + expiration notifications ── -->
+    <string name="d_tray_open">Abrir PGPony</string>
+    <string name="d_tray_quit">Salir de PGPony</string>
+    <string name="d_notif_key_expiring">PGPony — clave por caducar</string>
+    <string name="d_notif_key_expiration">PGPony — caducidad de clave</string>
+
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
+    <string name="d_menu_file">Archivo</string>
+    <string name="d_menu_file_mnemonic">A</string>
+    <string name="d_menu_goto_keyring">Ir al llavero (importar)</string>
+    <string name="d_menu_restore_backup">Restaurar copia de seguridad…</string>
+    <string name="d_menu_quit">Salir</string>
+    <string name="d_menu_keys">Claves</string>
+    <string name="d_menu_keys_mnemonic">C</string>
+    <string name="d_menu_new_key">Nueva clave…</string>
+    <string name="d_menu_hardware_keys">Llaves de hardware</string>
+    <string name="d_menu_message">Mensaje</string>
+    <string name="d_menu_message_mnemonic">M</string>
+    <string name="d_menu_help">Ayuda</string>
+    <string name="d_menu_help_mnemonic">A</string>
+    <string name="d_menu_about">Acerca de PGPony</string>
+    <string name="d_menu_encrypt_decrypt">Cifrar / Descifrar</string>
+
+    <!-- ═══ Batch 1: key generation, cards, key refresh, expiry (D11b) ═══ -->
+    <!-- ── Generate-key dialog. The algorithm names themselves (Ed25519, RSA 4096) are
+         spec names and stay untranslated — only the one-line hints are keys. ── -->
+    <string name="d_gen_hint_ed25519">Recomendado: moderno, compacto, funciona en todas partes</string>
+    <string name="d_gen_hint_v6">RFC 9580 v6: protección Argon2id; mejor con herramientas actuales</string>
+    <string name="d_gen_hint_pq_v6">Poscuántico (borrador del IETF, v6): ML-KEM-768 + X25519</string>
+    <string name="d_gen_hint_pq_librepgp">Poscuántico (LibrePGP): interopera con GnuPG 2.5</string>
+    <string name="d_gen_hint_rsa4096">Grande, lento, máxima compatibilidad con sistemas antiguos</string>
+    <string name="d_gen_hint_rsa2048">Solo por compatibilidad con sistemas antiguos</string>
+    <string name="d_gen_no_passphrase_warning">Sin contraseña: la clave secreta se guardará sin protección en este equipo.</string>
+
+    <!-- ── Card dialog + PC/SC transport errors. The reader name is an argument; the
+         quotes around it are per-locale. ── -->
+    <string name="d_cards_choose_reader">Elegir lector</string>
+    <string name="d_cards_rescan">Volver a escanear</string>
+    <string name="d_cards_pin_pw1">PIN de la tarjeta (PW1)</string>
+    <string name="d_cards_talking_touch">Comunicando con la llave de hardware… si requiere confirmación táctil, tócala ahora.</string>
+    <string name="d_cards_pin_scope_note">El PIN autoriza solo esta operación en la propia llave; los secretos nunca salen del hardware.</string>
+    <string name="d_common_run">Ejecutar</string>
+    <string name="d_card_err_unplugged">La llave de hardware se desconectó durante la operación</string>
+    <string name="d_card_err_io">Error de E/S con la tarjeta: %1$s</string>
+    <string name="d_card_err_connect">No se pudo conectar con la tarjeta en «%1$s»: %2$s</string>
+    <string name="d_card_err_no_service">No hay ningún servicio de tarjetas inteligentes disponible</string>
+    <string name="d_card_err_pcscd_hint"> — ¿está pcscd instalado y en ejecución?</string>
+    <string name="d_card_err_detail_suffix"> (%1$s)</string>
+    <string name="d_card_err_reader_gone">El lector «%1$s» ya no está conectado.</string>
+    <string name="d_card_err_no_card">No hay tarjeta en «%1$s»: inserta o vuelve a conectar tu llave de hardware.</string>
+
+    <!-- ── Key server refresh failures ── -->
+    <string name="d_refresh_err_no_servers">No hay servidores de claves con búsqueda activada configurados</string>
+    <string name="d_refresh_err_server_prefix">%1$s: %2$s</string>
+    <string name="d_refresh_err_parse">No se pudo analizar la respuesta del servidor de claves: %1$s</string>
+
+    <!-- ── Expiration reminders. The WHOLE headline is a key with the key name as an
+         argument; concatenating a name and a phrase would freeze English word order. ── -->
+    <string name="d_expiry_headline_expired">%1$s ha CADUCADO</string>
+    <string name="d_expiry_headline_today">%1$s caduca hoy</string>
+    <string name="d_expiry_headline_tomorrow">%1$s caduca mañana</string>
+    <plurals name="d_expiry_headline_days">
+        <item quantity="one">%2$s caduca en %1$d día</item>
+        <item quantity="other">%2$s caduca en %1$d días</item>
+    </plurals>
+
+    <!-- ═══ Batch 2: backup service + backup dialogs (D11b) ═══ -->
+    <!-- ── Backup/restore engine errors. The four d_backup_detail_* values are the
+         inner cause spliced into d_backup_err_corrupt, so they are sentence fragments. ── -->
+    <string name="d_backup_err_not_a_backup">Este archivo no es una copia de seguridad de PGPony</string>
+    <string name="d_backup_err_wrong_code">Ese código de recuperación no desbloqueó la copia de seguridad</string>
+    <string name="d_backup_err_corrupt">La copia de seguridad está dañada: %1$s</string>
+    <string name="d_backup_err_empty_keyring">No hay claves para respaldar</string>
+    <string name="d_backup_detail_unreadable_archive">archivo comprimido ilegible</string>
+    <string name="d_backup_detail_empty_archive">archivo comprimido vacío</string>
+    <string name="d_backup_detail_no_keys">no se encontraron claves en la copia de seguridad</string>
+    <string name="d_backup_detail_integrity">la comprobación de integridad falló</string>
+    <string name="d_restore_unreadable_block">bloque de clave ilegible</string>
+
+    <!-- ── Restore summary clauses. Each clause carries its OWN leading separator so a
+         locale can choose its own punctuation; the added clause never has one. ── -->
+    <plurals name="d_restore_summary_added">
+        <item quantity="one">%1$d añadida</item>
+        <item quantity="other">%1$d añadidas</item>
+    </plurals>
+    <plurals name="d_restore_summary_upgraded">
+        <item quantity="one">, %1$d actualizada a par de claves</item>
+        <item quantity="other">, %1$d actualizadas a pares de claves</item>
+    </plurals>
+    <plurals name="d_restore_summary_updated">
+        <item quantity="one">, %1$d actualizada</item>
+        <item quantity="other">, %1$d actualizadas</item>
+    </plurals>
+    <plurals name="d_restore_summary_unchanged">
+        <item quantity="one">, %1$d ya actualizada</item>
+        <item quantity="other">, %1$d ya actualizadas</item>
+    </plurals>
+    <plurals name="d_restore_summary_failed">
+        <item quantity="one">, %1$d no se pudo restaurar</item>
+        <item quantity="other">, %1$d no se pudieron restaurar</item>
+    </plurals>
+
+    <!-- ── Export/restore dialogs. The merge-report section labels reuse the Android
+         restore_* keys verbatim. ── -->
+    <string name="d_backup_export_title">Respaldar llavero</string>
+    <string name="d_backup_export_intro">Todo lo que hay en tu llavero: las claves secretas mantienen su propia protección por contraseña. Todo el archivo se sella con este código de recuperación:</string>
+    <string name="d_backup_code_copied">Código de recuperación copiado</string>
+    <string name="d_backup_reenter_warning">Anótalo o guárdalo en un gestor de contraseñas: sin él, la copia de seguridad no se puede abrir. Vuelve a introducirlo para continuar:</string>
+    <string name="d_backup_save_action">Guardar copia de seguridad…</string>
+    <string name="d_backup_saved_status">Copia de seguridad guardada: %1$s</string>
+    <string name="d_backup_failed">Error en la copia de seguridad</string>
+    <string name="d_backup_save_dialog_title">Guardar copia de seguridad</string>
+    <string name="d_restore_title">Restaurar copia de seguridad</string>
+    <string name="d_restore_choose_file">Elegir archivo de copia de seguridad…</string>
+    <string name="d_restore_kind_pgpony">Copia de seguridad de PGPony</string>
+    <string name="d_restore_kind_okc">Copia de seguridad de OpenKeychain</string>
+    <string name="d_restore_code_label_okc">Código de copia de seguridad (9×4 dígitos)</string>
+    <string name="d_restore_note">La restauración nunca sobrescribe una clave secreta que ya tienes.</string>
+    <string name="d_restore_done_status">Restaurado: %1$s</string>
+    <string name="d_restore_status">Restauración: %1$s</string>
+    <string name="d_restore_failed">Error al restaurar</string>
+    <string name="d_restore_open_dialog_title">Elegir copia de seguridad</string>
+
+    <!-- ═══ Batch 2: key-server dialogs + keyring screen (D11b) ═══ -->
+    <!-- ── Key-server search. The query label, the Search button and its in-progress
+         label come from the Android layer; only desktop-specific copy is minted here. ── -->
+    <string name="d_search_servers_title">Buscar en servidores de claves</string>
+    <string name="d_search_lookup_order">Orden de búsqueda: WKD (el propio dominio de correo del destinatario) → tus servidores configurados → keys.openpgp.org.</string>
+    <string name="d_search_none">No se encontró ninguna clave (WKD, servidores configurados, keys.openpgp.org).</string>
+    <string name="d_search_unparseable">(no se puede analizar)</string>
+    <string name="d_search_failed">La búsqueda falló: %1$s</string>
+    <string name="d_search_found_via">Encontrada mediante %1$s</string>
+    <string name="d_search_trust_warning">Al importarla, la clave se añade con confianza DESCONOCIDA: verifica la huella digital con su propietario antes de confiar en ella.</string>
+    <string name="d_search_again">Buscar de nuevo</string>
+    <string name="d_common_import">Importar</string>
+
+    <!-- ── Publish. Each outcome is a WHOLE sentence: the server label leads in English
+         but not in every locale, so the label is an argument rather than a prefix. ── -->
+    <string name="d_publish_title">Publicar clave pública</string>
+    <string name="d_publish_no_servers">No hay servidores habilitados para publicar: activa uno en Ajustes → Red.</string>
+    <string name="d_publish_may_not_accept">Puede que no acepte claves %1$s</string>
+    <string name="d_publish_warning">Solo se sube la clave PÚBLICA. Los servidores de claves son directorios públicos y permanentes: publicar es difícil de deshacer.</string>
+    <string name="d_publish_in_progress">Publicando…</string>
+    <string name="d_publish_outcome_ok">%1$s: publicada ✓</string>
+    <string name="d_publish_outcome_pending"> — se envió un correo de verificación a %1$s (haz clic en el enlace para que la clave se pueda buscar por correo)</string>
+    <string name="d_publish_outcome_rejected">%1$s: rechazada (HTTP %2$d) — es probable que este servidor no acepte claves %3$s</string>
+    <string name="d_publish_outcome_failed">%1$s: falló — %2$s</string>
+
+    <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
+         entry is a compile-time constant and cannot hold a translated string. ── -->
+    <string name="d_keyring_search_servers">Buscar en servidores…</string>
+    <string name="d_keyring_paste_armor">Pegar ASCII armor…</string>
+    <string name="d_keyring_import_file">Importar archivo…</string>
+    <string name="d_keyring_import_qr">Importar QR…</string>
+    <string name="d_keyring_search_placeholder">Buscar nombre, correo, huella digital</string>
+    <string name="d_keyring_sort_label">Orden: %1$s</string>
+    <string name="d_keyring_sort_recent">Recientes</string>
+    <string name="d_keyring_sort_name">Nombre</string>
+    <string name="d_keyring_sort_algorithm">Algoritmo</string>
+    <string name="d_keyring_empty_title">Aún no hay claves</string>
+    <string name="d_keyring_empty_body">Genera un par de claves, importa un archivo de clave (.asc, .gpg) o pega un bloque en ASCII armor.</string>
+    <string name="d_keyring_no_matches_title">Sin coincidencias</string>
+    <string name="d_keyring_no_matches_body">Nada en tu llavero coincide con «%1$s». Busca por nombre, dirección de correo o parte de una huella digital.</string>
+    <string name="d_keyring_clear_search">Borrar búsqueda</string>
+    <string name="d_keyring_err_no_public_armor_for">No hay armadura pública almacenada para %1$s</string>
+    <string name="d_keyring_qr_none_found">No se encontró ningún código QR en %1$s</string>
+    <string name="d_keyring_qr_not_a_key">Ese QR no es una clave OpenPGP</string>
+    <string name="d_keyring_delete_secret_warning">\n\nEsto incluye la clave SECRETA. Sin una copia de seguridad, los mensajes cifrados para ella quedarán ilegibles.</string>
+    <string name="d_keyring_cd_copy_public">Copiar clave pública</string>
+    <string name="d_keyring_cd_delete">Eliminar clave</string>
+    <string name="d_keyring_meta_line">Creada %1$s%2$s · ID de clave %3$s</string>
+    <string name="d_keyring_meta_expires"> · Caduca %1$s</string>
+    <string name="d_keyring_import_file_dialog">Importar archivo de clave</string>
+    <string name="d_keyring_qr_dialog">Elegir imagen QR</string>
+    <plurals name="d_keyring_key_count">
+        <item quantity="one">%1$d clave</item>
+        <item quantity="other">%1$d claves</item>
+    </plurals>
+    <plurals name="d_keyring_match_count">
+        <item quantity="one">%1$d coincidencia</item>
+        <item quantity="other">%1$d coincidencias</item>
+    </plurals>
+
+    <!-- ═══ Batch 2: file crypto outcomes (D11b) ═══ -->
+    <!-- ── FileOutcome.detail — every one of these is shown verbatim in the results list,
+         so they are whole sentences rather than assembled fragments. ── -->
+    <string name="d_file_err_recipient_ring">No se pudo cargar el llavero del destinatario: %1$s</string>
+    <string name="d_file_err_signing_key">No se pudo cargar la clave de firma: %1$s</string>
+    <string name="d_file_signed_suffix">, firmado</string>
+    <string name="d_file_err_encrypt">Error al cifrar</string>
+    <string name="d_file_err_decrypt">Error al descifrar</string>
+    <string name="d_file_sig_written">Firma separada escrita</string>
+    <string name="d_file_sig_written_card">Firma separada escrita (llave de hardware)</string>
+    <string name="d_file_err_sign">Error al firmar</string>
+    <string name="d_file_err_card_sign">Error al firmar con la llave de hardware</string>
+    <string name="d_file_err_card_decrypt">Error al descifrar con la llave de hardware</string>
+    <plurals name="d_file_encrypted_to">
+        <item quantity="one">Cifrado para %1$d destinatario</item>
+        <item quantity="other">Cifrado para %1$d destinatarios</item>
+    </plurals>
+    <plurals name="d_file_encrypted_to_card">
+        <item quantity="one">Cifrado para %1$d destinatario, firmado (llave de hardware)</item>
+        <item quantity="other">Cifrado para %1$d destinatarios, firmado (llave de hardware)</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle">
+        <item quantity="one">Paquete descifrado → %1$d archivo</item>
+        <item quantity="other">Paquete descifrado → %1$d archivos</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle_card">
+        <item quantity="one">Paquete descifrado (llave de hardware) → %1$d archivo</item>
+        <item quantity="other">Paquete descifrado (llave de hardware) → %1$d archivos</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes">
+        <item quantity="one">%1$d byte descifrado</item>
+        <item quantity="other">%1$d bytes descifrados</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes_card">
+        <item quantity="one">%1$d byte descifrado (llave de hardware)</item>
+        <item quantity="other">%1$d bytes descifrados (llave de hardware)</item>
+    </plurals>
+
+    <!-- ── The signature note appended to a decrypt outcome. It carries its OWN leading
+         separator; the XML reader does not trim, so the leading spaces here are load-bearing.
+         ja uses a full-width middle dot and full-width parentheses. ── -->
+    <string name="d_file_sig_verified"> · firma VERIFICADA</string>
+    <string name="d_file_sig_unheld"> · firmado por una clave que no tienes</string>
+    <string name="d_file_sig_id_suffix"> (%1$s)</string>
+
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">Firma VERIFICADA — %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_file_verify_invalid">Firma NO VÁLIDA — el contenido no coincide con la firma</string>
+    <string name="d_file_verify_unknown_signer">Firmado por una clave que no está en el llavero</string>
+    <string name="d_file_verify_unsigned">No se encontró ninguna firma</string>
+    <string name="d_file_err_verify">Error al verificar</string>
+
+</resources>

@@ -1,0 +1,32 @@
+PGPony Desktop
+Copyright 2026 NorseHorse
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+
+This product contains source copied VERBATIM from the PGPonyAndroid repository
+(Apache License 2.0, Copyright 2026 NorseHorse), located under vendor/:
+
+    vendor/app-crypto/        the OpenPGP engine — packet handling, v4 and v6
+                              (RFC 9580) keys, the post-quantum composite layer,
+                              the OpenPGP smart-card protocol stack, MIME
+    vendor/app-data/          the Room data layer and PGPDatabase schema
+    vendor/app-backup/        the Crockford recovery-code and archive codecs
+    vendor/app-network/       the keyserver, WKD and VKS stack
+    vendor/app-strings/       the six localized strings.xml files
+    vendor/app-crypto-tests/  the crypto unit-test suite and its fixtures
+
+These files are not modified here. Fixes go upstream to PGPonyAndroid and are
+re-synced by tools/sync-vendor.sh; see vendor/README.md for the inventory and
+for the desktop-specific replacements of Android-coupled files.
+
+--------------------------------------------------------------------------------
+
+This product depends on third-party libraries, each under its own licence, as
+declared in build.gradle.kts: Compose Multiplatform, AndroidX Room and SQLite,
+Bouncy Castle, Ktor, kotlinx.serialization, org.json, and ZXing.

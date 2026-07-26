@@ -1,0 +1,757 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PGPony Desktop — the DESKTOP-OWNED string layer (base / English).
+
+  This file is the ownership list. A key declared here is served from the desktop layer and the
+  vendored Android files are never consulted for it; anything NOT here falls through to
+  vendor/app-strings/, which is a verbatim copy of the Android app's translations and must never
+  be hand-edited (see vendor/README.md, tools/sync-strings.sh).
+
+  So: add a key here only when the desktop genuinely says something Android doesn't — a PC/SC
+  reader, a file association, a window or menu-bar item, a folder path, desktop-specific framing.
+  If Android already has the sentence, reuse ITS key and get five translations for free.
+
+  Format is Android's strings.xml on purpose: `%1$s` / `%2$d` are java.util.Formatter syntax, so
+  the same audit script (tools/i18n-audit.py) runs over both layers unchanged. The `d_` prefix
+  marks desktop ownership at a glance and guarantees a future Android key can never collide.
+
+  Translations live in the sibling values-<locale>/ folders. A key missing from a translation
+  falls back to the English here — a half-translated file degrades, it never breaks.
+-->
+<resources>
+
+    <!-- ── Navigation rail ─────────────────────────────────────────────── -->
+    <!-- Android splits encrypt and decrypt into two tabs; the desktop window is wide enough
+         to host both on one surface, so the label has to name both. -->
+    <string name="d_nav_crypto">Encrypt</string>
+    <!-- Android says "Security Key" for the same hardware; the desktop supports several form
+         factors over PC/SC, so the plural reads better on the rail. -->
+    <string name="d_nav_cards">Hardware Keys</string>
+
+    <!-- ── Settings · Network ──────────────────────────────────────────── -->
+    <!-- Desktop groups proxy + key servers + refresh under one heading; Android has three
+         separate preference sections. -->
+    <string name="d_settings_section_network">Network</string>
+    <string name="d_settings_proxy_title">Proxy</string>
+    <string name="d_settings_proxy_off">Direct connection</string>
+    <!-- %1$s host, %2$d port — the local Tor SOCKS listener. Android names Orbot here; there is
+         no Orbot on the desktop, so the mode is named after what it actually is. -->
+    <string name="d_settings_proxy_tor">Tor (local daemon, %1$s:%2$d)</string>
+    <string name="d_settings_proxy_custom">Custom SOCKS proxy</string>
+    <!-- %1$s host, %2$d port -->
+    <string name="d_settings_proxy_tor_note">Requires a Tor daemon on this machine — Tor Browser (while running) or the tor service both listen on %1$s:%2$d.</string>
+    <!-- %1$s host:port -->
+    <string name="d_status_proxy_set">Proxy set: %1$s</string>
+
+    <string name="d_settings_keyservers_title">Key servers (lookup order)</string>
+    <!-- Deliberately shorter than Android's "Use for lookup" / "Use for publishing": these are
+         column labels beside a checkbox in a single dense row, not full-width list rows. -->
+    <string name="d_keyservers_lookup">Lookup</string>
+    <string name="d_keyservers_publish">Publish</string>
+    <string name="d_keyservers_first_party"> · first-party</string>
+    <string name="d_keyservers_remove">Remove server</string>
+    <string name="d_keyservers_add">Add server…</string>
+    <string name="d_keyservers_note">Lookup queries enabled servers in order (after WKD); publish offers each publish-enabled server. keys.openpgp.org verifies emails but may reject v6/PQC keys; keys.pgpony.app accepts every key type PGPony makes.</string>
+    <string name="d_keyservers_add_title">Add key server</string>
+    <string name="d_keyservers_add_url_label">Base URL (scheme + host, no trailing slash)</string>
+    <string name="d_keyservers_add_note">The server should speak the keys.openpgp.org VKS API; PGPony falls back to HKP (/pks/add) for publishing where VKS is missing.</string>
+    <!-- %1$s server name -->
+    <string name="d_status_keyserver_added">Added key server %1$s</string>
+    <!-- Desktop refreshes on a session timer rather than a scheduled OS job, so the cadence is
+         stated plainly instead of Android's battery/network wording. -->
+    <string name="d_settings_autorefresh">Refresh keys from key servers automatically (every 12 hours while running)</string>
+
+    <!-- ── Settings · Backup ───────────────────────────────────────────── -->
+    <string name="d_settings_backup_export">Back up keyring…</string>
+    <string name="d_settings_backup_restore">Restore backup…</string>
+    <string name="d_settings_backup_note">The .pgpony format cross-restores with PGPony for iOS and Android; OpenKeychain backups restore too.</string>
+    <string name="d_settings_subtitle">Everything that applies to PGPony on this computer.</string>
+    <string name="d_settings_network_note">Proxy, keyservers, and automatic key refresh.</string>
+    <string name="d_settings_appearance_note">Theme and language. Both take effect immediately.</string>
+
+    <!-- ── Settings · Password store ───────────────────────────────────── -->
+    <!-- "tab" is the desktop rail item; Android's equivalent copy talks about a screen. -->
+    <string name="d_settings_pass_show_tab">Show the Password Store tab</string>
+    <string name="d_settings_pass_note">Browses a standard `pass` store — a folder of .gpg files with .gpg-id recipient files — and decrypts entries with your keyring, software or hardware key. Read-only: PGPony never writes to the store.</string>
+    <string name="d_settings_pass_default_location">Default location:</string>
+    <plurals name="d_settings_pass_status_configured">
+        <!-- %1$d store count -->
+        <item quantity="one">%1$d store configured — manage it on the Password Store tab.</item>
+        <item quantity="other">%1$d stores configured — manage them on the Password Store tab.</item>
+    </plurals>
+    <string name="d_settings_pass_status_exists">This folder exists — add it on the Password Store tab.</string>
+    <string name="d_settings_pass_status_none">No store here yet. PASSWORD_STORE_DIR is honored if you set it; otherwise add any folder on the Password Store tab.</string>
+
+    <!-- ── Settings · Clipboard ────────────────────────────────────────── -->
+    <!-- Android offers fixed intervals (30s/1m/2m/5m); the desktop takes a number, so it needs
+         a field label, an Apply button and a range note Android has no use for. -->
+    <string name="d_settings_clipboard_autoclear">Clear copied secrets automatically</string>
+    <string name="d_settings_clipboard_seconds_label">Seconds</string>
+    <string name="d_settings_clipboard_note">5–600 seconds. The timer only clears the clipboard if it still holds what PGPony put there — if you copied something else, your clipboard is left alone. Note that a clipboard manager or a sync service (KDE Klipper, Windows cloud clipboard, macOS Universal Clipboard) may keep a copy PGPony cannot reach.</string>
+    <!-- %1$d seconds -->
+    <string name="d_status_clipboard_seconds">Clipboard clears after %1$ds</string>
+
+    <!-- ── Settings · Appearance · Language ────────────────────────────── -->
+    <!-- %1$s the language the OS resolves to, e.g. "System (Deutsch)". -->
+    <string name="d_settings_language_system">System (%1$s)</string>
+    <!-- Android's language_picker_footer warns that some screens need a restart. The desktop
+         picker re-renders the whole window on the next frame, so it says the opposite. -->
+    <string name="d_settings_language_note">The whole window switches immediately — no restart. Text that comes from your keys or your files is shown as they store it and is never translated.</string>
+
+    <!-- ── Settings · Storage ──────────────────────────────────────────── -->
+    <!-- Desktop-only: Android has no user-visible data folder to name. -->
+    <string name="d_settings_section_storage">Storage</string>
+    <string name="d_settings_storage_data_folder">Data folder:</string>
+    <string name="d_settings_storage_note">Key metadata lives in pgpony.db (the same Room schema as PGPony for Android); armored key material lives under keys/, one file per key half, mode 0600. Secret keys stay in their own passphrase (S2K) protection at rest — the store adds no crypto of its own.</string>
+
+    <!-- ── Settings · About ────────────────────────────────────────────── -->
+    <!-- %1$s version string -->
+    <string name="d_settings_about_version">PGPony Desktop %1$s</string>
+    <string name="d_settings_about_note">Same OpenPGP engine and Room schema as PGPony for Android (vendored, not rewritten).</string>
+    <string name="d_about_title">About PGPony</string>
+    <string name="d_about_links">Links</string>
+
+    <!-- ── Shared desktop buttons ──────────────────────────────────────── -->
+    <!-- Android commits an edit by leaving the row; the desktop's text fields need an explicit
+         commit, so "Apply" has no Android counterpart to reuse. -->
+    <string name="d_common_apply">Apply</string>
+    <string name="d_common_add">Add</string>
+    <string name="d_common_clear_now">Clear now</string>
+    <string name="d_common_remove">Remove</string>
+
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
+    <string name="d_settings_storage_open_folder">Open folder</string>
+    <string name="d_settings_storage_copy_path">Copy path</string>
+
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
+    <string name="d_settings_about_repo">Source code on GitHub</string>
+    <string name="d_settings_about_repo_note">The desktop source is published with the 1.0 release. The Android app and the shared crypto cores are already public.</string>
+    <string name="d_settings_about_issues">Report a problem</string>
+    <string name="d_settings_about_website">PGPony website</string>
+    <string name="d_settings_about_runtime_label">Runtime:</string>
+    <string name="d_settings_about_copy_diagnostics">Copy</string>
+
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
+    <!-- The app NAMES and the platform lists next to them are proper nouns and stay in English
+         in every locale; only these sentences are translated. -->
+    <string name="d_settings_section_apps">More from NorseHorse</string>
+    <string name="d_settings_apps_note">The rest of the family, by the same developer. Links open in your browser.</string>
+    <string name="d_app_pgpony_desc">The same keyring everywhere — one OpenPGP engine and one backup format, from phone to desktop.</string>
+    <string name="d_app_carrierpony_desc">End-to-end encrypted messages and file transfer over OpenPGP. No account, no phone number.</string>
+    <string name="d_app_agepony_desc">File encryption and detached signing built on age. Encrypt to a GitHub username, sign with a security key.</string>
+    <string name="d_app_quorumpony_desc">Split a secret across backup cards. A threshold of them restores it; any single one reveals nothing.</string>
+    <string name="d_app_relaypony_desc">Send files straight from one device to another over Wi-Fi. Encrypted end to end, with no server in between.</string>
+    <string name="d_app_burnpony_desc">Self-destructing encrypted notes, sealed on your device and gone once they have been read.</string>
+
+    <!-- ── Status line ───────────────────────────────────── -->
+    <string name="d_status_copied">Copied to the clipboard.</string>
+    <!-- %1$s the address or path that could not be opened -->
+    <string name="d_status_open_failed">Could not open %1$s — it is on your clipboard instead.</string>
+
+
+    <!-- ═══ Encrypt · Decrypt screen (D11b) ══════════════════════════════ -->
+
+    <!-- ── Tabs and file operations ────────────────────────────────────── -->
+    <!-- Encrypt/Decrypt/Sign/Verify reuse the Android tab keys. Android has no Files tab:
+         there, file mode is a sub-mode of Encrypt. The two FileOp labels say "(detached)"
+         because a file signature is always detached — there is nothing to clear-sign. -->
+    <string name="d_crypto_tab_files">Files</string>
+    <string name="d_crypto_fileop_sign">Sign (detached)</string>
+    <string name="d_crypto_fileop_verify">Verify (detached)</string>
+    <string name="d_crypto_err_generic">Operation failed</string>
+
+    <!-- ── Files pane ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_add_files">Add files…</string>
+    <string name="d_crypto_drop_hint">…or drop files anywhere on the window</string>
+    <string name="d_crypto_no_files">No files selected.</string>
+    <string name="d_crypto_no_files_title">No files queued</string>
+    <string name="d_crypto_result_ok">OK</string>
+    <string name="d_crypto_result_failed">FAILED</string>
+    <string name="d_crypto_signer_pass_label">Signer passphrase (blank if unprotected)</string>
+    <string name="d_crypto_armor_gpg">ASCII armor (.asc instead of binary .gpg)</string>
+    <string name="d_crypto_armor_sig">ASCII armor (.asc instead of binary .sig)</string>
+    <string name="d_crypto_decrypt_pass_label">Key or message passphrase</string>
+    <string name="d_crypto_decrypt_files_note">Decrypted files restore the original name from the message when present and never overwrite existing files.</string>
+    <string name="d_crypto_sign_as_colon">Sign as:</string>
+    <string name="d_crypto_verify_files_hint">Select a .sig/.asc signature whose content file sits next to it (same name without the extension), or exactly two files — the signature and the content.</string>
+    <string name="d_crypto_err_no_pairing">No signature/content pairing found — see the hint above</string>
+    <string name="d_crypto_err_no_signer">No key pair to sign with</string>
+    <string name="d_crypto_files_done">%1$d/%2$d file(s) processed</string>
+    <string name="d_crypto_files_partial">%1$d/%2$d succeeded — see per-file results</string>
+    <string name="d_crypto_run_op">Run %1$s</string>
+    <string name="d_crypto_input_verify">Clear-signed message or armored signature</string>
+
+    <!-- ── Encrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_encrypt_with">Encrypt with:</string>
+    <string name="d_crypto_with_public_keys">Public keys</string>
+    <string name="d_crypto_attach_files">Attach files…</string>
+    <string name="d_crypto_clear_attachments">Clear attachments</string>
+    <string name="d_crypto_bundle_note">Sent as a PGP/MIME bundle — body + %1$d attachment(s) inside one encrypted multipart/mixed.</string>
+    <string name="d_crypto_err_card_or_recipient_load">A recipient or the card key failed to load</string>
+    <string name="d_crypto_card_sign_encrypt_title">Sign &amp; encrypt on %1$s</string>
+    <string name="d_crypto_hardware_key">hardware key</string>
+    <string name="d_crypto_err_pubkey_missing">Couldn’t load the public key for \"%1$s\" — its stored key material is missing. Remove that entry from the Keyring and re-import the public key.</string>
+    <string name="d_crypto_err_signer_load">Signing key %1$s could not be loaded — nothing was encrypted. (Uncheck Sign as to send unsigned.)</string>
+    <string name="d_crypto_banner_encrypted">Encrypted to %1$d recipient(s)</string>
+    <string name="d_crypto_banner_encrypted_card">Encrypted to %1$d recipient(s), signed on card as %2$s</string>
+    <string name="d_crypto_banner_encrypted_pass">Encrypted with passphrase</string>
+    <string name="d_crypto_banner_signed_as">, signed as %1$s (%2$s)</string>
+    <string name="d_crypto_banner_unsigned">, UNSIGNED</string>
+
+    <!-- ── Banners: stems and fragments ────────────────────────────────── -->
+    <!-- The banner sentences are assembled from a stem plus optional suffix fragments,
+         because the same three optional clauses (a resolved signer, a raw key ID, an
+         attachment count) attach to six different stems. The *_suffix keys below are
+         FRAGMENTS, not sentences: each one carries its own leading separator so a
+         translator can move the punctuation, and each is appended to a stem above.
+         Translate them as continuations, never as standalone lines. -->
+    <string name="d_crypto_banner_bundle_suffix"> · bundle with %1$d attachment(s)</string>
+    <string name="d_crypto_banner_attach_suffix"> · %1$d attachment(s)</string>
+    <string name="d_crypto_banner_signer_suffix"> — %1$s</string>
+    <string name="d_crypto_banner_keyid_suffix"> (key ID %1$s)</string>
+
+    <!-- ── Decrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_decrypt_note">Accepts an armored message or a full PGP/MIME .eml — bundles show their attachments beside the output.</string>
+    <string name="d_crypto_card_decrypt_title">Decrypt on %1$s</string>
+    <string name="d_crypto_banner_decrypted_card_verified">Decrypted on card · signature VERIFIED</string>
+    <string name="d_crypto_banner_decrypted_card_unknown">Decrypted on card · signer not in your keyring</string>
+    <string name="d_crypto_banner_decrypted_card_unsigned">Decrypted on card · no signature</string>
+    <string name="d_crypto_banner_decrypted_verified">Decrypted · signature VERIFIED</string>
+    <string name="d_crypto_banner_decrypted_unknown">Decrypted · signed by a key not in your keyring</string>
+    <string name="d_crypto_banner_decrypted_unsigned">Decrypted · no signature</string>
+
+    <!-- ── Sign tab ────────────────────────────────────────────────────── -->
+    <string name="d_crypto_detached_toggle">Detached signature (signature only, text stays separate)</string>
+    <string name="d_crypto_clear_signed">Clear-signed</string>
+    <string name="d_crypto_err_card_pubkey">Card public key could not be loaded</string>
+    <string name="d_crypto_card_sign_title">Sign on %1$s</string>
+    <string name="d_crypto_banner_signed_card">%1$s on card · %2$s</string>
+    <string name="d_crypto_banner_signed">%1$s · %2$s</string>
+    <string name="d_crypto_err_signer_ring">Signer secret ring failed to load</string>
+
+    <!-- ── Verify tab ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_verify_hint">Paste a clear-signed message above. For a detached signature, paste the signature above and the original text below.</string>
+    <string name="d_crypto_detached_content_label">Original text (detached verification only)</string>
+    <string name="d_crypto_err_detached_needs_text">Detached signature — paste the original text in the second field</string>
+    <string name="d_crypto_err_is_encrypted">This is an encrypted message — use the Decrypt tab</string>
+    <string name="d_crypto_err_no_framing">No recognizable PGP signature framing found</string>
+    <string name="d_crypto_banner_verified">Signature VERIFIED — %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_invalid">Signature INVALID — the content does not match the signature</string>
+    <string name="d_crypto_banner_unknown_signer">Signed by a key not in your keyring — import the signer\'s public key to verify</string>
+    <string name="d_crypto_banner_no_signature">No signature found in the input</string>
+
+    <!-- ── Output pane ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_output">Output</string>
+    <string name="d_crypto_attachment_meta">%1$s · %2$d bytes</string>
+    <string name="d_common_save_as">Save…</string>
+    <string name="d_crypto_copy_output">Copy output</string>
+    <string name="d_crypto_save_eml">Save .eml…</string>
+    <string name="d_status_saved">Saved %1$s</string>
+    <string name="d_status_saved_bytes">Saved %1$s (%2$d bytes)</string>
+    <string name="d_crypto_cancelled">Cancelled</string>
+    <string name="d_crypto_no_signer_available">No key pair available</string>
+
+    <!-- ── Hardware-key batch prompts ──────────────────────────────────── -->
+    <!-- %1$d file count, %2$s the key's user ID (or d_crypto_hardware_key when it is blank). -->
+    <string name="d_crypto_card_sign_files">Sign %1$d file(s) on %2$s</string>
+    <string name="d_crypto_card_sign_encrypt_files">Sign &amp; encrypt %1$d file(s) on %2$s</string>
+    <string name="d_crypto_card_decrypt_files">Decrypt %1$d file(s) on %2$s</string>
+
+
+    <!-- ═══ Password Store screen (D11b) ═════════════════════════════════ -->
+
+    <!-- Android ships this surface as three screens (PassStoreListScreen /
+         PassBrowserScreen / PassEntryScreen), so seventeen strings on the desktop screen are
+         ANDROID keys reused verbatim and are not repeated here. A d_pass_* key is minted only
+         where the desktop says something the phone doesn't: the store bar, the auto-relock note
+         that stands in for the biometric gate, the search-hit count, and the live-TOTP block,
+         which on Android is still the "code generation is not supported" apology. -->
+
+    <!-- ── Store bar ───────────────────────────────────────────────────── -->
+    <string name="d_pass_store_unreadable">Can\'t read %1$s — moved, unmounted, or no longer readable.</string>
+    <string name="d_pass_not_a_store">Not a readable password store: %1$s</string>
+    <string name="d_pass_store_added">Password store added — %1$s</string>
+    <string name="d_pass_choose_store">Choose store</string>
+    <string name="d_pass_add_store">Add store…</string>
+    <string name="d_pass_store_title">Password Store</string>
+    <string name="d_pass_use_default">Use ~/.password-store</string>
+    <string name="d_pass_rescan">Rescan</string>
+    <string name="d_pass_empty_title">No password store yet</string>
+    <string name="d_pass_select_entry_title">Nothing selected</string>
+    <string name="d_pass_store_removed">Removed %1$s from PGPony (the folder is untouched)</string>
+    <string name="d_pass_choose_folder">Choose password store folder</string>
+
+    <!-- ── Browser pane ────────────────────────────────────────────────── -->
+    <string name="d_pass_search_label">Search entries</string>
+    <string name="d_pass_no_entries">No entries.</string>
+    <plurals name="d_pass_match_count">
+        <!-- %1$d match count -->
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
+    <string name="d_pass_up">Up one folder</string>
+    <string name="d_pass_select_entry">Select an entry to decrypt it.</string>
+    <string name="d_pass_empty_intro">Point PGPony at a `pass` store — a folder of OpenPGP-encrypted .gpg files, the layout the standard password-store tools use.</string>
+    <string name="d_pass_empty_detail">The store is read in place, so whatever syncs it (git, Syncthing, Nextcloud) keeps working. PGPony reads only: it never writes, moves, or re-encrypts anything in the folder. Entries are decrypted one at a time, when you open them — browsing the tree reads filenames only.</string>
+
+    <!-- ── Entry pane ──────────────────────────────────────────────────── -->
+    <string name="d_pass_entry_missing">Entry file is missing or unreadable.</string>
+    <string name="d_pass_no_matching_key">No key in your keyring can open this entry. Import the secret key it\'s encrypted to, or pair the hardware key that holds it.</string>
+    <string name="d_pass_decrypting">Decrypting…</string>
+    <string name="d_pass_card_entry">This entry is encrypted to a hardware key.</string>
+    <string name="d_pass_card_key_missing">The paired card key for this entry isn\'t in your keyring.</string>
+    <string name="d_pass_card_decrypt_title">Decrypt %1$s on %2$s</string>
+    <string name="d_pass_card_failed">Hardware-key decryption failed: %1$s</string>
+    <string name="d_pass_encrypted_to">Encrypted to: %1$s</string>
+    <string name="d_common_reveal">Reveal</string>
+    <string name="d_common_hide">Hide</string>
+    <string name="d_pass_password_copied">Password copied</string>
+    <string name="d_pass_password_copied_clearing">Password copied — clipboard clears in %1$ds</string>
+    <string name="d_pass_copy_password">Copy password</string>
+    <string name="d_pass_clipboard_countdown">Clipboard clears in %1$ds</string>
+    <string name="d_pass_fields">Fields</string>
+    <string name="d_pass_field_copied">%1$s copied</string>
+    <string name="d_pass_copy_field">Copy %1$s</string>
+    <string name="d_pass_lock">Lock</string>
+    <string name="d_pass_relock_note">Locks itself after %1$ds.</string>
+
+    <!-- ── One-time codes ──────────────────────────────────────────────── -->
+    <!-- The desktop generates TOTP codes itself; Android only stores the otpauth URI.
+         d_pass_otp_meta: %1$s label, %2$s algorithm, %3$d digit count, %4$d period seconds. -->
+    <string name="d_pass_otp_unparsable">PGPony can\'t generate codes from this URI — it isn\'t a TOTP URI, or its secret isn\'t valid base32. Use your authenticator app for this entry.</string>
+    <string name="d_pass_otp_uri_copied">otpauth URI copied</string>
+    <string name="d_pass_copy_uri">Copy URI</string>
+    <string name="d_pass_otp_no_provider">This JVM has no HMAC-%1$s provider, so the code can\'t be generated here.</string>
+    <string name="d_pass_code_copied">Code copied</string>
+    <string name="d_pass_code_copied_clearing">Code copied — clipboard clears in %1$ds</string>
+    <string name="d_pass_copy_code">Copy one-time code</string>
+    <string name="d_pass_otp_rolls_in">rolls in %1$ds</string>
+    <string name="d_pass_otp_meta">%1$s — %2$s, %3$d digits, %4$ds</string>
+    <string name="d_pass_show_uri">Show setup URI</string>
+    <string name="d_pass_hide_uri">Hide setup URI</string>
+    <string name="d_pass_copy_setup_uri">Copy setup URI</string>
+
+
+    <!-- ═══ Hardware Keys screen (D11b) ═══════════════════════════════ -->
+    <string name="d_cards_subtitle">OpenPGP smart cards over USB — YubiKey 5, Token2, Nitrokey 3 and friends. Secrets live on the key and never touch this computer.</string>
+
+    <!-- ── Reader row (USB PC/SC — the phone taps NFC instead) ─────────── -->
+    <string name="d_cards_reader_label">Reader:</string>
+    <string name="d_cards_no_reader">No reader found</string>
+    <string name="d_cards_reader_with_card">%1$s · card present</string>
+    <string name="d_cards_read_card">Read card</string>
+    <string name="d_cards_no_reader_detected">No PC/SC reader detected. Plug in the key (it enumerates as its own reader).</string>
+    <string name="d_cards_no_reader_linux">On Linux, install and start pcscd.</string>
+    <string name="d_cards_section_reader">Reader</string>
+    <string name="d_cards_no_reader_title">No reader detected</string>
+    <string name="d_cards_no_card_title">No card read yet</string>
+    <string name="d_cards_no_card_body">Insert the hardware key and choose Read card. PGPony reads the card\'s public slots only — nothing is written to it.</string>
+
+    <!-- ── Card info ──────────────────────────────────────────────────── -->
+    <string name="d_cards_aid">AID %1$s</string>
+    <string name="d_cards_pin_tries">PIN tries remaining — user: %1$d · admin: %2$d</string>
+
+    <!-- ── Pairing ────────────────────────────────────────────────────── -->
+    <string name="d_cards_paired">Paired — keyring row: %1$s</string>
+    <string name="d_cards_pair">Pair with keyring</string>
+    <string name="d_cards_keygen_open">Generate keys on card…</string>
+    <string name="d_cards_pair_note">Pairing records the card in your keyring so messages can be addressed to it and decrypt/sign route through the hardware. If the card\'s public key certificate is already in your keyring (import it or fetch from a key server), pairing links onto that row — offline-primary layouts included.</string>
+    <string name="d_cards_keygen_done">Generated on card and paired — %1$s. Export and BACK UP the public key; the secret keys cannot leave the card.</string>
+
+    <!-- ── Management buttons (ellipsis = opens a dialog) ──────────────── -->
+    <string name="d_cards_change_pin_open">Change PIN…</string>
+    <string name="d_cards_change_admin_open">Change Admin PIN…</string>
+    <string name="d_cards_unblock_open">Unblock PIN…</string>
+    <string name="d_cards_reset_open">Factory reset…</string>
+
+    <!-- ── PIN cache ──────────────────────────────────────────────────── -->
+    <string name="d_cards_pin_cache_title">PIN cache</string>
+    <string name="d_cards_pin_cache_toggle">Remember the user PIN after a successful operation</string>
+    <string name="d_cards_pin_cache_keep_for">Keep for:</string>
+    <string name="d_cards_pin_cache_custom_seconds">%1$d s</string>
+    <string name="d_cards_pin_held_no_timer">PIN held (no timer)</string>
+    <string name="d_cards_pin_cache_note">Held in memory only — never written to disk. A wrong PIN, quitting the app, or Clear now drops it. The Admin PIN is never cached.</string>
+
+    <!-- ── Dialogs ────────────────────────────────────────────────────── -->
+    <string name="d_cards_new_pin_min6">New PIN (min 6)</string>
+    <string name="d_cards_new_admin_min8">New Admin PIN (min 8)</string>
+    <string name="d_cards_new_user_pin_min6">New user PIN (min 6)</string>
+    <string name="d_cards_pin_retry_warning">Wrong entries burn retry attempts — the card blocks after too many.</string>
+    <string name="d_cards_reset_warning">This ERASES every key on the card and resets both PINs to their defaults (123456 / 12345678). Keys generated on-card are unrecoverable. This cannot be undone.</string>
+    <string name="d_cards_reset_type_prompt">Type %1$s to confirm</string>
+    <string name="d_cards_reset_confirm">Erase card</string>
+    <string name="d_cards_keygen_warning">Generates an Ed25519 signing key + Cv25519 encryption key ON the card. OVERWRITES the card\'s signature and decryption slots. The private keys never leave the hardware and CANNOT be backed up — lose the card, lose the keys.</string>
+    <string name="d_cards_expires_colon">Expires:</string>
+    <string name="d_cards_keygen_ack">I understand this overwrites the card\'s keys and they can\'t be backed up</string>
+
+    <!-- ── Shared desktop buttons (cont.) ─────────────────────────────── -->
+    <string name="d_common_working">Working…</string>
+
+
+    <!-- ═══ Key detail dialog (D11b) ══════════════════════ -->
+    <string name="d_keydetail_no_user_id">(no user ID)</string>
+    <string name="d_keydetail_badge_secret">SECRET</string>
+    <string name="d_keydetail_badge_card">CARD</string>
+    <string name="d_keydetail_badge_expired">EXPIRED</string>
+
+    <!-- ── Identity ────────────────────────────────────── -->
+    <string name="d_keydetail_copy_fingerprint">Copy fingerprint</string>
+    <string name="d_keydetail_status_fingerprint_copied">Fingerprint copied</string>
+    <string name="d_keydetail_key_id">Key ID</string>
+    <string name="d_keydetail_make_default_signing">Make default signing key</string>
+
+    <!-- ── Subkey list ─────────────────────────────────── -->
+    <string name="d_keydetail_section_keys">Keys (%1$d)</string>
+    <string name="d_keydetail_subkey">Subkey</string>
+    <string name="d_keydetail_subkey_meta">%1$s · Created %2$s</string>
+    <string name="d_keydetail_subkey_meta_expires">%1$s · Created %2$s · Expires %3$s</string>
+
+    <!-- ── Export row (short labels; Android's are phone-sized sentences) ─ -->
+    <string name="d_keydetail_copy_public">Copy public</string>
+    <string name="d_keydetail_export_public">Export public…</string>
+    <string name="d_keydetail_show_qr">Show QR…</string>
+    <string name="d_keydetail_export_secret">Export secret…</string>
+    <string name="d_keydetail_status_pub_copied">Public key copied — %1$s</string>
+    <string name="d_keydetail_err_no_public_armor">No public armor stored</string>
+    <string name="d_keydetail_secret_export_note">Exported secret keys keep their passphrase (S2K) protection.</string>
+
+    <!-- ── Key servers ─────────────────────────────────── -->
+    <string name="d_keydetail_refresh_servers">Refresh from key servers</string>
+
+    <!-- ── Danger zone + save dialog ───────────────────── -->
+    <string name="d_keydetail_danger_zone">Danger zone</string>
+    <string name="d_keydetail_save_dialog_title">Export key</string>
+    <string name="d_keydetail_status_exported">Exported %1$s</string>
+    <string name="d_keydetail_status_nothing_to_export">Nothing to export</string>
+
+    <!-- ── QR dialog ───────────────────────────────────── -->
+    <string name="d_keydetail_qr_title">Public key QR</string>
+    <string name="d_keydetail_qr_hint">Scan with PGPony on another device to import %1$s.</string>
+    <string name="d_keydetail_qr_too_large">This key is too large to fit in a QR code — export the .asc file and share that instead.</string>
+    <string name="d_keydetail_qr_no_material">No public key material to show.</string>
+    <string name="d_keydetail_qr_save_png">Save PNG…</string>
+    <string name="d_keydetail_status_qr_saved">QR saved — %1$s</string>
+
+    <!-- ── Expiration dialog ───────────────────────────── -->
+    <string name="d_keydetail_expiry_never">Never expires</string>
+    <string name="d_keydetail_expiry_date_label">Expires on (YYYY-MM-DD)</string>
+    <string name="d_keydetail_expiry_note">Re-signs the key\'s self-certification and subkey bindings.</string>
+
+    <!-- ── Revoke dialog ──────────────────────────────── -->
+    <string name="d_keydetail_revoke_title">Revoke %1$s</string>
+    <string name="d_keydetail_revoke_warning">Revocation marks this key as unusable for new signatures and encryption. Past messages remain decryptable. This cannot be undone.</string>
+    <string name="d_keydetail_revoke_ack">I understand this cannot be undone</string>
+
+    <!-- ── Shared desktop buttons (cont.) ───────────────── -->
+    <string name="d_common_edit_ellipsis">Edit…</string>
+    <string name="d_common_add_ellipsis">Add…</string>
+    <string name="d_common_rendering">Rendering…</string>
+
+
+    <!-- ═══ Keyring repository (D11b) ════════════════ -->
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
+    <plurals name="d_import_summary_blocks">
+        <!-- %1$d total blocks, %2$s assembled clause list -->
+        <item quantity="one">%1$d block: %2$s</item>
+        <item quantity="other">%1$d blocks: %2$s</item>
+    </plurals>
+    <plurals name="d_import_summary_added">
+        <item quantity="one">%1$d added</item>
+        <item quantity="other">%1$d added</item>
+    </plurals>
+    <plurals name="d_import_summary_upgraded">
+        <item quantity="one">, %1$d upgraded to key pair</item>
+        <item quantity="other">, %1$d upgraded to key pairs</item>
+    </plurals>
+    <plurals name="d_import_summary_merged">
+        <item quantity="one">, %1$d merged new material</item>
+        <item quantity="other">, %1$d merged new material</item>
+    </plurals>
+    <plurals name="d_import_summary_already">
+        <item quantity="one">, %1$d already in keyring</item>
+        <item quantity="other">, %1$d already in keyring</item>
+    </plurals>
+    <plurals name="d_import_summary_failed">
+        <item quantity="one">, %1$d failed</item>
+        <item quantity="other">, %1$d failed</item>
+    </plurals>
+
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
+    <string name="d_repo_err_no_card_keys">No OpenPGP keys found on this card</string>
+    <string name="d_repo_err_key_not_found">Key not found: %1$s</string>
+    <string name="d_repo_err_revoke_public_only">Cannot revoke a public-only key — the private key is required to sign</string>
+    <string name="d_repo_err_secret_ring_load">Secret key ring could not be loaded for %1$s</string>
+    <string name="d_repo_err_public_ring_load">Public key ring could not be loaded for %1$s</string>
+    <string name="d_repo_err_no_public_ring">Generated key produced no public key ring</string>
+    <string name="d_repo_err_card_row_missing">Generated card key row not found after import</string>
+    <string name="d_repo_err_expiry_public_only">Cannot edit expiration on a public-only key — the private key is required to re-sign.</string>
+    <string name="d_repo_err_expiry_card">This key lives on a hardware key — changing its expiration isn\'t supported here yet.</string>
+
+    <!-- ═══ Window shell: tray, menu bar, status line (D11b) ═══ -->
+    <!-- ── Status line ── -->
+    <string name="d_list_separator">, </string>
+    <string name="d_status_migrated_legacy">Migrated the legacy keyring — %1$s</string>
+    <string name="d_status_autorefresh">Key server auto-refresh: %1$s</string>
+    <string name="d_status_import">Import — %1$s</string>
+    <string name="d_status_generating">Generating %1$s key…</string>
+    <string name="d_status_generated">Generated %1$s — %2$s</string>
+    <string name="d_status_generate_failed">Generation failed: %1$s</string>
+    <string name="d_status_deleted">Deleted %1$s</string>
+    <string name="d_status_trust_set">Trust set to %1$s — %2$s</string>
+    <string name="d_status_expiration_removed">Expiration removed — key never expires</string>
+    <string name="d_status_expiration_updated">Expiration updated</string>
+    <string name="d_status_expiration_failed">Expiration edit failed: %1$s</string>
+    <string name="d_status_revoked">Revoked %1$s (%2$s)</string>
+    <string name="d_status_checking_servers">Checking key servers — %1$s…</string>
+    <string name="d_status_refresh_not_published">Not published on any enabled key server</string>
+    <string name="d_status_refresh_also_merged"> (new material merged too)</string>
+    <string name="d_status_refresh_key_missing">Key not found in the keyring</string>
+    <plurals name="d_status_files_dropped">
+        <item quantity="one">%1$d file dropped</item>
+        <item quantity="other">%1$d files dropped</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_revoked">
+        <item quantity="one">%1$d key REVOKED upstream</item>
+        <item quantity="other">%1$d keys REVOKED upstream</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_updated">
+        <item quantity="one">%1$d key updated</item>
+        <item quantity="other">%1$d keys updated</item>
+    </plurals>
+
+    <!-- ── Tray + expiration notifications ── -->
+    <string name="d_tray_open">Open PGPony</string>
+    <string name="d_tray_quit">Quit PGPony</string>
+    <string name="d_notif_key_expiring">PGPony — key expiring</string>
+    <string name="d_notif_key_expiration">PGPony — key expiration</string>
+
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
+    <string name="d_menu_file">File</string>
+    <string name="d_menu_file_mnemonic">F</string>
+    <string name="d_menu_goto_keyring">Go to Keyring (import)</string>
+    <string name="d_menu_restore_backup">Restore backup…</string>
+    <string name="d_menu_quit">Quit</string>
+    <string name="d_menu_keys">Keys</string>
+    <string name="d_menu_keys_mnemonic">K</string>
+    <string name="d_menu_new_key">New key…</string>
+    <string name="d_menu_hardware_keys">Hardware keys</string>
+    <string name="d_menu_message">Message</string>
+    <string name="d_menu_message_mnemonic">M</string>
+    <string name="d_menu_help">Help</string>
+    <string name="d_menu_help_mnemonic">H</string>
+    <string name="d_menu_about">About PGPony</string>
+    <string name="d_menu_encrypt_decrypt">Encrypt / Decrypt</string>
+
+    <!-- ═══ Batch 1: key generation, cards, key refresh, expiry (D11b) ═══ -->
+    <!-- ── Generate-key dialog. The algorithm names themselves (Ed25519, RSA 4096) are
+         spec names and stay untranslated — only the one-line hints are keys. ── -->
+    <string name="d_gen_hint_ed25519">Recommended — modern, compact, works everywhere</string>
+    <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id protection; best with current tooling</string>
+    <string name="d_gen_hint_pq_v6">Post-quantum (IETF draft, v6) — ML-KEM-768 + X25519</string>
+    <string name="d_gen_hint_pq_librepgp">Post-quantum (LibrePGP) — interops with GnuPG 2.5</string>
+    <string name="d_gen_hint_rsa4096">Large, slow, maximum legacy compatibility</string>
+    <string name="d_gen_hint_rsa2048">Legacy compatibility only</string>
+    <string name="d_gen_no_passphrase_warning">No passphrase: the secret key will be stored unprotected on this computer.</string>
+
+    <!-- ── Card dialog + PC/SC transport errors. The reader name is an argument; the
+         quotes around it are per-locale. ── -->
+    <string name="d_cards_choose_reader">Choose reader</string>
+    <string name="d_cards_rescan">Rescan</string>
+    <string name="d_cards_pin_pw1">Card PIN (PW1)</string>
+    <string name="d_cards_talking_touch">Talking to the hardware key… if it has touch confirmation, tap it now.</string>
+    <string name="d_cards_pin_scope_note">The PIN authorizes this one operation on the key itself; secrets never leave the hardware.</string>
+    <string name="d_common_run">Run</string>
+    <string name="d_card_err_unplugged">Hardware key was unplugged mid-operation</string>
+    <string name="d_card_err_io">Card I/O failed: %1$s</string>
+    <string name="d_card_err_connect">Could not connect to the card in "%1$s": %2$s</string>
+    <string name="d_card_err_no_service">No smart-card service available</string>
+    <string name="d_card_err_pcscd_hint"> — is pcscd installed and running?</string>
+    <string name="d_card_err_detail_suffix"> (%1$s)</string>
+    <string name="d_card_err_reader_gone">Reader "%1$s" is no longer attached.</string>
+    <string name="d_card_err_no_card">No card present in "%1$s" — insert or re-plug your hardware key.</string>
+
+    <!-- ── Key server refresh failures ── -->
+    <string name="d_refresh_err_no_servers">No lookup-enabled key servers configured</string>
+    <string name="d_refresh_err_server_prefix">%1$s: %2$s</string>
+    <string name="d_refresh_err_parse">Could not parse the keyserver response: %1$s</string>
+
+    <!-- ── Expiration reminders. The WHOLE headline is a key with the key name as an
+         argument; concatenating a name and a phrase would freeze English word order. ── -->
+    <string name="d_expiry_headline_expired">%1$s has EXPIRED</string>
+    <string name="d_expiry_headline_today">%1$s expires today</string>
+    <string name="d_expiry_headline_tomorrow">%1$s expires tomorrow</string>
+    <plurals name="d_expiry_headline_days">
+        <item quantity="one">%2$s expires in %1$d day</item>
+        <item quantity="other">%2$s expires in %1$d days</item>
+    </plurals>
+
+    <!-- ═══ Batch 2: backup service + backup dialogs (D11b) ═══ -->
+    <!-- ── Backup/restore engine errors. The four d_backup_detail_* values are the
+         inner cause spliced into d_backup_err_corrupt, so they are sentence fragments. ── -->
+    <string name="d_backup_err_not_a_backup">This file isn\'t a PGPony backup</string>
+    <string name="d_backup_err_wrong_code">That recovery code didn\'t unlock the backup</string>
+    <string name="d_backup_err_corrupt">The backup is damaged: %1$s</string>
+    <string name="d_backup_err_empty_keyring">There are no keys to back up</string>
+    <string name="d_backup_detail_unreadable_archive">unreadable archive</string>
+    <string name="d_backup_detail_empty_archive">empty archive</string>
+    <string name="d_backup_detail_no_keys">no keys found in backup</string>
+    <string name="d_backup_detail_integrity">integrity check failed</string>
+    <string name="d_restore_unreadable_block">unreadable key block</string>
+
+    <!-- ── Restore summary clauses. Each clause carries its OWN leading separator so a
+         locale can choose its own punctuation; the added clause never has one. ── -->
+    <plurals name="d_restore_summary_added">
+        <item quantity="one">%1$d added</item>
+        <item quantity="other">%1$d added</item>
+    </plurals>
+    <plurals name="d_restore_summary_upgraded">
+        <item quantity="one">, %1$d upgraded to key pair</item>
+        <item quantity="other">, %1$d upgraded to key pairs</item>
+    </plurals>
+    <plurals name="d_restore_summary_updated">
+        <item quantity="one">, %1$d updated</item>
+        <item quantity="other">, %1$d updated</item>
+    </plurals>
+    <plurals name="d_restore_summary_unchanged">
+        <item quantity="one">, %1$d already up to date</item>
+        <item quantity="other">, %1$d already up to date</item>
+    </plurals>
+    <plurals name="d_restore_summary_failed">
+        <item quantity="one">, %1$d couldn\'t restore</item>
+        <item quantity="other">, %1$d couldn\'t restore</item>
+    </plurals>
+
+    <!-- ── Export/restore dialogs. The merge-report section labels reuse the Android
+         restore_* keys verbatim. ── -->
+    <string name="d_backup_export_title">Back up keyring</string>
+    <string name="d_backup_export_intro">Everything in your keyring — secret keys stay in their own passphrase protection. The whole file is sealed with this recovery code:</string>
+    <string name="d_backup_code_copied">Recovery code copied</string>
+    <string name="d_backup_reenter_warning">Write it down or store it in a password manager — without it the backup cannot be opened. Re-enter it to continue:</string>
+    <string name="d_backup_save_action">Save backup…</string>
+    <string name="d_backup_saved_status">Backup saved — %1$s</string>
+    <string name="d_backup_failed">Backup failed</string>
+    <string name="d_backup_save_dialog_title">Save backup</string>
+    <string name="d_restore_title">Restore backup</string>
+    <string name="d_restore_choose_file">Choose backup file…</string>
+    <string name="d_restore_kind_pgpony">PGPony backup</string>
+    <string name="d_restore_kind_okc">OpenKeychain backup</string>
+    <string name="d_restore_code_label_okc">Backup code (9×4 digits)</string>
+    <string name="d_restore_note">Restore never overwrites a secret key you already hold.</string>
+    <string name="d_restore_done_status">Restored — %1$s</string>
+    <string name="d_restore_status">Restore — %1$s</string>
+    <string name="d_restore_failed">Restore failed</string>
+    <string name="d_restore_open_dialog_title">Choose backup</string>
+
+    <!-- ═══ Batch 2: key-server dialogs + keyring screen (D11b) ═══ -->
+    <!-- ── Key-server search. The query label, the Search button and its in-progress
+         label come from the Android layer; only desktop-specific copy is minted here. ── -->
+    <string name="d_search_servers_title">Search key servers</string>
+    <string name="d_search_lookup_order">Lookup order: WKD (the recipient\'s own mail domain) → your configured servers → keys.openpgp.org.</string>
+    <string name="d_search_none">No key found (WKD, configured servers, keys.openpgp.org).</string>
+    <string name="d_search_unparseable">(unparseable)</string>
+    <string name="d_search_failed">Search failed: %1$s</string>
+    <string name="d_search_found_via">Found via %1$s</string>
+    <string name="d_search_trust_warning">Importing adds the key as UNKNOWN trust — verify the fingerprint with its owner before relying on it.</string>
+    <string name="d_search_again">Search again</string>
+    <string name="d_common_import">Import</string>
+
+    <!-- ── Publish. Each outcome is a WHOLE sentence: the server label leads in English
+         but not in every locale, so the label is an argument rather than a prefix. ── -->
+    <string name="d_publish_title">Publish public key</string>
+    <string name="d_publish_no_servers">No publish-enabled servers — enable one in Settings → Network.</string>
+    <string name="d_publish_may_not_accept">May not accept %1$s keys</string>
+    <string name="d_publish_warning">Only the PUBLIC key is uploaded. Key servers are public, permanent directories — publishing is hard to undo.</string>
+    <string name="d_publish_in_progress">Publishing…</string>
+    <string name="d_publish_outcome_ok">%1$s: published ✓</string>
+    <string name="d_publish_outcome_pending"> — verification email sent to %1$s (click the link there to become searchable by email)</string>
+    <string name="d_publish_outcome_rejected">%1$s: rejected (HTTP %2$d) — this server likely doesn\'t accept %3$s keys</string>
+    <string name="d_publish_outcome_failed">%1$s: failed — %2$s</string>
+
+    <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
+         entry is a compile-time constant and cannot hold a translated string. ── -->
+    <string name="d_keyring_search_servers">Search servers…</string>
+    <string name="d_keyring_paste_armor">Paste armor…</string>
+    <string name="d_keyring_import_file">Import file…</string>
+    <string name="d_keyring_import_qr">Import QR…</string>
+    <string name="d_keyring_search_placeholder">Search name, email, fingerprint</string>
+    <string name="d_keyring_sort_label">Sort: %1$s</string>
+    <string name="d_keyring_sort_recent">Recent</string>
+    <string name="d_keyring_sort_name">Name</string>
+    <string name="d_keyring_sort_algorithm">Algorithm</string>
+    <string name="d_keyring_empty_title">No keys yet</string>
+    <string name="d_keyring_empty_body">Generate a key pair, import a key file (.asc, .gpg), or paste an armored block.</string>
+    <string name="d_keyring_no_matches_title">No matches</string>
+    <string name="d_keyring_no_matches_body">Nothing in your keyring matches "%1$s". Search by name, email address, or any part of a fingerprint.</string>
+    <string name="d_keyring_clear_search">Clear search</string>
+    <string name="d_keyring_err_no_public_armor_for">No public armor stored for %1$s</string>
+    <string name="d_keyring_qr_none_found">No QR code found in %1$s</string>
+    <string name="d_keyring_qr_not_a_key">That QR isn\'t an OpenPGP key</string>
+    <string name="d_keyring_delete_secret_warning">\n\nThis includes the SECRET key. Without a backup, messages encrypted to it become unreadable.</string>
+    <string name="d_keyring_cd_copy_public">Copy public key</string>
+    <string name="d_keyring_cd_delete">Delete key</string>
+    <string name="d_keyring_meta_line">Created %1$s%2$s · Key ID %3$s</string>
+    <string name="d_keyring_meta_expires"> · Expires %1$s</string>
+    <string name="d_keyring_import_file_dialog">Import key file</string>
+    <string name="d_keyring_qr_dialog">Choose QR image</string>
+    <plurals name="d_keyring_key_count">
+        <item quantity="one">%1$d key</item>
+        <item quantity="other">%1$d keys</item>
+    </plurals>
+    <plurals name="d_keyring_match_count">
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
+
+    <!-- ═══ Batch 2: file crypto outcomes (D11b) ═══ -->
+    <!-- ── FileOutcome.detail — every one of these is shown verbatim in the results list,
+         so they are whole sentences rather than assembled fragments. ── -->
+    <string name="d_file_err_recipient_ring">Recipient ring failed to load: %1$s</string>
+    <string name="d_file_err_signing_key">Signing key could not be loaded: %1$s</string>
+    <string name="d_file_signed_suffix">, signed</string>
+    <string name="d_file_err_encrypt">Encrypt failed</string>
+    <string name="d_file_err_decrypt">Decrypt failed</string>
+    <string name="d_file_sig_written">Detached signature written</string>
+    <string name="d_file_sig_written_card">Detached signature written (hardware key)</string>
+    <string name="d_file_err_sign">Sign failed</string>
+    <string name="d_file_err_card_sign">Card sign failed</string>
+    <string name="d_file_err_card_decrypt">Card decrypt failed</string>
+    <plurals name="d_file_encrypted_to">
+        <item quantity="one">Encrypted to %1$d recipient</item>
+        <item quantity="other">Encrypted to %1$d recipients</item>
+    </plurals>
+    <plurals name="d_file_encrypted_to_card">
+        <item quantity="one">Encrypted to %1$d recipient, signed (hardware key)</item>
+        <item quantity="other">Encrypted to %1$d recipients, signed (hardware key)</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle">
+        <item quantity="one">Decrypted bundle → %1$d file</item>
+        <item quantity="other">Decrypted bundle → %1$d files</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle_card">
+        <item quantity="one">Decrypted bundle (hardware key) → %1$d file</item>
+        <item quantity="other">Decrypted bundle (hardware key) → %1$d files</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes">
+        <item quantity="one">Decrypted %1$d byte</item>
+        <item quantity="other">Decrypted %1$d bytes</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes_card">
+        <item quantity="one">Decrypted %1$d byte (hardware key)</item>
+        <item quantity="other">Decrypted %1$d bytes (hardware key)</item>
+    </plurals>
+
+    <!-- ── The signature note appended to a decrypt outcome. It carries its OWN leading
+         separator; the XML reader does not trim, so the leading spaces here are load-bearing.
+         ja uses a full-width middle dot and full-width parentheses. ── -->
+    <string name="d_file_sig_verified"> · signature VERIFIED</string>
+    <string name="d_file_sig_unheld"> · signed by unheld key</string>
+    <string name="d_file_sig_id_suffix"> (%1$s)</string>
+
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">Signature VERIFIED — %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_file_verify_invalid">Signature INVALID — content does not match the signature</string>
+    <string name="d_file_verify_unknown_signer">Signed by a key not in the keyring</string>
+    <string name="d_file_verify_unsigned">No signature found</string>
+    <string name="d_file_err_verify">Verify failed</string>
+
+</resources>
