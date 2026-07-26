@@ -1,0 +1,16 @@
+# winget manifest — version file.
+#
+# Staged here, not consumed from here: winget installs from a PR to
+# microsoft/winget-pkgs under manifests/n/NorseHorse/PGPony/1.0.0/. Keeping the three
+# files in this repo means each release edits a tracked copy rather than someone
+# hand-writing YAML into a fork at release time.
+#
+# Two fields cannot be filled until the tag builds — InstallerSha256 and ProductCode,
+# both in the installer manifest. Run `winget validate` and `winget install --manifest`
+# against the real msi before opening the PR; nothing here has been validated by a
+# winget client.
+PackageIdentifier: NorseHorse.PGPony
+PackageVersion: 1.0.0
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.6.0

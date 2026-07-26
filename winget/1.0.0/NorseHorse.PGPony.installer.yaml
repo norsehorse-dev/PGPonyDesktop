@@ -1,0 +1,22 @@
+PackageIdentifier: NorseHorse.PGPony
+PackageVersion: 1.0.0
+MinimumOSVersion: 10.0.0.0
+InstallerType: wix
+# jpackage leaves perUserInstall off, so the msi installs per-machine and needs elevation.
+Scope: machine
+InstallModes:
+  - interactive
+  - silent
+UpgradeBehavior: install
+ReleaseDate: 2026-07-26
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/norsehorse-dev/PGPonyDesktop/releases/download/v1.0.0/PGPony-windows.msi
+    # FILL from the published SHA256SUMS.
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+    # FILL from the built msi. On Windows:
+    #   Get-WmiObject Win32_Product | Where-Object { $_.Name -like 'PGPony*' } | Select IdentifyingNumber
+    # This is NOT the upgradeUuid in build.gradle.kts — that is the UpgradeCode, a different GUID.
+    ProductCode: "{00000000-0000-0000-0000-000000000000}"
+ManifestType: installer
+ManifestVersion: 1.6.0

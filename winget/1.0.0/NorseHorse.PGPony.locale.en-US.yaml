@@ -1,0 +1,40 @@
+PackageIdentifier: NorseHorse.PGPony
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: NorseHorse
+PublisherUrl: https://pgpony.app
+PublisherSupportUrl: https://github.com/norsehorse-dev/PGPonyDesktop/issues
+PackageName: PGPony
+PackageUrl: https://pgpony.app/desktop
+License: Apache-2.0
+LicenseUrl: https://github.com/norsehorse-dev/PGPonyDesktop/blob/main/LICENSE
+Copyright: Copyright 2026 NorseHorse
+ShortDescription: OpenPGP for the desktop - encrypt, decrypt, sign, verify, manage your keys
+Description: >-
+  PGPony is an OpenPGP application for macOS, Linux and Windows, and the desktop member of
+  the PGPony family. Encrypt, decrypt, sign and verify messages and files, manage your
+  keyring, and use a hardware security key over USB - all on device, with no accounts, no
+  ads, no analytics and no tracking.
+
+  It compiles the exact OpenPGP engine the PGPony phone apps ship, including v4 and v6
+  (RFC 9580) keys, post-quantum ML-KEM composite encryption in both wire formats, the
+  OpenPGP smart-card protocol stack and PGP/MIME, so keys, messages and encrypted backups
+  move between your phone and your computer without a compatibility story. It also ships
+  the pgpony command line, which shares the application keyring.
+
+  The Java runtime is bundled; nothing else needs installing.
+Moniker: pgpony
+Tags:
+  - openpgp
+  - pgp
+  - gnupg
+  - encryption
+  - cryptography
+  - privacy
+  - security
+  - post-quantum
+  - yubikey
+  - smartcard
+ReleaseNotesUrl: https://github.com/norsehorse-dev/PGPonyDesktop/releases/tag/v1.0.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
