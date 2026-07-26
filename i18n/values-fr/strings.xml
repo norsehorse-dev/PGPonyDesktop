@@ -623,4 +623,16 @@
     <string name="d_file_verify_unsigned">Aucune signature trouvée</string>
     <string name="d_file_err_verify">Échec de la vérification</string>
 
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
+    <string name="d_settings_section_updates">Mises à jour</string>
+    <string name="d_settings_updates_note">Désactivé par défaut. Si vous l\'activez, PGPony recherche une version plus récente sur pgpony.app une fois par jour : aucune information vous concernant ou concernant vos clés n\'est transmise, et votre configuration de proxy est respectée.</string>
+    <string name="d_settings_updates_idle">Pas encore vérifié.</string>
+    <string name="d_settings_updates_checking">Vérification…</string>
+    <string name="d_settings_updates_current">Vous utilisez la dernière version.</string>
+    <string name="d_settings_updates_available">La version %1$s est disponible.</string>
+    <string name="d_settings_updates_failed">Impossible de joindre pgpony.app.</string>
+    <string name="d_settings_updates_check_now">Vérifier maintenant</string>
+    <string name="d_settings_updates_download">Télécharger</string>
+    <string name="d_settings_updates_auto">Vérifier automatiquement une fois par jour</string>
+
 </resources>

@@ -601,4 +601,16 @@
     <string name="d_file_verify_unsigned">署名が見つかりません</string>
     <string name="d_file_err_verify">検証に失敗しました</string>
 
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
+    <string name="d_settings_section_updates">アップデート</string>
+    <string name="d_settings_updates_note">既定ではオフです。オンにすると、PGPony は 1 日 1 回 pgpony.app で新しいバージョンを確認します。あなたや鍵に関する情報は送信されず、プロキシ設定に従います。</string>
+    <string name="d_settings_updates_idle">まだ確認していません。</string>
+    <string name="d_settings_updates_checking">確認しています…</string>
+    <string name="d_settings_updates_current">最新バージョンを使用しています。</string>
+    <string name="d_settings_updates_available">バージョン %1$s が利用できます。</string>
+    <string name="d_settings_updates_failed">pgpony.app に接続できませんでした。</string>
+    <string name="d_settings_updates_check_now">今すぐ確認</string>
+    <string name="d_settings_updates_download">ダウンロード</string>
+    <string name="d_settings_updates_auto">1 日 1 回自動的に確認する</string>
+
 </resources>

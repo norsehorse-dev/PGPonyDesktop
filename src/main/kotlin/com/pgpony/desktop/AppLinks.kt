@@ -62,6 +62,13 @@ object Links {
     const val REPO = "https://github.com/norsehorse-dev/PGPonyDesktop"
     const val ISSUES = "$REPO/issues"
     const val WEBSITE = "https://pgpony.app"
+
+    /**
+     * The desktop download page. Where "a newer version is available" sends the user — D13 ships
+     * no auto-update (plan §5), so a browser handoff is the entire delivery mechanism, and this
+     * being a compile-time constant is what keeps openUri() clear of remote input.
+     */
+    const val DESKTOP_DOWNLOAD = "$WEBSITE/desktop"
 }
 
 /**

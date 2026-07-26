@@ -475,6 +475,17 @@ private fun guiApplication() = application {
             }
         }
 
+        // D13 — the update check. OPT-IN: checkIfDue() returns immediately unless the user has
+        // turned it on in Settings, which is off out of the box, so a default install makes no
+        // request from here at all. Once enabled it still needs a day to have passed since the
+        // last attempt, and that timestamp is persisted, so relaunching the app repeatedly cannot
+        // turn this into a heartbeat. It never blocks the UI:
+        // a failure leaves the Settings section reading "could not reach pgpony.app" and nothing
+        // else in the app notices. See UpdateCheck.kt for what does and does not go over the wire.
+        LaunchedEffect(Unit) {
+            UpdateCheck.checkIfDue()
+        }
+
         // D3b — window-level drag-drop via AWT DropTarget (no experimental Compose APIs).
         // Compose snapshot state accepts writes from the AWT EDT.
         LaunchedEffect(Unit) {

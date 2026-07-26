@@ -754,4 +754,16 @@
     <string name="d_file_verify_unsigned">No signature found</string>
     <string name="d_file_err_verify">Verify failed</string>
 
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
+    <string name="d_settings_section_updates">Updates</string>
+    <string name="d_settings_updates_note">Off by default. When you turn it on, PGPony checks pgpony.app once a day for a newer version — nothing about you or your keys is sent, and your proxy setting is followed.</string>
+    <string name="d_settings_updates_idle">Not checked yet.</string>
+    <string name="d_settings_updates_checking">Checking…</string>
+    <string name="d_settings_updates_current">You are running the latest version.</string>
+    <string name="d_settings_updates_available">Version %1$s is available.</string>
+    <string name="d_settings_updates_failed">Could not reach pgpony.app.</string>
+    <string name="d_settings_updates_check_now">Check now</string>
+    <string name="d_settings_updates_download">Download</string>
+    <string name="d_settings_updates_auto">Check automatically once a day</string>
+
 </resources>
