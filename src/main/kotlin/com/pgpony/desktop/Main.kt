@@ -12,7 +12,11 @@ import kotlin.system.exitProcess
 
 // D10 — the pgpony CLI verbs (Cli.run) plus the meta verbs handled here.
 private val PGPONY_VERBS = setOf(
-    "encrypt", "decrypt", "sign", "verify", "import", "export", "list-keys", "gen-key"
+    "encrypt", "decrypt", "sign", "verify", "import", "export", "list-keys", "gen-key",
+    // 1.0.1 — card-info. This set is the GATE: a verb Cli.run() dispatches but that is missing
+    // here never reaches it, and falls through to the usage text below instead. Adding a verb
+    // means editing BOTH places, which is exactly what was forgotten first time round.
+    "card-info"
 )
 private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "help", "--help", "-h") + PGPONY_VERBS
 
@@ -68,6 +72,8 @@ private fun usage() {
 
         CLI verbs (share the app's keyring): encrypt · decrypt · sign · verify · import ·
         export · list-keys · gen-key. Run `pgpony <verb>` with no options for its usage.
+
+          card-info   Report the PC/SC readers this build can see, and why it cannot see any
         """.trimIndent()
     )
 }

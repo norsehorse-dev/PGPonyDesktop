@@ -167,12 +167,18 @@ jobs:
             throw 'pgpony-cli.exe printed nothing - the console subsystem was not applied'
           }
 
-          # 4. card-info runs. It reports no readers on a runner, which is correct and fine; what
-          #    matters is that it does not crash and that smartcardio resolved at runtime.
+          # 4. card-info actually RUNS. Asserting on its real output, not on the absence of an
+          #    error string: the first version of this check only looked for 'MISSING from this
+          #    runtime', so it passed while card-info was silently falling through to Main.kt's
+          #    usage text — the verb had been added to Cli's dispatch but not to Main's gate.
+          #    A check that cannot fail on the actual bug is not a check.
           $ci = & (Join-Path $img 'pgpony-cli.exe') card-info 2>&1 | Out-String
           Write-Host "pgpony-cli card-info ->"
           Write-Host $ci
-          if ($ci -match 'MISSING from this runtime') { throw 'smartcardio did not resolve at runtime' }
+          if ($ci -notmatch 'smartcardio\s') { throw 'card-info did not run - no smartcardio line (fell through to usage?)' }
+          if ($ci -notmatch 'readers\s')     { throw 'card-info did not report a readers line' }
+          if ($ci -match  'MISSING from this runtime') { throw 'smartcardio did not resolve at runtime' }
+          if ($ci -match  'Usage: pgpony')    { throw 'card-info fell through to the usage text' }
 
       - uses: actions/upload-artifact@v4
         with:
