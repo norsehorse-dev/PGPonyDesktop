@@ -47,6 +47,29 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Fail fast on a missing or misnamed secret. Without this the build does NOT fail: Compose
+      # only enables signing when MACOS_SIGN_IDENTITY is non-blank, so a typo in the repo settings
+      # produces an unsigned dmg that then gets signed, published and reported as a success. A
+      # release is the worst place to discover that.
+      - name: Require the macOS signing secrets
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+          NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+        run: |
+          missing=""
+          for v in MACOS_CERT_P12_BASE64 MACOS_SIGN_IDENTITY NOTARIZATION_APPLE_ID \
+                   NOTARIZATION_PASSWORD NOTARIZATION_TEAM_ID; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing required secret(s):$missing" >&2
+            echo "See RELEASING.md. Nothing was built." >&2
+            exit 1
+          fi
+
       - name: Import Developer ID certificate
         env:
           CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
@@ -159,9 +182,22 @@ jobs:
       - name: Import release signing subkey
         env:
           PGP_RELEASE_KEY_BASE64: ${{ secrets.PGP_RELEASE_KEY_BASE64 }}
+          PGP_RELEASE_PASSPHRASE: ${{ secrets.PGP_RELEASE_PASSPHRASE }}
         run: |
+          if [ -z "$PGP_RELEASE_KEY_BASE64" ] || [ -z "$PGP_RELEASE_PASSPHRASE" ]; then
+            echo "PGP_RELEASE_KEY_BASE64 and PGP_RELEASE_PASSPHRASE are both required." >&2
+            echo "See RELEASING.md. The installers built, but nothing has been published." >&2
+            exit 1
+          fi
           echo "$PGP_RELEASE_KEY_BASE64" | base64 --decode | gpg --batch --import
           gpg --list-secret-keys --keyid-format=long
+          # A keyring holding more than one secret key makes the default-key selection below
+          # ambiguous, and the wrong signature is worse than none.
+          count=$(gpg --list-secret-keys --with-colons | grep -c '^sec:')
+          if [ "$count" -ne 1 ]; then
+            echo "Expected exactly one secret key in the CI keyring, found $count." >&2
+            exit 1
+          fi
 
       # SHA256SUMS is generated from inside dist/ so the manifest holds bare filenames and
       # `sha256sum -c SHA256SUMS` works wherever a user unpacks it.
