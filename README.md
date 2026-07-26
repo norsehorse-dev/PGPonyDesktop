@@ -30,8 +30,12 @@ Requires a JDK 17 or newer.
 
 The same binary is both the GUI and the `pgpony` CLI: a bare launch (or a file argument)
 opens the app; a verb (`encrypt`, `decrypt`, `sign`, `verify`, `import`, `export`,
-`list-keys`, `gen-key`) runs the command line. `pgpony <verb>` with no options prints its
-usage.
+`list-keys`, `gen-key`, `card-info`) runs the command line. `pgpony <verb>` with no options
+prints its usage.
+
+On **Windows** the command line is a second executable, `pgpony-cli.exe`, installed beside the
+GUI. Windows needs a console-subsystem binary to write to a terminal at all, and it cannot be
+called `pgpony.exe` because the filesystem is case-insensitive and that is already `PGPony.exe`.
 
 ## Native installers
 

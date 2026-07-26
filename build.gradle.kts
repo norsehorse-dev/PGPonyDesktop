@@ -261,14 +261,22 @@ tasks.matching { it.name == "packageMsi" }.configureEach {
     val free = runCatching { property("freeArgs") }.getOrNull()
     if (free is ListProperty<*>) {
         @Suppress("UNCHECKED_CAST")
-        // FORWARD slashes, even on Windows. jpackage is invoked as `jpackage @argfile`, and a Java
-        // argfile treats backslash as an ESCAPE character — so an absolute Windows path like
-        // D:\a\PGPonyDesktop\... arrives with \a and \P read as escape sequences and the file is
-        // never found. Same failure family as the space in --linux-package-deps: everything the
-        // argfile carries has to survive Java's argfile tokenizer, not just the shell's.
+        // The launcher is named pgpony-cli, NOT pgpony, and that is not cosmetic. Windows
+        // filesystems are case-insensitive, so an added launcher called `pgpony` resolves to the
+        // same file as the main GUI launcher `PGPony.exe`, and jpackage dies with
+        // FileAlreadyExistsException on ...\win-msi.image\PGPony\pgpony.exe.
+        //
+        // This is the SECOND time case-insensitivity has broken packaging in this phase: the first
+        // was packaging/pgpony.icns colliding with Resources/PGPony.icns on macOS. Any packaging
+        // artifact whose name differs from "PGPony" only by case will collide.
+        //
+        // Forward slashes are belt-and-braces, not the fix — a Java argfile treats backslash as an
+        // escape character, so a raw D:\a\... path is a hazard in principle. It was NOT the cause
+        // of the failure above: jpackage located the properties file and got as far as writing the
+        // launcher. Normalizing costs nothing, so it stays.
         (free as ListProperty<String>).addAll(
             "--add-launcher",
-            "pgpony=" + project.file("packaging/pgpony-cli.properties").absolutePath.replace('\\', '/')
+            "pgpony-cli=" + project.file("packaging/pgpony-cli.properties").absolutePath.replace('\\', '/')
         )
     }
 }

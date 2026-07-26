@@ -114,9 +114,10 @@ jobs:
       #  1. java.smartcardio in the bundled runtime. D12 warned that a wrong module name would
       #     silently drop card support from the jlink image; the macOS image was verified and
       #     Windows was not, on the assumption that one platform covered all three.
-      #  2. Both launchers present. The console pgpony.exe comes from --add-launcher, and if that
-      #     freeArgs injection ever stops resolving it degrades to a silent no-op — exactly the
-      #     failure mode --linux-package-deps has.
+      #  2. Both launchers present. The console pgpony-cli.exe comes from --add-launcher, and if
+      #     that freeArgs injection ever stops resolving it degrades to a silent no-op — exactly
+      #     the failure mode --linux-package-deps has. It is pgpony-cli and not pgpony because
+      #     Windows is case-insensitive and pgpony.exe collides with the GUI's PGPony.exe.
       #  3. The CLI actually PRINTS. 1.0.0's only launcher was GUI-subsystem, which on Windows has
       #     no stdout, so every verb ran and discarded its output. Nothing caught it because
       #     nothing ever ran the CLI.
@@ -128,14 +129,14 @@ jobs:
           $rel = Get-Content (Join-Path $img 'runtime/release') -Raw
           if ($rel -notmatch 'java\.smartcardio') { throw 'java.smartcardio is MISSING from the bundled runtime' }
           Write-Host 'java.smartcardio: present'
-          foreach ($exe in 'PGPony.exe', 'pgpony.exe') {
+          foreach ($exe in 'PGPony.exe', 'pgpony-cli.exe') {
             if (-not (Test-Path (Join-Path $img $exe))) { throw "launcher missing: $exe" }
           }
           Write-Host 'both launchers: present'
-          $out = & (Join-Path $img 'pgpony.exe') version 2>&1 | Out-String
-          Write-Host "pgpony version -> '$($out.Trim())'"
+          $out = & (Join-Path $img 'pgpony-cli.exe') version 2>&1 | Out-String
+          Write-Host "pgpony-cli version -> '$($out.Trim())'"
           if ([string]::IsNullOrWhiteSpace($out)) {
-            throw 'pgpony.exe printed nothing - the console subsystem was not applied'
+            throw 'pgpony-cli.exe printed nothing - the console subsystem was not applied'
           }
 
       - uses: actions/upload-artifact@v4

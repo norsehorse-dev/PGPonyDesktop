@@ -163,9 +163,10 @@ Artifacts:
       so Linux users verifying later can still use `sha256sum -c`)
 - [ ] the published checksums match what `downloads/desktop.json` claims
 - [ ] `dpkg-deb -f PGPony-linux.deb Depends` mentions `pcsc`
-- [ ] a CLI verb PRINTS on every OS — `pgpony version`. 1.0.0 shipped a Windows build whose only
-      launcher was GUI-subsystem, so the whole CLI was silent there and no check noticed
-- [ ] `pgpony card-info` reports the expected readers on every OS
+- [ ] a CLI verb PRINTS on every OS — `pgpony version`, and `pgpony-cli version` on Windows.
+      1.0.0 shipped a Windows build whose only launcher was GUI-subsystem, so the whole CLI was
+      silent there and no check noticed
+- [ ] `pgpony card-info` (`pgpony-cli card-info` on Windows) reports the expected readers
 
 macOS:
 
