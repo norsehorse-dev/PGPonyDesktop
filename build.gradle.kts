@@ -261,9 +261,14 @@ tasks.matching { it.name == "packageMsi" }.configureEach {
     val free = runCatching { property("freeArgs") }.getOrNull()
     if (free is ListProperty<*>) {
         @Suppress("UNCHECKED_CAST")
+        // FORWARD slashes, even on Windows. jpackage is invoked as `jpackage @argfile`, and a Java
+        // argfile treats backslash as an ESCAPE character — so an absolute Windows path like
+        // D:\a\PGPonyDesktop\... arrives with \a and \P read as escape sequences and the file is
+        // never found. Same failure family as the space in --linux-package-deps: everything the
+        // argfile carries has to survive Java's argfile tokenizer, not just the shell's.
         (free as ListProperty<String>).addAll(
             "--add-launcher",
-            "pgpony=" + project.file("packaging/pgpony-cli.properties").absolutePath
+            "pgpony=" + project.file("packaging/pgpony-cli.properties").absolutePath.replace('\\', '/')
         )
     }
 }

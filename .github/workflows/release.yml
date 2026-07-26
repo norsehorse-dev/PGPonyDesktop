@@ -97,6 +97,18 @@ jobs:
           ./gradlew.bat packageMsi
           Copy-Item build/compose/binaries/main/msi/PGPony-*.msi PGPony-windows.msi
 
+      # jpackage writes its real error to a log file and Gradle prints only the path, so a failure
+      # here otherwise says nothing but "exit code 1". The Linux job grew this step first; not
+      # carrying it across cost a blind round trip on the very next Windows failure.
+      - name: jpackage logs on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          Get-ChildItem build/compose/logs/packageMsi/*.txt -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "===== $($_.FullName) ====="
+            Get-Content $_.FullName
+          }
+
       # Three assertions, each for a bug that shipped in 1.0.0 while the build was green.
       #
       #  1. java.smartcardio in the bundled runtime. D12 warned that a wrong module name would
