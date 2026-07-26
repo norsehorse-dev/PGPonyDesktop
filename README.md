@@ -89,4 +89,5 @@ row layout that stops German button groups being crushed, unified chrome across 
 dialogs, and a new About dialog behind a Help menu — 480 desktop-owned keys, six locales;
 de/ja visual layout pass pending). Next: D13 packaging.
 Phase roster:
-`PLANNING_DESKTOP_1_0_0.md` (PGPonyAndroid repo root); phase records: `PHASE_D*_NOTES.md` here.
+`PLANNING_DESKTOP_1_0_0.md` (PGPonyAndroid repo root); phase records:
+[`docs/phases/`](docs/phases/).
