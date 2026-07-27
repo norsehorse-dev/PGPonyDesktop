@@ -96,12 +96,67 @@ object DesktopCardReader {
         private set
 
     /**
+     * How many times a PC/SC call is attempted before giving up, and the pause between tries.
+     * Three attempts adds at most ~240 ms to a failure and nothing at all to a success.
+     */
+    private const val PCSC_ATTEMPTS = 3
+    private const val PCSC_BACKOFF_MS = 120L
+
+    /**
+     * Set when a PC/SC call FAILED and then succeeded on a retry. STICKY for the life of the
+     * process — deliberately not cleared by a later clean call, because the whole point is that
+     * an intermittent fault leaves a trace someone can still find afterwards. Nothing in the UI
+     * reads it (a transient the app recovered from is not the user's problem); `pgpony card-info`
+     * prints it.
+     *
+     * This matters more than the retry itself. A retry that hides the failure would make the
+     * fault unobservable and permanent.
+     */
+    @Volatile
+    var lastRecovery: String? = null
+        private set
+
+    /**
+     * Run a PC/SC call, retrying on failure.
+     *
+     * Not a blind retry. OpenJDK's PCSCTerminals.list() responds to SCARD_E_NO_SERVICE and
+     * SCARD_E_SERVICE_STOPPED by resetting its cached context id to 0 and THEN throwing — so the
+     * call that fails is also the call that repairs the context, and the next one re-establishes
+     * it. Without a retry the user sees a hard failure the library was already prepared to
+     * recover from, which is what a Windows box did: enumeration succeeded, the session open
+     * threw, and everything worked afterwards with no code change.
+     *
+     * A short backoff also covers the other candidate, SCARD_E_SHARING_VIOLATION, where another
+     * process holds the reader for a moment.
+     *
+     * Blocking sleeps are fine here: every entry point on this object is already documented as
+     * blocking PC/SC I/O called from Dispatchers.IO.
+     */
+    private fun <T> pcscRetry(block: () -> T): T {
+        var failure: Exception? = null
+        for (attempt in 1..PCSC_ATTEMPTS) {
+            try {
+                val value = block()
+                if (attempt > 1) {
+                    lastRecovery = "recovered on attempt $attempt of $PCSC_ATTEMPTS " +
+                        "after ${causeChain(failure!!)}"
+                }
+                return value
+            } catch (e: Exception) {
+                failure = e
+                if (attempt < PCSC_ATTEMPTS) Thread.sleep(PCSC_BACKOFF_MS)
+            }
+        }
+        throw failure!!
+    }
+
+    /**
      * The attached PC/SC readers. Empty (never throws) when the PC/SC layer is unavailable —
      * on Linux that usually means pcscd isn't running; macOS and Windows ship the service
      * natively. Check [lastListError] to tell "none attached" from "PC/SC failed".
      */
     fun listReaders(): List<ReaderInfo> = try {
-        val found = TerminalFactory.getDefault().terminals().list().map { t ->
+        val found = pcscRetry { TerminalFactory.getDefault().terminals().list() }.map { t ->
             ReaderInfo(t.name, runCatching { t.isCardPresent }.getOrDefault(false))
         }
         lastListError = null
@@ -130,7 +185,9 @@ object DesktopCardReader {
         val card = try {
             // "*" negotiates the protocol; USB CCID OpenPGP tokens (YubiKey 5, Token2) come
             // up as T=1.
-            terminal.connect("*")
+            // Retried too: SCARD_E_SHARING_VIOLATION here means another process held the
+            // reader for a moment, which is exactly the transient a second attempt clears.
+            pcscRetry { terminal.connect("*") }
         } catch (e: CardException) {
             throw OpenPgpCardException.Communication(
                 // causeChain, not e.message: a connect failure is where an exclusive-access
@@ -149,7 +206,7 @@ object DesktopCardReader {
 
     private fun findTerminal(readerName: String?): CardTerminal {
         val terminals = try {
-            TerminalFactory.getDefault().terminals().list()
+            pcscRetry { TerminalFactory.getDefault().terminals().list() }
         } catch (e: Exception) {
             throw OpenPgpCardException.Communication(
                 // The two suffixes carry their own leading space: the XML reader does not

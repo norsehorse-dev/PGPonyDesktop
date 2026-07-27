@@ -411,6 +411,9 @@ object Cli {
             err("PC/SC unavailable: $failure")
             return ExitCode.FAILED
         }
+        // A recovered transient is the evidence that matters for the intermittent Windows PC/SC
+        // fault: the app carried on, so nothing else records that anything went wrong.
+        DesktopCardReader.lastRecovery?.let { out("pcsc       $it") }
         if (readers.isEmpty()) {
             out("readers    none attached")
             return ExitCode.OK
