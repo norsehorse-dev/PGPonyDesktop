@@ -48,23 +48,22 @@ class PcscDiagnosticsTest {
     }
 
     /**
-     * A self-referential cause is rare but real (some libraries initCause to themselves). Without
-     * the seen-set this loops forever, and it would hang inside a card operation on a UI action —
-     * a worse failure than the one the function exists to report.
+     * A cycle between two throwables. Without the seen-set this loops forever, and it would hang
+     * inside a card operation triggered by a button press — a worse failure than the one the
+     * function exists to report.
+     *
+     * Note this is the two-throwable form, not self-causation: Throwable.initCause REJECTS being
+     * passed the throwable itself (IllegalArgumentException, "Self-causation not permitted"), so
+     * a self-referential cause cannot be constructed in Java and needs no test. An earlier version
+     * of this file asserted against exactly that impossible state and failed.
      */
     @Test
-    fun selfReferentialCauseTerminates() {
-        val e = RuntimeException("loop")
-        e.initCause(e)
-        assertEquals("RuntimeException: loop", causeChain(e))
-    }
-
-    @Test
-    fun aCycleBetweenTwoThrowablesAlsoTerminates() {
+    fun aCycleBetweenTwoThrowablesTerminates() {
         val a = RuntimeException("a")
         val b = RuntimeException("b", a)
         a.initCause(b)
         val line = causeChain(b)
         assertTrue(line.contains("a") && line.contains("b"), line)
+        assertEquals(2, line.split(" <- ").size, "each throwable exactly once: $line")
     }
 }
