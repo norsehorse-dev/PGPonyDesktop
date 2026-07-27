@@ -47,6 +47,30 @@ class PcscCardTransport(private val channel: CardChannel) : CardTransport {
 }
 
 /**
+ * A throwable and every cause under it, on one line.
+ *
+ * The JDK's PC/SC layer wraps everything: `sun.security.smartcardio.PCSCTerminals` catches a
+ * `PCSCException` and rethrows `CardException("list() failed", cause)`. So `e.message` is the
+ * useless wrapper and the `SCARD_E_*` code — the single fact that identifies the fault — sits one
+ * level down. 1.0.1 added a diagnostic and then printed the wrapper, which is how a Windows report
+ * came back reading "list() failed" and said nothing.
+ *
+ * SCARD_E_SHARING_VIOLATION (something else holds the reader exclusively) and SCARD_E_NO_SERVICE
+ * (the resource-manager context is dead) need opposite fixes and are indistinguishable without it.
+ */
+internal fun causeChain(t: Throwable): String {
+    val parts = ArrayList<String>()
+    var cur: Throwable? = t
+    val seen = HashSet<Throwable>()          // a self-referential cause would otherwise spin
+    while (cur != null && seen.add(cur)) {
+        val msg = cur.message?.takeIf { it.isNotBlank() }
+        parts += if (msg != null) "${cur.javaClass.simpleName}: $msg" else cur.javaClass.simpleName
+        cur = cur.cause
+    }
+    return parts.joinToString(" <- ")
+}
+
+/**
  * Reader discovery + the per-operation session runner. All entry points are blocking PC/SC
  * I/O — call from Dispatchers.IO (the screen helpers do).
  */
@@ -87,7 +111,7 @@ object DesktopCardReader {
         // SCARD_E_NO_SERVICE (the resource manager is not running) and
         // SCARD_E_NO_READERS_AVAILABLE (it is running and has nothing) are different problems
         // with different fixes, and both used to arrive as the same empty list.
-        lastListError = e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
+        lastListError = causeChain(e)
         emptyList()
     }
 
@@ -109,7 +133,9 @@ object DesktopCardReader {
             terminal.connect("*")
         } catch (e: CardException) {
             throw OpenPgpCardException.Communication(
-                tr("d_card_err_connect", terminal.name, e.message.orEmpty()), e
+                // causeChain, not e.message: a connect failure is where an exclusive-access
+                // holder shows up as SCARD_E_SHARING_VIOLATION, and the JDK wraps that too.
+                tr("d_card_err_connect", terminal.name, causeChain(e)), e
             )
         }
         try {
@@ -131,7 +157,7 @@ object DesktopCardReader {
                 tr("d_card_err_no_service") +
                     (if (System.getProperty("os.name").lowercase().contains("linux"))
                         tr("d_card_err_pcscd_hint") else "") +
-                    (e.message?.let { tr("d_card_err_detail_suffix", it) } ?: ""),
+                    tr("d_card_err_detail_suffix", causeChain(e)),
                 e
             )
         }
