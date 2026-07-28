@@ -113,7 +113,15 @@ jobs:
           rm -rf /tmp/tarcheck && mkdir -p /tmp/tarcheck
           tar -xzf ${{ matrix.tarball }} -C /tmp/tarcheck
           test -x /tmp/tarcheck/PGPony/bin/PGPony
-          grep -q 'java\.smartcardio' /tmp/tarcheck/PGPony/runtime/release
+          # The runtime's location is NOT the same across platforms: jpackage puts it at
+          # <app>/runtime on Windows, <app>/lib/runtime on Linux and Contents/runtime on macOS.
+          # The first version of this step hardcoded the Windows path and failed on both Linux
+          # legs while the tarball itself was perfectly good. Locate it instead of assuming, and
+          # echo the path so the log records the real layout rather than leaving it folklore.
+          rel=$(find /tmp/tarcheck/PGPony -path '*runtime*' -name release -type f | head -1)
+          echo "runtime release file -> ${rel:-NONE FOUND}"
+          test -n "$rel"
+          grep -q 'java\.smartcardio' "$rel"
           out=$(/tmp/tarcheck/PGPony/bin/PGPony version 2>&1)
           echo "bin/PGPony version -> $out"
           test -n "$out"

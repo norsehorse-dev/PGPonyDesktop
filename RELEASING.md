@@ -220,8 +220,14 @@ Every OS:
 
 Site:
 
-- [ ] each of the four download links on `/desktop` files the right value in the daily click
-      report: `desktop_macos`, `desktop_linux`, `desktop_windows`, `desktop_sig`
+- [ ] `php api/migrate_add_desktop_linux.php` has been run on the server. The ENUM and
+      `track-click.php`'s allowlist must agree — a value accepted by the allowlist but missing
+      from the ENUM throws on INSERT and the click is lost, not degraded
+- [ ] every download link on `/desktop` files the right value in the daily click report:
+      `desktop_macos`, `desktop_linux`, `desktop_linux_arm`, `desktop_linux_tar`,
+      `desktop_linux_appimage`, `desktop_aur`, `desktop_windows`, `desktop_sig`. The arm64 `.deb`
+      is the one to check by hand: its rule must be tested before the generic `.deb` rule, and
+      reversed it files ARM downloads as x86_64 with nothing in the data marking the ambiguity
 - [ ] the Desktop badge on the homepage files `desktop`
 
 ## 7. Arch Linux — the AUR package
