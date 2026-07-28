@@ -1,18 +1,17 @@
 name: Release
 
 # Cut a release by pushing a version tag:
-#   git tag v1.0.0 && git push origin v1.0.0
+#   git tag v1.0.3 && git push origin v1.0.3
 #
-# CI builds the two installers that need a machine you do not have — the .deb on Ubuntu and the
-# .msi on Windows — and opens a DRAFT release with them attached. The macOS .dmg, every PGP
-# signature and the SHA256SUMS manifest are made on Kevin's Mac and attached by hand, then the
-# draft is published. RELEASING.md has the local half.
+# CI builds everything that needs a machine you do not have — the Linux .deb, portable tarball
+# and AppImage on both x86_64 and aarch64, and the Windows .msi — and opens a DRAFT release with
+# them attached. The macOS .dmg, every PGP signature and the SHA256SUMS manifest are made on
+# Kevin's Mac and attached by hand, then the draft is published. RELEASING.md has the local half.
 #
 # This split is the plan of record (§D0-5: "CI producing unsigned artifacts, signing done locally
 # at release time"), and it is the reason this repository holds NO secrets. The Developer ID
 # certificate never reaches a hosted runner, and neither does the PGP release key — which for an
-# OpenPGP application signing its own releases is the whole point. A fully automated pipeline is
-# possible and was written first; it was dropped deliberately, not for lack of trying.
+# OpenPGP application signing its own releases is the whole point.
 #
 # The workflow triggers only on tag pushes. There is nothing secret here for a fork PR to reach,
 # but keep it that way regardless.
@@ -23,22 +22,54 @@ on:
       - 'v*'
 
 jobs:
+  # One matrix, two architectures, ONE set of steps. Deliberately not two copied jobs: an arm64
+  # lane that drifts from the x86_64 lane is how a second architecture ships with a verification
+  # gap, and 1.0.0 already shipped a broken Windows CLI for exactly that reason — the check
+  # existed on one platform and was assumed to cover the rest.
+  #
+  # jpackage cannot cross-compile, so each architecture genuinely needs its own native runner.
+  # GitHub's ubuntu-24.04-arm runners are GA and free on public repositories.
   linux:
-    name: deb (Linux)
-    runs-on: ubuntu-latest
+    name: deb + tarball + AppImage (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The x86_64 .deb keeps the name it has always had. Existing links to
+          # PGPony-linux.deb must not break, so the arch suffix is only added to the new one.
+          - arch: x86_64
+            runner: ubuntu-latest
+            debarch: amd64
+            deb: PGPony-linux.deb
+            tarball: PGPony-linux-x86_64.tar.gz
+            appimage: PGPony-x86_64.AppImage
+            appimagetool: appimagetool-x86_64.AppImage
+            artifact: linux-x86_64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            debarch: arm64
+            deb: PGPony-linux-arm64.deb
+            tarball: PGPony-linux-aarch64.tar.gz
+            appimage: PGPony-aarch64.AppImage
+            appimagetool: appimagetool-aarch64.AppImage
+            artifact: linux-aarch64
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - run: sudo apt-get update && sudo apt-get install -y fakeroot
+      # desktop-file-utils supplies desktop-file-validate, which appimagetool runs against the
+      # AppDir's .desktop and refuses to build without.
+      - run: sudo apt-get update && sudo apt-get install -y fakeroot desktop-file-utils
 
-      - name: Build deb
+      - name: Build deb and portable tarball
         run: |
           chmod +x gradlew
-          ./gradlew packageDeb
-          cp build/compose/binaries/main/deb/pgpony_*_amd64.deb PGPony-linux.deb
+          ./gradlew packageDeb createDistributable
+          cp build/compose/binaries/main/deb/pgpony_*_${{ matrix.debarch }}.deb ${{ matrix.deb }}
+          tar -czf ${{ matrix.tarball }} -C build/compose/binaries/main/app PGPony
 
       # jpackage writes its real error to a log file and Gradle only prints the path, so a
       # failure here otherwise says nothing but "exit code 1". Without this the only way to see
@@ -46,7 +77,7 @@ jobs:
       - name: jpackage logs on failure
         if: failure()
         run: |
-          for f in build/compose/logs/packageDeb/*.txt; do
+          for f in build/compose/logs/*/*.txt; do
             echo "===== $f ====="
             cat "$f"
           done
@@ -56,21 +87,78 @@ jobs:
       # nothing here; this is the check that would notice, and hardware keys are dead without it.
       - name: Verify deb declares its pcsc dependency
         run: |
-          dpkg-deb -f PGPony-linux.deb Depends
-          dpkg-deb -f PGPony-linux.deb Depends | grep -q pcsc
+          dpkg-deb -f ${{ matrix.deb }} Depends
+          dpkg-deb -f ${{ matrix.deb }} Depends | grep -q pcsc
 
-      # The OS half of the D9 file-association work. The .desktop entry must claim the types, or
+      # The OS half of the D9 file-association work: the .desktop entry must claim the types or
       # the routing DesktopFileRouter already implements never gets handed a file.
+      #
+      # This assertion used to end in `|| echo "NO MimeType FOUND"`, which made it incapable of
+      # failing — it printed a scary string and returned 0. Same defect class as the card-info
+      # check that passed while card-info was falling through to the usage text. A check that
+      # cannot fail on the bug it names is not a check.
       - name: Verify deb registers the file associations
         run: |
-          dpkg-deb -c PGPony-linux.deb | grep -E '\.desktop$' || true
-          mkdir -p /tmp/debx && dpkg-deb -x PGPony-linux.deb /tmp/debx
-          grep -rh "MimeType" /tmp/debx --include=*.desktop || echo "NO MimeType FOUND"
+          rm -rf /tmp/debx && mkdir -p /tmp/debx
+          dpkg-deb -x ${{ matrix.deb }} /tmp/debx
+          grep -rh MimeType /tmp/debx --include=*.desktop
+          grep -rq 'MimeType=.*pgp' /tmp/debx --include=*.desktop
+
+      # The tarball is a NEW distribution channel with no installer to vouch for it, so it gets
+      # the checks the .deb gets for free. Running the CLI out of the extracted tree is the
+      # Linux counterpart of the Windows "pgpony-cli actually prints" assertion — 1.0.0 shipped
+      # a platform whose CLI was silently mute because nothing ever ran it.
+      - name: Verify the portable tarball
+        run: |
+          rm -rf /tmp/tarcheck && mkdir -p /tmp/tarcheck
+          tar -xzf ${{ matrix.tarball }} -C /tmp/tarcheck
+          test -x /tmp/tarcheck/PGPony/bin/PGPony
+          grep -q 'java\.smartcardio' /tmp/tarcheck/PGPony/runtime/release
+          out=$(/tmp/tarcheck/PGPony/bin/PGPony version 2>&1)
+          echo "bin/PGPony version -> $out"
+          test -n "$out"
+
+      # AppRun and the .desktop are COMMITTED files copied in, never heredocs written inline.
+      # A YAML block scalar re-indents its content, and a shell script whose shebang line
+      # arrives with leading whitespace cannot be exec'd at all.
+      #
+      # --appimage-extract-and-run is what lets appimagetool work on a runner: it unpacks itself
+      # rather than mounting, and hosted runners have no FUSE.
+      - name: Build AppImage
+        run: |
+          APPDIR=PGPony.AppDir
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR"
+          cp -r build/compose/binaries/main/app/PGPony/* "$APPDIR/"
+          cp packaging/appimage/AppRun "$APPDIR/AppRun"
+          chmod +x "$APPDIR/AppRun"
+          cp packaging/appimage/pgpony.desktop "$APPDIR/pgpony.desktop"
+          cp packaging/pgpony.png "$APPDIR/pgpony.png"
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/${{ matrix.appimagetool }}
+          chmod +x ${{ matrix.appimagetool }}
+          ARCH=${{ matrix.arch }} ./${{ matrix.appimagetool }} --appimage-extract-and-run "$APPDIR" ${{ matrix.appimage }}
+
+      # --appimage-extract needs no FUSE either, so the produced image can be opened and its
+      # entry point actually executed. This proves AppRun's exec path resolves inside the
+      # bundle, which is the one thing a committed-vs-generated AppRun mistake would break.
+      - name: Verify the AppImage runs
+        run: |
+          chmod +x ${{ matrix.appimage }}
+          rm -rf squashfs-root
+          ./${{ matrix.appimage }} --appimage-extract > /dev/null
+          test -x squashfs-root/AppRun
+          out=$(./squashfs-root/AppRun version 2>&1)
+          echo "AppRun version -> $out"
+          test -n "$out"
+          rm -rf squashfs-root
 
       - uses: actions/upload-artifact@v4
         with:
-          name: deb
-          path: PGPony-linux.deb
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.deb }}
+            ${{ matrix.tarball }}
+            ${{ matrix.appimage }}
 
   windows:
     name: msi (Windows)
@@ -109,25 +197,11 @@ jobs:
             Get-Content $_.FullName
           }
 
-      # Three assertions, each for a bug that shipped in 1.0.0 while the build was green.
-      #
-      #  1. java.smartcardio in the bundled runtime. D12 warned that a wrong module name would
-      #     silently drop card support from the jlink image; the macOS image was verified and
-      #     Windows was not, on the assumption that one platform covered all three.
-      #  2. Both launchers present. The console pgpony-cli.exe comes from --add-launcher, and if
-      #     that freeArgs injection ever stops resolving it degrades to a silent no-op — exactly
-      #     the failure mode --linux-package-deps has. It is pgpony-cli and not pgpony because
-      #     Windows is case-insensitive and pgpony.exe collides with the GUI's PGPony.exe.
-      #  3. The CLI actually PRINTS. 1.0.0's only launcher was GUI-subsystem, which on Windows has
-      #     no stdout, so every verb ran and discarded its output. Nothing caught it because
-      #     nothing ever ran the CLI.
-      # Verified against the INSTALLED msi, not an intermediate build directory. packageMsi
+      # Four assertions, each for a bug that shipped in 1.0.0 or 1.0.1 while the build was green.
+      # Verified against the INSTALLED msi, not an intermediate build directory: packageMsi
       # builds into a jpackage temp image and leaves no app image behind (packageDmg does, which
-      # is what misled the first version of this step), and --add-launcher is scoped to packageMsi
-      # by task name so an intermediate would not carry pgpony-cli.exe regardless.
-      #
-      # Installing also makes this the clean-machine install that D13 never performed — the msi
-      # goes in silently, gets inspected, and the job fails if any of it is wrong.
+      # is what misled the first version of this step). Installing also makes this the
+      # clean-machine install the release checklist otherwise never performs.
       - name: Install the msi and verify it
         shell: pwsh
         run: |
@@ -159,8 +233,7 @@ jobs:
           Write-Host 'both launchers: present'
 
           # 3. The CLI actually PRINTS. 1.0.0 shipped only a GUI-subsystem launcher, which on
-          #    Windows has no stdout, so every verb ran and discarded its output. Nothing caught
-          #    it because nothing ever ran the CLI.
+          #    Windows has no stdout, so every verb ran and discarded its output.
           $out = & (Join-Path $img 'pgpony-cli.exe') version 2>&1 | Out-String
           Write-Host "pgpony-cli version -> '$($out.Trim())'"
           if ([string]::IsNullOrWhiteSpace($out)) {
@@ -171,7 +244,6 @@ jobs:
           #    error string: the first version of this check only looked for 'MISSING from this
           #    runtime', so it passed while card-info was silently falling through to Main.kt's
           #    usage text — the verb had been added to Cli's dispatch but not to Main's gate.
-          #    A check that cannot fail on the actual bug is not a check.
           $ci = & (Join-Path $img 'pgpony-cli.exe') card-info 2>&1 | Out-String
           Write-Host "pgpony-cli card-info ->"
           Write-Host $ci
@@ -187,6 +259,7 @@ jobs:
 
   draft:
     name: Open the draft release
+    # Naming the matrix job once waits for BOTH of its legs.
     needs: [linux, windows]
     runs-on: ubuntu-latest
     permissions:
@@ -199,21 +272,51 @@ jobs:
       - name: Collect
         run: |
           mkdir -p dist
-          mv artifacts/deb/PGPony-linux.deb dist/
+          mv artifacts/linux-x86_64/PGPony-linux.deb dist/
+          mv artifacts/linux-x86_64/PGPony-linux-x86_64.tar.gz dist/
+          mv artifacts/linux-x86_64/PGPony-x86_64.AppImage dist/
+          mv artifacts/linux-aarch64/PGPony-linux-arm64.deb dist/
+          mv artifacts/linux-aarch64/PGPony-linux-aarch64.tar.gz dist/
+          mv artifacts/linux-aarch64/PGPony-aarch64.AppImage dist/
           mv artifacts/msi/PGPony-windows.msi dist/
           ls -l dist
           sha256sum dist/*
 
-      # DRAFT, deliberately. A release published with two of its three installers missing, no
-      # signatures and no SHA256SUMS would be visible to anyone watching the repo, and the site
-      # would start linking assets that are not there yet. The draft stays invisible until the
-      # local half is attached and it is published by hand.
+      # DRAFT, deliberately. A release published without the dmg, without signatures and without
+      # SHA256SUMS would be visible to anyone watching the repo, and the site would start linking
+      # assets that are not there yet. The draft stays invisible until the local half is attached
+      # and it is published by hand.
+      #
+      # Note for anything relying on releases/latest/download/...: those URLs resolve only once
+      # this draft is PUBLISHED and marked latest. Until then they serve the previous release.
+      # Re-pushing a tag is a normal thing to do — a botched tag, a fix after CI fails — and a
+      # bare `gh release create` fails outright when a release for that tag already exists,
+      # taking this job red for a reason that has nothing to do with the build. Clear any
+      # existing DRAFT for this tag first. A published release is left alone deliberately:
+      # deleting one out from under users is not something a workflow should do unattended.
+      - name: Clear any stale draft for this tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" \
+               --json isDraft --jq '.isDraft' 2>/dev/null | grep -qx true; then
+            echo "deleting stale draft for ${{ github.ref_name }}"
+            gh release delete "${{ github.ref_name }}" --repo "${{ github.repository }}" --yes
+          else
+            echo "no draft to clear"
+          fi
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" \
             dist/PGPony-linux.deb \
+            dist/PGPony-linux-x86_64.tar.gz \
+            dist/PGPony-x86_64.AppImage \
+            dist/PGPony-linux-arm64.deb \
+            dist/PGPony-linux-aarch64.tar.gz \
+            dist/PGPony-aarch64.AppImage \
             dist/PGPony-windows.msi \
             --repo "${{ github.repository }}" \
             --title "PGPony Desktop ${{ github.ref_name }}" \

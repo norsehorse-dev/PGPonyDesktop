@@ -1,14 +1,19 @@
 # Releasing PGPony Desktop
 
-Each release ships three installers — a signed and notarized **`.dmg`** (macOS, arm64), a
-**`.deb`** (Linux, amd64) and an **`.msi`** (Windows, x64) — plus a detached `.asc` for each and
-a signed `SHA256SUMS` covering all three.
+Each release ships eight artifacts — a signed and notarized **`.dmg`** (macOS, arm64), an
+**`.msi`** (Windows, x64), and six for Linux: a **`.deb`**, a portable **`.tar.gz`** and an
+**`.AppImage`**, each for both **x86_64** and **ARM64** — plus a detached `.asc` for every one of
+them and a signed `SHA256SUMS` covering the lot. Arch Linux is served separately by the
+`pgpony-bin` AUR package, which pulls the tarballs (see §7).
+
+The x86_64 `.deb` keeps its historic asset name, `PGPony-linux.deb`. Only the ARM one carries an
+architecture suffix, so links published before 1.0.3 keep working.
 
 `jpackage` only builds for the OS it runs on, so the work is split:
 
 | Where | What |
 | --- | --- |
-| **CI**, on a tag push | the `.deb` and the `.msi`, attached to a **draft** release |
+| **CI**, on a tag push | the six Linux artifacts + the `.msi`, into a **draft** release |
 | **Your Mac** | the `.dmg`, notarization, every PGP signature, and publishing the draft |
 
 **This repository holds no secrets.** The Developer ID certificate never reaches a hosted
@@ -35,13 +40,25 @@ git status --short
 git push
 ```
 
-## 2. Tag — CI builds the deb and the msi
+## 2. Tag — CI builds the Linux artifacts and the msi
 
 ```sh
-git tag v1.0.0
-git push origin v1.0.0
-gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
+git tag v1.0.3
+git push origin v1.0.3
+sleep 15
+gh run watch $(gh run list --workflow=release.yml --limit 1 \
+  --json databaseId --jq '.[0].databaseId')
 ```
+
+The `sleep` matters: `gh run list` fires before the new run registers and happily hands you the
+*previous* run's id, which then reports success for work you are not watching.
+
+Three build jobs now — `linux (x86_64)`, `linux (aarch64)` and `windows`. The two Linux legs are
+one matrix job, deliberately: an ARM lane maintained as a copy of the x86_64 lane drifts, and a
+lane that drifts is a lane whose assertions quietly stop covering it.
+
+`ubuntu-24.04-arm` runners are GA and free on public repositories. jpackage cannot cross-compile,
+so the ARM artifacts genuinely require an ARM machine — there is no flag that avoids this.
 
 This opens a **draft** release with the two installers attached. Draft is deliberate: a release
 published with one installer missing, no signatures and no `SHA256SUMS` is visible to anyone
@@ -99,28 +116,40 @@ covers the exact bytes that ship.
 
 ```sh
 mkdir -p ~/pgpony-release && cd ~/pgpony-release
-gh release download v1.0.0 --repo norsehorse-dev/PGPonyDesktop --dir .
+gh release download v1.0.3 --repo norsehorse-dev/PGPonyDesktop --dir .
 cp /Users/kevinstewart/Apps/PGPonyDesktop/build/compose/binaries/main/dmg/PGPony-*.dmg \
    PGPony-macOS.dmg
 
-shasum -a 256 PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi > SHA256SUMS
+FILES="PGPony-macOS.dmg PGPony-linux.deb PGPony-linux-x86_64.tar.gz PGPony-x86_64.AppImage \
+PGPony-linux-arm64.deb PGPony-linux-aarch64.tar.gz PGPony-aarch64.AppImage PGPony-windows.msi"
+
+shasum -a 256 $FILES > SHA256SUMS
 cat SHA256SUMS
-for f in PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi SHA256SUMS; do
-  gpg --armor --detach-sign "$f"
+for f in $FILES SHA256SUMS; do
+  gpg -u A0CBC8F65AACE56F1C5B767753F9798E4919DE62 --armor --detach-sign "$f"
 done
-for f in PGPony-macOS.dmg PGPony-linux.deb PGPony-windows.msi SHA256SUMS; do
+for f in $FILES SHA256SUMS; do
   gpg --verify "$f.asc" "$f"
 done
 shasum -a 256 -c SHA256SUMS
 ```
 
+The explicit `-u` is not decoration: a bare `gpg --detach-sign` failed with "no default secret
+key" during the 1.0.1 cycle. Nine signatures now, not four — check the `gpg --verify` loop
+printed nine `Good signature` lines before going any further.
+
 Verify before publishing, not after. A signature that does not check out is worse than none.
 
 ```sh
-gh release upload v1.0.0 PGPony-macOS.dmg *.asc SHA256SUMS \
+gh release upload v1.0.3 PGPony-macOS.dmg *.asc SHA256SUMS \
   --repo norsehorse-dev/PGPonyDesktop
-gh release edit v1.0.0 --draft=false --repo norsehorse-dev/PGPonyDesktop
+gh release edit v1.0.3 --draft=false --latest --repo norsehorse-dev/PGPonyDesktop
 ```
+
+`--latest` is load-bearing. `releases/latest/download/…` — the stable, versionless URLs handed
+out in the README and used by anyone scripting an install — resolve to whichever release carries
+the "latest" flag, not to the newest tag. A release published without it leaves those links
+pointing at the previous version, silently and indefinitely.
 
 Keep `~/pgpony-release` until the site steps below are done — the checksums are needed there.
 
@@ -162,7 +191,12 @@ Artifacts:
 - [ ] `shasum -a 256 -c SHA256SUMS` passes (macOS has no `sha256sum`; the format is identical,
       so Linux users verifying later can still use `sha256sum -c`)
 - [ ] the published checksums match what `downloads/desktop.json` claims
-- [ ] `dpkg-deb -f PGPony-linux.deb Depends` mentions `pcsc`
+- [ ] `dpkg-deb -f PGPony-linux.deb Depends` mentions `pcsc` — and the same for
+      `PGPony-linux-arm64.deb`. CI asserts both, but the ARM lane is the newer one
+- [ ] the portable tarball extracts and `PGPony/bin/PGPony version` prints (CI asserts this on
+      both arches; do it once by hand on a real machine before the first ARM release)
+- [ ] the AppImage is executable and runs — `chmod +x` then `./PGPony-x86_64.AppImage version`.
+      On a desktop with FUSE it should also launch the GUI by double-click
 - [ ] a CLI verb PRINTS on every OS — `pgpony version`, and `pgpony-cli version` on Windows.
       1.0.0 shipped a Windows build whose only launcher was GUI-subsystem, so the whole CLI was
       silent there and no check noticed
@@ -189,3 +223,37 @@ Site:
 - [ ] each of the four download links on `/desktop` files the right value in the daily click
       report: `desktop_macos`, `desktop_linux`, `desktop_windows`, `desktop_sig`
 - [ ] the Desktop badge on the homepage files `desktop`
+
+## 7. Arch Linux — the AUR package
+
+`pgpony-bin` is published separately from the GitHub release and **must go out after it**. The
+PKGBUILD fetches the release tarballs by tag, and PGPony's releases open as drafts: push to the
+AUR while the release is still a draft and every user's `makepkg` gets a 404.
+
+Sources live in `packaging/aur/` (`PKGBUILD`, `.SRCINFO`, `pgpony.desktop`, plus `README.md`
+explaining the dependencies). The AUR repository itself holds only `PKGBUILD` and `.SRCINFO`.
+
+```sh
+cd ~/pgpony-release
+git clone ssh://aur@aur.archlinux.org/pgpony-bin.git
+cp /Users/kevinstewart/Apps/PGPonyDesktop/packaging/aur/PKGBUILD pgpony-bin/
+cp /Users/kevinstewart/Apps/PGPonyDesktop/packaging/aur/.SRCINFO pgpony-bin/
+cd pgpony-bin
+git add PKGBUILD .SRCINFO
+git commit -m "pgpony-bin 1.0.3"
+git push origin master
+```
+
+The AUR's default branch is **`master`**. A push to `main` is rejected outright.
+
+Two things that are easy to get wrong here:
+
+- **`pcsclite` is a hard dependency, not a nicety.** `javax.smartcardio` dlopens `libpcsclite` at
+  runtime, so without it the app installs cleanly, starts, and every hardware-key feature fails
+  with a PC/SC error that looks like a broken security key. This is the same reason the `.deb`
+  declares `pcscd,libpcsclite1`. RelayPony's PKGBUILD needs only `fontconfig`; copying it
+  verbatim would have shipped exactly that bug.
+- **`.SRCINFO` is hand-written**, because it is maintained from a Mac with no Arch environment.
+  `makepkg --printsrcinfo` is authoritative — if you have a container, regenerate and diff before
+  pushing. `SKIP` checksums are acceptable for a first push; `updpkgsums` fills in real ones once
+  the release assets exist.

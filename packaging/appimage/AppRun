@@ -1,0 +1,13 @@
+#!/bin/sh
+# AppRun — the AppImage entry point. Committed as a real file, deliberately.
+#
+# This is never generated inline in the workflow. A YAML block scalar re-indents everything it
+# contains, and a shell script whose shebang line arrives with leading whitespace is not a shell
+# script at all — the kernel refuses to exec it and the AppImage fails with a message that names
+# neither the cause nor this file. The same applies to the .desktop beside it.
+#
+# Inside a mounted AppImage $0 is a path under /tmp/.mount_*, so readlink -f resolves through to
+# the squashfs root and HERE is the AppDir. exec rather than a subshell, so signals and the exit
+# code reach the JVM directly — the CLI's exit codes are part of its contract.
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/bin/PGPony" "$@"

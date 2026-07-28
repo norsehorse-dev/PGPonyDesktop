@@ -22,3 +22,19 @@ keystore.properties
 *.p12
 *.jks
 *.keystore
+
+# Release artifacts and CI outputs pulled down for signing — never commit binaries. This is not
+# tidiness: a 100+MB artifact committed by accident is rejected by GitHub at push time, and the
+# only fix is a history rewrite. The AppDir and appimagetool below are created in the workspace
+# by the release workflow and by anyone reproducing it locally.
+/ci-artifacts/
+/*.AppDir/
+/appimagetool-*.AppImage
+/squashfs-root/
+/PGPony-*.dmg
+/PGPony-*.deb
+/PGPony-*.msi
+/PGPony-*.tar.gz
+/PGPony-*.AppImage
+/SHA256SUMS
+/SHA256SUMS.asc
