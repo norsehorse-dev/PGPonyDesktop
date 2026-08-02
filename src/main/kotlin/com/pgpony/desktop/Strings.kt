@@ -141,6 +141,40 @@ object I18n {
      */
     fun localeOf(tag: String): Locale = Locale.forLanguageTag(tag)
 
+    /**
+     * CLDR cardinal plural category for an integer [count] in the language of [tag].
+     *
+     * A hand-written rule table over the CLDR data — the same trade `systemMatch` makes, a
+     * `when` instead of an ICU4J dependency — and integer rules only, because every count this
+     * app pluralizes is a whole number of keys, files, or bytes. The rows worth reading twice:
+     * French and Brazilian Portuguese put 0 with the singular (CLDR: «0 fichier», not
+     * «0 fichiers»), which the old `count == 1` branch got wrong; and Russian is in the table
+     * ahead of `values-ru` landing, because its `one`/`few`/`many` split over the final digit
+     * (21 → `one`, 3 → `few`, 5 and 11 → `many`) is the entire reason the two-way branch had
+     * to die (2.0.0 plan §4).
+     *
+     * Unknown languages take the English row, and a category the translation file doesn't
+     * carry degrades sideways to that language's `other` in [pluralTemplate] — so a wrong row
+     * here mislabels a count, but never blanks a screen and never leaks another language.
+     */
+    fun pluralCategory(tag: String, count: Long): String {
+        // CLDR rules operate on |n|. Long.MIN_VALUE has no positive twin, so nudge it first.
+        val n = kotlin.math.abs(if (count == Long.MIN_VALUE) count + 1 else count)
+        val mod10 = (n % 10).toInt()
+        val mod100 = (n % 100).toInt()
+        return when (localeOf(tag).language) {
+            "ja" -> "other"
+            "fr", "pt" -> if (n < 2) "one" else "other"
+            "ru" -> when {
+                mod10 == 1 && mod100 != 11 -> "one"
+                mod10 in 2..4 && mod100 !in 12..14 -> "few"
+                else -> "many"
+            }
+            // en, de, es — also the rule the English base files are written against.
+            else -> if (n == 1L) "one" else "other"
+        }
+    }
+
     // ── Resource layers ────────────────────────────────────────────────────
 
     /**
@@ -328,10 +362,14 @@ fun tr(key: String, vararg args: Any?): String {
 }
 
 /**
- * A `<plurals>` lookup. English/German/Spanish/French/Portuguese distinguish one from other;
- * Japanese has no plural form and its file carries only `other`, so a count of 1 there resolves
- * to the Japanese `other` item rather than to English (see [I18n.pluralTemplate]). A plural no
- * layer declares renders as its own key, like [tr].
+ * A `<plurals>` lookup, routed through the CLDR selector [I18n.pluralCategory]: English,
+ * German and Spanish split on exactly 1; French and Brazilian Portuguese put 0 with the
+ * singular; Japanese has one category and its file carries only `other`, so a count of 1
+ * there resolves to the Japanese `other` item rather than to English (see
+ * [I18n.pluralTemplate]); Russian will want `one`/`few`/`many` the day `values-ru` lands.
+ * A category a file doesn't carry degrades sideways the same way Japanese does, so no file
+ * ever has to declare forms its language doesn't use. A plural no layer declares renders as
+ * its own key, like [tr].
  *
  * [count] is passed to the formatter as the first argument, matching Android's
  * `getQuantityString(id, count, count)` convention at PGPony's single call site.
@@ -345,7 +383,7 @@ fun trQuantity(key: String, count: Int, vararg args: Any?): String =
  * lookup works in [Long] and the [Int] overload widens into it. `%d` formats either.
  */
 fun trQuantity(key: String, count: Long, vararg args: Any?): String {
-    val quantity = if (count == 1L) "one" else "other"
+    val quantity = I18n.pluralCategory(I18n.effective, count)
     val template = I18n.pluralTemplate(key, quantity) ?: return key
     val all = if (args.isEmpty()) arrayOf<Any?>(count) else arrayOf<Any?>(count, *args)
     return try {

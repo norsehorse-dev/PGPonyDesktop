@@ -30,35 +30,47 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
 /**
- * The open-file bus. The UI registers [handler]; everything else calls [deliver]. Paths that
+ * One delivery on the open-file bus: the paths, plus the operation the caller forced, if any
+ * (D14 — `pgpony open --op`, and the context-menu verbs built on it).
+ */
+data class OpenRequest(val paths: List<Path>, val op: ForcedOp? = null)
+
+/**
+ * The open-file bus. The UI registers [handler]; everything else calls [deliver]. Requests that
  * arrive before a handler is set queue in [pending] and are drained on registration, so a file
- * passed on the very first launch still routes once the window exists.
+ * passed on the very first launch still routes once the window exists. Queued as REQUESTS, not
+ * pooled paths — two forwarded opens with different forced ops must not merge into one batch
+ * that could only keep a single op.
  */
 object AppOpen {
     private val lock = Any()
-    private var handler: ((List<Path>) -> Unit)? = null
-    private val pending = mutableListOf<Path>()
+    private var handler: ((OpenRequest) -> Unit)? = null
+    private val pending = mutableListOf<OpenRequest>()
 
-    /** Called by DesktopState once it can route. Drains anything queued so far. */
-    fun setHandler(h: (List<Path>) -> Unit) {
-        val drain: List<Path>
+    /** Called by DesktopState once it can route. Drains anything queued so far, in order. */
+    fun setHandler(h: (OpenRequest) -> Unit) {
+        val drain: List<OpenRequest>
         synchronized(lock) {
             handler = h
             drain = pending.toList()
             pending.clear()
         }
-        if (drain.isNotEmpty()) h(drain)
+        drain.forEach(h)
     }
 
-    /** Deliver files to the UI (or queue them until a handler exists). */
-    fun deliver(paths: List<Path>) {
-        val existing: ((List<Path>) -> Unit)?
+    /** Deliver a request to the UI (or queue it until a handler exists). */
+    fun deliver(request: OpenRequest) {
+        if (request.paths.isEmpty()) return
+        val existing: ((OpenRequest) -> Unit)?
         synchronized(lock) {
             existing = handler
-            if (existing == null) pending.addAll(paths)
+            if (existing == null) pending.add(request)
         }
-        existing?.invoke(paths)
+        existing?.invoke(request)
     }
+
+    /** The un-forced shape most callers mean (drag-drop, macOS open events). */
+    fun deliver(paths: List<Path>) = deliver(OpenRequest(paths))
 
     /** Optional window-focus hook set by the GUI so a forwarded open raises the window. */
     @Volatile var focusWindow: (() -> Unit)? = null
@@ -75,13 +87,14 @@ object SingleInstance {
 
     /**
      * Try to become the primary instance. On success returns true (the caller opens the GUI);
-     * the primary begins serving forwarded opens. On failure the [files] are forwarded to the
+     * the primary begins serving forwarded opens. On failure the [request] is forwarded to the
      * already-running instance and this returns false (the caller should exit).
      *
      * If anything about the IPC goes wrong (stale port file, refused connection), we fail SAFE
      * by treating this process as primary — a second window beats a file that opens nothing.
      */
-    fun acquire(files: List<Path>): Boolean {
+    fun acquire(request: OpenRequest): Boolean {
+        val files = request.paths
         val lockPath = Config.dataDir.resolve(LOCK_FILE)
         val portPath = Config.dataDir.resolve(PORT_FILE)
 
@@ -100,21 +113,21 @@ object SingleInstance {
             lockChannel = channel
             lock = acquired
             startServer(portPath)
-            if (files.isNotEmpty()) AppOpen.deliver(files)
+            if (files.isNotEmpty()) AppOpen.deliver(request)
             Runtime.getRuntime().addShutdownHook(Thread {
                 runCatching { Files.deleteIfExists(portPath) }
             })
             return true
         }
 
-        // Secondary: forward our files to the primary and bow out.
+        // Secondary: forward our request to the primary and bow out.
         channel.close()
         if (files.isEmpty()) {
             // A bare second launch with no file: just raise the primary if we can, then exit.
-            forward(portPath, emptyList())
+            forward(portPath, OpenRequest(emptyList()))
             return false
         }
-        val ok = forward(portPath, files)
+        val ok = forward(portPath, request)
         if (!ok) {
             // Couldn't reach the primary (stale state). Fail safe: run as our own instance.
             return true
@@ -142,29 +155,49 @@ object SingleInstance {
 
     private fun handleConnection(socket: Socket) {
         socket.use { s ->
-            val paths = mutableListOf<Path>()
+            var request = OpenRequest(emptyList())
             runCatching {
                 BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8)).use { reader ->
-                    reader.lineSequence().forEach { line ->
-                        val trimmed = line.trim()
-                        if (trimmed.isNotEmpty()) {
-                            runCatching { Path.of(trimmed) }.getOrNull()?.let { paths.add(it) }
-                        }
-                    }
+                    request = parseForwarded(reader.lineSequence())
                 }
             }
             // Always raise the window on a forwarded launch, even a bare one.
             AppOpen.focusWindow?.invoke()
-            if (paths.isNotEmpty()) AppOpen.deliver(paths)
+            if (request.paths.isNotEmpty()) AppOpen.deliver(request)
         }
     }
 
-    private fun forward(portPath: Path, files: List<Path>): Boolean {
+    /**
+     * The wire format, reading side (exposed for tests). One optional header line
+     * `--op <name>`, then one absolute path per line. No collision is possible: [forward]
+     * writes absolute paths, and an absolute path never begins with `--`. An unknown op name
+     * (a newer secondary talking to an older primary) degrades to classification rather than
+     * dropping the files.
+     */
+    internal fun parseForwarded(lines: Sequence<String>): OpenRequest {
+        var op: ForcedOp? = null
+        val paths = mutableListOf<Path>()
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) continue
+            if (trimmed.startsWith(OP_HEADER)) {
+                op = ForcedOp.fromCli(trimmed.removePrefix(OP_HEADER))
+                continue
+            }
+            runCatching { Path.of(trimmed) }.getOrNull()?.let { paths.add(it) }
+        }
+        return OpenRequest(paths, op)
+    }
+
+    private const val OP_HEADER = "--op "
+
+    private fun forward(portPath: Path, request: OpenRequest): Boolean {
         val port = runCatching { Files.readString(portPath).trim().toInt() }.getOrNull() ?: return false
         return try {
             Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
                 OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8).use { w ->
-                    files.forEach { w.write(it.toAbsolutePath().toString() + "\n") }
+                    request.op?.let { w.write(OP_HEADER + it.cliName + "\n") }
+                    request.paths.forEach { w.write(it.toAbsolutePath().toString() + "\n") }
                     w.flush()
                 }
             }

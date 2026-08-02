@@ -18,7 +18,7 @@ private val PGPONY_VERBS = setOf(
     // means editing BOTH places, which is exactly what was forgotten first time round.
     "card-info"
 )
-private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "help", "--help", "-h") + PGPONY_VERBS
+private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open", "help", "--help", "-h") + PGPONY_VERBS
 
 fun main(args: Array<String>) {
     val first = args.firstOrNull()
@@ -38,6 +38,24 @@ fun main(args: Array<String>) {
         in PGPONY_VERBS -> exitProcess(Cli.run(args))
     }
 
+    // D14 (2.0.0 §2a) — `open` puts files in the GUI like a bare file argument does, but can
+    // FORCE the operation instead of trusting classification: `pgpony open --op encrypt <file>…`.
+    // The file-manager context menus and the clipboard sentinel are built on this spelling.
+    // Not one of PGPONY_VERBS on purpose: it launches (or forwards to) the GUI, so it must not
+    // pin English, and it routes through the single-instance guard like any other open.
+    if (first == "open") {
+        val request = try {
+            parseOpenArgs(args.drop(1).toList())
+        } catch (e: IllegalArgumentException) {
+            System.err.println("pgpony: ${e.message}")
+            System.err.println(OPEN_USAGE)
+            exitProcess(ExitCode.USAGE)
+        }
+        if (!SingleInstance.acquire(request)) return
+        cmdGui()
+        return
+    }
+
     // File-open arguments: any arg that isn't a known verb and resolves to an existing file.
     val fileArgs = if (first != null && first !in CLI_VERBS) {
         args.mapNotNull { runCatching { Path.of(it) }.getOrNull() }
@@ -51,10 +69,35 @@ fun main(args: Array<String>) {
 
     // GUI launch (bare, `gui`, or with file arguments). The single-instance guard forwards the
     // files to an already-running window when there is one; otherwise this becomes the primary.
-    if (!SingleInstance.acquire(fileArgs)) {
+    if (!SingleInstance.acquire(OpenRequest(fileArgs))) {
         return // forwarded to the running instance — exit quietly
     }
     cmdGui()
+}
+
+private const val OPEN_USAGE =
+    "usage: pgpony open [--op encrypt|decrypt|verify|import|restore] <file>..."
+
+/**
+ * The `open` grammar, apart from main() so it is testable without launching a window (CliTest).
+ * Reuses the D10 [Options] parser, so `--op=encrypt`, `--op encrypt` and `--` all behave like
+ * every other verb. Throws [IllegalArgumentException] with a printable message on a bad op
+ * name, a missing file argument, or a path that is not an existing regular file — a
+ * misconfigured context-menu verb must fail loudly on stderr, not open an empty window.
+ */
+internal fun parseOpenArgs(rest: List<String>): OpenRequest {
+    val o = Options(rest)
+    val op = o.value("--op")?.let {
+        ForcedOp.fromCli(it) ?: throw IllegalArgumentException(
+            "unknown --op '$it' (expected ${ForcedOp.entries.joinToString(" | ") { e -> e.cliName }})"
+        )
+    }
+    val files = o.allPositionals().map { Path.of(it) }
+    if (files.isEmpty()) throw IllegalArgumentException("open needs at least one file")
+    files.firstOrNull { !Files.isRegularFile(it) }?.let {
+        throw IllegalArgumentException("not a file: $it")
+    }
+    return OpenRequest(files.map { it.toAbsolutePath() }, op)
 }
 
 private fun usage() {
@@ -67,6 +110,8 @@ private fun usage() {
           gui         Open the graphical app (also opens when run with no command)
           <file>      Open a file in the app, routed by type (key → import, message → decrypt,
                       .pgpony → restore, detached signature → verify, anything else → encrypt)
+          open        Open files in the app, optionally forcing the operation instead of
+                      routing by type: pgpony open [--op encrypt|decrypt|verify|import|restore] <file>...
           selftest    Verify the vendored OpenPGP engine runs on this JVM (keygen + round-trip)
           version     Print the version
 

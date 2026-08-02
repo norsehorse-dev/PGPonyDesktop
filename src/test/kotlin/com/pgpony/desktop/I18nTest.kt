@@ -249,6 +249,80 @@ class I18nTest {
         assertEquals(template, tr(key, "not a number"))
     }
 
+    /**
+     * The 2.0.0 plan's matrix counts — 1, 2, 3, 5, 11, 21, 101 — chosen because together they
+     * split every row in the table: 21 is Russian `one` but English `other`, 2 is Russian
+     * `few` but French `other`, and 11 is Russian `many` despite ending in 1. Expected values
+     * are transcribed from the CLDR cardinal rules, not derived — the point of the test is
+     * that the hand-written table and CLDR agree.
+     */
+    @Test
+    fun pluralCategoriesMatchCldrAtTheMatrixCounts() {
+        val counts = listOf(1L, 2L, 3L, 5L, 11L, 21L, 101L)
+        val oneAtExactlyOne = listOf("one", "other", "other", "other", "other", "other", "other")
+        val expected = mapOf(
+            "en" to oneAtExactlyOne,
+            "de" to oneAtExactlyOne,
+            "es" to oneAtExactlyOne,
+            "fr" to oneAtExactlyOne,
+            "pt-BR" to oneAtExactlyOne,
+            "ja" to List(7) { "other" },
+            "ru" to listOf("one", "few", "few", "many", "many", "one", "one"),
+        )
+        for ((tag, categories) in expected) {
+            for ((i, count) in counts.withIndex()) {
+                assertEquals(
+                    categories[i], I18n.pluralCategory(tag, count),
+                    "pluralCategory(\"$tag\", $count)"
+                )
+            }
+        }
+    }
+
+    /** The rows the matrix counts can't reach: zero, the Russian teens/hundreds, negatives. */
+    @Test
+    fun pluralCategoryEdges() {
+        // CLDR puts 0 with the singular in French and Portuguese — «0 fichier» — and with the
+        // plural in English. This is the behavior change the selector rework ships on purpose.
+        assertEquals("one", I18n.pluralCategory("fr", 0))
+        assertEquals("one", I18n.pluralCategory("pt-BR", 0))
+        assertEquals("other", I18n.pluralCategory("en", 0))
+
+        // Russian: the teens are `many` whatever their last digit; x02–x04 return to `few`;
+        // x11–x14 in any hundred are teens again.
+        assertEquals("many", I18n.pluralCategory("ru", 12))
+        assertEquals("many", I18n.pluralCategory("ru", 111))
+        assertEquals("few", I18n.pluralCategory("ru", 102))
+        assertEquals("many", I18n.pluralCategory("ru", 100))
+        assertEquals("one", I18n.pluralCategory("ru", 1_000_001))
+
+        // The region subtag routes to the language's row, and unknown languages take English's.
+        assertEquals("one", I18n.pluralCategory("de-CH", 1))
+        assertEquals("other", I18n.pluralCategory("kl", 2))
+
+        // |n|: a negative count categorizes like its magnitude, and MIN_VALUE must not throw.
+        assertEquals("one", I18n.pluralCategory("en", -1))
+        assertEquals("few", I18n.pluralCategory("ru", -3))
+        I18n.pluralCategory("ru", Long.MIN_VALUE)
+
+        // 64-bit counts stay in Long: 2^31 (an Int would have wrapped) is still categorized.
+        assertEquals("other", I18n.pluralCategory("en", 2_147_483_648L))
+    }
+
+    /** The selector must actually be wired into trQuantity, not just exist beside it. */
+    @Test
+    fun trQuantityRoutesThroughTheSelector() {
+        // French, count 0: the old `count == 1` branch rendered the `other` item; CLDR (and
+        // now the selector) says `one`. The desktop French file declares both forms.
+        val key = "d_settings_pass_status_configured"
+        I18n.selectLanguage("fr")
+        val frOne = assertNotNull(
+            I18n.tableOf(I18n.DESKTOP_LAYER, "fr")["$key/one"],
+            "the French file should declare '$key/one' — this test needs it"
+        )
+        assertEquals(String.format(I18n.localeOf("fr"), frOne, 0L), trQuantity(key, 0))
+    }
+
     @Test
     fun quantityPicksOneOrOther() {
         val one = trQuantity("d_settings_pass_status_configured", 1)

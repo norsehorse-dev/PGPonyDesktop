@@ -129,11 +129,16 @@ class DesktopState(private val scope: CoroutineScope) {
 
     fun consumePendingOpen() { pendingOpen = null }
 
-    /** Route incoming file opens: a single file classifies to a typed action; several files go
-     *  to the Files surface as a batch (the drag-drop path). */
-    private fun onOpenFiles(paths: List<Path>) {
+    /** Route incoming file opens: a single file classifies to a typed action — honoring a
+     *  forced op from `open --op` / a context-menu verb (D14) — and several files go to the
+     *  Files surface as a batch (the drag-drop path), where the user picks the bulk operation
+     *  themselves. A forced op on a batch is deliberately not pre-applied yet: the Files tab
+     *  is the existing chooser, and pre-selecting its operation is 2a's installer-facing UI
+     *  work, not routing. */
+    private fun onOpenFiles(request: OpenRequest) {
+        val paths = request.paths
         when {
-            paths.size == 1 -> pendingOpen = DesktopFileRouter.classify(paths.first())
+            paths.size == 1 -> pendingOpen = DesktopFileRouter.classify(paths.first(), request.op)
             paths.size > 1 -> onFilesDropped(paths.map { it.toFile() })
         }
     }
@@ -142,8 +147,8 @@ class DesktopState(private val scope: CoroutineScope) {
     fun reload() = scope.launch { refresh() }
 
     init {
-        // D9 — register with the open-file bus; drains any file passed on first launch.
-        AppOpen.setHandler { paths -> onOpenFiles(paths) }
+        // D9 — register with the open-file bus; drains any request passed on first launch.
+        AppOpen.setHandler { request -> onOpenFiles(request) }
         scope.launch {
             repository.migrateLegacyJson(Config.legacyKeyringFile)?.let {
                 status = tr("d_status_migrated_legacy", it.summary())

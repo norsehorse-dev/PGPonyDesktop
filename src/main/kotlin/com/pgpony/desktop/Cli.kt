@@ -484,7 +484,8 @@ internal class Options(args: List<String>) {
     private val valued = setOf(
         "--output", "-o", "--input", "-i", "--recipient", "-r", "--sign-as", "-u",
         "--signature", "-s", "--passphrase-env", "--passphrase-fd", "--name", "--email",
-        "--algo", "--expires"
+        "--algo", "--expires",
+        "--op" // D14 — `pgpony open --op <verb>` (Main.parseOpenArgs)
     )
 
     init {
@@ -519,4 +520,7 @@ internal class Options(args: List<String>) {
         values.filter { it.first in names }.map { it.second }
 
     fun positional(): String? = positionals.firstOrNull()
+
+    /** Every positional, in order — `open` takes several files (D14); the D10 verbs take one. */
+    fun allPositionals(): List<String> = positionals.toList()
 }

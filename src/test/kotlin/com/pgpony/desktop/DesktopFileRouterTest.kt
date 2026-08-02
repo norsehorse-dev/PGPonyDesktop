@@ -10,6 +10,7 @@ import com.pgpony.android.crypto.PGPCryptoService
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DesktopFileRouterTest {
@@ -101,5 +102,55 @@ class DesktopFileRouterTest {
     @Test
     fun emptyFileRoutesToNone() {
         assertEquals(OpenAction.None, DesktopFileRouter.classifyBytes(ByteArray(0), path("empty")))
+    }
+
+    // ── Forced operations (D14 — `open --op`, the context-menu verbs) ──────
+
+    @Test
+    fun forcedEncryptWinsOverKeyClassification() {
+        val g = gen()
+        val bytes = g.armoredPublicKey.toByteArray()
+        // Classification says Import; the user's right-click said Encrypt. The click wins.
+        assertTrue(DesktopFileRouter.classifyBytes(bytes, path("key.asc")) is OpenAction.ImportKey)
+        val forced = DesktopFileRouter.classifyBytes(bytes, path("key.asc"), ForcedOp.ENCRYPT)
+        assertTrue(forced is OpenAction.EncryptFile, "got $forced")
+    }
+
+    @Test
+    fun forcedImportConsumesTheTextEvenWhenClassificationWouldNot() {
+        // The Import surface owns the "not a key" error, which names the op the user asked for.
+        val note = "not a key at all".toByteArray()
+        val forced = DesktopFileRouter.classifyBytes(note, path("notes.txt"), ForcedOp.IMPORT)
+        assertTrue(forced is OpenAction.ImportKey, "got $forced")
+        assertEquals("not a key at all", (forced as OpenAction.ImportKey).armored)
+    }
+
+    @Test
+    fun forcedDecryptKeepsTheTextFileSplitButNeverTheOp() {
+        val g = gen()
+        val ring = crypto.importArmoredKey(g.armoredPublicKey).publicKeyRing!!
+        val armored = crypto.encryptMessage("hello", listOf(ring), null, null).toByteArray()
+        val small = DesktopFileRouter.classifyBytes(armored, path("msg.asc"), ForcedOp.DECRYPT)
+        assertTrue(small is OpenAction.DecryptText, "got $small")
+        // Binary content picks the file VARIANT; the bytes never override the op itself.
+        val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte()) + ByteArray(16)
+        val big = DesktopFileRouter.classifyBytes(jpeg, path("photo.jpg"), ForcedOp.DECRYPT)
+        assertTrue(big is OpenAction.DecryptFile, "got $big")
+    }
+
+    @Test
+    fun forcedVerifyAndRestoreNameTheirActions() {
+        // Content decides nothing for these two — classify(path, op) doesn't even read it.
+        val verify = DesktopFileRouter.classifyBytes(ByteArray(0), path("x.sig"), ForcedOp.VERIFY)
+        assertTrue(verify is OpenAction.VerifyDetachedSignature, "got $verify")
+        val restore = DesktopFileRouter.classifyBytes(ByteArray(0), path("x.bin"), ForcedOp.RESTORE)
+        assertTrue(restore is OpenAction.RestoreBackup, "got $restore")
+    }
+
+    @Test
+    fun forcedOpNamesParseCaseInsensitivelyAndUnknownIsNull() {
+        assertEquals(ForcedOp.ENCRYPT, ForcedOp.fromCli("Encrypt"))
+        assertEquals(ForcedOp.DECRYPT, ForcedOp.fromCli(" decrypt "))
+        assertNull(ForcedOp.fromCli("sign"), "sign is not a forced op until signing UX exists")
     }
 }

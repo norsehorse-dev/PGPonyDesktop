@@ -24,6 +24,26 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.name
 
+/**
+ * An operation the caller FORCES — a file-manager context-menu verb, or `pgpony open --op` —
+ * instead of letting [DesktopFileRouter.classify] infer one (D14, 2.0.0 plan §2a). The
+ * [cliName] spellings get written into Windows registry verbs, `.desktop` Actions and Finder
+ * Quick Actions by the installers, so they are a public contract: add names, never rename.
+ */
+enum class ForcedOp(val cliName: String) {
+    ENCRYPT("encrypt"),
+    DECRYPT("decrypt"),
+    VERIFY("verify"),
+    IMPORT("import"),
+    RESTORE("restore");
+
+    companion object {
+        /** Parse a CLI/wire spelling. Unknown names are null — the caller picks the error. */
+        fun fromCli(name: String): ForcedOp? =
+            entries.firstOrNull { it.cliName.equals(name.trim(), ignoreCase = true) }
+    }
+}
+
 /** What opening a file should do. Text variants carry the string; file variants the path. */
 sealed class OpenAction {
     data class ImportKey(val armored: String) : OpenAction()
@@ -52,6 +72,59 @@ object DesktopFileRouter {
     } catch (_: Exception) {
         OpenAction.None
     }
+
+    /**
+     * [classify] with an optional forced operation (D14). A null [op] is the inference path
+     * above; a non-null one takes the decision tree out of the loop entirely — a user who
+     * right-clicked "Encrypt" on a `.asc` key file means it, and getting an Import surface
+     * instead is the bug this exists to prevent. Never throws.
+     *
+     * Content is read only where it still chooses BETWEEN variants of the same action (text
+     * vs file), never to second-guess the op — and not at all for encrypt/verify/restore, so
+     * forcing encrypt on a 10 GB file doesn't buffer it (the 3b rule starts here).
+     */
+    fun classify(path: Path, op: ForcedOp?): OpenAction {
+        if (op == null) return classify(path)
+        if (!Files.isRegularFile(path)) return OpenAction.None
+        return try {
+            val bytes = when (op) {
+                ForcedOp.ENCRYPT, ForcedOp.VERIFY, ForcedOp.RESTORE -> EMPTY
+                ForcedOp.IMPORT -> Files.readAllBytes(path)
+                ForcedOp.DECRYPT ->
+                    if (Files.size(path) <= TEXT_PREFILL_LIMIT) Files.readAllBytes(path) else EMPTY
+            }
+            classifyBytes(bytes, path, op)
+        } catch (_: Exception) {
+            OpenAction.None
+        }
+    }
+
+    /**
+     * The forced-op core (exposed for tests, which build bytes in memory, like [classifyBytes]).
+     * [op] picks the ACTION KIND; [bytes] only choose between its text and file variants.
+     */
+    fun classifyBytes(bytes: ByteArray, path: Path, op: ForcedOp): OpenAction = when (op) {
+        ForcedOp.ENCRYPT -> OpenAction.EncryptFile(path)
+        ForcedOp.VERIFY -> OpenAction.VerifyDetachedSignature(path)
+        ForcedOp.RESTORE -> OpenAction.RestoreBackup(path)
+        // Import consumes armored text; a non-key payload surfaces as the Import screen's own
+        // "not a key" error, which names the op the user asked for — better than a silent reroute.
+        ForcedOp.IMPORT -> OpenAction.ImportKey(String(bytes, Charsets.UTF_8).trim())
+        ForcedOp.DECRYPT -> {
+            val text = if (bytes.isNotEmpty() && bytes.size <= TEXT_PREFILL_LIMIT) {
+                String(bytes, Charsets.UTF_8).trim()
+            } else ""
+            if (text.contains("-----BEGIN PGP MESSAGE-----") ||
+                text.contains("-----BEGIN PGP SIGNED MESSAGE-----")
+            ) {
+                OpenAction.DecryptText(text)
+            } else {
+                OpenAction.DecryptFile(path)
+            }
+        }
+    }
+
+    private val EMPTY = ByteArray(0)
 
     /** The classification core (exposed for tests, which build bytes in memory). */
     fun classifyBytes(bytes: ByteArray, path: Path): OpenAction {
