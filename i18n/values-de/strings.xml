@@ -105,6 +105,7 @@
     <string name="d_status_open_failed">%1$s konnte nicht geöffnet werden – die Adresse liegt stattdessen in deiner Zwischenablage.</string>
 
     <string name="d_crypto_tab_files">Dateien</string>
+    <string name="d_crypto_tab_message">Nachricht</string>
     <string name="d_crypto_fileop_sign">Signieren (abgetrennt)</string>
     <string name="d_crypto_fileop_verify">Prüfen (abgetrennt)</string>
     <string name="d_crypto_err_generic">Vorgang fehlgeschlagen</string>

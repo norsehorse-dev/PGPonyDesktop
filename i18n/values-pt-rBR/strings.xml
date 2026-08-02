@@ -105,6 +105,7 @@
     <string name="d_status_open_failed">Não foi possível abrir %1$s; o endereço foi copiado para a área de transferência.</string>
 
     <string name="d_crypto_tab_files">Arquivos</string>
+    <string name="d_crypto_tab_message">Mensagem</string>
     <string name="d_crypto_fileop_sign">Assinar (destacada)</string>
     <string name="d_crypto_fileop_verify">Verificar (destacada)</string>
     <string name="d_crypto_err_generic">A operação falhou</string>

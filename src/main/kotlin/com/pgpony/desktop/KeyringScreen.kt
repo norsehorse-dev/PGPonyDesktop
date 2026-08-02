@@ -337,6 +337,9 @@ private fun KeyCard(
                     )
                     BrandBadge(key.algorithm.displayName)
                     if (key.isKeyPair) BrandBadge(tr("d_keydetail_badge_secret"), BadgeTone.Brand)
+                    // 1.1.0 — field report: card-backed rows were only identifiable by opening
+                    // the detail dialog. Same key the dialog renders, already in all six locales.
+                    if (key.isCardBacked) BrandBadge(tr("d_keydetail_badge_card"), BadgeTone.Brand)
                     if (key.isDefault) BrandBadge(tr("key_detail_badge_default"))
                     if (key.isRevoked) BrandBadge(tr("key_card_revoked_badge"), BadgeTone.Error)
                     if (key.isExpired) BrandBadge(tr("d_keydetail_badge_expired"), BadgeTone.Error)

@@ -105,6 +105,7 @@
     <string name="d_status_open_failed">No se pudo abrir %1$s; la dirección está en tu portapapeles.</string>
 
     <string name="d_crypto_tab_files">Archivos</string>
+    <string name="d_crypto_tab_message">Mensaje</string>
     <string name="d_crypto_fileop_sign">Firmar (separada)</string>
     <string name="d_crypto_fileop_verify">Verificar (separada)</string>
     <string name="d_crypto_err_generic">La operación falló</string>

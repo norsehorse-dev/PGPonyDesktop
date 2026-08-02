@@ -107,6 +107,7 @@
     <string name="d_status_open_failed">%1$s を開けませんでした。代わりにクリップボードにコピーしました。</string>
 
     <string name="d_crypto_tab_files">ファイル</string>
+    <string name="d_crypto_tab_message">メッセージ</string>
     <string name="d_crypto_fileop_sign">署名（分離）</string>
     <string name="d_crypto_fileop_verify">検証（分離）</string>
     <string name="d_crypto_err_generic">操作に失敗しました</string>

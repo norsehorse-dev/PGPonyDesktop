@@ -105,6 +105,7 @@
     <string name="d_status_open_failed">Impossible d\'ouvrir %1$s ; l\'adresse a été placée dans votre presse-papiers.</string>
 
     <string name="d_crypto_tab_files">Fichiers</string>
+    <string name="d_crypto_tab_message">Message</string>
     <string name="d_crypto_fileop_sign">Signer (détachée)</string>
     <string name="d_crypto_fileop_verify">Vérifier (détachée)</string>
     <string name="d_crypto_err_generic">Échec de l\'opération</string>

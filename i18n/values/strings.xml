@@ -156,6 +156,7 @@
          there, file mode is a sub-mode of Encrypt. The two FileOp labels say "(detached)"
          because a file signature is always detached — there is nothing to clear-sign. -->
     <string name="d_crypto_tab_files">Files</string>
+    <string name="d_crypto_tab_message">Message</string>
     <string name="d_crypto_fileop_sign">Sign (detached)</string>
     <string name="d_crypto_fileop_verify">Verify (detached)</string>
     <string name="d_crypto_err_generic">Operation failed</string>

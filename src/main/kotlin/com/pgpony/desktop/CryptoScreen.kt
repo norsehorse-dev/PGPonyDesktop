@@ -21,6 +21,8 @@
 
 package com.pgpony.desktop
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,16 +38,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -83,15 +89,25 @@ import java.nio.file.Path
 // and never move again when the picker changes; resolution has to happen at the draw site,
 // inside composition, where the snapshot read subscribes the row to I18n.language.
 //
-// Four of the five tab labels are Android keys — the phone app already says Encrypt, Decrypt,
-// Sign and Verify in six languages. Only "Files" is desktop-owned, because Android's file mode
-// is a sub-mode of Encrypt rather than a tab of its own.
+// 1.1.0 — the field-report restructure: the top level splits by what you operate on (a Message
+// or Files), and the operation is a radio row inside each, the shape the Files tab always had.
+// Until 1.1.0 the four operations were themselves tabs, inherited from the phone's IA, with
+// Files bolted on as a fifth sibling of a different kind; the design note is
+// PLANNING_DESKTOP_1_1_0.md §3. Only "Message" and "Files" are desktop-owned keys — the four
+// former tab labels are Android keys and live on as the MessageOp radio labels, so nothing is
+// orphaned.
 private enum class CryptoTab(val labelKey: String) {
+    MESSAGE("d_crypto_tab_message"),
+    FILES("d_crypto_tab_files")
+}
+
+// The four former top-level tabs, demoted to the Message tab's operation selector. The label
+// keys are unchanged from their tab days on purpose: same words, same translations, new place.
+private enum class MessageOp(val labelKey: String) {
     ENCRYPT("main_tab_encrypt"),
     DECRYPT("main_tab_decrypt"),
     SIGN("encrypt_action_sign"),
-    VERIFY("verify_file_verify_button"),
-    FILES("d_crypto_tab_files")
+    VERIFY("verify_file_verify_button")
 }
 
 private enum class FileOp(val labelKey: String) {
@@ -118,10 +134,12 @@ fun CryptoScreen(state: DesktopState) {
     val clipboard = LocalClipboardManager.current
     val crypto = state.repository
 
-    var tab by remember { mutableStateOf(CryptoTab.ENCRYPT) }
-    // Per-tab input (field report: text typed in Encrypt used to follow you to Decrypt).
-    val inputs = remember { mutableStateMapOf<CryptoTab, String>() }
-    val input = inputs[tab] ?: ""
+    var tab by remember { mutableStateOf(CryptoTab.MESSAGE) }
+    var messageOp by remember { mutableStateOf(MessageOp.ENCRYPT) }
+    // Per-OPERATION input (field report: text typed in Encrypt used to follow you to Decrypt;
+    // the 1.1.0 restructure keeps that fix keyed by op now that the ops share one tab).
+    val inputs = remember { mutableStateMapOf<MessageOp, String>() }
+    val input = inputs[messageOp] ?: ""
     var output by remember { mutableStateOf("") }
     var banner by remember { mutableStateOf<Banner?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -162,13 +180,16 @@ fun CryptoScreen(state: DesktopState) {
     val fileOps = remember { FileCryptoOps(state.repository) }
 
     // D9 — a classified file/text open routes here (import & restore are handled elsewhere).
+    // 1.1.0 — the single-path adds go through PathListOps.add: `fileList + a.path` resolved to
+    // the Iterable overload of `plus` and appended the path's COMPONENTS as separate rows (the
+    // field-report bug's unreported sibling; see PathListOps).
     androidx.compose.runtime.LaunchedEffect(state.pendingOpen) {
         when (val a = state.pendingOpen) {
-            is OpenAction.DecryptText -> { tab = CryptoTab.DECRYPT; inputs[CryptoTab.DECRYPT] = a.armored; banner = null; state.consumePendingOpen() }
-            is OpenAction.EncryptText -> { tab = CryptoTab.ENCRYPT; inputs[CryptoTab.ENCRYPT] = a.text; banner = null; state.consumePendingOpen() }
-            is OpenAction.DecryptFile -> { tab = CryptoTab.FILES; if (a.path !in fileList) fileList = fileList + a.path; fileOp = FileOp.DECRYPT; fileOpTouched = true; state.consumePendingOpen() }
-            is OpenAction.EncryptFile -> { tab = CryptoTab.FILES; if (a.path !in fileList) fileList = fileList + a.path; fileOp = FileOp.ENCRYPT; fileOpTouched = true; state.consumePendingOpen() }
-            is OpenAction.VerifyDetachedSignature -> { tab = CryptoTab.FILES; if (a.path !in fileList) fileList = fileList + a.path; fileOp = FileOp.VERIFY; fileOpTouched = true; state.consumePendingOpen() }
+            is OpenAction.DecryptText -> { tab = CryptoTab.MESSAGE; messageOp = MessageOp.DECRYPT; inputs[MessageOp.DECRYPT] = a.armored; banner = null; state.consumePendingOpen() }
+            is OpenAction.EncryptText -> { tab = CryptoTab.MESSAGE; messageOp = MessageOp.ENCRYPT; inputs[MessageOp.ENCRYPT] = a.text; banner = null; state.consumePendingOpen() }
+            is OpenAction.DecryptFile -> { tab = CryptoTab.FILES; fileList = PathListOps.add(fileList, a.path); fileOp = FileOp.DECRYPT; fileOpTouched = true; state.consumePendingOpen() }
+            is OpenAction.EncryptFile -> { tab = CryptoTab.FILES; fileList = PathListOps.add(fileList, a.path); fileOp = FileOp.ENCRYPT; fileOpTouched = true; state.consumePendingOpen() }
+            is OpenAction.VerifyDetachedSignature -> { tab = CryptoTab.FILES; fileList = PathListOps.add(fileList, a.path); fileOp = FileOp.VERIFY; fileOpTouched = true; state.consumePendingOpen() }
             else -> Unit
         }
     }
@@ -177,7 +198,7 @@ fun CryptoScreen(state: DesktopState) {
     androidx.compose.runtime.LaunchedEffect(state.droppedFiles) {
         if (state.droppedFiles.isNotEmpty()) {
             val incoming = state.droppedFiles.filter { it !in fileList }
-            fileList = fileList + incoming
+            fileList = PathListOps.addAll(fileList, incoming)
             if (!fileOpTouched && incoming.isNotEmpty()) {
                 fileOp = if (incoming.all { FileCryptoOps.looksEncrypted(it) }) FileOp.DECRYPT
                 else FileOp.ENCRYPT
@@ -285,7 +306,9 @@ fun CryptoScreen(state: DesktopState) {
                         }
                     }
                 }
-                fileList.forEach { p -> FileRow(p, enabled = !busy) { fileList = fileList - p } }
+                // 1.1.0 — PathListOps.remove, NOT `fileList - p`: the Iterable overload of
+                // `minus` made the reported Remove button a silent no-op (see PathListOps).
+                fileList.forEach { p -> FileRow(p, enabled = !busy) { fileList = PathListOps.remove(fileList, p) } }
 
                 Spacer(Modifier.height(Spacing.Large))
                 when (fileOp) {
@@ -489,7 +512,7 @@ fun CryptoScreen(state: DesktopState) {
                 MultiFileDialog { picked ->
                     showMultiFilePicker = false
                     val incoming = picked.map { it.toPath() }.filter { it !in fileList }
-                    fileList = fileList + incoming
+                    fileList = PathListOps.addAll(fileList, incoming)
                     if (!fileOpTouched && incoming.isNotEmpty()) {
                         fileOp = if (incoming.all { FileCryptoOps.looksEncrypted(it) }) FileOp.DECRYPT
                         else FileOp.ENCRYPT
@@ -499,6 +522,27 @@ fun CryptoScreen(state: DesktopState) {
             return@Column
         }
 
+        // ── Message surface (1.1.0) — the operation selector, the same radio-row shape the
+        // Files tab established (WrapRow for the German-overflow case). Switching op clears the
+        // outcome state exactly as switching tab does: a banner about an encrypt must not
+        // survive into a verify.
+        WrapRow(horizontalSpacing = Spacing.Medium) {
+            MessageOp.entries.forEach { op ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = messageOp == op,
+                        onClick = {
+                            messageOp = op; banner = null; output = ""
+                            decryptedAttachments = emptyList()
+                        },
+                        enabled = !busy
+                    )
+                    Text(tr(op.labelKey), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        Spacer(Modifier.height(Spacing.Medium))
+
         Row(modifier = Modifier.fillMaxSize()) {
 
             // ── Left: input + options ───────────────────────────────────
@@ -506,15 +550,14 @@ fun CryptoScreen(state: DesktopState) {
                 modifier = Modifier.weight(1f).fillMaxSize().verticalScroll(rememberScrollState())
             ) {
                 OutlinedTextField(
-                    value = input, onValueChange = { inputs[tab] = it },
+                    value = input, onValueChange = { inputs[messageOp] = it },
                     label = {
                         Text(
-                            when (tab) {
-                                CryptoTab.ENCRYPT -> tr("encrypt_input_label_message_to_encrypt")
-                                CryptoTab.DECRYPT -> tr("decrypt_input_paste_label")
-                                CryptoTab.SIGN -> tr("encrypt_input_label_message_to_sign")
-                                CryptoTab.VERIFY -> tr("d_crypto_input_verify")
-                                CryptoTab.FILES -> ""   // unreachable — Files renders its own pane
+                            when (messageOp) {
+                                MessageOp.ENCRYPT -> tr("encrypt_input_label_message_to_encrypt")
+                                MessageOp.DECRYPT -> tr("decrypt_input_paste_label")
+                                MessageOp.SIGN -> tr("encrypt_input_label_message_to_sign")
+                                MessageOp.VERIFY -> tr("d_crypto_input_verify")
                             }
                         )
                     },
@@ -522,8 +565,8 @@ fun CryptoScreen(state: DesktopState) {
                 )
                 Spacer(Modifier.height(10.dp))
 
-                when (tab) {
-                    CryptoTab.ENCRYPT -> {
+                when (messageOp) {
+                    MessageOp.ENCRYPT -> {
                         // WrapRow: the label plus two radio-and-word pairs is the widest control
                         // group on the left pane, and the pane is already only half the window.
                         WrapRow(horizontalSpacing = Spacing.Medium) {
@@ -626,9 +669,9 @@ fun CryptoScreen(state: DesktopState) {
                                     fontFamily = FontFamily.Monospace,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                TextButton(onClick = { attachments = attachments - p }) {
-                                    Text(tr("d_common_remove"))
-                                }
+                                // 1.1.0 — PathListOps.remove: `attachments - p` was the same
+                                // silent no-op as the Files-tab Remove (see PathListOps).
+                                RemoveIconButton { attachments = PathListOps.remove(attachments, p) }
                             }
                         }
                         if (attachments.isNotEmpty()) {
@@ -731,7 +774,7 @@ fun CryptoScreen(state: DesktopState) {
                         ) { Text(if (busy) tr("common_processing") else tr("encrypt_action_encrypt")) }
                     }
 
-                    CryptoTab.DECRYPT -> {
+                    MessageOp.DECRYPT -> {
                         OutlinedTextField(
                             value = decryptPass, onValueChange = { decryptPass = it },
                             label = { Text(tr("d_crypto_decrypt_pass_label")) }, singleLine = true,
@@ -826,7 +869,7 @@ fun CryptoScreen(state: DesktopState) {
                         ) { Text(if (busy) tr("common_processing") else tr("decrypt_action_decrypt")) }
                     }
 
-                    CryptoTab.SIGN -> {
+                    MessageOp.SIGN -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(tr("d_crypto_sign_as_colon"), style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.width(8.dp))
@@ -900,7 +943,7 @@ fun CryptoScreen(state: DesktopState) {
                         ) { Text(if (busy) tr("common_processing") else tr("encrypt_action_sign")) }
                     }
 
-                    CryptoTab.VERIFY -> {
+                    MessageOp.VERIFY -> {
                         Text(
                             tr("d_crypto_verify_hint"),
                             style = MaterialTheme.typography.bodySmall,
@@ -961,7 +1004,6 @@ fun CryptoScreen(state: DesktopState) {
                         ) { Text(if (busy) tr("common_processing") else tr("verify_file_verify_button")) }
                     }
 
-                    CryptoTab.FILES -> Unit   // unreachable — Files renders its own pane
                 }
             }
 
@@ -982,7 +1024,7 @@ fun CryptoScreen(state: DesktopState) {
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 )
                 // D3c — attachments from a structured decrypt
-                if (tab == CryptoTab.DECRYPT && decryptedAttachments.isNotEmpty()) {
+                if (messageOp == MessageOp.DECRYPT && decryptedAttachments.isNotEmpty()) {
                     Spacer(Modifier.height(Spacing.Medium))
                     SubHeading(tr("structured_result_attachments_format", decryptedAttachments.size))
                     decryptedAttachments.forEach { att ->
@@ -1013,14 +1055,14 @@ fun CryptoScreen(state: DesktopState) {
                             state.status = tr("d_status_copied")
                         }
                     ) { Text(tr("d_crypto_copy_output")) }
-                    if (tab == CryptoTab.ENCRYPT && output.contains("BEGIN PGP MESSAGE")) {
+                    if (messageOp == MessageOp.ENCRYPT && output.contains("BEGIN PGP MESSAGE")) {
                         OutlinedButton(
                             onClick = { showSaveEml = true },
                             shape = RoundedCornerShape(Radius.Small)
                         ) { Text(tr("d_crypto_save_eml")) }
                     }
                     TextButton(onClick = {
-                        inputs[tab] = ""; output = ""; banner = null; decryptedAttachments = emptyList()
+                        inputs[messageOp] = ""; output = ""; banner = null; decryptedAttachments = emptyList()
                     }) { Text(tr("common_button_clear")) }
                 }
             }
@@ -1032,7 +1074,7 @@ fun CryptoScreen(state: DesktopState) {
         MultiFileDialog { picked ->
             showAttachPicker = false
             val incoming = picked.map { it.toPath() }.filter { it !in attachments }
-            attachments = attachments + incoming
+            attachments = PathListOps.addAll(attachments, incoming)
         }
     }
     if (showSaveEml) {
@@ -1135,9 +1177,65 @@ private fun FileRow(path: Path, enabled: Boolean, onRemove: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            TextButton(onClick = onRemove, enabled = enabled) { Text(tr("d_common_remove")) }
+            // 1.1.0 — an icon button, not a word: on a narrow window the WrapRow can put this
+            // control under the filename, where a bare "Remove" reads as body text. The glyph
+            // reads as a control anywhere; the word survives as the tooltip and the
+            // contentDescription (same key, so the audit sees one string).
+            RemoveIconButton(enabled = enabled, onClick = onRemove)
         }
     }
+}
+
+/**
+ * The remove control for a queued file or attachment row (1.1.0). One composable so the two
+ * Remove sites cannot drift apart in shape. TooltipArea is desktop-only foundation API and
+ * still opt-in as of Compose Multiplatform 1.11; the opt-in stays scoped to this one control.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RemoveIconButton(enabled: Boolean = true, onClick: () -> Unit) {
+    TooltipArea(tooltip = {
+        Surface(
+            shape = RoundedCornerShape(Radius.Small),
+            color = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            shadowElevation = 2.dp
+        ) {
+            Text(
+                tr("d_common_remove"),
+                modifier = Modifier.padding(horizontal = Spacing.Small, vertical = Spacing.Tight),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }) {
+        IconButton(onClick = onClick, enabled = enabled) {
+            Icon(Icons.Filled.Close, contentDescription = tr("d_common_remove"))
+        }
+    }
+}
+
+/**
+ * List mutations for `List<Path>`, written out longhand because the obvious operators are a trap:
+ * `java.nio.file.Path` implements `Iterable<Path>` (over its own name components), so
+ * `list - path` resolves to the Iterable overload of `minus` — it subtracts the path's
+ * COMPONENTS, matches nothing, and is a silent no-op — and `list + path` appends the components
+ * as separate elements. Shipped as the 1.0.x "Remove does nothing" field report and its
+ * unreported single-file-open sibling. No compiler diagnostic exists for this; every single-Path
+ * add/remove in the desktop source goes through here, and CryptoScreenListOpsTest pins the
+ * semantics. Also recorded in CLAUDE.md's working conventions.
+ */
+internal object PathListOps {
+    /** Append one path, deduplicating: the no-op when already queued is intentional. */
+    fun add(list: List<Path>, p: Path): List<Path> =
+        if (p in list) list else list.plusElement(p)
+
+    /** Append many, keeping first-added order and dropping ones already queued. */
+    fun addAll(list: List<Path>, incoming: List<Path>): List<Path> =
+        list + incoming.filter { it !in list }
+
+    /** Remove one path by equality. */
+    fun remove(list: List<Path>, p: Path): List<Path> =
+        list.filterNot { it == p }
 }
 
 /** Native save dialog (AWT FileDialog, SAVE mode). */
