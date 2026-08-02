@@ -56,4 +56,7 @@ object Config {
 
     /** Armored key material, one file per key half (KeyMaterialStore). */
     val keysDir: Path get() = dataDir.resolve("keys")
+
+    /** D15 — the ssh-agent's Unix socket lives here, 0700 dir / 0600 socket (SshAgentService). */
+    val agentDir: Path get() = dataDir.resolve("agent")
 }

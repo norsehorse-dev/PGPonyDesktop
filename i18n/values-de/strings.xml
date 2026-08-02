@@ -639,4 +639,18 @@
     <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
     <string name="d_cards_pcsc_error">PC/SC meldet: %1$s</string>
 
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH-Agent</string>
+    <string name="d_settings_ssh_agent_note">Standardmäßig aus. Wenn Sie ihn einschalten, stellt PGPony Ihre Authentifizierungsschlüssel über einen lokalen Socket für ssh bereit — wie ssh-agent, aber aus Ihrem Schlüsselbund. Schlüssel werden zwischen Anfragen nie gehalten, und ein geschützter Schlüssel wird jedes Mal abgefragt. In dieser Version nur macOS und Linux.</string>
+    <string name="d_settings_ssh_agent_windows">Der SSH-Agent ist in dieser Version unter Windows nicht verfügbar — das ssh der Plattform erwartet eine Named Pipe, die die App noch nicht bereitstellen kann.</string>
+    <string name="d_settings_ssh_agent_enable">Authentifizierungsschlüssel für ssh bereitstellen</string>
+    <string name="d_settings_ssh_agent_error">Agent konnte nicht gestartet werden: %1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">Kopieren</string>
+    <string name="d_agent_unlock_title">Signaturschlüssel entsperren</string>
+    <string name="d_agent_unlock_message">ssh hat PGPony gebeten, mit %1$s zu signieren; dieser Schlüssel ist passwortgeschützt.</string>
+    <string name="d_agent_unlock_field">Passphrase</string>
+    <string name="d_agent_unlock_confirm">Entsperren</string>
+    <string name="d_agent_unlock_cancel">Abbrechen</string>
+
 </resources>

@@ -108,6 +108,12 @@ fun SettingsScreen(state: DesktopState) {
         }
         Spacer(Modifier.height(Spacing.Large))
 
+        // ── SSH agent (D15) ─────────────────────────────────────────────
+        SectionCard(tr("d_settings_section_ssh_agent"), tr("d_settings_ssh_agent_note")) {
+            SshAgentSection(state)
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
         // ── Backup (D6) ─────────────────────────────────────────────────
         SectionCard(tr("settings_section_backup"), tr("d_settings_backup_note")) {
             WrapRow {

@@ -770,4 +770,18 @@
     <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
     <string name="d_cards_pcsc_error">PC/SC reported: %1$s</string>
 
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH agent</string>
+    <string name="d_settings_ssh_agent_note">Off by default. When you turn it on, PGPony serves your authentication keys to ssh over a local socket — like ssh-agent, but backed by your keyring. It never holds keys between requests, and a protected key is asked for each time. macOS and Linux only in this release.</string>
+    <string name="d_settings_ssh_agent_windows">The SSH agent is not available on Windows in this release — the platform's ssh expects a named pipe the app cannot serve yet.</string>
+    <string name="d_settings_ssh_agent_enable">Serve authentication keys to ssh</string>
+    <string name="d_settings_ssh_agent_error">Could not start the agent: %1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">Copy</string>
+    <string name="d_agent_unlock_title">Unlock signing key</string>
+    <string name="d_agent_unlock_message">ssh asked PGPony to sign with %1$s, which is passphrase-protected.</string>
+    <string name="d_agent_unlock_field">Passphrase</string>
+    <string name="d_agent_unlock_confirm">Unlock</string>
+    <string name="d_agent_unlock_cancel">Cancel</string>
+
 </resources>

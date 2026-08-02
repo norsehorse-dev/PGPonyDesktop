@@ -639,4 +639,18 @@
     <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
     <string name="d_cards_pcsc_error">PC/SC signale : %1$s</string>
 
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">Agent SSH</string>
+    <string name="d_settings_ssh_agent_note">Désactivé par défaut. Lorsque vous l\'activez, PGPony fournit vos clés d\'authentification à ssh via un socket local — comme ssh-agent, mais à partir de votre trousseau. Il ne conserve jamais les clés entre les requêtes, et une clé protégée est demandée à chaque fois. macOS et Linux uniquement dans cette version.</string>
+    <string name="d_settings_ssh_agent_windows">L\'agent SSH n\'est pas disponible sous Windows dans cette version — le ssh de la plateforme attend un canal nommé que l\'application ne peut pas encore fournir.</string>
+    <string name="d_settings_ssh_agent_enable">Fournir les clés d\'authentification à ssh</string>
+    <string name="d_settings_ssh_agent_error">Impossible de démarrer l\'agent : %1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">Copier</string>
+    <string name="d_agent_unlock_title">Déverrouiller la clé de signature</string>
+    <string name="d_agent_unlock_message">ssh a demandé à PGPony de signer avec %1$s, qui est protégée par une phrase secrète.</string>
+    <string name="d_agent_unlock_field">Phrase secrète</string>
+    <string name="d_agent_unlock_confirm">Déverrouiller</string>
+    <string name="d_agent_unlock_cancel">Annuler</string>
+
 </resources>

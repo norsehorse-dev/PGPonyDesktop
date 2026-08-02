@@ -23,6 +23,16 @@ private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open",
 fun main(args: Array<String>) {
     val first = args.firstOrNull()
 
+    // D15 (2.0.0 §1b) — the git signing shim. Reached as `pgpony-gpg` (git invokes gpg.program
+    // by that name, seen here through the launcher basename) or the explicit `gpg-shim` verb.
+    // It is a scriptable, machine-readable face like the CLI verbs, so it pins English and runs
+    // in-process, never touching the single-instance guard or the GUI.
+    if (invokedAsGpgShim() || first == "gpg-shim") {
+        I18n.pinEnglish()
+        val shimArgs = if (first == "gpg-shim") args.drop(1) else args.toList()
+        exitProcess(GpgShim.run(shimArgs, System.`in`, System.out, System.err))
+    }
+
     // CLI output is scriptable, so a CLI process is pinned to English before any of it runs.
     // The repository and the crypto/backup helpers are shared with the GUI and their messages
     // are localized (D11b) — without this pin, someone's `pgpony import | grep failed` would
@@ -75,6 +85,20 @@ fun main(args: Array<String>) {
     cmdGui()
 }
 
+/**
+ * True when this process was launched as the git signing shim rather than `pgpony`. jpackage
+ * sets `jpackage.app-path` to the launcher the user (here, git) actually invoked; its basename
+ * distinguishes the `pgpony-gpg` launcher from `pgpony` within the one app image. Falls back to
+ * `sun.java.command` for a `java -jar` / dev run. Never throws — an unknown launcher is `pgpony`.
+ */
+internal fun invokedAsGpgShim(): Boolean {
+    fun basename(p: String?): String =
+        p?.substringAfterLast('/')?.substringAfterLast('\\')?.lowercase() ?: ""
+    val appPath = basename(System.getProperty("jpackage.app-path"))
+    if (appPath.isNotEmpty()) return appPath.removeSuffix(".exe") == "pgpony-gpg"
+    return basename(System.getProperty("sun.java.command")).removeSuffix(".exe") == "pgpony-gpg"
+}
+
 private const val OPEN_USAGE =
     "usage: pgpony open [--op encrypt|decrypt|verify|import|restore] <file>..."
 
@@ -114,6 +138,8 @@ private fun usage() {
                       routing by type: pgpony open [--op encrypt|decrypt|verify|import|restore] <file>...
           selftest    Verify the vendored OpenPGP engine runs on this JVM (keygen + round-trip)
           version     Print the version
+          gpg-shim    Speak git's gpg.program slice (sign + verify) against the keyring; also
+                      reached as the `pgpony-gpg` launcher — set git's gpg.program to it
 
         CLI verbs (share the app's keyring): encrypt · decrypt · sign · verify · import ·
         export · list-keys · gen-key. Run `pgpony <verb>` with no options for its usage.

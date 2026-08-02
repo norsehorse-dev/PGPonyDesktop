@@ -617,4 +617,18 @@
     <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
     <string name="d_cards_pcsc_error">PC/SC の報告: %1$s</string>
 
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH エージェント</string>
+    <string name="d_settings_ssh_agent_note">既定ではオフです。オンにすると、PGPony はローカルソケット経由で認証鍵を ssh に提供します — ssh-agent と同様ですが、鍵束に基づきます。リクエスト間で鍵を保持することはなく、保護された鍵は毎回入力を求められます。このリリースでは macOS と Linux のみ対応します。</string>
+    <string name="d_settings_ssh_agent_windows">このリリースでは SSH エージェントは Windows で利用できません — プラットフォームの ssh は、アプリがまだ提供できない名前付きパイプを必要とします。</string>
+    <string name="d_settings_ssh_agent_enable">認証鍵を ssh に提供する</string>
+    <string name="d_settings_ssh_agent_error">エージェントを開始できませんでした: %1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">コピー</string>
+    <string name="d_agent_unlock_title">署名鍵のロックを解除</string>
+    <string name="d_agent_unlock_message">ssh が %1$s での署名を PGPony に要求しました。この鍵はパスフレーズで保護されています。</string>
+    <string name="d_agent_unlock_field">パスフレーズ</string>
+    <string name="d_agent_unlock_confirm">ロック解除</string>
+    <string name="d_agent_unlock_cancel">キャンセル</string>
+
 </resources>

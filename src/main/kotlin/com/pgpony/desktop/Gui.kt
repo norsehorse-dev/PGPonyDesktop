@@ -109,6 +109,21 @@ class DesktopState(private val scope: CoroutineScope) {
         if (!value && destination == Destination.Pass) destination = Destination.Keyring
     }
 
+    /**
+     * D15 — the ssh-agent toggle. Mirrored into Compose state so the Settings section shows
+     * the socket line the same frame it starts. The listener's lifecycle rides this: on means
+     * a bound socket, off means the socket is gone. Persisted-on keys restart the agent at
+     * launch (init below).
+     */
+    var sshAgentEnabled by mutableStateOf(SshAgentPrefs.enabled())
+        private set
+
+    fun enableSshAgent(value: Boolean) {
+        SshAgentPrefs.setEnabled(value)
+        sshAgentEnabled = value
+        if (value) SshAgentService.start(repository) else SshAgentService.stop()
+    }
+
     /** D3b — files dropped on the window; consumed by the Files surface. */
     var droppedFiles by mutableStateOf<List<Path>>(emptyList())
         private set
@@ -147,6 +162,9 @@ class DesktopState(private val scope: CoroutineScope) {
     fun reload() = scope.launch { refresh() }
 
     init {
+        // D15 — an agent left enabled comes back up with the app (isSupported() gates Windows).
+        if (sshAgentEnabled) SshAgentService.start(repository)
+
         // D9 — register with the open-file bus; drains any request passed on first launch.
         AppOpen.setHandler { request -> onOpenFiles(request) }
         scope.launch {
@@ -457,6 +475,20 @@ private fun guiApplication() = application {
                 TrayNav.request?.let { state.destination = it; TrayNav.request = null }
                 kotlinx.coroutines.delay(150)
             }
+        }
+
+        // D15 — the ssh-agent's passphrase prompt, raised from the agent thread via the same
+        // poll-a-volatile bridge as TrayNav. Rendered as a dialog; the agent thread is blocked
+        // on the request's latch until the dialog completes it (or its 60s timeout fires).
+        val agentUnlock = remember { mutableStateOf<AgentUnlockRequest?>(null) }
+        LaunchedEffect(Unit) {
+            while (true) {
+                if (agentUnlock.value == null) agentUnlock.value = AgentPrompt.request
+                kotlinx.coroutines.delay(150)
+            }
+        }
+        agentUnlock.value?.let { req ->
+            AgentUnlockDialog(req) { agentUnlock.value = null }
         }
 
         // D9 — key-expiration reminders. Re-scans whenever the keyring changes (it loads async
