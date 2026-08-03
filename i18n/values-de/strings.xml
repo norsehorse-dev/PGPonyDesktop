@@ -669,4 +669,27 @@
     <string name="d_crypto_progress_bytes_indeterminate">%1$s verarbeitet</string>
     <string name="d_file_cancelled">Abgebrochen</string>
 
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">Ordner überwachen</string>
+    <string name="d_settings_watch_note">Standardmäßig aus. Wenn aktiviert, überwacht PGPony die angegebenen Ordner und verschlüsselt jede neue Datei für die gewählten Empfänger — nur Verschlüsselung, nur öffentliche Schlüssel, sodass eine Regel, die in Ihrer Abwesenheit läuft, nie eine Passphrase oder Karte braucht und schlimmstenfalls verschlüsselt. macOS, Linux und Windows.</string>
+    <string name="d_settings_watch_enable">Die untenstehenden Ordner überwachen</string>
+    <string name="d_settings_watch_rules">Regeln</string>
+    <string name="d_settings_watch_no_rules">Noch keine Regeln. Fügen Sie eine hinzu, um einen Ordner zu überwachen.</string>
+    <string name="d_settings_watch_rule_summary">%1$d Empfänger → %2$s</string>
+    <string name="d_settings_watch_beside_source">neben der Quelle</string>
+    <string name="d_settings_watch_rule_on">Ein</string>
+    <string name="d_settings_watch_deletes">löscht Original</string>
+    <string name="d_settings_watch_add_rule">Regel hinzufügen</string>
+    <string name="d_settings_watch_recent">Letzte Aktivität</string>
+    <string name="d_settings_watch_folder">Zu überwachender Ordner</string>
+    <string name="d_settings_watch_browse">Durchsuchen…</string>
+    <string name="d_settings_watch_glob">Muster (Glob, z. B. *.pdf)</string>
+    <string name="d_settings_watch_output">Ausgabeordner (optional)</string>
+    <string name="d_settings_watch_no_recipients">Keine nutzbaren Empfänger — importieren Sie zuerst einen öffentlichen Schlüssel.</string>
+    <string name="d_settings_watch_armor">Ausgabe ASCII-gepanzert (.asc)</string>
+    <string name="d_settings_watch_delete_original">Original nach dem Verschlüsseln löschen</string>
+    <string name="d_settings_watch_delete_warning">Das Original wird ohne Rückgängig entfernt. Lassen Sie es aus, wenn Sie nicht sicher sind.</string>
+    <string name="d_watch_notif_encrypted">Überwachter Ordner: verschlüsselt</string>
+    <string name="d_watch_notif_failed">Überwachter Ordner: fehlgeschlagen</string>
+
 </resources>

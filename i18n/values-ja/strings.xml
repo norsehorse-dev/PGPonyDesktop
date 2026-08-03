@@ -645,4 +645,27 @@
     <string name="d_crypto_progress_bytes_indeterminate">%1$s 処理済み</string>
     <string name="d_file_cancelled">キャンセルしました</string>
 
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">監視フォルダー</string>
+    <string name="d_settings_watch_note">既定ではオフです。オンにすると、指定したフォルダーを PGPony が監視し、新しいファイルを選んだ受信者宛てに暗号化します — 暗号化のみ、公開鍵のみなので、不在中に動くルールがパスフレーズやカードを必要とすることはなく、最悪でも暗号化するだけです。macOS、Linux、Windows 対応。</string>
+    <string name="d_settings_watch_enable">下のフォルダーを監視する</string>
+    <string name="d_settings_watch_rules">ルール</string>
+    <string name="d_settings_watch_no_rules">まだルールがありません。フォルダーを監視するには追加してください。</string>
+    <string name="d_settings_watch_rule_summary">%1$d 人の受信者 → %2$s</string>
+    <string name="d_settings_watch_beside_source">元ファイルと同じ場所</string>
+    <string name="d_settings_watch_rule_on">オン</string>
+    <string name="d_settings_watch_deletes">元を削除</string>
+    <string name="d_settings_watch_add_rule">ルールを追加</string>
+    <string name="d_settings_watch_recent">最近のアクティビティ</string>
+    <string name="d_settings_watch_folder">監視するフォルダー</string>
+    <string name="d_settings_watch_browse">参照…</string>
+    <string name="d_settings_watch_glob">一致パターン(glob、例: *.pdf)</string>
+    <string name="d_settings_watch_output">出力フォルダー(任意)</string>
+    <string name="d_settings_watch_no_recipients">利用可能な受信者がいません — 先に公開鍵をインポートしてください。</string>
+    <string name="d_settings_watch_armor">出力を ASCII アーマー(.asc)にする</string>
+    <string name="d_settings_watch_delete_original">暗号化後に元ファイルを削除する</string>
+    <string name="d_settings_watch_delete_warning">元ファイルは取り消せずに削除されます。確信がなければオフのままにしてください。</string>
+    <string name="d_watch_notif_encrypted">監視フォルダー: 暗号化しました</string>
+    <string name="d_watch_notif_failed">監視フォルダー: 失敗</string>
+
 </resources>

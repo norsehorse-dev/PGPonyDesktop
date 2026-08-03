@@ -45,7 +45,8 @@ class FileCryptoOps(
         signerPassphrase: String?,
         armor: Boolean,
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
-        isCancelled: () -> Boolean = NOT_CANCELLED
+        isCancelled: () -> Boolean = NOT_CANCELLED,
+        outputDir: Path? = null
     ): FileOutcome = try {
         val rings = recipientFingerprints.map {
             repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
@@ -77,7 +78,10 @@ class FileCryptoOps(
             Files.deleteIfExists(tmp)
             throw t
         }
-        val out = uniquePath(file.resolveSibling(file.name + if (armor) ".asc" else ".gpg"))
+        // Output beside the source, or in a rule's output directory (D18 watch folders).
+        val outName = file.name + if (armor) ".asc" else ".gpg"
+        val outParent = outputDir?.also { Files.createDirectories(it) } ?: file.parent
+        val out = uniquePath(outParent.resolve(outName))
         Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
         FileOutcome(
             file, out, true,

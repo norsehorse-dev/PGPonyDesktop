@@ -669,4 +669,27 @@
     <string name="d_crypto_progress_bytes_indeterminate">%1$s procesado</string>
     <string name="d_file_cancelled">Cancelado</string>
 
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">Carpetas vigiladas</string>
+    <string name="d_settings_watch_note">Desactivado de forma predeterminada. Cuando está activado, PGPony vigila las carpetas que indiques y cifra cada archivo nuevo para los destinatarios que elijas — solo cifrado, solo claves públicas, así una regla que se ejecuta en tu ausencia nunca necesita una frase de contraseña ni una tarjeta, y a lo sumo puede cifrar. macOS, Linux y Windows.</string>
+    <string name="d_settings_watch_enable">Vigilar las carpetas de abajo</string>
+    <string name="d_settings_watch_rules">Reglas</string>
+    <string name="d_settings_watch_no_rules">Aún no hay reglas. Añade una para vigilar una carpeta.</string>
+    <string name="d_settings_watch_rule_summary">%1$d destinatarios → %2$s</string>
+    <string name="d_settings_watch_beside_source">junto al original</string>
+    <string name="d_settings_watch_rule_on">Activa</string>
+    <string name="d_settings_watch_deletes">elimina el original</string>
+    <string name="d_settings_watch_add_rule">Añadir una regla</string>
+    <string name="d_settings_watch_recent">Actividad reciente</string>
+    <string name="d_settings_watch_folder">Carpeta a vigilar</string>
+    <string name="d_settings_watch_browse">Examinar…</string>
+    <string name="d_settings_watch_glob">Coincidencia (glob, p. ej. *.pdf)</string>
+    <string name="d_settings_watch_output">Carpeta de salida (opcional)</string>
+    <string name="d_settings_watch_no_recipients">No hay destinatarios utilizables — importa primero una clave pública.</string>
+    <string name="d_settings_watch_armor">Blindar la salida en ASCII (.asc)</string>
+    <string name="d_settings_watch_delete_original">Eliminar el original tras cifrar</string>
+    <string name="d_settings_watch_delete_warning">El original se elimina sin deshacer. Déjalo desactivado si no estás seguro.</string>
+    <string name="d_watch_notif_encrypted">Carpeta vigilada: cifrado</string>
+    <string name="d_watch_notif_failed">Carpeta vigilada: error</string>
+
 </resources>

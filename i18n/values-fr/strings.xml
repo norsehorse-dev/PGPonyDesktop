@@ -669,4 +669,27 @@
     <string name="d_crypto_progress_bytes_indeterminate">%1$s traités</string>
     <string name="d_file_cancelled">Annulé</string>
 
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">Dossiers surveillés</string>
+    <string name="d_settings_watch_note">Désactivé par défaut. Une fois activé, PGPony surveille les dossiers indiqués et chiffre chaque nouveau fichier pour les destinataires choisis — chiffrement uniquement, clés publiques uniquement, de sorte qu\'une règle qui s\'exécute en votre absence n\'a jamais besoin d\'une phrase secrète ni d\'une carte, et peut au pire chiffrer. macOS, Linux et Windows.</string>
+    <string name="d_settings_watch_enable">Surveiller les dossiers ci-dessous</string>
+    <string name="d_settings_watch_rules">Règles</string>
+    <string name="d_settings_watch_no_rules">Aucune règle pour l\'instant. Ajoutez-en une pour surveiller un dossier.</string>
+    <string name="d_settings_watch_rule_summary">%1$d destinataires → %2$s</string>
+    <string name="d_settings_watch_beside_source">à côté de la source</string>
+    <string name="d_settings_watch_rule_on">Active</string>
+    <string name="d_settings_watch_deletes">supprime l\'original</string>
+    <string name="d_settings_watch_add_rule">Ajouter une règle</string>
+    <string name="d_settings_watch_recent">Activité récente</string>
+    <string name="d_settings_watch_folder">Dossier à surveiller</string>
+    <string name="d_settings_watch_browse">Parcourir…</string>
+    <string name="d_settings_watch_glob">Motif (glob, p. ex. *.pdf)</string>
+    <string name="d_settings_watch_output">Dossier de sortie (facultatif)</string>
+    <string name="d_settings_watch_no_recipients">Aucun destinataire utilisable — importez d\'abord une clé publique.</string>
+    <string name="d_settings_watch_armor">Armurer la sortie en ASCII (.asc)</string>
+    <string name="d_settings_watch_delete_original">Supprimer l\'original après le chiffrement</string>
+    <string name="d_settings_watch_delete_warning">L\'original est supprimé sans annulation possible. Laissez désactivé en cas de doute.</string>
+    <string name="d_watch_notif_encrypted">Dossier surveillé : chiffré</string>
+    <string name="d_watch_notif_failed">Dossier surveillé : échec</string>
+
 </resources>

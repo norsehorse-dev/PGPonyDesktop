@@ -669,4 +669,27 @@
     <string name="d_crypto_progress_bytes_indeterminate">%1$s processado</string>
     <string name="d_file_cancelled">Cancelado</string>
 
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">Pastas monitoradas</string>
+    <string name="d_settings_watch_note">Desativado por padrão. Quando ativado, o PGPony monitora as pastas indicadas e criptografa cada novo arquivo para os destinatários escolhidos — apenas criptografia, apenas chaves públicas, então uma regra que roda na sua ausência nunca precisa de senha nem de cartão, e no máximo pode criptografar. macOS, Linux e Windows.</string>
+    <string name="d_settings_watch_enable">Monitorar as pastas abaixo</string>
+    <string name="d_settings_watch_rules">Regras</string>
+    <string name="d_settings_watch_no_rules">Ainda sem regras. Adicione uma para monitorar uma pasta.</string>
+    <string name="d_settings_watch_rule_summary">%1$d destinatários → %2$s</string>
+    <string name="d_settings_watch_beside_source">junto ao original</string>
+    <string name="d_settings_watch_rule_on">Ativa</string>
+    <string name="d_settings_watch_deletes">exclui o original</string>
+    <string name="d_settings_watch_add_rule">Adicionar uma regra</string>
+    <string name="d_settings_watch_recent">Atividade recente</string>
+    <string name="d_settings_watch_folder">Pasta a monitorar</string>
+    <string name="d_settings_watch_browse">Procurar…</string>
+    <string name="d_settings_watch_glob">Correspondência (glob, ex.: *.pdf)</string>
+    <string name="d_settings_watch_output">Pasta de saída (opcional)</string>
+    <string name="d_settings_watch_no_recipients">Nenhum destinatário utilizável — importe primeiro uma chave pública.</string>
+    <string name="d_settings_watch_armor">Blindar a saída em ASCII (.asc)</string>
+    <string name="d_settings_watch_delete_original">Excluir o original após criptografar</string>
+    <string name="d_settings_watch_delete_warning">O original é removido sem desfazer. Deixe desativado se não tiver certeza.</string>
+    <string name="d_watch_notif_encrypted">Pasta monitorada: criptografado</string>
+    <string name="d_watch_notif_failed">Pasta monitorada: falhou</string>
+
 </resources>

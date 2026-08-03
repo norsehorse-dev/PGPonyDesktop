@@ -114,6 +114,12 @@ fun SettingsScreen(state: DesktopState) {
         }
         Spacer(Modifier.height(Spacing.Large))
 
+        // ── Watch folders (D18) ─────────────────────────────────────────
+        SectionCard(tr("d_settings_section_watch"), tr("d_settings_watch_note")) {
+            WatchSection(state)
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
         // ── Backup (D6) ─────────────────────────────────────────────────
         SectionCard(tr("settings_section_backup"), tr("d_settings_backup_note")) {
             WrapRow {

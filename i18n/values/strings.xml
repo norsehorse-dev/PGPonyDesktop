@@ -800,4 +800,27 @@
     <string name="d_crypto_progress_bytes_indeterminate">%1$s processed</string>
     <string name="d_file_cancelled">Cancelled</string>
 
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">Watch folders</string>
+    <string name="d_settings_watch_note">Off by default. When on, PGPony watches the folders you name and encrypts each new file to the recipients you pick — encrypt-only, public keys only, so a rule that runs while you are away never needs a passphrase or a card, and can at worst encrypt. macOS, Linux and Windows.</string>
+    <string name="d_settings_watch_enable">Watch the folders below</string>
+    <string name="d_settings_watch_rules">Rules</string>
+    <string name="d_settings_watch_no_rules">No rules yet. Add one to watch a folder.</string>
+    <string name="d_settings_watch_rule_summary">%1$d recipients → %2$s</string>
+    <string name="d_settings_watch_beside_source">beside the source</string>
+    <string name="d_settings_watch_rule_on">On</string>
+    <string name="d_settings_watch_deletes">deletes original</string>
+    <string name="d_settings_watch_add_rule">Add a rule</string>
+    <string name="d_settings_watch_recent">Recent activity</string>
+    <string name="d_settings_watch_folder">Folder to watch</string>
+    <string name="d_settings_watch_browse">Browse…</string>
+    <string name="d_settings_watch_glob">Match (glob, e.g. *.pdf)</string>
+    <string name="d_settings_watch_output">Output folder (optional)</string>
+    <string name="d_settings_watch_no_recipients">No usable recipients — import a public key first.</string>
+    <string name="d_settings_watch_armor">ASCII-armor the output (.asc)</string>
+    <string name="d_settings_watch_delete_original">Delete the original after encrypting</string>
+    <string name="d_settings_watch_delete_warning">The original is removed with no undo. Leave off unless you are sure.</string>
+    <string name="d_watch_notif_encrypted">Watch folder: encrypted</string>
+    <string name="d_watch_notif_failed">Watch folder: failed</string>
+
 </resources>

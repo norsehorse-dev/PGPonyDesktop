@@ -124,6 +124,25 @@ class DesktopState(private val scope: CoroutineScope) {
         if (value) SshAgentService.start(repository) else SshAgentService.stop()
     }
 
+    /**
+     * D18 — the watch-folders master toggle (§3c). Off by default; on means the WatchService
+     * thread is running against the enabled rules. The Settings UI calls [refreshWatch] after
+     * editing rules so a change takes effect without a relaunch.
+     */
+    var watchEnabled by mutableStateOf(WatchRulesStore.enabled())
+        private set
+
+    fun enableWatch(value: Boolean) {
+        WatchRulesStore.setEnabled(value)
+        watchEnabled = value
+        if (value) WatchFolderService.start(repository) else WatchFolderService.stop()
+    }
+
+    /** Re-read rules into the running watcher (no-op when the master toggle is off). */
+    fun refreshWatch() {
+        if (watchEnabled) WatchFolderService.reload(repository)
+    }
+
     /** D3b — files dropped on the window; consumed by the Files surface. D16: folders too, so a
      *  dropped directory can be tar-encrypted (§3a); the Files surface routes each by kind. */
     var droppedFiles by mutableStateOf<List<Path>>(emptyList())
@@ -165,6 +184,9 @@ class DesktopState(private val scope: CoroutineScope) {
     init {
         // D15 — an agent left enabled comes back up with the app (isSupported() gates Windows).
         if (sshAgentEnabled) SshAgentService.start(repository)
+
+        // D18 — watch folders resume at launch if the master toggle was left on.
+        if (watchEnabled) WatchFolderService.start(repository)
 
         // D9 — register with the open-file bus; drains any request passed on first launch.
         AppOpen.setHandler { request -> onOpenFiles(request) }
@@ -510,6 +532,24 @@ private fun guiApplication() = application {
                     }
                 }
                 kotlinx.coroutines.delay(EXPIRY_SCAN_TICK_MS)
+            }
+        }
+
+        // D18 — the watch-folder thread can't compose, so it drops tray messages in TrayOutbox
+        // (the TrayNav idiom); this drains them onto the real TrayState. Off entirely unless the
+        // watcher is running and actually producing outcomes.
+        LaunchedEffect(Unit) {
+            while (true) {
+                for (m in TrayOutbox.drain()) {
+                    trayState.sendNotification(
+                        Notification(
+                            title = m.title,
+                            message = m.body,
+                            type = if (m.warn) Notification.Type.Warning else Notification.Type.Info
+                        )
+                    )
+                }
+                kotlinx.coroutines.delay(1000)
             }
         }
 
