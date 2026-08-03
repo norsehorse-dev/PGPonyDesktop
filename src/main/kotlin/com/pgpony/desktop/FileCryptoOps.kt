@@ -75,6 +75,66 @@ class FileCryptoOps(
         FileOutcome(file, null, false, t.message ?: tr("d_file_err_encrypt"))
     }
 
+    // ── Encrypt a folder (D16 / 2.0.0 §3a) ──────────────────────────────
+    //
+    // A dropped folder tars, then encrypts, in one pass: TarStreamer writes the archive into a
+    // pipe that encryptStream reads, so a multi-gigabyte tree never lands in the heap AND the
+    // plaintext tar never touches disk (no temp file to leak or clean up). The producer thread
+    // carries any walk/IO failure across the pipe so the outcome reflects it.
+
+    suspend fun encryptFolder(
+        folder: Path,
+        recipientFingerprints: Collection<String>,
+        signerFingerprint: String?,
+        signerPassphrase: String?,
+        armor: Boolean
+    ): FileOutcome = try {
+        val rings = recipientFingerprints.map {
+            repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
+        }
+        val signerRing = signerFingerprint?.let {
+            repo.loadSecretKeyRing(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
+        }
+        val tarName = folder.fileName.toString() + ".tar"
+        val out = uniquePath(folder.resolveSibling(tarName + if (armor) ".asc" else ".gpg"))
+
+        val piped = java.io.PipedInputStream(1 shl 16)
+        val sink = java.io.PipedOutputStream(piped)
+        val producerError = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val producer = Thread({
+            try {
+                sink.use { TarStreamer.archive(folder, it) }
+            } catch (t: Throwable) {
+                producerError.set(t)
+            }
+        }, "pgpony-tar-encrypt").apply { isDaemon = true; start() }
+
+        try {
+            Files.newOutputStream(out).use { output ->
+                crypto.encryptStream(
+                    input = piped,
+                    output = output,
+                    recipientPublicKeys = rings,
+                    signingSecretKey = signerRing,
+                    passphrase = signerPassphrase,
+                    filename = tarName,
+                    armor = armor
+                )
+            }
+        } finally {
+            producer.join()
+        }
+        producerError.get()?.let { throw it } // a walk failure must fail the whole op
+
+        FileOutcome(
+            folder, out, true,
+            trQuantity("d_file_folder_encrypted", recipientFingerprints.size) +
+                (if (signerRing != null) tr("d_file_signed_suffix") else "")
+        )
+    } catch (t: Throwable) {
+        FileOutcome(folder, null, false, t.message ?: tr("d_file_err_encrypt"))
+    }
+
     // ── Decrypt ─────────────────────────────────────────────────────────
 
     /**
@@ -107,7 +167,12 @@ class FileCryptoOps(
             val result = crypto.decryptArmored(armoredFromText, secretRings, passphrase, publicRings)
             val sigNote = sigNote(result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw)
             val mime = MimeParser.parse(result.data)
-            if (mime != null && (mime.hasAttachments || !mime.body.isNullOrBlank())) {
+            if (TarStreamer.looksLikeTar(result.data)) {
+                // A folder encrypted with §3a arrives as a ustar tarball — extract it to a
+                // sibling folder rather than dropping a raw .tar. Checked before MIME: a tar is
+                // unambiguous by its magic, whereas MimeParser would happily mis-read tar bytes.
+                extractTar(file, result.data.inputStream(), sigNote)
+            } else if (mime != null && (mime.hasAttachments || !mime.body.isNullOrBlank())) {
                 // Bundle → sibling folder with body + attachments as files.
                 val outDir = uniquePath(file.resolveSibling(file.nameWithoutExtension))
                 Files.createDirectories(outDir)
@@ -142,16 +207,46 @@ class FileCryptoOps(
                 Files.deleteIfExists(tmp)
                 throw t
             }
-            val restoredName = result.filename
-                ?.takeIf { it.isNotBlank() && !it.contains('/') && !it.contains('\\') }
-                ?: defaultDecryptedName(file)
-            val out = uniquePath(file.resolveSibling(restoredName))
-            Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
             val sigNote = sigNote(result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw)
-            FileOutcome(file, out, true, trQuantity("d_file_decrypted_bytes", result.bytesWritten) + sigNote)
+            // Peek the plaintext head: a §3a folder tarball extracts to a sibling folder,
+            // streamed straight off the temp file so a huge archive never re-enters the heap.
+            val head = Files.newInputStream(tmp).use { it.readNBytes(512) }
+            if (TarStreamer.looksLikeTar(head)) {
+                val outcome = Files.newInputStream(tmp).use { extractTar(file, it, sigNote) }
+                Files.deleteIfExists(tmp)
+                outcome
+            } else {
+                val restoredName = result.filename
+                    ?.takeIf { it.isNotBlank() && !it.contains('/') && !it.contains('\\') }
+                    ?: defaultDecryptedName(file)
+                val out = uniquePath(file.resolveSibling(restoredName))
+                Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
+                FileOutcome(file, out, true, trQuantity("d_file_decrypted_bytes", result.bytesWritten) + sigNote)
+            }
         }
     } catch (t: Throwable) {
         FileOutcome(file, null, false, t.message ?: tr("d_file_err_decrypt"))
+    }
+
+    /**
+     * Extract a decrypted ustar [tar] stream into a uniquely-named sibling folder of [file].
+     * TarStreamer enforces the traversal / symlink guards; a hostile archive fails the whole
+     * op with a named error rather than half-populating the folder. The destination is the
+     * input name with its .tar(.gpg|.asc) suffix peeled off, so `docs.tar.gpg` → `docs/`.
+     */
+    private fun extractTar(file: Path, tar: java.io.InputStream, sigNote: String): FileOutcome {
+        val stem = file.name
+            .removeSuffix(".gpg").removeSuffix(".asc").removeSuffix(".pgp").removeSuffix(".tar")
+            .ifBlank { file.nameWithoutExtension }
+        val outDir = uniquePath(file.resolveSibling(stem))
+        Files.createDirectories(outDir)
+        val written = try {
+            TarStreamer.extract(tar, outDir)
+        } catch (t: Throwable) {
+            // Leave the partial folder for the user to inspect; surface the reason.
+            return FileOutcome(file, outDir, false, t.message ?: tr("d_file_err_decrypt"))
+        }
+        return FileOutcome(file, outDir, true, trQuantity("d_file_folder_extracted", written) + sigNote)
     }
 
     private fun defaultDecryptedName(file: Path): String = when (file.extension.lowercase()) {

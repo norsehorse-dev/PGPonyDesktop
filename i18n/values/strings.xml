@@ -784,4 +784,14 @@
     <string name="d_agent_unlock_confirm">Unlock</string>
     <string name="d_agent_unlock_cancel">Cancel</string>
 
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="one">Folder encrypted to %1$d recipient</item>
+        <item quantity="other">Folder encrypted to %1$d recipients</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="one">Extracted folder → %1$d file</item>
+        <item quantity="other">Extracted folder → %1$d files</item>
+    </plurals>
+
 </resources>

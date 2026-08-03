@@ -653,4 +653,14 @@
     <string name="d_agent_unlock_confirm">Déverrouiller</string>
     <string name="d_agent_unlock_cancel">Annuler</string>
 
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="one">Dossier chiffré pour %1$d destinataire</item>
+        <item quantity="other">Dossier chiffré pour %1$d destinataires</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="one">Dossier extrait → %1$d fichier</item>
+        <item quantity="other">Dossier extrait → %1$d fichiers</item>
+    </plurals>
+
 </resources>

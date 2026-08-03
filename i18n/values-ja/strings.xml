@@ -631,4 +631,12 @@
     <string name="d_agent_unlock_confirm">ロック解除</string>
     <string name="d_agent_unlock_cancel">キャンセル</string>
 
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="other">%1$d 人の受信者にフォルダーを暗号化しました</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="other">フォルダーを展開しました → %1$d 個のファイル</item>
+    </plurals>
+
 </resources>

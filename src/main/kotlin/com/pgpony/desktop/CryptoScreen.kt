@@ -429,9 +429,15 @@ fun CryptoScreen(state: DesktopState) {
                                 FileOp.ENCRYPT -> {
                                     val signFp = if (signEnabled && effectiveSigner != null)
                                         effectiveSigner.fingerprint else null
-                                    for (f in fileList) outcomes += fileOps.encryptFile(
-                                        f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor
-                                    )
+                                    // D16 — a directory tars-then-encrypts (§3a); a file goes
+                                    // straight through. The card-signer batch above handles files
+                                    // only, so a folder always lands on this software path.
+                                    for (f in fileList) outcomes +=
+                                        if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
+                                            f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor
+                                        ) else fileOps.encryptFile(
+                                            f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor
+                                        )
                                 }
                                 FileOp.DECRYPT -> for (f in fileList)
                                     outcomes += fileOps.decryptFile(f, decryptPass.ifBlank { null })

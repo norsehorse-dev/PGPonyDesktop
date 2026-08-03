@@ -653,4 +653,14 @@
     <string name="d_agent_unlock_confirm">Desbloquear</string>
     <string name="d_agent_unlock_cancel">Cancelar</string>
 
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="one">Pasta criptografada para %1$d destinatário</item>
+        <item quantity="other">Pasta criptografada para %1$d destinatários</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="one">Pasta extraída → %1$d arquivo</item>
+        <item quantity="other">Pasta extraída → %1$d arquivos</item>
+    </plurals>
+
 </resources>

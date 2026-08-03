@@ -124,12 +124,13 @@ class DesktopState(private val scope: CoroutineScope) {
         if (value) SshAgentService.start(repository) else SshAgentService.stop()
     }
 
-    /** D3b — files dropped on the window; consumed by the Files surface. */
+    /** D3b — files dropped on the window; consumed by the Files surface. D16: folders too, so a
+     *  dropped directory can be tar-encrypted (§3a); the Files surface routes each by kind. */
     var droppedFiles by mutableStateOf<List<Path>>(emptyList())
         private set
 
     fun onFilesDropped(files: List<java.io.File>) {
-        droppedFiles = files.filter { it.isFile }.map { it.toPath() }
+        droppedFiles = files.filter { it.isFile || it.isDirectory }.map { it.toPath() }
         if (droppedFiles.isNotEmpty()) status = trQuantity("d_status_files_dropped", droppedFiles.size)
     }
 
