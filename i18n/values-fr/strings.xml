@@ -663,4 +663,10 @@
         <item quantity="other">Dossier extrait → %1$d fichiers</item>
     </plurals>
 
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">Annulation…</string>
+    <string name="d_crypto_progress_bytes">%1$s sur %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s traités</string>
+    <string name="d_file_cancelled">Annulé</string>
+
 </resources>

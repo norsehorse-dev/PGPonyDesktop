@@ -663,4 +663,10 @@
         <item quantity="other">Ordner extrahiert → %1$d Dateien</item>
     </plurals>
 
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">Wird abgebrochen…</string>
+    <string name="d_crypto_progress_bytes">%1$s von %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s verarbeitet</string>
+    <string name="d_file_cancelled">Abgebrochen</string>
+
 </resources>

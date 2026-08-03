@@ -48,6 +48,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -79,7 +80,9 @@ import com.pgpony.android.crypto.VerifyService
 import com.pgpony.android.crypto.mime.MimeAttachment
 import com.pgpony.android.data.PGPKeyEntity
 import androidx.compose.ui.awt.AwtWindow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.nio.file.Path
@@ -143,6 +146,12 @@ fun CryptoScreen(state: DesktopState) {
     var output by remember { mutableStateOf("") }
     var banner by remember { mutableStateOf<Banner?>(null) }
     var busy by remember { mutableStateOf(false) }
+
+    // D17 (§3b) — per-file byte progress for the running batch, keyed by the source path, plus a
+    // cancel flag the ops poll through their ProgressInputStream. The map is snapshot state, so a
+    // progress tick from a background thread moves the row's bar on the next frame.
+    val fileProgress = remember { mutableStateMapOf<String, Pair<Long, Long>>() }
+    val cancelFlag = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
 
     // Encrypt options
     var encryptWith by remember { mutableStateOf(EncryptWith.PUBLIC_KEYS) }
@@ -308,7 +317,11 @@ fun CryptoScreen(state: DesktopState) {
                 }
                 // 1.1.0 — PathListOps.remove, NOT `fileList - p`: the Iterable overload of
                 // `minus` made the reported Remove button a silent no-op (see PathListOps).
-                fileList.forEach { p -> FileRow(p, enabled = !busy) { fileList = PathListOps.remove(fileList, p) } }
+                fileList.forEach { p ->
+                    FileRow(p, enabled = !busy, progress = fileProgress[p.toString()]) {
+                        fileList = PathListOps.remove(fileList, p)
+                    }
+                }
 
                 Spacer(Modifier.height(Spacing.Large))
                 when (fileOp) {
@@ -424,46 +437,75 @@ fun CryptoScreen(state: DesktopState) {
                                 pendingCardOp = cardBatch
                                 return@run
                             }
-                            val outcomes = mutableListOf<FileCryptoOps.FileOutcome>()
-                            when (fileOp) {
-                                FileOp.ENCRYPT -> {
-                                    val signFp = if (signEnabled && effectiveSigner != null)
-                                        effectiveSigner.fingerprint else null
-                                    // D16 — a directory tars-then-encrypts (§3a); a file goes
-                                    // straight through. The card-signer batch above handles files
-                                    // only, so a folder always lands on this software path.
-                                    for (f in fileList) outcomes +=
-                                        if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
-                                            f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor
-                                        ) else fileOps.encryptFile(
-                                            f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor
-                                        )
-                                }
-                                FileOp.DECRYPT -> for (f in fileList)
-                                    outcomes += fileOps.decryptFile(f, decryptPass.ifBlank { null })
-                                FileOp.SIGN -> {
-                                    val s = effectiveSigner ?: error(tr("d_crypto_err_no_signer"))
-                                    for (f in fileList) outcomes += fileOps.signFileDetached(
-                                        f, s.fingerprint, signerPass.ifBlank { null }, fileArmor
-                                    )
-                                }
-                                FileOp.VERIFY -> {
-                                    val pairs = FileCryptoOps.pairDetached(fileList)
-                                    check(pairs.isNotEmpty()) {
-                                        tr("d_crypto_err_no_pairing")
+                            // D17 — fresh progress + cancel state for this batch.
+                            cancelFlag.set(false)
+                            fileProgress.clear()
+                            val cancelled = { cancelFlag.get() }
+                            fun tick(f: Path): (Long, Long) -> Unit =
+                                { done, total -> fileProgress[f.toString()] = done to total }
+                            // D17 — the batch runs on IO, not the composition's dispatcher: a
+                            // multi-gigabyte pass must not block the UI thread, or the progress
+                            // bar can't paint and the cancel button can't be clicked. Progress
+                            // ticks are snapshot-state writes, safe from this thread; the result
+                            // assignment resumes back on the caller's context.
+                            val outcomes = withContext(Dispatchers.IO) {
+                                val acc = mutableListOf<FileCryptoOps.FileOutcome>()
+                                when (fileOp) {
+                                    FileOp.ENCRYPT -> {
+                                        val signFp = if (signEnabled && effectiveSigner != null)
+                                            effectiveSigner.fingerprint else null
+                                        // D16 — a directory tars-then-encrypts (§3a); a file goes
+                                        // straight through. The card-signer batch above handles
+                                        // files only, so a folder always lands on this path.
+                                        for (f in fileList) acc +=
+                                            if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
+                                                f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
+                                                tick(f), cancelled
+                                            ) else fileOps.encryptFile(
+                                                f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
+                                                tick(f), cancelled
+                                            )
                                     }
-                                    for ((sig, content) in pairs)
-                                        outcomes += fileOps.verifyFileDetached(sig, content)
+                                    FileOp.DECRYPT -> for (f in fileList)
+                                        acc += fileOps.decryptFile(f, decryptPass.ifBlank { null }, tick(f), cancelled)
+                                    FileOp.SIGN -> {
+                                        val s = effectiveSigner ?: error(tr("d_crypto_err_no_signer"))
+                                        for (f in fileList) acc += fileOps.signFileDetached(
+                                            f, s.fingerprint, signerPass.ifBlank { null }, fileArmor
+                                        )
+                                    }
+                                    FileOp.VERIFY -> {
+                                        val pairs = FileCryptoOps.pairDetached(fileList)
+                                        check(pairs.isNotEmpty()) { tr("d_crypto_err_no_pairing") }
+                                        for ((sig, content) in pairs)
+                                            acc += fileOps.verifyFileDetached(sig, content)
+                                    }
                                 }
+                                acc
                             }
                             fileResults = outcomes
+                            fileProgress.clear()
                             val ok = outcomes.count { it.ok }
-                            banner = if (ok == outcomes.size)
-                                Banner.Good(tr("d_crypto_files_done", ok, outcomes.size))
-                            else Banner.Warn(tr("d_crypto_files_partial", ok, outcomes.size))
+                            banner = when {
+                                cancelFlag.get() -> Banner.Info(tr("d_crypto_cancelled"))
+                                ok == outcomes.size -> Banner.Good(tr("d_crypto_files_done", ok, outcomes.size))
+                                else -> Banner.Warn(tr("d_crypto_files_partial", ok, outcomes.size))
+                            }
                         }
                     }
                 ) { Text(if (busy) tr("common_processing") else tr("d_crypto_run_op", tr(fileOp.labelKey))) }
+
+                // D17 (§3b) — cancel a running encrypt/decrypt batch. The flag trips the next
+                // ProgressInputStream read; the op deletes its partial output and reports the
+                // cancel. Sign/verify are quick and buffer-bounded, so the button is scoped to
+                // the two streaming ops where a 10 GB pass is worth interrupting.
+                if (busy && (fileOp == FileOp.ENCRYPT || fileOp == FileOp.DECRYPT)) {
+                    Spacer(Modifier.height(Spacing.Small))
+                    OutlinedButton(
+                        onClick = { cancelFlag.set(true) },
+                        enabled = !cancelFlag.get()
+                    ) { Text(if (cancelFlag.get()) tr("d_crypto_cancelling") else tr("common_button_cancel")) }
+                }
 
                 banner?.let { b ->
                     Spacer(Modifier.height(Spacing.Large))
@@ -1161,35 +1203,71 @@ private fun BannerStrip(banner: Banner) {
 
 /** One queued file in the Files tab: name, its folder, and a remove control. */
 @Composable
-private fun FileRow(path: Path, enabled: Boolean, onRemove: () -> Unit) {
+private fun FileRow(
+    path: Path,
+    enabled: Boolean,
+    progress: Pair<Long, Long>? = null,
+    onRemove: () -> Unit
+) {
     Card(
         shape = RoundedCornerShape(Radius.Small),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
     ) {
-        WrapRow(
-            horizontalSpacing = Spacing.Small,
-            verticalSpacing = Spacing.Tight,
-            modifier = Modifier.padding(horizontal = Spacing.Medium, vertical = Spacing.Small)
-        ) {
-            Text(
-                path.fileName.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                path.parent?.toString() ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            // 1.1.0 — an icon button, not a word: on a narrow window the WrapRow can put this
-            // control under the filename, where a bare "Remove" reads as body text. The glyph
-            // reads as a control anywhere; the word survives as the tooltip and the
-            // contentDescription (same key, so the audit sees one string).
-            RemoveIconButton(enabled = enabled, onClick = onRemove)
+        Column(modifier = Modifier.padding(horizontal = Spacing.Medium, vertical = Spacing.Small)) {
+            WrapRow(horizontalSpacing = Spacing.Small, verticalSpacing = Spacing.Tight) {
+                Text(
+                    path.fileName.toString(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    path.parent?.toString() ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                // 1.1.0 — an icon button, not a word: on a narrow window the WrapRow can put this
+                // control under the filename, where a bare "Remove" reads as body text. The glyph
+                // reads as a control anywhere; the word survives as the tooltip and the
+                // contentDescription (same key, so the audit sees one string).
+                RemoveIconButton(enabled = enabled, onClick = onRemove)
+            }
+            // D17 (§3b) — a live byte-progress bar while this file is streaming through the
+            // engine. Determinate when the source size is known, indeterminate otherwise.
+            progress?.let { (done, total) ->
+                Spacer(Modifier.height(Spacing.Tight))
+                if (total > 0) {
+                    LinearProgressIndicator(
+                        progress = { (done.toFloat() / total).coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        tr("d_crypto_progress_bytes", humanBytes(done), humanBytes(total)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(
+                        tr("d_crypto_progress_bytes_indeterminate", humanBytes(done)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
+}
+
+/** Bytes as a short human string (KB/MB/GB, binary units). Locale-formatted for the count. */
+private fun humanBytes(n: Long): String {
+    if (n < 1024) return "$n B"
+    val units = arrayOf("KB", "MB", "GB", "TB")
+    var value = n.toDouble() / 1024
+    var i = 0
+    while (value >= 1024 && i < units.size - 1) { value /= 1024; i++ }
+    return String.format(I18n.localeOf(I18n.effective), "%.1f %s", value, units[i])
 }
 
 /**

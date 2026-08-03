@@ -663,4 +663,10 @@
         <item quantity="other">Pasta extraída → %1$d arquivos</item>
     </plurals>
 
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">Cancelando…</string>
+    <string name="d_crypto_progress_bytes">%1$s de %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s processado</string>
+    <string name="d_file_cancelled">Cancelado</string>
+
 </resources>

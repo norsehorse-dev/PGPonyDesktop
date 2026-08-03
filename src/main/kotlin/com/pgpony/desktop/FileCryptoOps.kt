@@ -43,7 +43,9 @@ class FileCryptoOps(
         recipientFingerprints: Collection<String>,
         signerFingerprint: String?,
         signerPassphrase: String?,
-        armor: Boolean
+        armor: Boolean,
+        onProgress: (Long, Long) -> Unit = NO_PROGRESS,
+        isCancelled: () -> Boolean = NOT_CANCELLED
     ): FileOutcome = try {
         val rings = recipientFingerprints.map {
             repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
@@ -52,27 +54,38 @@ class FileCryptoOps(
         val signerRing = signerFingerprint?.let {
             repo.loadSecretKeyRing(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
-        val out = uniquePath(file.resolveSibling(file.name + if (armor) ".asc" else ".gpg"))
-        Files.newInputStream(file).use { input ->
-            Files.newOutputStream(out).use { output ->
-                crypto.encryptStream(
-                    input = input,
-                    output = output,
-                    recipientPublicKeys = rings,
-                    signingSecretKey = signerRing,
-                    passphrase = signerPassphrase,
-                    filename = file.name,
-                    armor = armor
-                )
+        // Write to a temp sibling and MOVE on success (D17): a cancel or crash leaves the temp,
+        // which the catch deletes — never a half-written .gpg beside the source, never an
+        // overwrite. Output name is resolved at the end, keeping the never-overwrite guarantee.
+        val total = runCatching { Files.size(file) }.getOrDefault(-1L)
+        val tmp = Files.createTempFile(file.parent, ".pgpony-enc", ".tmp")
+        try {
+            ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { input ->
+                Files.newOutputStream(tmp).use { output ->
+                    crypto.encryptStream(
+                        input = input,
+                        output = output,
+                        recipientPublicKeys = rings,
+                        signingSecretKey = signerRing,
+                        passphrase = signerPassphrase,
+                        filename = file.name,
+                        armor = armor
+                    )
+                }
             }
+        } catch (t: Throwable) {
+            Files.deleteIfExists(tmp)
+            throw t
         }
+        val out = uniquePath(file.resolveSibling(file.name + if (armor) ".asc" else ".gpg"))
+        Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
         FileOutcome(
             file, out, true,
             trQuantity("d_file_encrypted_to", recipientFingerprints.size) +
                 (if (signerRing != null) tr("d_file_signed_suffix") else "")
         )
     } catch (t: Throwable) {
-        FileOutcome(file, null, false, t.message ?: tr("d_file_err_encrypt"))
+        cancelledOrError(file, t) { tr("d_file_err_encrypt") }
     }
 
     // ── Encrypt a folder (D16 / 2.0.0 §3a) ──────────────────────────────
@@ -87,7 +100,9 @@ class FileCryptoOps(
         recipientFingerprints: Collection<String>,
         signerFingerprint: String?,
         signerPassphrase: String?,
-        armor: Boolean
+        armor: Boolean,
+        onProgress: (Long, Long) -> Unit = NO_PROGRESS,
+        isCancelled: () -> Boolean = NOT_CANCELLED
     ): FileOutcome = try {
         val rings = recipientFingerprints.map {
             repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
@@ -96,7 +111,10 @@ class FileCryptoOps(
             repo.loadSecretKeyRing(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
         val tarName = folder.fileName.toString() + ".tar"
-        val out = uniquePath(folder.resolveSibling(tarName + if (armor) ".asc" else ".gpg"))
+        // A cheap stat walk gives a determinate total; tar headers add a little, but for a
+        // progress bar the payload bytes are what the user watches move.
+        val total = runCatching { folderSize(folder) }.getOrDefault(-1L)
+        val tmp = Files.createTempFile(folder.parent, ".pgpony-enc", ".tmp")
 
         val piped = java.io.PipedInputStream(1 shl 16)
         val sink = java.io.PipedOutputStream(piped)
@@ -110,29 +128,43 @@ class FileCryptoOps(
         }, "pgpony-tar-encrypt").apply { isDaemon = true; start() }
 
         try {
-            Files.newOutputStream(out).use { output ->
-                crypto.encryptStream(
-                    input = piped,
-                    output = output,
-                    recipientPublicKeys = rings,
-                    signingSecretKey = signerRing,
-                    passphrase = signerPassphrase,
-                    filename = tarName,
-                    armor = armor
-                )
+            ProgressInputStream(piped, total, isCancelled, onProgress).use { input ->
+                Files.newOutputStream(tmp).use { output ->
+                    crypto.encryptStream(
+                        input = input,
+                        output = output,
+                        recipientPublicKeys = rings,
+                        signingSecretKey = signerRing,
+                        passphrase = signerPassphrase,
+                        filename = tarName,
+                        armor = armor
+                    )
+                }
             }
+        } catch (t: Throwable) {
+            producer.join()
+            Files.deleteIfExists(tmp)
+            throw t
         } finally {
             producer.join()
         }
-        producerError.get()?.let { throw it } // a walk failure must fail the whole op
+        producerError.get()?.let { Files.deleteIfExists(tmp); throw it } // a walk failure fails the op
 
+        val out = uniquePath(folder.resolveSibling(tarName + if (armor) ".asc" else ".gpg"))
+        Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
         FileOutcome(
             folder, out, true,
             trQuantity("d_file_folder_encrypted", recipientFingerprints.size) +
                 (if (signerRing != null) tr("d_file_signed_suffix") else "")
         )
     } catch (t: Throwable) {
-        FileOutcome(folder, null, false, t.message ?: tr("d_file_err_encrypt"))
+        cancelledOrError(folder, t) { tr("d_file_err_encrypt") }
+    }
+
+    private fun folderSize(folder: Path): Long {
+        var sum = 0L
+        Files.walk(folder).use { s -> s.forEach { if (Files.isRegularFile(it)) sum += Files.size(it) } }
+        return sum
     }
 
     // ── Decrypt ─────────────────────────────────────────────────────────
@@ -146,7 +178,12 @@ class FileCryptoOps(
      *   sibling FOLDER — body.txt + each attachment as a real file.
      *   3. Anything else (binary .gpg/.pgp) — the original streaming path, heap-free.
      */
-    suspend fun decryptFile(file: Path, passphrase: String?): FileOutcome = try {
+    suspend fun decryptFile(
+        file: Path,
+        passphrase: String?,
+        onProgress: (Long, Long) -> Unit = NO_PROGRESS,
+        isCancelled: () -> Boolean = NOT_CANCELLED
+    ): FileOutcome = try {
         val all = repo.allKeys()
         val secretRings = all.filter { it.isKeyPair }.mapNotNull { repo.loadSecretKeyRing(it.fingerprint) }
         val publicRings = all.mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
@@ -195,10 +232,12 @@ class FileCryptoOps(
                 FileOutcome(file, out, true, trQuantity("d_file_decrypted_bytes", result.data.size) + sigNote)
             }
         } else {
-            // Streaming path for binary ciphertext.
+            // Streaming path for binary ciphertext. Progress is bytes read from the CIPHERTEXT
+            // (the plaintext size isn't known ahead), a fine proxy for a moving bar.
+            val total = runCatching { Files.size(file) }.getOrDefault(-1L)
             val tmp = Files.createTempFile(file.parent, ".pgpony-dec", ".tmp")
             val result = try {
-                Files.newInputStream(file).use { input ->
+                ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { input ->
                     Files.newOutputStream(tmp).use { output ->
                         crypto.decryptStream(input, output, secretRings, passphrase, publicRings)
                     }
@@ -225,8 +264,16 @@ class FileCryptoOps(
             }
         }
     } catch (t: Throwable) {
-        FileOutcome(file, null, false, t.message ?: tr("d_file_err_decrypt"))
+        cancelledOrError(file, t) { tr("d_file_err_decrypt") }
     }
+
+    /**
+     * Map a caught throwable to an outcome: a user cancel (D17) reads as a neutral "cancelled"
+     * line, not a red error — the partial output was already deleted by the op's inner catch.
+     */
+    private inline fun cancelledOrError(input: Path, t: Throwable, fallback: () -> String): FileOutcome =
+        if (t is CancelledException) FileOutcome(input, null, false, tr("d_file_cancelled"))
+        else FileOutcome(input, null, false, t.message ?: fallback())
 
     /**
      * Extract a decrypted ustar [tar] stream into a uniquely-named sibling folder of [file].
@@ -449,6 +496,10 @@ class FileCryptoOps(
     companion object {
         private const val BEGIN_MESSAGE = "-----BEGIN PGP MESSAGE-----"
         private const val END_MESSAGE = "-----END PGP MESSAGE-----"
+
+        /** Defaults so the card paths and tests can call the ops without a progress/cancel arg. */
+        val NO_PROGRESS: (Long, Long) -> Unit = { _, _ -> }
+        val NOT_CANCELLED: () -> Boolean = { false }
 
         /** The armored MESSAGE block inside arbitrary surrounding text, or null. */
         fun extractArmoredMessage(text: String): String? {

@@ -794,4 +794,10 @@
         <item quantity="other">Extracted folder → %1$d files</item>
     </plurals>
 
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">Cancelling…</string>
+    <string name="d_crypto_progress_bytes">%1$s of %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s processed</string>
+    <string name="d_file_cancelled">Cancelled</string>
+
 </resources>

@@ -639,4 +639,10 @@
         <item quantity="other">フォルダーを展開しました → %1$d 個のファイル</item>
     </plurals>
 
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">キャンセル中…</string>
+    <string name="d_crypto_progress_bytes">%2$s 中 %1$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s 処理済み</string>
+    <string name="d_file_cancelled">キャンセルしました</string>
+
 </resources>
