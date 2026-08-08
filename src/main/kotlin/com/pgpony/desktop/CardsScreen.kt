@@ -82,7 +82,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private enum class CardDialog { NONE, CHANGE_PIN, CHANGE_ADMIN, UNBLOCK, FACTORY_RESET, KEYGEN }
+private enum class CardDialog { NONE, CHANGE_PIN, CHANGE_ADMIN, UNBLOCK, FACTORY_RESET, KEYGEN, MOVE_KEY }
 
 @Composable
 fun CardsScreen(state: DesktopState) {
@@ -203,11 +203,13 @@ fun CardsScreen(state: DesktopState) {
                 title = tr("d_cards_no_reader_title"),
                 message = listOfNotNull(
                     tr("d_cards_no_reader_detected"),
-                    // When PC/SC itself failed, name it. "Nothing is plugged in" and "the smart
-                    // card service is not running" are the same empty list to every caller but
-                    // completely different problems to the person reading this screen — and the
-                    // second one is unfixable by plugging something in.
-                    DesktopCardReader.lastListError?.let { tr("d_cards_pcsc_error", it) },
+                    // When PC/SC failed for a REASON — service not running, reader held by another
+                    // program — say that reason in plain words. "Nothing is plugged in" and "the
+                    // service is not running" are the same empty list to every caller but
+                    // completely different problems, and the second is unfixable by plugging
+                    // something in. The raw SCARD chain stays in `pgpony card-info`, not here
+                    // (D19 — a tester's screenshot caught it leaking to users).
+                    friendlyPcscReason(DesktopCardReader.lastListError),
                     tr("d_cards_no_reader_linux").takeIf {
                         System.getProperty("os.name").lowercase().contains("linux")
                     }
@@ -261,6 +263,13 @@ fun CardsScreen(state: DesktopState) {
                         shape = RoundedCornerShape(Radius.Small)
                     ) {
                         Text(tr("d_cards_keygen_open"))
+                    }
+                    OutlinedButton(
+                        enabled = !busy,
+                        onClick = { dialog = CardDialog.MOVE_KEY },
+                        shape = RoundedCornerShape(Radius.Small)
+                    ) {
+                        Text(tr("d_cards_move_open"))
                     }
                 }
                 Spacer(Modifier.height(Spacing.Small))
@@ -353,7 +362,7 @@ fun CardsScreen(state: DesktopState) {
         CardDialog.KEYGEN -> CardKeygenDialog(
             busy = busy,
             onDismiss = { dialog = CardDialog.NONE },
-            onGenerate = { name, email, expirationSeconds, adminPin, userPin ->
+            onGenerate = { algo, name, email, expirationSeconds, adminPin, userPin ->
                 dialog = CardDialog.NONE
                 busy = true
                 message = null
@@ -361,9 +370,19 @@ fun CardsScreen(state: DesktopState) {
                     try {
                         val result = withContext(Dispatchers.IO) {
                             DesktopCardReader.withCard(reader) { session ->
-                                CardKeygenService.generateOnCard(
-                                    session, name, email, expirationSeconds, adminPin, userPin
-                                )
+                                when (algo) {
+                                    CardKeyAlgo.ED25519 -> CardKeygenService.generateOnCard(
+                                        session, name, email, expirationSeconds, adminPin, userPin
+                                    )
+                                    CardKeyAlgo.RSA_2048 -> DesktopCardKeygen.generateRsaOnCard(
+                                        session, DesktopCardKeygen.RsaBits.RSA_2048,
+                                        name, email, expirationSeconds, adminPin, userPin
+                                    )
+                                    CardKeyAlgo.RSA_4096 -> DesktopCardKeygen.generateRsaOnCard(
+                                        session, DesktopCardKeygen.RsaBits.RSA_4096,
+                                        name, email, expirationSeconds, adminPin, userPin
+                                    )
+                                }
                             }
                         }
                         val entity = state.repository.importGeneratedCardKey(
@@ -375,6 +394,37 @@ fun CardsScreen(state: DesktopState) {
                             "d_cards_keygen_done",
                             entity.userID.ifBlank { entity.shortFingerprint }
                         )
+                        messageIsError = false
+                    } catch (t: Throwable) {
+                        message = t.message ?: t::class.simpleName
+                        messageIsError = true
+                    } finally {
+                        busy = false
+                    }
+                }
+            }
+        )
+        CardDialog.MOVE_KEY -> MoveKeyToCardDialog(
+            busy = busy,
+            candidates = state.keys.filter { it.isKeyPair && !it.isRevoked && it.algorithm.name.startsWith("RSA") },
+            onDismiss = { dialog = CardDialog.NONE },
+            onMove = { fingerprint, passphrase, adminPin, format ->
+                dialog = CardDialog.NONE
+                busy = true
+                message = null
+                scope.launch {
+                    try {
+                        val ring = state.repository.loadSecretKeyRing(fingerprint)
+                            ?: error(tr("d_cards_move_no_secret"))
+                        val result = withContext(Dispatchers.IO) {
+                            DesktopCardReader.withCardTransport(reader) { transport ->
+                                DesktopCardKeyImport.moveToCard(transport, ring, passphrase, adminPin, format)
+                            }
+                        }
+                        val entity = state.repository.importCardKey(result.cardInfo)
+                        info = result.cardInfo
+                        state.reload()
+                        message = tr("d_cards_move_done", entity.userID.ifBlank { entity.shortFingerprint })
                         messageIsError = false
                     } catch (t: Throwable) {
                         message = t.message ?: t::class.simpleName
@@ -665,14 +715,24 @@ private fun FactoryResetDialog(busy: Boolean, onDismiss: () -> Unit, onConfirm: 
     )
 }
 
+/** The on-card key algorithm the dialog offers. Ed25519 goes through the vendored keygen; the
+ *  two RSA sizes go through the desktop-owned DesktopCardKeygen (D20). Labels are technical
+ *  identifiers, not translated. */
+private enum class CardKeyAlgo(val label: String) {
+    ED25519("Ed25519"),
+    RSA_2048("RSA 2048"),
+    RSA_4096("RSA 4096")
+}
+
 @Composable
 private fun CardKeygenDialog(
     busy: Boolean,
     onDismiss: () -> Unit,
-    onGenerate: (name: String, email: String, expirationSeconds: Long?, adminPin: String, userPin: String) -> Unit
+    onGenerate: (algo: CardKeyAlgo, name: String, email: String, expirationSeconds: Long?, adminPin: String, userPin: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var algo by remember { mutableStateOf(CardKeyAlgo.ED25519) }
     var years by remember { mutableStateOf(0) }
     var adminPin by remember { mutableStateOf("") }
     var userPin by remember { mutableStateOf("") }
@@ -699,6 +759,16 @@ private fun CardKeygenDialog(
                 OutlinedTextField(value = email, onValueChange = { email = it },
                     label = { Text(tr("card_keygen_field_email")) }, singleLine = true,
                     enabled = !busy, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(6.dp))
+                Text(tr("d_cards_keygen_algo_label"), style = MaterialTheme.typography.bodyMedium)
+                WrapRow {
+                    CardKeyAlgo.entries.forEach { a ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = algo == a, onClick = { algo = a }, enabled = !busy)
+                            Text(a.label, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("d_cards_expires_colon"), style = MaterialTheme.typography.bodyMedium)
@@ -734,9 +804,95 @@ private fun CardKeygenDialog(
                 enabled = valid && !busy,
                 onClick = {
                     val expirationSeconds = years.takeIf { it > 0 }?.let { it * 365L * 24 * 60 * 60 }
-                    onGenerate(name.trim(), email.trim(), expirationSeconds, adminPin, userPin)
+                    onGenerate(algo, name.trim(), email.trim(), expirationSeconds, adminPin, userPin)
                 }
             ) { Text(if (busy) tr("d_common_working") else tr("card_keygen_generate")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(tr("common_button_cancel")) } }
+    )
+}
+
+/**
+ * D21 — move an existing SOFTWARE key onto the card (keytocard). Only RSA keypairs are offered
+ * (the first cut); the security trade is stated plainly, because unlike on-card generation this
+ * key's secret existed off the card. The import format defaults to CRT and is exposed as a knob,
+ * since cards differ on which format they accept for import.
+ */
+@Composable
+private fun MoveKeyToCardDialog(
+    busy: Boolean,
+    candidates: List<com.pgpony.android.data.PGPKeyEntity>,
+    onDismiss: () -> Unit,
+    onMove: (fingerprint: String, passphrase: String?, adminPin: String, format: RsaImportFormat) -> Unit
+) {
+    var selected by remember { mutableStateOf(candidates.firstOrNull()?.fingerprint ?: "") }
+    var passphrase by remember { mutableStateOf("") }
+    var adminPin by remember { mutableStateOf("") }
+    var format by remember { mutableStateOf(RsaImportFormat.CRT) }
+    var confirmed by remember { mutableStateOf(false) }
+    val valid = selected.isNotBlank() && adminPin.isNotBlank() && confirmed
+
+    BrandDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = tr("d_cards_move_title"),
+        destructive = true,
+        content = {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                Text(
+                    tr("d_cards_move_warning"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(8.dp))
+                if (candidates.isEmpty()) {
+                    Text(tr("d_cards_move_no_candidates"), style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text(tr("d_cards_move_pick_key"), style = MaterialTheme.typography.bodyMedium)
+                    candidates.forEach { key ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = selected == key.fingerprint,
+                                onClick = { selected = key.fingerprint }, enabled = !busy
+                            )
+                            Text(
+                                key.userID.ifBlank { key.shortFingerprint } + "  (" + key.algorithm.displayName + ")",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(value = passphrase, onValueChange = { passphrase = it },
+                    label = { Text(tr("d_cards_move_passphrase")) }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !busy, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(value = adminPin, onValueChange = { adminPin = it },
+                    label = { Text(tr("card_keygen_field_admin_pin")) }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !busy, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(6.dp))
+                Text(tr("d_cards_move_format"), style = MaterialTheme.typography.bodyMedium)
+                WrapRow {
+                    RsaImportFormat.entries.forEach { f ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = format == f, onClick = { format = f }, enabled = !busy)
+                            Text(f.name, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = confirmed, onCheckedChange = { confirmed = it }, enabled = !busy)
+                    Text(tr("d_cards_move_ack"))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = valid && !busy,
+                onClick = { onMove(selected, passphrase.ifBlank { null }, adminPin, format) }
+            ) { Text(if (busy) tr("d_common_working") else tr("d_cards_move_confirm")) }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(tr("common_button_cancel")) } }
     )

@@ -64,11 +64,12 @@ import androidx.compose.ui.window.rememberWindowState
 import com.pgpony.android.data.PGPKeyEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.awtTransferable
 import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.DnDConstants
-import java.awt.dnd.DropTarget
-import java.awt.dnd.DropTargetAdapter
-import java.awt.dnd.DropTargetDropEvent
 import java.nio.file.Path
 
 /** App-level state: Room-backed keyring (D2a) wrapped for Compose observation. */
@@ -564,25 +565,9 @@ private fun guiApplication() = application {
             UpdateCheck.checkIfDue()
         }
 
-        // D3b — window-level drag-drop via AWT DropTarget (no experimental Compose APIs).
-        // Compose snapshot state accepts writes from the AWT EDT.
-        LaunchedEffect(Unit) {
-            window.dropTarget = DropTarget(window, object : DropTargetAdapter() {
-                override fun drop(event: DropTargetDropEvent) {
-                    try {
-                        event.acceptDrop(DnDConstants.ACTION_COPY)
-                        val dropped = (event.transferable
-                            .getTransferData(DataFlavor.javaFileListFlavor) as? List<*>)
-                            ?.filterIsInstance<java.io.File>()
-                            .orEmpty()
-                        if (dropped.isNotEmpty()) state.onFilesDropped(dropped)
-                        event.dropComplete(true)
-                    } catch (_: Throwable) {
-                        event.dropComplete(false)
-                    }
-                }
-            })
-        }
+        // D3b / D16 — window drag-drop is handled by Modifier.dragAndDropTarget on App's root
+        // Surface (see App()). The old AWT window.dropTarget never fired on macOS, where Compose's
+        // Skia surface consumes the drop before the AWT window sees it; the Compose target does.
 
         // D12 batch 3 — the About modal's open/closed flag. It lives HERE, in the window scope,
         // rather than inside App(): the menu bar and the theme block are siblings under
@@ -630,11 +615,28 @@ private fun guiApplication() = application {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun App(state: DesktopState) {
     // Dropped files route to the Files surface.
     LaunchedEffect(state.droppedFiles) {
         if (state.droppedFiles.isNotEmpty()) state.destination = Destination.Crypto
+    }
+
+    // D16b — window drag-drop through Compose (Modifier.dragAndDropTarget), which receives the
+    // drop on the Skia surface where the old AWT window.dropTarget did not on macOS. Files AND
+    // folders are kept (onFilesDropped filters by kind); a dropped folder routes to tar-encrypt.
+    val fileDropTarget = remember(state) {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                val files = runCatching {
+                    event.awtTransferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<*>
+                }.getOrNull()?.filterIsInstance<java.io.File>().orEmpty()
+                if (files.isEmpty()) return false
+                state.onFilesDropped(files)
+                return true
+            }
+        }
     }
 
     // D9 — a classified file open switches to the owning screen; the screen consumes the
@@ -650,7 +652,16 @@ private fun App(state: DesktopState) {
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { event ->
+                    event.awtTransferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+                },
+                target = fileDropTarget
+            )
+    ) {
         Row(modifier = Modifier.fillMaxSize()) {
             // D12 — the rail carries the brand. The gradient goes on a Box behind it and the
             // rail itself is transparent, because NavigationRail's containerColor takes a Color

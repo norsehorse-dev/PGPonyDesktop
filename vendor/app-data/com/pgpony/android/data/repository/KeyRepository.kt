@@ -156,8 +156,29 @@ class KeyRepository(
         // that just succeeded at key generation), we fall back to
         // entity = null cert. The KeyDetailScreen revoke flow can
         // always generate fresh.
+        // 4.1.0 Phase 12a — this block had never run. `importResult` above is
+        // parsed from result.publicKeyData, so importResult.secretKeyRing is
+        // ALWAYS null: a public-only import cannot carry a secret ring. Every
+        // key generated since 4.0.3 stored a null revocation certificate, so
+        // the "revoke even after losing your passphrase" fallback the
+        // pre-cache exists for did not exist. The revoke-from-UI flow was
+        // unaffected, which is why nothing looked broken.
+        // PLANNING_4_2_0.md §10.2.
+        //
+        // Parsed from result.privateKeyData, the BINARY secret ring, and
+        // deliberately NOT from result.armoredPrivateKey: exportArmoredPrivateKey
+        // runs v5 composite rings through LibrePGPV5Interop.toLibrePGPFormat,
+        // so the armored form is not always the framing BC produced, while
+        // privateKeyData is exactly what storePrivateKey just persisted and
+        // what loadSecretKeyRing reads back.
+        val generatedSecretRing = try {
+            crypto.importKeyData(result.privateKeyData).secretKeyRing
+        } catch (_: Exception) {
+            null
+        }
+
         val preCachedRevocationCert: String? = try {
-            importResult.secretKeyRing?.let { secRing ->
+            generatedSecretRing?.let { secRing ->
                 revocation.generateRevocationCertificate(
                     secretKeyRing = secRing,
                     reason = RevocationReason.NO_REASON,

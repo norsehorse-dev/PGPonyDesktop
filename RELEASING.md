@@ -120,8 +120,16 @@ gh release download v1.0.3 --repo norsehorse-dev/PGPonyDesktop --dir .
 cp /Users/kevinstewart/Apps/PGPonyDesktop/build/compose/binaries/main/dmg/PGPony-*.dmg \
    PGPony-macOS.dmg
 
-FILES="PGPony-macOS.dmg PGPony-linux.deb PGPony-linux-x86_64.tar.gz PGPony-x86_64.AppImage \
-PGPony-linux-arm64.deb PGPony-linux-aarch64.tar.gz PGPony-aarch64.AppImage PGPony-windows.msi"
+FILES=(
+  PGPony-macOS.dmg
+  PGPony-linux.deb
+  PGPony-linux-x86_64.tar.gz
+  PGPony-x86_64.AppImage
+  PGPony-linux-arm64.deb
+  PGPony-linux-aarch64.tar.gz
+  PGPony-aarch64.AppImage
+  PGPony-windows.msi
+)
 
 shasum -a 256 $FILES > SHA256SUMS
 cat SHA256SUMS
@@ -134,9 +142,14 @@ done
 shasum -a 256 -c SHA256SUMS
 ```
 
-The explicit `-u` is not decoration: a bare `gpg --detach-sign` failed with "no default secret
-key" during the 1.0.1 cycle. Nine signatures now, not four — check the `gpg --verify` loop
-printed nine `Good signature` lines before going any further.
+An ARRAY, not a space-separated string. This shell is zsh, and zsh does not word-split an
+unquoted `$var` the way bash does — `FILES="a b c"` followed by `shasum $FILES` passes one
+filename made of all three names joined, and every command in this block then fails in a way
+that looks like the files are missing. An array expands to separate words in zsh.
+
+The explicit `-u` is not decoration either: a bare `gpg --detach-sign` failed with "no default
+secret key" during the 1.0.1 cycle. Nine signatures now, not four — check the `gpg --verify`
+loop printed nine `Good signature` lines before going any further.
 
 Verify before publishing, not after. A signature that does not check out is worse than none.
 

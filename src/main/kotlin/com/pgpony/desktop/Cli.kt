@@ -295,6 +295,8 @@ object Cli {
         "v6-x448" -> KeyAlgorithm.V6_X448
         "mlkem", "mlkem-v6", "pqc" -> KeyAlgorithm.MLKEM768_X25519_V6
         "mlkem-librepgp", "mlkem-v5" -> KeyAlgorithm.MLKEM768_X25519_LIBREPGP
+        "mlkem-1024", "mlkem-1024-v6", "pqc-1024" -> KeyAlgorithm.MLKEM1024_X448_V6
+        "mlkem-1024-librepgp", "mlkem-1024-v5" -> KeyAlgorithm.MLKEM1024_X448_LIBREPGP
         else -> throw CliError(
             ExitCode.USAGE,
             "gen-key: unknown --algo \"$name\" (ed25519, rsa2048, rsa4096, v6-ed25519, v6-x25519, " +

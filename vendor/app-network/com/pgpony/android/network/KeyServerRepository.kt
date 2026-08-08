@@ -140,14 +140,18 @@ class KeyServerRepository {
         // v6/PQC keys that keys.openpgp.org won't serve, and rides the
         // onion when Tor is on. keys.openpgp.org is handled by the Hagrid
         // step below, so it's skipped here to avoid a double round-trip.
-        for (server in directoryLookupServers()) {
-            val hit = runCatching {
+        val emailServers = directoryLookupServers()
+        logDirectory("findByEmail($email)", emailServers.map { it.label })
+        for (server in emailServers) {
+            val outcome = runCatching {
                 MultiKeyServerService.shared.searchByEmail(server, email)
-            }.getOrNull()
+            }
+            val hit = outcome.getOrNull()
             if (!hit.isNullOrBlank()) {
                 Log.d(LOG_TAG, "findByEmail($email) → hit via ${server.label}")
                 return KeyLookupResult(armoredKey = hit, source = KeyLookupSource.KEYSERVER)
             }
+            logMiss("findByEmail($email)", server.label, outcome.exceptionOrNull())
         }
 
         // Hagrid fallback (keys.openpgp.org) — always the final source so
@@ -168,19 +172,89 @@ class KeyServerRepository {
      * WKD is email-only so it isn't part of this path.
      */
     suspend fun findByFingerprint(fingerprint: String): KeyLookupResult? {
-        for (server in directoryLookupServers()) {
-            val hit = runCatching {
+        val fpServers = directoryLookupServers()
+        logDirectory("findByFingerprint", fpServers.map { it.label })
+        for (server in fpServers) {
+            val outcome = runCatching {
                 MultiKeyServerService.shared.fetchByFingerprint(server, fingerprint)
-            }.getOrNull()
+            }
+            val hit = outcome.getOrNull()
             if (!hit.isNullOrBlank()) {
                 Log.d(LOG_TAG, "findByFingerprint → hit via ${server.label}")
                 return KeyLookupResult(armoredKey = hit, source = KeyLookupSource.KEYSERVER)
             }
+            logMiss("findByFingerprint", server.label, outcome.exceptionOrNull())
         }
         val hagrid = searchByFingerprint(fingerprint)
         return if (hagrid != null) {
+            Log.d(LOG_TAG, "findByFingerprint → hit via keys.openpgp.org (Hagrid)")
             KeyLookupResult(armoredKey = hagrid, source = KeyLookupSource.HAGRID)
-        } else null
+        } else {
+            Log.d(LOG_TAG, "findByFingerprint → miss on all sources")
+            null
+        }
+    }
+
+    /**
+     * 4.1.0 Phase 14e. Unified 64-bit key ID lookup, same source order
+     * as [findByFingerprint]: configured directory servers with the
+     * first-party one (keys.pgpony.app) first, then keys.openpgp.org.
+     *
+     * Used by the signer lookup on the decrypt path, which has no
+     * fingerprint to offer. Less precise than by-fingerprint, which is
+     * the trade VerificationResult.UnknownSigner already documents; the
+     * user confirms the result before anything reaches the keyring.
+     */
+    suspend fun findByKeyId(keyId: String): KeyLookupResult? {
+        val keyIdServers = directoryLookupServers()
+        logDirectory("findByKeyId($keyId)", keyIdServers.map { it.label })
+        for (server in keyIdServers) {
+            val outcome = runCatching {
+                MultiKeyServerService.shared.fetchByKeyId(server, keyId)
+            }
+            val hit = outcome.getOrNull()
+            if (!hit.isNullOrBlank()) {
+                Log.d(LOG_TAG, "findByKeyId → hit via ${server.label}")
+                return KeyLookupResult(armoredKey = hit, source = KeyLookupSource.KEYSERVER)
+            }
+            logMiss("findByKeyId($keyId)", server.label, outcome.exceptionOrNull())
+        }
+        val hagrid = searchByKeyId(keyId)
+        return if (hagrid != null) {
+            Log.d(LOG_TAG, "findByKeyId → hit via keys.openpgp.org (Hagrid)")
+            KeyLookupResult(armoredKey = hagrid, source = KeyLookupSource.HAGRID)
+        } else {
+            Log.d(LOG_TAG, "findByKeyId → miss on all sources")
+            null
+        }
+    }
+
+    /**
+     * 4.1.0 Phase 19. Name the directory a lookup is about to walk, or
+     * say plainly that there is none.
+     *
+     * Without this, an empty directory and a directory that simply had
+     * no answer looked the same in logcat, because the loop only spoke
+     * on success. That is exactly the wrong conclusion to make easy in a
+     * feature whose whole point is "we asked your server first".
+     */
+    private fun logDirectory(op: String, labels: List<String>) {
+        if (labels.isEmpty()) {
+            Log.d(LOG_TAG, "$op → no lookup-enabled directory servers, Hagrid only")
+        } else {
+            Log.d(LOG_TAG, "$op → directory order: ${labels.joinToString()}")
+        }
+    }
+
+    /**
+     * 4.1.0 Phase 19. One line per server that did not answer,
+     * distinguishing "asked, no key there" from "could not reach it".
+     * The callers swallow both into a null, which is right for control
+     * flow and useless for diagnosis.
+     */
+    private fun logMiss(op: String, label: String, error: Throwable?) {
+        val why = error?.let { " (${it.javaClass.simpleName}: ${it.message})" } ?: ""
+        Log.d(LOG_TAG, "$op → no result from $label$why")
     }
 
     /**
@@ -227,6 +301,43 @@ class KeyServerRepository {
         try {
             val fp = fingerprint.uppercase().replace(" ", "")
             val response = client.get("$BASE_URL/vks/v1/by-fingerprint/$fp") {
+                accept(ContentType.Application.OctetStream)
+            }
+            if (response.status == HttpStatusCode.OK) {
+                response.bodyAsText()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 4.1.0 Phase 14d. Search for a public key by 64-bit long key ID.
+     * GET /vks/v1/by-keyid/{keyid}
+     *
+     * The signer lookup wants a fingerprint, and gets one on the
+     * clear-signed path because VerifyService reads the issuer
+     * fingerprint subpacket. The decrypt path has no fingerprint to
+     * offer: DecryptResult and DecryptStreamResult carry only the raw
+     * key ID from the signature packets. Rather than leave the yellow
+     * banner tappable and inert, fall back to this.
+     *
+     * Less precise than by-fingerprint, which is the trade
+     * VerificationResult.UnknownSigner already documents for signatures
+     * without the subpacket. Hagrid still returns at most one key, and
+     * the user confirms before anything is added to the keyring, so the
+     * imprecision does not reach the keyring unreviewed.
+     *
+     * Same swallow-everything contract as [searchByFingerprint]: null
+     * for "no result" and for transport failure alike.
+     */
+    suspend fun searchByKeyId(keyId: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val id = keyId.uppercase().replace(" ", "").removePrefix("0X")
+            if (id.isEmpty()) return@withContext null
+            val response = client.get("$BASE_URL/vks/v1/by-keyid/$id") {
                 accept(ContentType.Application.OctetStream)
             }
             if (response.status == HttpStatusCode.OK) {

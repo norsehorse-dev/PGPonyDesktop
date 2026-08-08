@@ -35,6 +35,10 @@ import org.bouncycastle.crypto.signers.Ed25519Signer
 import org.bouncycastle.crypto.params.X25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
+import org.bouncycastle.crypto.generators.X448KeyPairGenerator
+import org.bouncycastle.crypto.params.X448KeyGenerationParameters
+import org.bouncycastle.crypto.params.X448PrivateKeyParameters
+import org.bouncycastle.crypto.params.X448PublicKeyParameters
 import org.bouncycastle.openpgp.PGPPrivateKey
 import org.bouncycastle.openpgp.PGPPublicKeyRing
 import org.bouncycastle.openpgp.PGPSecretKey
@@ -51,7 +55,6 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPKeyConverter
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMKeyGenerationParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMKeyPairGenerator
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPublicKeyParameters
 import java.io.ByteArrayInputStream
@@ -72,20 +75,43 @@ object CompositeKeyGen {
      * [passphrase] unlocks the primary for signing (null/empty for
      * passphrase-less keys).
      */
+    /**
+     * Backward-compatible entry: the 4.0.0 [Scheme] selects the 768 suite.
+     * New callers pass a [CompositeSuite] to reach the 1024 parameter sets.
+     */
     fun addCompositeSubkey(
         secretRing: PGPSecretKeyRing,
         scheme: Scheme,
         passphrase: String? = null,
         random: SecureRandom = SecureRandom(),
         creationTime: Date = Date()
+    ): PGPSecretKeyRing = addCompositeSubkey(
+        secretRing,
+        if (scheme == Scheme.IETF_V6) CompositeSuite.IETF_768 else CompositeSuite.LIBREPGP_768,
+        passphrase, random, creationTime
+    )
+
+    fun addCompositeSubkey(
+        secretRing: PGPSecretKeyRing,
+        suite: CompositeSuite,
+        passphrase: String? = null,
+        random: SecureRandom = SecureRandom(),
+        creationTime: Date = Date()
     ): PGPSecretKeyRing {
-        // 1. Fresh composite material.
-        val xGen = X25519KeyPairGenerator().apply { init(X25519KeyGenerationParameters(random)) }
-        val xkp = xGen.generateKeyPair()
-        val xSec = (xkp.private as X25519PrivateKeyParameters).encoded
-        val xPub = (xkp.public as X25519PublicKeyParameters).encoded
+        // 1. Fresh composite material for the suite's curve and ML-KEM level.
+        val (xSec, xPub) = if (suite.curve == EccCurve.X448) {
+            val kp = X448KeyPairGenerator()
+                .apply { init(X448KeyGenerationParameters(random)) }.generateKeyPair()
+            (kp.private as X448PrivateKeyParameters).encoded to
+                (kp.public as X448PublicKeyParameters).encoded
+        } else {
+            val kp = X25519KeyPairGenerator()
+                .apply { init(X25519KeyGenerationParameters(random)) }.generateKeyPair()
+            (kp.private as X25519PrivateKeyParameters).encoded to
+                (kp.public as X25519PublicKeyParameters).encoded
+        }
         val mGen = MLKEMKeyPairGenerator().apply {
-            init(MLKEMKeyGenerationParameters(random, MLKEMParameters.ml_kem_768))
+            init(MLKEMKeyGenerationParameters(random, suite.mlkem.params))
         }
         val mkp = mGen.generateKeyPair()
         val mPub = (mkp.public as MLKEMPublicKeyParameters).encoded
@@ -95,10 +121,9 @@ object CompositeKeyGen {
         val ctime = (creationTime.time / 1000L).toInt()
 
         // 2. Emit the subkey packets.
-        val (pubBody, secBody) = when (scheme) {
-            Scheme.IETF_V6 -> v6Bodies(ctime, xPub, mPub, xSec, mSeed)
-            Scheme.LIBREPGP_V5 -> v5Bodies(ctime, xPub, mPub, xSec, mSeed)
-        }
+        val (pubBody, secBody) = if (suite.isLibrePgp)
+            v5Bodies(ctime, xPub, mPub, xSec, mSeed, suite)
+        else v6Bodies(ctime, xPub, mPub, xSec, mSeed, suite)
         val pubPacket = packet(TAG_PUBSUBKEY, pubBody)
         val secPacket = packet(TAG_SECSUBKEY, secBody)
 
@@ -118,7 +143,7 @@ object CompositeKeyGen {
             BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider())
                 .build((passphrase ?: "").toCharArray())
         )
-        val bindingSigPacket: ByteArray = if (scheme == Scheme.LIBREPGP_V5) {
+        val bindingSigPacket: ByteArray = if (suite.isLibrePgp) {
             // Hand-rolled v4 subkey-binding signature. BC's generateCertification
             // re-serializes the algo-8 subkey (which it doesn't natively know) and
             // hashes it with v4 (0x99/2-octet) framing, so the hash GnuPG computes
@@ -158,10 +183,10 @@ object CompositeKeyGen {
         //    the algo-35/8 key, matching the version's framing (v6 -> the
         //    encryptor's usage octet, v5 -> CFB/SHA-1).
         if (!passphrase.isNullOrEmpty()) {
-            val algo = if (scheme == Scheme.IETF_V6) CompositeKem.ALGORITHM_ID
+            val algo = if (!suite.isLibrePgp) suite.ietfAlgId
             else CompositeKemLibrePGP.ALGORITHM_ID
             val plain = ring.secretKeys.asSequence().first { it.publicKey.algorithm == algo }
-            val protectedSub = if (scheme == Scheme.IETF_V6) {
+            val protectedSub = if (!suite.isLibrePgp) {
                 // v6 (IETF): AEAD, S2K usage 253 + Argon2id — the RFC 9580
                 // recommendation and what iOS emits. BC parses 253 back, so no
                 // storage-path change is needed. (v6 forbids the bare-checksum
@@ -196,13 +221,14 @@ object CompositeKeyGen {
 
     /** v6 (IETF algo 35): pub = X25519(32) || ML-KEM(1184); sec = usage0 + 96. */
     private fun v6Bodies(
-        ctime: Int, xPub: ByteArray, mPub: ByteArray, xSec: ByteArray, mSeed: ByteArray
+        ctime: Int, xPub: ByteArray, mPub: ByteArray, xSec: ByteArray, mSeed: ByteArray,
+        suite: CompositeSuite
     ): Pair<ByteArray, ByteArray> {
-        val pubMat = xPub + mPub // 1216
+        val pubMat = xPub + mPub // 1216 (768) or 1624 (1024)
         val pub = ByteArrayOutputStream().apply {
             write(6)
             write(uint32(ctime))
-            write(CompositeKem.ALGORITHM_ID)   // 35
+            write(suite.ietfAlgId)   // 35 or 36
             write(uint32(pubMat.size))
             write(pubMat)
         }.toByteArray()
@@ -220,11 +246,22 @@ object CompositeKeyGen {
      * kyberLen(4) | kyber(1184); sec = usage0 + matLen(4) + material + cksum(2).
      */
     private fun v5Bodies(
-        ctime: Int, xPub: ByteArray, mPub: ByteArray, xSec: ByteArray, mSeed: ByteArray
+        ctime: Int, xPub: ByteArray, mPub: ByteArray, xSec: ByteArray, mSeed: ByteArray,
+        suite: CompositeSuite
     ): Pair<ByteArray, ByteArray> {
-        val oid = byteArrayOf(0x03, 0x2b, 0x65, 0x6e) // len 3 + 1.3.101.110 (X25519)
-        val point = byteArrayOf(0x40) + xPub          // native-point prefix
-        val pointMpi = byteArrayOf(0x01, 0x07) + point // 263 bits
+        val oid = byteArrayOf(0x03) + suite.curve.oidTail // len 3 + curve OID (110/111)
+        // Composite ECC component: the raw curve point (no 0x40 native-point
+        // prefix) as a MINIMAL-length OpenPGP MPI, byte-for-byte how gpg
+        // 2.5.x stores and re-serializes it inside a composite (algo 8).
+        // Two things this must get right, each found via gpg interop:
+        //   - No 0x40 prefix. gpg's KEM wants the bare point; the prefixed
+        //     form failed encryption with "pubkey_encrypt: Invalid data".
+        //   - Minimal, not fixed width. gpg canonicalizes to a minimal MPI
+        //     when it verifies the subkey binding signature, so a fixed-width
+        //     point with a leading zero byte makes gpg report a bad binding
+        //     and drop the subkey. gpg's KEM left-pads a short MPI back to
+        //     the curve length, so minimal still decodes correctly.
+        val pointMpi = canonicalMpi(xPub)
         val pubMat = oid + pointMpi + uint32(mPub.size) + mPub // 1227
         val pub = ByteArrayOutputStream().apply {
             write(5)

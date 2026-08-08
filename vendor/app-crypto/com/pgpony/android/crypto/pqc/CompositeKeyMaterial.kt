@@ -18,7 +18,7 @@ object CompositeKeyMaterial {
 
     /** The composite ML-KEM+X25519 encryption subkey in [ring], if present. */
     fun encryptionSubkey(ring: PGPPublicKeyRing): PGPPublicKey? =
-        ring.publicKeys.asSequence().firstOrNull { it.algorithm == ALGORITHM_ID }
+        ring.publicKeys.asSequence().firstOrNull { CompositeSuite.ietfFor(it.algorithm) != null }
 
     /** Does [ring] carry a composite ML-KEM+X25519 encryption subkey? */
     fun isComposite(ring: PGPPublicKeyRing): Boolean = encryptionSubkey(ring) != null
@@ -28,10 +28,14 @@ object CompositeKeyMaterial {
      * (X25519 pub 32, ML-KEM-768 pub 1184). Null if [pubKey] isn't algo 35
      * or the material isn't the expected length.
      */
+    /** The IETF suite (algo 35 or 36) of [pubKey], or null if not composite. */
+    fun suiteOf(pubKey: PGPPublicKey): CompositeSuite? =
+        CompositeSuite.ietfFor(pubKey.algorithm)
+
     fun publicMaterial(pubKey: PGPPublicKey): Pair<ByteArray, ByteArray>? {
-        if (pubKey.algorithm != ALGORITHM_ID) return null
+        val suite = suiteOf(pubKey) ?: return null
         val bytes = pubKey.publicKeyPacket.key.encoded
-        if (bytes.size != CompositeKem.COMPOSITE_PUB_LEN) return null
-        return CompositeKem.splitPublic(bytes)
+        if (bytes.size != suite.compositePubLen) return null
+        return CompositeKem.splitPublic(bytes, suite)
     }
 }

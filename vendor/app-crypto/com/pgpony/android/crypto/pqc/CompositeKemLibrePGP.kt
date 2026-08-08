@@ -34,9 +34,13 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.bouncycastle.crypto.params.X25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
+import org.bouncycastle.crypto.agreement.X448Agreement
+import org.bouncycastle.crypto.generators.X448KeyPairGenerator
+import org.bouncycastle.crypto.params.X448KeyGenerationParameters
+import org.bouncycastle.crypto.params.X448PrivateKeyParameters
+import org.bouncycastle.crypto.params.X448PublicKeyParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMExtractor
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMGenerator
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPublicKeyParameters
 import java.security.SecureRandom
@@ -90,12 +94,18 @@ object CompositeKemLibrePGP {
      * agreement, ecc_ct is the 32-byte ephemeral point, and ecc_pk is the
      * recipient's 32-byte X25519 public key.
      */
-    private fun eccKemKdf(ecdh: ByteArray, eccCt: ByteArray, eccPk: ByteArray): ByteArray {
-        val d = SHA3Digest(256)
+    private fun eccKemKdf(
+        suite: CompositeSuite, ecdh: ByteArray, eccCt: ByteArray, eccPk: ByteArray
+    ): ByteArray {
+        // gpg's ECC key-share KDF hash scales with the curve (Kyber spec):
+        // SHA3-256 for X25519, SHA3-512 for X448. Using 256 for X448 yields a
+        // different eccKeyShare, hence a different KEK and "checksum failed".
+        val hashBits = if (suite.curve == EccCurve.X448) 512 else 256
+        val d = SHA3Digest(hashBits)
         d.update(ecdh, 0, ecdh.size)
         d.update(eccCt, 0, eccCt.size)
         d.update(eccPk, 0, eccPk.size)
-        val out = ByteArray(32)
+        val out = ByteArray(hashBits / 8)
         d.doFinal(out, 0)
         return out
     }
@@ -110,12 +120,18 @@ object CompositeKemLibrePGP {
         recipientX25519Sec: ByteArray,
         recipientX25519Pub: ByteArray,
         recipientMlkemSec: MLKEMPrivateKeyParameters,
-        fixedInfo: ByteArray
+        fixedInfo: ByteArray,
+        suite: CompositeSuite = CompositeSuite.LIBREPGP_768
     ): ByteArray {
-        val ecdh = x25519(X25519PrivateKeyParameters(recipientX25519Sec, 0), eccCiphertext)
-        val eccSs = eccKemKdf(ecdh, eccCiphertext, recipientX25519Pub)
+        // Normalize to the fixed curve length; gpg emits a minimal MPI that
+        // can be shorter, and the KEM (agreement, KDF, combiner) needs the
+        // full curve.keyLen octets on both sides.
+        val eccCt = suite.curve.normalizePoint(eccCiphertext)
+        val recipPub = suite.curve.normalizePoint(recipientX25519Pub)
+        val ecdh = ecdhAgree(suite, recipientX25519Sec, eccCt)
+        val eccSs = eccKemKdf(suite, ecdh, eccCt, recipPub)
         val mlkemShared = MLKEMExtractor(recipientMlkemSec).extractSecret(mlkemCiphertext)
-        return combine(eccSs, eccCiphertext, mlkemShared, mlkemCiphertext, fixedInfo)
+        return combine(eccSs, eccCt, mlkemShared, mlkemCiphertext, fixedInfo)
     }
 
     /** RFC-3394 AES-256 key unwrap the session key blob under [kek]. */
@@ -152,26 +168,47 @@ object CompositeKemLibrePGP {
         recipientX25519Pub: ByteArray,
         recipientKyberPub: ByteArray,
         fixedInfo: ByteArray,
-        random: SecureRandom = SecureRandom()
+        random: SecureRandom = SecureRandom(),
+        suite: CompositeSuite = CompositeSuite.LIBREPGP_768
     ): Encapsulation {
-        val gen = X25519KeyPairGenerator().apply { init(X25519KeyGenerationParameters(random)) }
-        val kp = gen.generateKeyPair()
-        val ephSk = kp.private as X25519PrivateKeyParameters
-        val ephPub = (kp.public as X25519PublicKeyParameters).encoded
+        val (ephSec, ephPub) = genEphemeral(suite, random)
 
-        val ecdh = x25519(ephSk, recipientX25519Pub)
-        val eccSs = eccKemKdf(ecdh, ephPub, recipientX25519Pub)
-        val mlkemPub = MLKEMPublicKeyParameters(MLKEMParameters.ml_kem_768, recipientKyberPub)
+        val ecdh = ecdhAgree(suite, ephSec, recipientX25519Pub)
+        val eccSs = eccKemKdf(suite, ecdh, ephPub, recipientX25519Pub)
+        val mlkemPub = MLKEMPublicKeyParameters(suite.mlkem.params, recipientKyberPub)
         val enc = MLKEMGenerator(random).generateEncapsulated(mlkemPub)
 
         val kek = combine(eccSs, ephPub, enc.secret, enc.encapsulation, fixedInfo)
         return Encapsulation(ephPub, enc.encapsulation, kek)
     }
 
-    private fun x25519(sk: X25519PrivateKeyParameters, peerPub: ByteArray): ByteArray {
-        val agr = X25519Agreement().apply { init(sk) }
-        val out = ByteArray(agr.agreementSize)
-        agr.calculateAgreement(X25519PublicKeyParameters(peerPub, 0), out, 0)
-        return out
-    }
+    /** Generate an ECC ephemeral for [suite]'s curve: (secret, public). */
+    private fun genEphemeral(suite: CompositeSuite, random: SecureRandom): Pair<ByteArray, ByteArray> =
+        if (suite.curve == EccCurve.X448) {
+            val kp = X448KeyPairGenerator()
+                .apply { init(X448KeyGenerationParameters(random)) }
+                .generateKeyPair()
+            (kp.private as X448PrivateKeyParameters).encoded to
+                (kp.public as X448PublicKeyParameters).encoded
+        } else {
+            val kp = X25519KeyPairGenerator()
+                .apply { init(X25519KeyGenerationParameters(random)) }
+                .generateKeyPair()
+            (kp.private as X25519PrivateKeyParameters).encoded to
+                (kp.public as X25519PublicKeyParameters).encoded
+        }
+
+    /** ECDH agreement on [suite]'s curve between a raw secret and peer public. */
+    private fun ecdhAgree(suite: CompositeSuite, secret: ByteArray, peerPub: ByteArray): ByteArray =
+        if (suite.curve == EccCurve.X448) {
+            val agr = X448Agreement().apply { init(X448PrivateKeyParameters(secret, 0)) }
+            val out = ByteArray(agr.agreementSize)
+            agr.calculateAgreement(X448PublicKeyParameters(peerPub, 0), out, 0)
+            out
+        } else {
+            val agr = X25519Agreement().apply { init(X25519PrivateKeyParameters(secret, 0)) }
+            val out = ByteArray(agr.agreementSize)
+            agr.calculateAgreement(X25519PublicKeyParameters(peerPub, 0), out, 0)
+            out
+        }
 }

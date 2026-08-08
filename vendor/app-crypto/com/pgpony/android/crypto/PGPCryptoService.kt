@@ -139,6 +139,25 @@ sealed class PGPCryptoError(message: String) : Exception(message) {
     // packet). Kept distinct from DecryptionFailed so the symmetric-path
     // wrong-passphrase remapping never masks a genuine tamper/no-MDC result.
     class IntegrityCheckFailed(msg: String) : PGPCryptoError(msg)
+
+    /**
+     * 4.1.0 - nothing on the ring opened the message's session-key packets.
+     *
+     * Split out of [DecryptionFailed] because the UI has something useful to
+     * do with it. [hiddenRecipient] is true when the message carried a
+     * wildcard PKESK (`gpg -R`): the recipient is undisclosed, so the keys
+     * were TRIALLED rather than looked up, and a card-backed key - which has
+     * no local private material to trial with - is the only candidate left to
+     * offer the user. Sibling of DecryptionFailed rather than a subclass, so
+     * the symmetric wrong-passphrase remapping in [decrypt] leaves it alone;
+     * any existing `catch (e: Exception)` behaves exactly as before.
+     */
+    class NoMatchingKey(val hiddenRecipient: Boolean = false) : PGPCryptoError(
+        if (hiddenRecipient)
+            "Decryption failed: this message hides its recipient, and none of your keys opened it"
+        else
+            "Decryption failed: No matching decryption key found"
+    )
 }
 
 // ── Result Types ───────────────────────────────────────────────────────
@@ -280,6 +299,27 @@ class PGPCryptoService private constructor() {
                     .generateSecretKeyRing()
                 val ring = com.pgpony.android.crypto.pqc.CompositeKeyGen.addCompositeSubkey(
                     baseSec, com.pgpony.android.crypto.pqc.CompositeKeyGen.Scheme.LIBREPGP_V5,
+                    passphrase, creationTime = creationDate
+                )
+                ring to com.pgpony.android.crypto.pqc.CompositeKeyGen.publicRingOf(ring)
+            }
+            KeyAlgorithm.MLKEM1024_X448_V6 -> {
+                // IETF composite (v6), ML-KEM-1024 + X448 (algo 36). Same graft
+                // as the 768 case, driven by the IETF_1024 suite.
+                val base = buildV6Ed25519X25519KeyRings(userID, passphrase, creationDate, expirationSeconds)
+                val ring = com.pgpony.android.crypto.pqc.CompositeKeyGen.addCompositeSubkey(
+                    base.first, com.pgpony.android.crypto.pqc.CompositeSuite.IETF_1024,
+                    passphrase, creationTime = creationDate
+                )
+                ring to com.pgpony.android.crypto.pqc.CompositeKeyGen.publicRingOf(ring)
+            }
+            KeyAlgorithm.MLKEM1024_X448_LIBREPGP -> {
+                // LibrePGP composite (v5), Kyber-1024 + X448, driven by the
+                // LIBREPGP_1024 suite (v4 EdDSA primary + v5 composite subkey).
+                val baseSec = buildEd25519KeyRingGenerator(userID, passphrase, creationDate, expirationSeconds)
+                    .generateSecretKeyRing()
+                val ring = com.pgpony.android.crypto.pqc.CompositeKeyGen.addCompositeSubkey(
+                    baseSec, com.pgpony.android.crypto.pqc.CompositeSuite.LIBREPGP_1024,
                     passphrase, creationTime = creationDate
                 )
                 ring to com.pgpony.android.crypto.pqc.CompositeKeyGen.publicRingOf(ring)
@@ -779,7 +819,7 @@ class PGPCryptoService private constructor() {
             for (ring in recipientPublicKeys) {
                 val encKey = findEncryptionKey(ring)
                     ?: throw PGPCryptoError.EncryptionFailed("No encryption subkey found for ${fingerprintHex(ring.publicKey)}")
-                if (encKey.algorithm == com.pgpony.android.crypto.pqc.CompositeKem.ALGORITHM_ID) {
+                if (com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(encKey.algorithm) != null) {
                     encryptedGen.addMethod(
                         com.pgpony.android.crypto.pqc.CompositeEncryptionMethodGenerator(encKey)
                     )
@@ -967,7 +1007,20 @@ class PGPCryptoService private constructor() {
         enableCompression: Boolean = true,
         cardSession: OpenPgpCardSession? = null,
         cardPin: ByteArray? = null,
-        cardSigningPublicKey: PGPPublicKey? = null
+        cardSigningPublicKey: PGPPublicKey? = null,
+        // ── 4.0.4: optional password (SKESK) recipient ────────────────
+        //
+        // Set to produce a `gpg -c` style message, alone or alongside
+        // public-key recipients. The S2K choice mirrors [encryptSymmetric]
+        // exactly so the two produce interoperable output: Argon2id (S2K
+        // type 4) by default, iterated-salted SHA-256 (type 3) when
+        // [useArgon2] is false for readers older than BC 1.79.
+        //
+        // This exists so the Encrypt tab's Password mode can stream a
+        // large file instead of buffering it (issue #6); encryptSymmetric
+        // takes and returns whole ByteArrays and cannot.
+        messagePassword: String? = null,
+        useArgon2: Boolean = true
     ) {
         // 1) Build the signer FIRST. Software: unlock up front (clean
         //    output guarantee). Card: the content-signer defers the tap
@@ -1045,7 +1098,7 @@ class PGPCryptoService private constructor() {
                     ?: throw PGPCryptoError.EncryptionFailed(
                         "No encryption subkey found for ${fingerprintHex(ring.publicKey)}"
                     )
-                if (encKey.algorithm == com.pgpony.android.crypto.pqc.CompositeKem.ALGORITHM_ID) {
+                if (com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(encKey.algorithm) != null) {
                     encryptedGen.addMethod(
                         com.pgpony.android.crypto.pqc.CompositeEncryptionMethodGenerator(encKey)
                     )
@@ -1058,6 +1111,30 @@ class PGPCryptoService private constructor() {
                         org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator(encKey)
                     )
                 }
+            }
+
+            // 4.0.4 — password (SKESK) recipient, if one was supplied. Added
+            // after the public-key methods so a message can carry both.
+            if (messagePassword != null) {
+                encryptedGen.addMethod(
+                    if (useArgon2) {
+                        org.bouncycastle.openpgp.operator.bc.BcPBEKeyEncryptionMethodGenerator(
+                            messagePassword.toCharArray(),
+                            org.bouncycastle.bcpg.S2K.Argon2Params.memoryConstrainedParameters()
+                        )
+                    } else {
+                        org.bouncycastle.openpgp.operator.bc.BcPBEKeyEncryptionMethodGenerator(
+                            messagePassword.toCharArray(),
+                            org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+                                .get(HashAlgorithmTags.SHA256),
+                            0xFF
+                        )
+                    }
+                )
+            }
+
+            if (recipientPublicKeys.isEmpty() && messagePassword == null) {
+                throw PGPCryptoError.EncryptionFailed("No recipients and no password")
             }
 
             val encryptedOut = encryptedGen.open(targetOut, ByteArray(1 shl 16))
@@ -1303,6 +1380,11 @@ class PGPCryptoService private constructor() {
         // we've committed to the symmetric (SKESK) path, which changes how a
         // failure is interpreted (bad passphrase vs. genuine corruption).
         var usedSymmetric = false
+        // 4.1.0 - hoisted for the same reason as usedSymmetric: the throw
+        // site below is outside the block where the PKESK list is built, and
+        // "no key matched" reads very differently for an addressed message
+        // than for a `gpg -R` one.
+        var sawWildcardPkesk = false
         // The SEIPD object we actually decrypted, kept so its integrity
         // protection can be verified AFTER the plaintext stream is fully read
         // (BC validates SEIPDv1's MDC only on an explicit verify(); without it,
@@ -1344,26 +1426,25 @@ class PGPCryptoService private constructor() {
                 // may carry public-key (PKESK) and/or password (SKESK) session
                 // keys; iterate once, take the first PKESK we hold a key for,
                 // and remember any SKESK as the symmetric fallback.
+                // 4.0.5 — collect first, resolve second. The old form
+                // matched a single exact key ID inline, which missed
+                // `gpg -R` hidden recipients entirely; see [resolvePkesk].
+                val pkesks = mutableListOf<PGPPublicKeyEncryptedData>()
                 for (obj in encData.encryptedDataObjects) {
                     when (obj) {
                         is PGPPublicKeyEncryptedData -> {
-                            if (decryptedStream != null) continue
-                            val secretKey = findSecretKey(obj.keyID, secretKeyRings)
-                            if (secretKey != null) {
-                                val decryptor = org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
-                                    org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
-                                ).build(passphrase?.toCharArray() ?: charArrayOf())
-                                val privateKey = secretKey.extractPrivateKey(decryptor)
-
-                                decryptedStream = obj.getDataStream(
-                                    org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory(privateKey)
-                                )
-                                integrityObj = obj
-                            }
+                            pkesks.add(obj)
+                            if (obj.keyID == WILDCARD_KEY_ID) sawWildcardPkesk = true
                         }
                         is PGPPBEEncryptedData -> {
                             if (pbeData == null) pbeData = obj
                         }
+                    }
+                }
+                if (decryptedStream == null) {
+                    resolvePkesk(pkesks, secretKeyRings, passphrase)?.let { match ->
+                        decryptedStream = match.stream
+                        integrityObj = match.data
                     }
                 }
             }
@@ -1393,7 +1474,7 @@ class PGPCryptoService private constructor() {
             }
 
             if (decryptedStream == null) {
-                throw PGPCryptoError.DecryptionFailed("No matching decryption key found")
+                throw PGPCryptoError.NoMatchingKey(hiddenRecipient = sawWildcardPkesk)
             }
 
             // Parse the decrypted content
@@ -1492,47 +1573,101 @@ class PGPCryptoService private constructor() {
         var usedSymmetric = false
         var integrityObj: org.bouncycastle.openpgp.PGPEncryptedData? = null
         try {
-            val decoder = org.bouncycastle.openpgp.PGPUtil.getDecoderStream(input)
-            val pgpFactory = JcaPGPObjectFactory(decoder)
-            val encData = findEncryptedData(pgpFactory)
-                ?: throw PGPCryptoError.DecryptionFailed("No encrypted data found in message")
-
             var decryptedStream: java.io.InputStream? = null
             var pbeData: PGPPBEEncryptedData? = null
-            for (obj in encData.encryptedDataObjects) {
-                when (obj) {
-                    is PGPPublicKeyEncryptedData -> {
-                        if (decryptedStream != null) continue
-                        val secretKey = findSecretKey(obj.keyID, secretKeyRings)
-                        if (secretKey != null) {
-                            val decryptor = org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
-                                org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
-                            ).build(passphrase?.toCharArray() ?: charArrayOf())
-                            val privateKey = secretKey.extractPrivateKey(decryptor)
-                            decryptedStream = obj.getDataStream(
-                                org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory(privateKey)
-                            )
-                            integrityObj = obj
-                        }
-                    }
-                    is PGPPBEEncryptedData -> {
-                        if (pbeData == null) pbeData = obj
-                    }
+            var sawWildcardPkesk = false
+
+            // 4.1.2 (issue #33): the composite (PQC) trial was only ever
+            // wired into [decrypt], so a file encrypted to an ML-KEM key
+            // arrived here, BC's PKESK parser threw on the unknown
+            // algorithm, and the user's own file would not open. BC cannot
+            // be handed a composite message at all, so the trial has to
+            // happen BEFORE the decoder, and a stream cannot be rewound
+            // the way [decrypt]'s byte array can. So: sniff the leading
+            // ESK packets from a bounded, resettable head. Only when a
+            // composite PKESK is actually present is the whole message
+            // buffered and run through the same validated decryptors the
+            // text path uses; classical messages keep the true streaming
+            // path untouched, and a sniff miss falls through to BC, which
+            // fails exactly as it did before this block existed. Accepted
+            // cost for the patch: a PQC file holds its ciphertext in
+            // memory (the plaintext still streams out in chunks). The
+            // session-key handoff that would stream the ciphertext too is
+            // written into the 4.2.0 roster, not smuggled in here.
+            val sniffLimit = 1 shl 16
+            val buffered = java.io.BufferedInputStream(input, sniffLimit)
+            buffered.mark(sniffLimit)
+            val head = readHead(buffered, sniffLimit)
+            buffered.reset()
+            var effectiveInput: java.io.InputStream = buffered
+            val sniff = compositeSniffBytes(head)
+            if (com.pgpony.android.crypto.pqc.CompositeDecryptor.sniffHead(sniff) ||
+                com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.sniffHead(sniff)
+            ) {
+                val whole = buffered.readBytes()
+                val composite = com.pgpony.android.crypto.pqc.CompositeDecryptor.tryDecrypt(
+                    whole, secretKeyRings, passphrase
+                )
+                val librePgp = if (composite == null)
+                    com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.tryDecrypt(
+                        whole, secretKeyRings, passphrase
+                    ) else null
+                decryptedStream = composite?.stream ?: librePgp?.stream
+                if (composite != null) {
+                    integrityObj = composite.integrity
+                } else if (librePgp != null) {
+                    integrityObj = librePgp.integrity
+                }
+                if (decryptedStream == null) {
+                    // Sniff said composite but both decryptors declined
+                    // (they return null only when no composite PKESK is
+                    // present): treat it as a false positive and hand BC
+                    // the buffered bytes, since [buffered] is consumed.
+                    effectiveInput = java.io.ByteArrayInputStream(whole)
                 }
             }
-            if (decryptedStream == null && pbeData != null) {
-                if (passphrase.isNullOrEmpty()) throw PGPCryptoError.PassphraseRequired()
-                usedSymmetric = true
-                decryptedStream = pbeData.getDataStream(
-                    org.bouncycastle.openpgp.operator.bc.BcPBEDataDecryptorFactory(
-                        passphrase.toCharArray(),
-                        org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+
+            if (decryptedStream == null) {
+                val decoder = org.bouncycastle.openpgp.PGPUtil.getDecoderStream(effectiveInput)
+                val pgpFactory = JcaPGPObjectFactory(decoder)
+                val encData = findEncryptedData(pgpFactory)
+                    ?: throw PGPCryptoError.DecryptionFailed("No encrypted data found in message")
+
+                // 4.0.5 — same two-pass resolution as [decrypt]; this is the
+                // path the OpenPGP API provider and large-file decrypt take, so
+                // hidden-recipient messages have to work here too. Trial
+                // decryption reads only the session-key packets, so the body
+                // stream is untouched and needs no rewind.
+                val pkesks = mutableListOf<PGPPublicKeyEncryptedData>()
+                for (obj in encData.encryptedDataObjects) {
+                    when (obj) {
+                        is PGPPublicKeyEncryptedData -> {
+                            pkesks.add(obj)
+                            if (obj.keyID == WILDCARD_KEY_ID) sawWildcardPkesk = true
+                        }
+                        is PGPPBEEncryptedData -> {
+                            if (pbeData == null) pbeData = obj
+                        }
+                    }
+                }
+                resolvePkesk(pkesks, secretKeyRings, passphrase)?.let { match ->
+                    decryptedStream = match.stream
+                    integrityObj = match.data
+                }
+                if (decryptedStream == null && pbeData != null) {
+                    if (passphrase.isNullOrEmpty()) throw PGPCryptoError.PassphraseRequired()
+                    usedSymmetric = true
+                    decryptedStream = pbeData.getDataStream(
+                        org.bouncycastle.openpgp.operator.bc.BcPBEDataDecryptorFactory(
+                            passphrase.toCharArray(),
+                            org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+                        )
                     )
-                )
-                integrityObj = pbeData
+                    integrityObj = pbeData
+                }
             }
             if (decryptedStream == null) {
-                throw PGPCryptoError.DecryptionFailed("No matching decryption key found")
+                throw PGPCryptoError.NoMatchingKey(hiddenRecipient = sawWildcardPkesk)
             }
 
             val result = streamDecryptedContent(
@@ -1573,6 +1708,41 @@ class PGPCryptoService private constructor() {
         } catch (e: Exception) {
             if (usedSymmetric) throw PGPCryptoError.InvalidPassphrase()
             throw PGPCryptoError.DecryptionFailed(e.message ?: "Unknown error")
+        }
+    }
+
+    /** 4.1.2: fill [limit] bytes (or to EOF) from [s] without reading
+     *  past them; the caller holds a mark. A plain InputStream.read may
+     *  return short counts, hence the loop. */
+    private fun readHead(s: java.io.InputStream, limit: Int): ByteArray {
+        val buf = ByteArray(limit)
+        var off = 0
+        while (off < limit) {
+            val n = s.read(buf, off, limit - off)
+            if (n < 0) break
+            off += n
+        }
+        return buf.copyOf(off)
+    }
+
+    /** 4.1.2: decode an armored head to packet bytes for the composite
+     *  sniff. The head is usually truncated mid-armor, so decode errors
+     *  are expected; whatever decoded before the failure is returned,
+     *  which always covers the leading ESK packets the sniff reads. */
+    private fun compositeSniffBytes(head: ByteArray): ByteArray {
+        if (head.isEmpty() || head[0].toInt() != '-'.code) return head
+        return try {
+            val out = java.io.ByteArrayOutputStream()
+            val armored = ArmoredInputStream(java.io.ByteArrayInputStream(head))
+            val buf = ByteArray(4096)
+            while (true) {
+                val n = try { armored.read(buf) } catch (e: Exception) { -1 }
+                if (n < 0) break
+                out.write(buf, 0, n)
+            }
+            out.toByteArray()
+        } catch (e: Exception) {
+            ByteArray(0)
         }
     }
 
@@ -1711,6 +1881,55 @@ class PGPCryptoService private constructor() {
     }
 
     /**
+     * 4.1.0 - can any of [secretKeyRings] open [encryptedData]'s public-key
+     * session-key packets?
+     *
+     * Answers the routing question a hidden-recipient (`gpg -R`) message
+     * raises: with no recipient key ID to look up, "is this one mine?" can
+     * only be settled by trying. [resolvePkesk] already does exactly that and
+     * touches only the session-key packets - the message body is never read -
+     * so it is cheap enough to ask BEFORE committing to an answer.
+     *
+     * That ordering is the whole point on the provider path. Once the calling
+     * app's output pipe has been handed to [decryptStream] it cannot be
+     * reused, so a failure discovered there has nowhere to fall back to.
+     * Asking first keeps the card fallback available.
+     *
+     * A key that is locked with no passphrase to hand counts as a MATCH:
+     * "ask the user to unlock this key" is the right next step, not "give up
+     * and ask them to tap a card". The caller's own decrypt then raises
+     * PassphraseRequired in the ordinary way.
+     */
+    fun canOpenWithSecretKeys(
+        encryptedData: ByteArray,
+        secretKeyRings: List<PGPSecretKeyRing>,
+        passphrase: String?
+    ): Boolean {
+        if (secretKeyRings.isEmpty()) return false
+        return try {
+            val input = if (isArmored(encryptedData)) {
+                ArmoredInputStream(ByteArrayInputStream(encryptedData))
+            } else {
+                ByteArrayInputStream(encryptedData)
+            }
+            val encData = findEncryptedData(JcaPGPObjectFactory(input)) ?: return false
+            val pkesks = encData.encryptedDataObjects
+                .asSequence()
+                .filterIsInstance<PGPPublicKeyEncryptedData>()
+                .toList()
+            // The stream this hands back is discarded: the real decrypt re-parses
+            // from the same bytes. Only the yes/no is wanted here.
+            resolvePkesk(pkesks, secretKeyRings, passphrase) != null
+        } catch (e: PGPCryptoError.PassphraseRequired) {
+            true
+        } catch (e: PGPCryptoError.InvalidPassphrase) {
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
      * Result of [inspectEncryptedMessage]: which session-key methods a
      * message carries, without decrypting. Lets the Decrypt UI pick the
      * right prompt — select a key, tap a card, or (Phase A1) ask for a
@@ -1724,6 +1943,21 @@ class PGPCryptoService private constructor() {
     ) {
         /** No public-key recipients, only a passphrase — a `gpg -c` message. */
         val isSymmetricOnly: Boolean get() = publicKeyIDs.isEmpty() && isPasswordEncrypted
+
+        /**
+         * 4.1.0 - the message carries at least one wildcard PKESK (`gpg -R`),
+         * so at least one recipient is undisclosed. Callers that route by key
+         * ID must treat this as "could be anyone I hold", not "not for me":
+         * the wildcard is the one recipient ID that is guaranteed to match
+         * nothing on the ring.
+         */
+        val hasHiddenRecipient: Boolean get() = publicKeyIDs.contains(0L)
+
+        /**
+         * Recipient key IDs that can actually be matched against a ring -
+         * everything except the wildcard.
+         */
+        val addressedKeyIDs: List<Long> get() = publicKeyIDs.filter { it != 0L }
     }
 
     /**
@@ -1733,14 +1967,27 @@ class PGPCryptoService private constructor() {
      * password-encrypted message to the passphrase prompt instead of the
      * key picker. Returns no recipients / not-password for unparseable input.
      */
-    fun inspectEncryptedMessage(encryptedData: ByteArray): MessageEncryptionInfo {
+    fun inspectEncryptedMessage(encryptedData: ByteArray): MessageEncryptionInfo =
+        inspectEncryptedMessage(ByteArrayInputStream(encryptedData))
+
+    /**
+     * 4.0.4 — streaming counterpart. The session-key packets (PKESK/SKESK)
+     * sit at the very front of an OpenPGP message and BC parses them
+     * lazily, so this touches only the head of [input] no matter how large
+     * the message is; the SEIPD body is never read. That is what lets the
+     * Decrypt tab route a picked file (card recipient vs. passphrase vs.
+     * software key) without first pulling the whole thing into memory.
+     *
+     * Armor detection is PGPUtil.getDecoderStream's job here rather than
+     * the ByteArray [isArmored] sniff — it reads the stream head itself,
+     * and it is the same detection decryptStream already relies on.
+     *
+     * Does not close [input]; the caller owns it.
+     */
+    fun inspectEncryptedMessage(input: java.io.InputStream): MessageEncryptionInfo {
         return try {
-            val input = if (isArmored(encryptedData)) {
-                ArmoredInputStream(ByteArrayInputStream(encryptedData))
-            } else {
-                ByteArrayInputStream(encryptedData)
-            }
-            val encData = findEncryptedData(JcaPGPObjectFactory(input))
+            val decoder = org.bouncycastle.openpgp.PGPUtil.getDecoderStream(input)
+            val encData = findEncryptedData(JcaPGPObjectFactory(decoder))
                 ?: return MessageEncryptionInfo(emptyList(), false)
             val ids = mutableListOf<Long>()
             var hasPbe = false
@@ -2017,8 +2264,15 @@ class PGPCryptoService private constructor() {
         if (ring.publicKeys.asSequence().any { it.algorithm == 35 }) {
             return KeyAlgorithm.MLKEM768_X25519_V6
         }
-        if (ring.publicKeys.asSequence().any { it.algorithm == 8 && it.version == 5 }) {
-            return KeyAlgorithm.MLKEM768_X25519_LIBREPGP
+        if (ring.publicKeys.asSequence().any { it.algorithm == 36 }) {
+            return KeyAlgorithm.MLKEM1024_X448_V6
+        }
+        ring.publicKeys.asSequence().firstOrNull { it.algorithm == 8 && it.version == 5 }?.let { sub ->
+            // algo 8 is a shared code point: the curve OID (X25519 vs X448)
+            // says whether this is the 768 or the 1024 composite.
+            return if (com.pgpony.android.crypto.pqc.CompositeLibrePGPKeyMaterial
+                    .suiteOf(sub.encoded).curve == com.pgpony.android.crypto.pqc.EccCurve.X448
+            ) KeyAlgorithm.MLKEM1024_X448_LIBREPGP else KeyAlgorithm.MLKEM768_X25519_LIBREPGP
         }
         return detectAlgorithm(masterKey)
     }
@@ -2117,6 +2371,128 @@ class PGPCryptoService private constructor() {
     }
 
     /** Find a secret key by key ID across multiple key rings. */
+    /**
+     * 4.0.5 — the "hidden recipient" key ID.
+     *
+     * `gpg -R` (as opposed to `-r`) writes the PKESK with an all-zero key
+     * ID so the recipient is not disclosed to anyone who intercepts the
+     * message. RFC 9580 §5.1 calls this the wildcard, and says a receiver
+     * that sees it should try its own secret keys against the packet.
+     */
+    private val WILDCARD_KEY_ID = 0L
+
+    /** A PKESK we managed to open, with the packet it came from. */
+    private class PkeskMatch(
+        val stream: java.io.InputStream,
+        val data: PGPPublicKeyEncryptedData
+    )
+
+    /**
+     * 4.0.5 — resolve the message's public-key session-key packets against
+     * the keys we hold.
+     *
+     * Before this, lookup was a single exact match on the packet's key ID.
+     * A `gpg -eaR` message carries [WILDCARD_KEY_ID], which matches nothing,
+     * so PGPony reported "No matching decryption key found" without having
+     * tried anything. The error was literally true and completely unhelpful.
+     *
+     * Exact matches are tried first, so the common case costs exactly what
+     * it did before. Only then are wildcard packets trialled against each
+     * key in turn.
+     *
+     * Trial decryption is cheap and safe here:
+     *
+     *   - It touches only the session-key packet. `getDataStream` decrypts
+     *     the session key and checks its checksum; the message body is not
+     *     read, so nothing is consumed and no stream needs rewinding. That
+     *     is what lets decryptStream() use this unchanged.
+     *   - [secretKeyRings] only ever holds software keys. Card-backed keys
+     *     have no local private material — KeyRepository.loadSecretKeyRing
+     *     returns null for them — so a wildcard message can never silently
+     *     turn into a series of NFC taps.
+     *
+     * Failure typing is deliberate. A key that cannot be unlocked is a
+     * passphrase problem and is reported as one; a key that unlocks but
+     * does not open the packet is simply the wrong key, which during a
+     * wildcard trial is the expected outcome and must stay silent.
+     *
+     * Returns null when nothing matched, leaving the caller to fall back to
+     * the symmetric path or to report no matching key, which by then is an
+     * honest answer.
+     */
+    private fun resolvePkesk(
+        pkesks: List<PGPPublicKeyEncryptedData>,
+        secretKeyRings: List<PGPSecretKeyRing>,
+        passphrase: String?
+    ): PkeskMatch? {
+        if (pkesks.isEmpty()) return null
+
+        // A candidate we could not unlock, versus one that unlocked and
+        // simply was not the right key. Only the first is worth reporting.
+        var sawLockedKey = false
+        var sawUnlockFailure = false
+
+        fun attempt(obj: PGPPublicKeyEncryptedData, secretKey: PGPSecretKey): PkeskMatch? {
+            // 4.0.4's guard, moved in here and made non-fatal: a locked key
+            // must not abort the scan, because a later candidate may open
+            // the packet without any passphrase at all. If none does, the
+            // flag below still produces PassphraseRequired rather than the
+            // InvalidPassphrase that BouncyCastle's checksum error would
+            // otherwise be mapped to.
+            if (secretKey.s2KUsage.toInt() != 0 && passphrase.isNullOrEmpty()) {
+                sawLockedKey = true
+                return null
+            }
+            val privateKey = try {
+                secretKey.extractPrivateKey(
+                    org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
+                        org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+                    ).build(passphrase?.toCharArray() ?: charArrayOf())
+                )
+            } catch (e: PGPException) {
+                // Could not unlock. For a protected key that means the
+                // passphrase is wrong, which the caller should surface.
+                if (secretKey.s2KUsage.toInt() != 0) sawUnlockFailure = true
+                return null
+            }
+            return try {
+                PkeskMatch(
+                    obj.getDataStream(
+                        org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory(privateKey)
+                    ),
+                    obj
+                )
+            } catch (e: PGPException) {
+                // Unlocked fine, wrong key for this packet. Expected during
+                // a wildcard trial; silent by design.
+                null
+            }
+        }
+
+        // Pass 1 — addressed packets. Unchanged behaviour and cost.
+        for (obj in pkesks) {
+            if (obj.keyID == WILDCARD_KEY_ID) continue
+            val secretKey = findSecretKey(obj.keyID, secretKeyRings) ?: continue
+            attempt(obj, secretKey)?.let { return it }
+        }
+
+        // Pass 2 — hidden recipients. Try every encryption-capable key we
+        // hold against each wildcard packet.
+        for (obj in pkesks) {
+            if (obj.keyID != WILDCARD_KEY_ID) continue
+            for (ring in secretKeyRings) {
+                for (candidate in ring.secretKeys) {
+                    if (!candidate.publicKey.isEncryptionKey) continue
+                    attempt(obj, candidate)?.let { return it }
+                }
+            }
+        }
+
+        if (sawLockedKey) throw PGPCryptoError.PassphraseRequired()
+        if (sawUnlockFailure) throw PGPCryptoError.InvalidPassphrase()
+        return null
+    }
+
     private fun findSecretKey(keyID: Long, rings: List<PGPSecretKeyRing>): PGPSecretKey? {
         for (ring in rings) {
             val key = ring.getSecretKey(keyID)

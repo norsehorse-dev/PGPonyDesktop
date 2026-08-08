@@ -57,20 +57,38 @@ object CompositeLibrePGPKeyMaterial {
      * (X25519 public 32, Kyber-768 public 1184) from a v5 algo-8 key packet.
      * Public material = OID | X25519 point MPI (0x40 || 32) | kyberLen(4) | kyber.
      */
+    /**
+     * The composite suite (768/X25519 or 1024/X448) of a v5 algo-8 key,
+     * read from its curve OID. Algorithm 8 is a shared code point, so the
+     * OID (X25519 1.3.101.110 vs X448 1.3.101.111) is what tells the two
+     * parameter sets apart.
+     */
+    fun suiteOf(packet: ByteArray): CompositeSuite {
+        val body = tagAndBody(packet).second
+        val pkMatLen = readUInt32(body, 6)
+        val pub = body.copyOfRange(10, 10 + pkMatLen)
+        val oidLen = pub[0].toInt() and 0xFF
+        val curve = EccCurve.fromOidTail(pub.copyOfRange(1, 1 + oidLen))
+            ?: throw IllegalArgumentException("unknown LibrePGP composite curve OID")
+        return CompositeSuite.librePgpFor(curve)
+    }
+
     fun publicMaterial(packet: ByteArray): Pair<ByteArray, ByteArray> {
         val body = tagAndBody(packet).second
         val pkMatLen = readUInt32(body, 6)
         val pub = body.copyOfRange(10, 10 + pkMatLen)
         var p = 0
         val oidLen = pub[p++].toInt() and 0xFF
+        val curve = EccCurve.fromOidTail(pub.copyOfRange(1, 1 + oidLen))
+            ?: throw IllegalArgumentException("unknown LibrePGP composite curve OID")
         p += oidLen
         val bits = ((pub[p].toInt() and 0xFF) shl 8) or (pub[p + 1].toInt() and 0xFF); p += 2
-        val pointLen = (bits + 7) / 8            // includes the 0x40 native prefix
-        val x25519 = pub.copyOfRange(p + pointLen - X25519_LEN, p + pointLen)
+        val pointLen = (bits + 7) / 8
+        val ecc = curve.normalizePoint(pub.copyOfRange(p, p + pointLen))
         p += pointLen
         val kyberLen = readUInt32(pub, p); p += 4
         val kyber = pub.copyOfRange(p, p + kyberLen)
-        return x25519 to kyber
+        return ecc to kyber
     }
 
     /**
@@ -86,13 +104,15 @@ object CompositeLibrePGPKeyMaterial {
         val pkMatLen = readUInt32(body, i); i += 4
         i += pkMatLen // skip public material
 
+        // algo 8 is shared 768/1024; the curve OID fixes the ECC secret length.
+        val eccLen = suiteOf(packet).curve.keyLen
         val usage = body[i++].toInt() and 0xFF
         val material: ByteArray = when (usage) {
             USAGE_NONE -> {
                 i++ // v5 conditional-parameter length octet (0 when unprotected)
                 val secMatLen = readUInt32(body, i); i += 4
-                require(secMatLen >= X25519_LEN + KYBER768_SEED_LEN) { "secret material too short" }
-                body.copyOfRange(i, i + X25519_LEN + KYBER768_SEED_LEN)
+                require(secMatLen >= eccLen + KYBER768_SEED_LEN) { "secret material too short" }
+                body.copyOfRange(i, i + eccLen + KYBER768_SEED_LEN)
             }
 
             USAGE_SHA1, USAGE_CHECKSUM -> {
@@ -113,16 +133,16 @@ object CompositeLibrePGPKeyMaterial {
                 val s2k = buildS2K(s2kBytes)
                 val key = decryptor.makeKeyFromPassPhrase(sym, s2k)
                 val plain = decryptor.recoverKeyData(sym, key, iv, enc, 0, enc.size)
-                require(plain.size >= X25519_LEN + KYBER768_SEED_LEN) { "recovered material too short" }
-                plain.copyOfRange(0, X25519_LEN + KYBER768_SEED_LEN)
+                require(plain.size >= eccLen + KYBER768_SEED_LEN) { "recovered material too short" }
+                plain.copyOfRange(0, eccLen + KYBER768_SEED_LEN)
             }
 
             else -> throw ProtectedKeyException("unsupported v5 S2K usage $usage")
         }
 
         return Material(
-            material.copyOfRange(0, X25519_LEN),
-            material.copyOfRange(X25519_LEN, X25519_LEN + KYBER768_SEED_LEN)
+            material.copyOfRange(0, eccLen),
+            material.copyOfRange(eccLen, eccLen + KYBER768_SEED_LEN)
         )
     }
 

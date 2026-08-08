@@ -75,24 +75,106 @@ class CardDecryptService private constructor() {
         val encList = findEncryptedData(JcaPGPObjectFactory(decoder))
             ?: throw OpenPgpCardException.Malformed("No encrypted data found in the message.")
 
+        // 4.1.0 - PKESK selection now covers hidden recipients.
+        //
+        // `gpg -R` writes the PKESK with an all-zero key ID (RFC 9580 5.1's
+        // wildcard) so an interceptor learns nothing about who the message is
+        // for. Selection here was a single exact match on obj.keyID, so a
+        // wildcard packet matched nothing and the user was told the message
+        // "isn't encrypted to this card's key" - which, for a card that could
+        // in fact open it, was simply false. The software path grew this fix
+        // in 4.0.5 (PGPCryptoService.resolvePkesk); this is its card twin.
+        val pkesks = encList.encryptedDataObjects
+            .asSequence()
+            .filterIsInstance<PGPPublicKeyEncryptedData>()
+            .toList()
+
         var pked: PGPPublicKeyEncryptedData? = null
         var encKey: PGPPublicKey? = null
-        for (obj in encList.encryptedDataObjects) {
-            if (obj !is PGPPublicKeyEncryptedData) continue
-            val k = pubRing.getPublicKey(obj.keyID)
-            if (k != null) {
-                pked = obj
-                encKey = k
-                break
+        var clearStream: java.io.InputStream? = null
+        var sawWildcard = false
+
+        // Pass 1 - addressed packets. Unchanged behaviour and cost: no card
+        // operation happens until a packet has been chosen.
+        for (obj in pkesks) {
+            if (obj.keyID == WILDCARD_KEY_ID) {
+                sawWildcard = true
+                continue
+            }
+            val k = pubRing.getPublicKey(obj.keyID) ?: continue
+            pked = obj
+            encKey = k
+            break
+        }
+
+        // Pass 2 - hidden recipients. Trial each wildcard packet against the
+        // card ring's encryption-capable public keys.
+        //
+        // Why a trial is sound on a card: RFC 6637 binds the recipient's
+        // fingerprint and algorithm attributes into the KDF, so the CANDIDATE
+        // public key decides the KEK even though the shared secret always
+        // comes from the one private key the card holds. A wrong candidate
+        // therefore derives a wrong KEK and BouncyCastle rejects the unwrapped
+        // session key on its checksum - it cannot yield plaintext.
+        //
+        // Cost is one PSO:DECIPHER per trial. PW1 in "other" mode is NOT
+        // consumed per operation, so the VERIFY above covers every attempt and
+        // no retry counter is touched. Rings normally carry exactly one
+        // encryption key, so the "trial" is usually a single attempt.
+        //
+        // Caveat, for the day a ring has two: the v3 PKESK checksum is what
+        // makes a wrong candidate fail HERE. A v6 PKESK carries no checksum -
+        // SEIPDv2's AEAD tag is what authenticates it - so a wrong candidate
+        // on a v6 message opens a stream that fails during the read instead,
+        // surfacing as a decryption error rather than a skipped candidate.
+        // Correctness is unaffected either way: no wrong key yields plaintext.
+        if (pked == null && sawWildcard) {
+            outer@ for (obj in pkesks) {
+                if (obj.keyID != WILDCARD_KEY_ID) continue
+                for (candidate in encryptionCandidates(pubRing)) {
+                    val stream = try {
+                        obj.getDataStream(CardPublicKeyDataDecryptorFactory(session, candidate))
+                    } catch (e: PGPException) {
+                        // Wrong key for this packet: the expected outcome of a
+                        // trial, and silent by design. A card that left the
+                        // field is NOT that, and must not be retried against
+                        // the next candidate.
+                        val cause = e.cause
+                        if (cause is OpenPgpCardException.TagLost) throw cause
+                        null
+                    } catch (e: OpenPgpCardException.TagLost) {
+                        throw e
+                    } catch (e: OpenPgpCardException) {
+                        // The card refused this particular unwrap (bad SW).
+                        // Same meaning as above: try the next candidate.
+                        null
+                    }
+                    if (stream != null) {
+                        pked = obj
+                        encKey = candidate
+                        clearStream = stream
+                        break@outer
+                    }
+                }
             }
         }
-        if (pked == null || encKey == null) {
-            throw OpenPgpCardException.Malformed("This message isn't encrypted to this card's key.")
+
+        val chosen = pked
+        val chosenKey = encKey
+        if (chosen == null || chosenKey == null) {
+            throw OpenPgpCardException.Malformed(
+                if (sawWildcard)
+                    "This message hides its recipient, and this card's key did not open it."
+                else
+                    "This message isn't encrypted to this card's key."
+            )
         }
 
         try {
-            val factory = CardPublicKeyDataDecryptorFactory(session, encKey)
-            val clear = pked.getDataStream(factory)
+            // Pass 2 already holds an open stream; pass 1 opens one here, which
+            // is where the card operation happens for an addressed message.
+            val clear = clearStream
+                ?: chosen.getDataStream(CardPublicKeyDataDecryptorFactory(session, chosenKey))
             val result = readLiteralAndVerify(JcaPGPObjectFactory(clear), verificationKeys)
 
             // INTEGRITY GATE. readLiteralAndVerify has fully read the plaintext,
@@ -109,10 +191,10 @@ class CardDecryptService private constructor() {
             // gate. So: tag 20 counts as protected, and skips the
             // MDC-oriented verify(). SEIPDv2 (isAEAD + tag 18) keeps
             // using verify(), which BC short-circuits to true.
-            val aead = pked.isAEAD()
-            val protected = pked.isIntegrityProtected() || aead
+            val aead = chosen.isAEAD()
+            val protected = chosen.isIntegrityProtected() || aead
             val intact = protected && try {
-                if (aead && !pked.isIntegrityProtected()) true else pked.verify()
+                if (aead && !chosen.isIntegrityProtected()) true else chosen.verify()
             } catch (ie: PGPException) { false }
             if (!intact) {
                 throw OpenPgpCardException.Malformed(
@@ -126,6 +208,33 @@ class CardDecryptService private constructor() {
             if (cause is OpenPgpCardException) throw cause
             throw OpenPgpCardException.Communication(e.message ?: "Decryption failed", e)
         }
+    }
+
+    /**
+     * RFC 9580 5.1's wildcard key ID. `gpg -R` writes it in place of the
+     * recipient's key ID so the message does not disclose who it is for;
+     * a receiver that sees it is expected to try its own keys against the
+     * packet. Mirrors PGPCryptoService's constant of the same name.
+     */
+    private val WILDCARD_KEY_ID = 0L
+
+    /**
+     * The card ring's encryption-capable public keys, subkeys first.
+     *
+     * Order affects cost, not correctness: on the offline-primary layouts
+     * PGPony pairs, the decryption key is always a subkey, so trying subkeys
+     * first means the ordinary case succeeds on the first attempt.
+     */
+    private fun encryptionCandidates(ring: PGPPublicKeyRing): List<PGPPublicKey> {
+        val subkeys = mutableListOf<PGPPublicKey>()
+        val primaries = mutableListOf<PGPPublicKey>()
+        val keys = ring.publicKeys
+        while (keys.hasNext()) {
+            val k = keys.next()
+            if (!k.isEncryptionKey) continue
+            if (k.isMasterKey) primaries.add(k) else subkeys.add(k)
+        }
+        return subkeys + primaries
     }
 
     private fun findEncryptedData(factory: JcaPGPObjectFactory): PGPEncryptedDataList? {

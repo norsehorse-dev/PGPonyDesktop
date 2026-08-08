@@ -290,6 +290,24 @@ fun CryptoScreen(state: DesktopState) {
                     ) {
                         Text(tr("d_crypto_add_files"))
                     }
+                    // D16 follow-up — a folder can't be picked in the native file dialog on every
+                    // platform, so a dedicated directory chooser is the reliable way to queue one
+                    // for tar-encrypt without depending on drag-drop.
+                    OutlinedButton(
+                        onClick = {
+                            pickDirectoryPath()?.let { dir ->
+                                val p = java.nio.file.Path.of(dir)
+                                if (p !in fileList) {
+                                    fileList = PathListOps.add(fileList, p)
+                                    if (!fileOpTouched) { fileOp = FileOp.ENCRYPT }
+                                }
+                            }
+                        },
+                        enabled = !busy,
+                        shape = RoundedCornerShape(Radius.Small)
+                    ) {
+                        Text(tr("d_crypto_add_folder"))
+                    }
                     TextButton(
                         onClick = { fileList = emptyList(); fileResults = emptyList(); banner = null },
                         enabled = fileList.isNotEmpty() || fileResults.isNotEmpty()

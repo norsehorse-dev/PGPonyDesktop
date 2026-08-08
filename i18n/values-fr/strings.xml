@@ -227,6 +227,7 @@
     <string name="d_pass_relock_note">Se verrouille au bout de %1$d s.</string>
     <string name="d_pass_otp_unparsable">PGPony ne peut pas générer de codes à partir de cet URI — ce n\'est pas un URI TOTP, ou son secret n\'est pas du base32 valide. Utilisez votre application d\'authentification pour cette entrée.</string>
     <string name="d_pass_otp_uri_copied">URI otpauth copié</string>
+    <string name="d_pass_otp_display_only">PGPony affiche cet URI de configuration mais ne génère pas de codes sur cet appareil. Copiez-le dans une application d\'authentification.</string>
     <string name="d_pass_copy_uri">Copier l\'URI</string>
     <string name="d_pass_otp_no_provider">Cette JVM n\'a pas de fournisseur HMAC-%1$s, le code ne peut donc pas être généré ici.</string>
     <string name="d_pass_code_copied">Code copié</string>
@@ -419,6 +420,8 @@
     <string name="d_gen_hint_v6">RFC 9580 v6 — protection Argon2id ; convient aux outils récents</string>
     <string name="d_gen_hint_pq_v6">Post-quantique (brouillon IETF, v6) — ML-KEM-768 + X25519</string>
     <string name="d_gen_hint_pq_librepgp">Post-quantique (LibrePGP) — interopère avec GnuPG 2.5</string>
+    <string name="d_gen_hint_pq_1024_v6">Post-quantique (brouillon IETF, v6) — ML-KEM-1024 + X448</string>
+    <string name="d_gen_hint_pq_1024_librepgp">Post-quantique (LibrePGP) — ML-KEM-1024 + X448, interopère avec GnuPG 2.5</string>
     <string name="d_gen_hint_rsa4096">Volumineux, lent, compatibilité maximale avec l\'existant</string>
     <string name="d_gen_hint_rsa2048">Compatibilité avec l\'existant uniquement</string>
     <string name="d_gen_no_passphrase_warning">Sans phrase secrète : la clé secrète sera stockée sans protection sur cet ordinateur.</string>
@@ -691,5 +694,26 @@
     <string name="d_settings_watch_delete_warning">L\'original est supprimé sans annulation possible. Laissez désactivé en cas de doute.</string>
     <string name="d_watch_notif_encrypted">Dossier surveillé : chiffré</string>
     <string name="d_watch_notif_failed">Dossier surveillé : échec</string>
+
+    <string name="d_crypto_add_folder">Ajouter un dossier…</string>
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">Le service de carte à puce n\'est pas en cours d\'exécution.</string>
+    <string name="d_cards_pcsc_sharing">Un autre programme utilise le lecteur — fermez-le (par exemple GnuPG ou OpenSC) et relancez l\'analyse.</string>
+    <string name="d_cards_pcsc_unknown">Le service du lecteur a signalé : %1$s.</string>
+    <string name="d_cards_pcsc_unknown_generic">Le service du lecteur a signalé un problème.</string>
+
+    <string name="d_cards_keygen_algo_label">Type de clé</string>
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">Déplacer la clé vers la carte…</string>
+    <string name="d_cards_move_title">Déplacer une clé vers la carte</string>
+    <string name="d_cards_move_warning">Ceci écrit une clé existante sur la carte et écrase les emplacements de clé de la carte. Contrairement à une clé générée sur la carte, celle-ci existait déjà hors de la carte, conservez donc votre sauvegarde en lieu sûr. Les codes PIN de la carte restent inchangés.</string>
+    <string name="d_cards_move_pick_key">Clé à déplacer</string>
+    <string name="d_cards_move_no_candidates">Aucune paire de clés RSA avec clé privée dans votre trousseau. Générez-en ou importez-en une d\'abord.</string>
+    <string name="d_cards_move_passphrase">Phrase secrète de la clé (vide si aucune)</string>
+    <string name="d_cards_move_format">Format d\'importation</string>
+    <string name="d_cards_move_ack">Je comprends que cela écrase les emplacements de clé de la carte</string>
+    <string name="d_cards_move_confirm">Déplacer vers la carte</string>
+    <string name="d_cards_move_done">Déplacée vers la carte — %1$s</string>
+    <string name="d_cards_move_no_secret">Impossible de charger le matériel privé de la clé.</string>
 
 </resources>

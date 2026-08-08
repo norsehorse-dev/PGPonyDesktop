@@ -30,7 +30,9 @@ object CompositePkesk {
         val recipientFingerprint: ByteArray,
         val ephemeralX25519: ByteArray,
         val mlkemCiphertext: ByteArray,
-        val wrappedSessionKey: ByteArray
+        val wrappedSessionKey: ByteArray,
+        /** Which IETF suite (algo 35 or 36) the packet declared. */
+        val suite: CompositeSuite = CompositeSuite.IETF_768
     )
 
     /**
@@ -43,10 +45,11 @@ object CompositePkesk {
     fun encodeAlgoFields(
         ephemeralX25519: ByteArray,
         mlkemCiphertext: ByteArray,
-        wrappedSessionKey: ByteArray
+        wrappedSessionKey: ByteArray,
+        suite: CompositeSuite = CompositeSuite.IETF_768
     ): ByteArray {
-        require(ephemeralX25519.size == CompositeKem.X25519_KEY_LEN) { "bad X25519 ephemeral length" }
-        require(mlkemCiphertext.size == CompositeKem.MLKEM768_CT_LEN) { "bad ML-KEM ciphertext length" }
+        require(ephemeralX25519.size == suite.curve.keyLen) { "bad ECC ephemeral length" }
+        require(mlkemCiphertext.size == suite.mlkem.ctLen) { "bad ML-KEM ciphertext length" }
         require(wrappedSessionKey.size in 1..255) { "wrapped session key length out of range" }
 
         val out = ByteArrayOutputStream()
@@ -62,7 +65,8 @@ object CompositePkesk {
         recipientFpV6: ByteArray,
         ephemeralX25519: ByteArray,
         mlkemCiphertext: ByteArray,
-        wrappedSessionKey: ByteArray
+        wrappedSessionKey: ByteArray,
+        suite: CompositeSuite = CompositeSuite.IETF_768
     ): ByteArray {
         val out = ByteArrayOutputStream()
         out.write(VERSION_6)
@@ -74,8 +78,8 @@ object CompositePkesk {
             out.write(6)      // recipient key version
             out.write(recipientFpV6)
         }
-        out.write(CompositeKem.ALGORITHM_ID) // 35
-        out.write(encodeAlgoFields(ephemeralX25519, mlkemCiphertext, wrappedSessionKey))
+        out.write(suite.ietfAlgId) // 35 or 36
+        out.write(encodeAlgoFields(ephemeralX25519, mlkemCiphertext, wrappedSessionKey, suite))
         return out.toByteArray()
     }
 
@@ -96,14 +100,17 @@ object CompositePkesk {
                 val fpLen = count - 1
                 fp = body.copyOfRange(i, i + fpLen); i += fpLen
             }
-            if ((body[i++].toInt() and 0xFF) != CompositeKem.ALGORITHM_ID) return null
-            val eph = body.copyOfRange(i, i + CompositeKem.X25519_KEY_LEN)
-            i += CompositeKem.X25519_KEY_LEN
-            val ct = body.copyOfRange(i, i + CompositeKem.MLKEM768_CT_LEN)
-            i += CompositeKem.MLKEM768_CT_LEN
+            // 4.2.0 §1.1: dispatch on the algorithm octet (35 or 36) rather
+            // than requiring 35, so an inbound ML-KEM-1024 PKESK parses with
+            // X448 (56) ephemeral and ML-KEM-1024 (1568) ciphertext lengths.
+            val suite = CompositeSuite.ietfFor(body[i++].toInt() and 0xFF) ?: return null
+            val eph = body.copyOfRange(i, i + suite.curve.keyLen)
+            i += suite.curve.keyLen
+            val ct = body.copyOfRange(i, i + suite.mlkem.ctLen)
+            i += suite.mlkem.ctLen
             val skLen = body[i++].toInt() and 0xFF
             val wrapped = body.copyOfRange(i, i + skLen)
-            return Parsed(fp, eph, ct, wrapped)
+            return Parsed(fp, eph, ct, wrapped, suite)
         } catch (e: Exception) {
             return null
         }

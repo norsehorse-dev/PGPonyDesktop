@@ -227,6 +227,7 @@
     <string name="d_pass_relock_note">Sperrt sich nach %1$d s von selbst.</string>
     <string name="d_pass_otp_unparsable">PGPony kann aus dieser URI keine Codes erzeugen – sie ist keine TOTP-URI, oder ihr Geheimnis ist kein gültiges Base32. Nutze für diesen Eintrag deine Authenticator-App.</string>
     <string name="d_pass_otp_uri_copied">otpauth-URI kopiert</string>
+    <string name="d_pass_otp_display_only">PGPony zeigt diese Einrichtungs-URI an, erzeugt aber keine Codes auf diesem Gerät. Kopieren Sie sie in eine Authenticator-App.</string>
     <string name="d_pass_copy_uri">URI kopieren</string>
     <string name="d_pass_otp_no_provider">Diese JVM hat keinen HMAC-%1$s-Provider, daher kann der Code hier nicht erzeugt werden.</string>
     <string name="d_pass_code_copied">Code kopiert</string>
@@ -419,6 +420,8 @@
     <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id-Schutz; am besten mit aktuellen Werkzeugen</string>
     <string name="d_gen_hint_pq_v6">Post-Quanten (IETF-Entwurf, v6) — ML-KEM-768 + X25519</string>
     <string name="d_gen_hint_pq_librepgp">Post-Quanten (LibrePGP) — kompatibel mit GnuPG 2.5</string>
+    <string name="d_gen_hint_pq_1024_v6">Post-Quanten (IETF-Entwurf, v6) — ML-KEM-1024 + X448</string>
+    <string name="d_gen_hint_pq_1024_librepgp">Post-Quanten (LibrePGP) — ML-KEM-1024 + X448, kompatibel mit GnuPG 2.5</string>
     <string name="d_gen_hint_rsa4096">Groß, langsam, maximale Kompatibilität mit Altsystemen</string>
     <string name="d_gen_hint_rsa2048">Nur für Kompatibilität mit Altsystemen</string>
     <string name="d_gen_no_passphrase_warning">Ohne Passphrase: Der geheime Schlüssel wird ungeschützt auf diesem Computer gespeichert.</string>
@@ -691,5 +694,26 @@
     <string name="d_settings_watch_delete_warning">Das Original wird ohne Rückgängig entfernt. Lassen Sie es aus, wenn Sie nicht sicher sind.</string>
     <string name="d_watch_notif_encrypted">Überwachter Ordner: verschlüsselt</string>
     <string name="d_watch_notif_failed">Überwachter Ordner: fehlgeschlagen</string>
+
+    <string name="d_crypto_add_folder">Ordner hinzufügen…</string>
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">Der Smartcard-Dienst läuft nicht.</string>
+    <string name="d_cards_pcsc_sharing">Ein anderes Programm verwendet den Leser — schließen Sie es (z. B. GnuPG oder OpenSC) und scannen Sie erneut.</string>
+    <string name="d_cards_pcsc_unknown">Der Lesedienst meldete: %1$s.</string>
+    <string name="d_cards_pcsc_unknown_generic">Der Lesedienst meldete ein Problem.</string>
+
+    <string name="d_cards_keygen_algo_label">Schlüsseltyp</string>
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">Schlüssel auf Karte übertragen…</string>
+    <string name="d_cards_move_title">Einen Schlüssel auf die Karte übertragen</string>
+    <string name="d_cards_move_warning">Dies schreibt einen vorhandenen Schlüssel auf die Karte und überschreibt die Schlüsselplätze der Karte. Anders als ein auf der Karte erzeugter Schlüssel existierte dieser bereits außerhalb der Karte, bewahren Sie Ihre Sicherung also sicher auf. Die PINs der Karte bleiben unverändert.</string>
+    <string name="d_cards_move_pick_key">Zu übertragender Schlüssel</string>
+    <string name="d_cards_move_no_candidates">Kein RSA-Schlüsselpaar mit privatem Schlüssel im Schlüsselbund. Erzeugen oder importieren Sie zuerst eines.</string>
+    <string name="d_cards_move_passphrase">Schlüssel-Passphrase (leer, falls keine)</string>
+    <string name="d_cards_move_format">Importformat</string>
+    <string name="d_cards_move_ack">Ich verstehe, dass dies die Schlüsselplätze der Karte überschreibt</string>
+    <string name="d_cards_move_confirm">Auf Karte übertragen</string>
+    <string name="d_cards_move_done">Auf die Karte übertragen — %1$s</string>
+    <string name="d_cards_move_no_secret">Privates Schlüsselmaterial konnte nicht geladen werden.</string>
 
 </resources>

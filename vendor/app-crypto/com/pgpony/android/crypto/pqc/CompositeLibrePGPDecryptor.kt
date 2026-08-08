@@ -28,7 +28,6 @@ import org.bouncycastle.openpgp.PGPSecretKey
 import org.bouncycastle.openpgp.PGPSecretKeyRing
 import org.bouncycastle.openpgp.PGPSessionKey
 import org.bouncycastle.openpgp.operator.bc.BcSessionKeyDataDecryptorFactory
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -60,10 +59,12 @@ object CompositeLibrePGPDecryptor {
         val v5fp = CompositeLibrePGPKeyMaterial.v5Fingerprint(packet)
         val (recipientXPub, _) = CompositeLibrePGPKeyMaterial.publicMaterial(packet)
 
-        val mlkemSec = MLKEMPrivateKeyParameters(MLKEMParameters.ml_kem_768, material.kyberSeed)
+        // algo 8 is shared; the key's curve OID says which parameter set.
+        val suite = CompositeLibrePGPKeyMaterial.suiteOf(packet)
+        val mlkemSec = MLKEMPrivateKeyParameters(suite.mlkem.params, material.kyberSeed)
         val fixedInfo = CompositeKemLibrePGP.fixedInfo(pkesk.symAlgo, v5fp)
         val kek = CompositeKemLibrePGP.decapsulate(
-            pkesk.eccEphemeral, pkesk.kyberCiphertext, material.x25519Secret, recipientXPub, mlkemSec, fixedInfo
+            pkesk.eccEphemeral, pkesk.kyberCiphertext, material.x25519Secret, recipientXPub, mlkemSec, fixedInfo, suite
         )
         val sessionKey = CompositeKemLibrePGP.unwrapSessionKey(kek, pkesk.wrappedSessionKey)
 
@@ -72,6 +73,30 @@ object CompositeLibrePGPDecryptor {
         val sessionEnc = encList.extractSessionKeyEncryptedData()
         val factory = BcSessionKeyDataDecryptorFactory(PGPSessionKey(pkesk.symAlgo, sessionKey))
         return Result(sessionEnc.getDataStream(factory), sessionEnc)
+    }
+
+    /** 4.1.2 (issue #33): head-sniff for the streaming decrypt path.
+     *  True when the leading ESK packets include a v3 algo-8 composite
+     *  PKESK. Truncated or unparseable heads read as false; the caller
+     *  falls through to BouncyCastle, same failure as before the sniff
+     *  existed, so a miss cannot regress anything. */
+    fun sniffHead(head: ByteArray): Boolean {
+        var i = 0
+        while (i < head.size) {
+            val h = try { header(head, i) } catch (e: Exception) { null } ?: return false
+            if (h.tag != TAG_PKESK && h.tag != TAG_SKESK) return false
+            val end = h.bodyStart + h.bodyLen
+            if (h.tag == TAG_PKESK) {
+                if (h.bodyLen < 0 || end > head.size) return false
+                val ok = try {
+                    parsePkesk(head.copyOfRange(h.bodyStart, end)) != null
+                } catch (e: Exception) { false }
+                if (ok) return true
+            }
+            if (end <= i) return false
+            i = end
+        }
+        return false
     }
 
     // ── PKESK parsing ────────────────────────────────────────────────
@@ -118,12 +143,18 @@ object CompositeLibrePGPDecryptor {
         var pkesk: Pkesk? = null
         val n = data.size
         while (i < n) {
-            val h = header(data, i) ?: break
-            val isEsk = h.tag == TAG_PKESK || h.tag == TAG_SKESK
-            if (!isEsk) {
+            // 4.1.2 (issue #33): same fix as CompositeDecryptor.split, and
+            // for the same reason. Tag first, lengths only for ESKs; the
+            // body packet keeps its framing (partial lengths included) and
+            // BC reads it natively.
+            val first = data[i].toInt() and 0xFF
+            if (first and 0x80 == 0) break
+            val tag = if (first and 0x40 != 0) first and 0x3F else (first shr 2) and 0x0F
+            if (tag != TAG_PKESK && tag != TAG_SKESK) {
                 val p = pkesk ?: return null
                 return Split(p, data.copyOfRange(i, n))
             }
+            val h = header(data, i) ?: break
             if (h.tag == TAG_PKESK && pkesk == null) {
                 parsePkesk(data.copyOfRange(h.bodyStart, h.bodyStart + h.bodyLen))?.let { pkesk = it }
             }

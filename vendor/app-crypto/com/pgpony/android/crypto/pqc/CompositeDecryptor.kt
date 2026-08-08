@@ -27,7 +27,6 @@ import org.bouncycastle.openpgp.PGPEncryptedDataList
 import org.bouncycastle.openpgp.PGPSecretKeyRing
 import org.bouncycastle.openpgp.PGPSessionKey
 import org.bouncycastle.openpgp.operator.bc.BcSessionKeyDataDecryptorFactory
-import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -64,7 +63,10 @@ object CompositeDecryptor {
             ?: throw NoMatchingKey("matched key is not a composite secret key")
 
         // Rebuild the recipient's composite secret and derive the KEK.
-        val mlkemSec = MLKEMPrivateKeyParameters(MLKEMParameters.ml_kem_768, material.mlkemSeed)
+        // 4.2.0 §1.1: the PKESK told us which suite (35 or 36); use it for the
+        // ML-KEM parameter set and to route the combiner to X25519 or X448.
+        val suite = split.parsed.suite
+        val mlkemSec = MLKEMPrivateKeyParameters(suite.mlkem.params, material.mlkemSeed)
         val (recipientXPub, _) = CompositeKeyMaterial.publicMaterial(secKey.publicKey)
             ?: throw NoMatchingKey("composite public material malformed")
 
@@ -73,7 +75,8 @@ object CompositeDecryptor {
             mlkemCiphertext = split.parsed.mlkemCiphertext,
             recipientX25519Sec = material.x25519Secret,
             recipientMlkemSec = mlkemSec,
-            recipientX25519Pub = recipientXPub
+            recipientX25519Pub = recipientXPub,
+            suite = suite
         )
         val sessionKey = CompositeKem.unwrapSessionKey(kek, split.parsed.wrappedSessionKey)
 
@@ -87,6 +90,31 @@ object CompositeDecryptor {
         )
         val stream = sessionEnc.getDataStream(factory)
         return Result(stream, sessionEnc)
+    }
+
+    /** 4.1.2 (issue #33): head-sniff for the streaming decrypt path.
+     *  True when the leading ESK packets include an algo-35 composite
+     *  PKESK. [head] is typically truncated somewhere past the ESKs; a
+     *  truncated or unparseable head reads as false, and the caller then
+     *  falls through to BouncyCastle, which fails the same way it did
+     *  before the sniff existed, so a miss cannot regress anything. */
+    fun sniffHead(head: ByteArray): Boolean {
+        var i = 0
+        while (i < head.size) {
+            val h = try { header(head, i) } catch (e: Exception) { null } ?: return false
+            if (h.tag != TAG_PKESK && h.tag != TAG_SKESK) return false
+            val end = h.bodyStart + h.bodyLen
+            if (h.tag == TAG_PKESK) {
+                if (h.bodyLen < 0 || end > head.size) return false
+                val ok = try {
+                    CompositePkesk.parseBody(head.copyOfRange(h.bodyStart, end)) != null
+                } catch (e: Exception) { false }
+                if (ok) return true
+            }
+            if (end <= i) return false
+            i = end
+        }
+        return false
     }
 
     // ── packet splitting ─────────────────────────────────────────────
@@ -104,13 +132,25 @@ object CompositeDecryptor {
         var parsed: CompositePkesk.Parsed? = null
         val n = data.size
         while (i < n) {
-            val h = header(data, i) ?: break
-            val isEsk = h.tag == TAG_PKESK || h.tag == TAG_SKESK
-            if (!isEsk) {
-                // First non-ESK packet: the encrypted-data (SEIPD) packet.
+            // 4.1.2 (issue #33): decide ESK-vs-body from the tag octet
+            // alone, BEFORE parsing any length. The SEIPD that follows the
+            // ESKs may use partial-length framing (BC's generator emits it
+            // for anything over its buffer), which header() rejects, and
+            // the old order made that reject read as "no composite PKESK",
+            // so any composite message over roughly one buffer fell
+            // through to BC and failed. ESK packets themselves always
+            // carry definite lengths, so header() stays correct for them.
+            val first = data[i].toInt() and 0xFF
+            if (first and 0x80 == 0) break
+            val tag = if (first and 0x40 != 0) first and 0x3F else (first shr 2) and 0x0F
+            if (tag != TAG_PKESK && tag != TAG_SKESK) {
+                // First non-ESK packet: the encrypted-data (SEIPD) packet,
+                // handed onward with its framing intact; BC reads partial
+                // lengths natively.
                 val p = parsed ?: return null
                 return Split(p, data.copyOfRange(i, n))
             }
+            val h = header(data, i) ?: break
             if (h.tag == TAG_PKESK && parsed == null) {
                 val body = data.copyOfRange(h.bodyStart, h.bodyStart + h.bodyLen)
                 CompositePkesk.parseBody(body)?.let { parsed = it }
@@ -164,7 +204,7 @@ object CompositeDecryptor {
         rings.asSequence()
             .flatMap { it.secretKeys.asSequence() }
             .firstOrNull {
-                it.publicKey.algorithm == CompositeKeyMaterial.ALGORITHM_ID &&
+                CompositeSuite.ietfFor(it.publicKey.algorithm) != null &&
                     it.publicKey.fingerprint.contentEquals(fp)
             }
 

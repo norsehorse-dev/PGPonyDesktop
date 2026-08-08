@@ -10,9 +10,42 @@ package com.pgpony.desktop
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PcscDiagnosticsTest {
+
+    // ── friendlyPcscReason (D19) ─────────────────────────────────────────────
+    // causeChain is the DEVELOPER view (pgpony card-info); friendlyPcscReason is the USER view.
+    // A tester's screenshot caught the raw chain leaking to the No-reader screen. These assert
+    // behaviour, not exact copy, so they hold whether or not the i18n tables are on the test
+    // classpath (a missing key resolves to itself — still non-null and still distinct).
+
+    @Test
+    fun noReadersAvailableIsCoveredByTheHeadlineSoItReturnsNull() {
+        assertNull(friendlyPcscReason("CardException: list() failed <- PCSCException: SCARD_E_NO_READERS_AVAILABLE"))
+        assertNull(friendlyPcscReason(null), "no error at all → nothing to add")
+    }
+
+    @Test
+    fun serviceAndSharingFaultsBecomeDistinctPlainReasons() {
+        val service = friendlyPcscReason("… SCARD_E_NO_SERVICE")
+        val stopped = friendlyPcscReason("… SCARD_E_SERVICE_STOPPED")
+        val sharing = friendlyPcscReason("… SCARD_E_SHARING_VIOLATION")
+        assertNotNull(service); assertNotNull(sharing)
+        assertEquals(service, stopped, "both service faults read the same way")
+        assertTrue(service != sharing, "a stopped service and a busy reader are different fixes")
+        // Never the raw Java wrapper.
+        assertTrue(!service!!.contains("list() failed") && !service.contains("PCSCException"))
+    }
+
+    @Test
+    fun anUnrecognizedCodeIsReportedButWithoutTheWrapper() {
+        val r = friendlyPcscReason("CardException: list() failed <- PCSCException: SCARD_E_UNEXPECTED")
+        assertNotNull(r)
+        assertTrue(!r!!.contains("list() failed"), "the Java wrapper is dropped: $r")
+    }
 
     @Test
     fun singleThrowableRendersTypeAndMessage() {

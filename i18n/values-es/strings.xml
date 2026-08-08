@@ -227,6 +227,7 @@
     <string name="d_pass_relock_note">Se bloquea sola tras %1$d s.</string>
     <string name="d_pass_otp_unparsable">PGPony no puede generar códigos a partir de este URI: no es un URI TOTP o su secreto no es base32 válido. Usa tu aplicación de autenticación para esta entrada.</string>
     <string name="d_pass_otp_uri_copied">URI otpauth copiado</string>
+    <string name="d_pass_otp_display_only">PGPony muestra este URI de configuración, pero no genera códigos en este dispositivo. Cópialo en una app de autenticación.</string>
     <string name="d_pass_copy_uri">Copiar URI</string>
     <string name="d_pass_otp_no_provider">Esta JVM no tiene un proveedor HMAC-%1$s, así que el código no se puede generar aquí.</string>
     <string name="d_pass_code_copied">Código copiado</string>
@@ -419,6 +420,8 @@
     <string name="d_gen_hint_v6">RFC 9580 v6: protección Argon2id; mejor con herramientas actuales</string>
     <string name="d_gen_hint_pq_v6">Poscuántico (borrador del IETF, v6): ML-KEM-768 + X25519</string>
     <string name="d_gen_hint_pq_librepgp">Poscuántico (LibrePGP): interopera con GnuPG 2.5</string>
+    <string name="d_gen_hint_pq_1024_v6">Poscuántico (borrador del IETF, v6): ML-KEM-1024 + X448</string>
+    <string name="d_gen_hint_pq_1024_librepgp">Poscuántico (LibrePGP): ML-KEM-1024 + X448, interopera con GnuPG 2.5</string>
     <string name="d_gen_hint_rsa4096">Grande, lento, máxima compatibilidad con sistemas antiguos</string>
     <string name="d_gen_hint_rsa2048">Solo por compatibilidad con sistemas antiguos</string>
     <string name="d_gen_no_passphrase_warning">Sin contraseña: la clave secreta se guardará sin protección en este equipo.</string>
@@ -691,5 +694,26 @@
     <string name="d_settings_watch_delete_warning">El original se elimina sin deshacer. Déjalo desactivado si no estás seguro.</string>
     <string name="d_watch_notif_encrypted">Carpeta vigilada: cifrado</string>
     <string name="d_watch_notif_failed">Carpeta vigilada: error</string>
+
+    <string name="d_crypto_add_folder">Añadir carpeta…</string>
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">El servicio de tarjetas inteligentes no está en ejecución.</string>
+    <string name="d_cards_pcsc_sharing">Otro programa está usando el lector — ciérralo (como GnuPG u OpenSC) y vuelve a escanear.</string>
+    <string name="d_cards_pcsc_unknown">El servicio del lector informó: %1$s.</string>
+    <string name="d_cards_pcsc_unknown_generic">El servicio del lector informó un problema.</string>
+
+    <string name="d_cards_keygen_algo_label">Tipo de clave</string>
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">Mover clave a la tarjeta…</string>
+    <string name="d_cards_move_title">Mover una clave a la tarjeta</string>
+    <string name="d_cards_move_warning">Esto escribe una clave existente en la tarjeta y sobrescribe las ranuras de clave de la tarjeta. A diferencia de una clave generada en la tarjeta, esta ya existía fuera de la tarjeta, así que guarda tu copia de seguridad. Los PIN de la tarjeta no cambian.</string>
+    <string name="d_cards_move_pick_key">Clave a mover</string>
+    <string name="d_cards_move_no_candidates">No hay ningún par de claves RSA con clave privada en tu llavero. Genera o importa uno primero.</string>
+    <string name="d_cards_move_passphrase">Frase de contraseña de la clave (vacío si no tiene)</string>
+    <string name="d_cards_move_format">Formato de importación</string>
+    <string name="d_cards_move_ack">Entiendo que esto sobrescribe las ranuras de clave de la tarjeta</string>
+    <string name="d_cards_move_confirm">Mover a la tarjeta</string>
+    <string name="d_cards_move_done">Movida a la tarjeta — %1$s</string>
+    <string name="d_cards_move_no_secret">No se pudo cargar el material privado de la clave.</string>
 
 </resources>

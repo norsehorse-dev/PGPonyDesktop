@@ -26,9 +26,20 @@ import java.io.ByteArrayOutputStream
 object LibrePGPV5Interop {
 
     private const val ALGO_KYBER = 8
-    private const val MATERIAL_LEN = 96                 // X25519(32) + ML-KEM seed(64)
-    private const val BC_REGION = 1 + 1 + 4 + MATERIAL_LEN + 2   // 104
-    private const val LIBREPGP_REGION = 1 + 4 + MATERIAL_LEN      // 101
+
+    // 4.2.0 §1.1: algo 8 is a shared code point, so the secret-material length
+    // depends on the curve: X25519(32) or X448(56) plus the fixed 64-octet
+    // ML-KEM seed, i.e. 96 or 120. It is read from the key's OID per packet
+    // rather than assumed, so both parameter sets round-trip through the shim.
+    private fun materialLen(body: ByteArray): Int? {
+        val oidStart = 10                    // ver(1) ctime(4) algo(1) pkMatLen(4)
+        if (oidStart >= body.size) return null
+        val oidLen = body[oidStart].toInt() and 0xFF
+        val end = oidStart + 1 + oidLen
+        if (end > body.size) return null
+        val curve = EccCurve.fromOidTail(body.copyOfRange(oidStart + 1, end)) ?: return null
+        return curve.keyLen + 64
+    }
 
     /** BC internal -> LibrePGP wire (for export). No-op if already LibrePGP. */
     fun toLibrePGPFormat(keyBytes: ByteArray): ByteArray = transform(keyBytes, toLibrePGP = true)
@@ -60,30 +71,33 @@ object LibrePGPV5Interop {
     private fun tryRewrite(tag: Int, body: ByteArray, toLibrePGP: Boolean): ByteArray? {
         if (tag != 7 && tag != 5) return null
         if (body.size <= 10 || body[0].toInt() != 5 || (body[5].toInt() and 0xFF) != ALGO_KYBER) return null
+        val mat = materialLen(body) ?: return null   // 96 (X25519) or 120 (X448)
+        val bcRegion = 1 + 1 + 4 + mat + 2
+        val librePgpRegion = 1 + 4 + mat
         val pkm = uint32(body, 6)
         val secStart = 10 + pkm
         if (secStart >= body.size || (body[secStart].toInt() and 0xFF) != 0) return null // only usage 0
         val region = body.size - secStart
 
         if (toLibrePGP) {
-            if (region != BC_REGION) return null // already LibrePGP (or unexpected)
-            // BC: usage(0) condLen(0) count(4) material(96) cksum(2)  -> drop condLen + cksum
+            if (region != bcRegion) return null // already LibrePGP (or unexpected)
+            // BC: usage(0) condLen(0) count(4) material cksum(2)  -> drop condLen + cksum
             val o = ByteArrayOutputStream()
             o.write(body, 0, secStart)                 // public portion
             o.write(0)                                 // usage 0
-            o.write(body, secStart + 2, 4 + MATERIAL_LEN)  // count(4) + material(96)
+            o.write(body, secStart + 2, 4 + mat)       // count(4) + material
             return o.toByteArray()
         } else {
-            if (region != LIBREPGP_REGION) return null // already BC (or unexpected)
-            // LibrePGP: usage(0) count(4) material(96)  -> insert condLen(0), append cksum(2)
+            if (region != librePgpRegion) return null // already BC (or unexpected)
+            // LibrePGP: usage(0) count(4) material  -> insert condLen(0), append cksum(2)
             val matStart = secStart + 1 + 4
             var sum = 0
-            for (k in 0 until MATERIAL_LEN) sum = (sum + (body[matStart + k].toInt() and 0xFF)) and 0xFFFF
+            for (k in 0 until mat) sum = (sum + (body[matStart + k].toInt() and 0xFF)) and 0xFFFF
             val o = ByteArrayOutputStream()
             o.write(body, 0, secStart)                 // public portion
             o.write(0)                                 // usage 0
             o.write(0)                                 // condLen 0 (BC requires it for v5)
-            o.write(body, secStart + 1, 4 + MATERIAL_LEN)  // count(4) + material(96)
+            o.write(body, secStart + 1, 4 + mat)       // count(4) + material
             o.write((sum ushr 8) and 0xFF)             // 2-octet checksum
             o.write(sum and 0xFF)
             return o.toByteArray()

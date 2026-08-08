@@ -158,7 +158,7 @@ private fun AddRuleDialog(state: DesktopState, onDismiss: () -> Unit, onSaved: (
                     value = folder, onValueChange = { folder = it },
                     label = { Text(tr("d_settings_watch_folder")) },
                     trailingIcon = {
-                        TextButton(onClick = { pickDirectory()?.let { folder = it } }) {
+                        TextButton(onClick = { pickDirectoryPath()?.let { folder = it } }) {
                             Text(tr("d_settings_watch_browse"))
                         }
                     },
@@ -175,7 +175,7 @@ private fun AddRuleDialog(state: DesktopState, onDismiss: () -> Unit, onSaved: (
                     value = outputDir, onValueChange = { outputDir = it },
                     label = { Text(tr("d_settings_watch_output")) },
                     trailingIcon = {
-                        TextButton(onClick = { pickDirectory()?.let { outputDir = it } }) {
+                        TextButton(onClick = { pickDirectoryPath()?.let { outputDir = it } }) {
                             Text(tr("d_settings_watch_browse"))
                         }
                     },
@@ -242,8 +242,9 @@ private fun AddRuleDialog(state: DesktopState, onDismiss: () -> Unit, onSaved: (
     )
 }
 
-/** A modal native directory chooser (Swing, cross-platform for folders). Null on cancel. */
-private fun pickDirectory(): String? {
+/** A modal native directory chooser (Swing, cross-platform for folders). Null on cancel.
+ *  Shared with the Files tab's "Add folder…" button (CryptoScreen), same package. */
+internal fun pickDirectoryPath(): String? {
     val chooser = javax.swing.JFileChooser().apply {
         fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
     }

@@ -321,6 +321,7 @@
          d_pass_otp_meta: %1$s label, %2$s algorithm, %3$d digit count, %4$d period seconds. -->
     <string name="d_pass_otp_unparsable">PGPony can\'t generate codes from this URI — it isn\'t a TOTP URI, or its secret isn\'t valid base32. Use your authenticator app for this entry.</string>
     <string name="d_pass_otp_uri_copied">otpauth URI copied</string>
+    <string name="d_pass_otp_display_only">PGPony displays this setup URI but does not generate codes on this device. Copy it into an authenticator app.</string>
     <string name="d_pass_copy_uri">Copy URI</string>
     <string name="d_pass_otp_no_provider">This JVM has no HMAC-%1$s provider, so the code can\'t be generated here.</string>
     <string name="d_pass_code_copied">Code copied</string>
@@ -550,6 +551,8 @@
     <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id protection; best with current tooling</string>
     <string name="d_gen_hint_pq_v6">Post-quantum (IETF draft, v6) — ML-KEM-768 + X25519</string>
     <string name="d_gen_hint_pq_librepgp">Post-quantum (LibrePGP) — interops with GnuPG 2.5</string>
+    <string name="d_gen_hint_pq_1024_v6">Post-quantum (IETF draft, v6) — ML-KEM-1024 + X448</string>
+    <string name="d_gen_hint_pq_1024_librepgp">Post-quantum (LibrePGP) — ML-KEM-1024 + X448, interops with GnuPG 2.5</string>
     <string name="d_gen_hint_rsa4096">Large, slow, maximum legacy compatibility</string>
     <string name="d_gen_hint_rsa2048">Legacy compatibility only</string>
     <string name="d_gen_no_passphrase_warning">No passphrase: the secret key will be stored unprotected on this computer.</string>
@@ -822,5 +825,26 @@
     <string name="d_settings_watch_delete_warning">The original is removed with no undo. Leave off unless you are sure.</string>
     <string name="d_watch_notif_encrypted">Watch folder: encrypted</string>
     <string name="d_watch_notif_failed">Watch folder: failed</string>
+
+    <string name="d_crypto_add_folder">Add folder…</string>
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">The smart-card service isn't running.</string>
+    <string name="d_cards_pcsc_sharing">Another program is using the reader — close it (such as GnuPG or OpenSC) and rescan.</string>
+    <string name="d_cards_pcsc_unknown">The reader service reported: %1$s.</string>
+    <string name="d_cards_pcsc_unknown_generic">The reader service reported a problem.</string>
+
+    <string name="d_cards_keygen_algo_label">Key type</string>
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">Move key to card…</string>
+    <string name="d_cards_move_title">Move a key onto the card</string>
+    <string name="d_cards_move_warning">This writes an existing key onto the card and overwrites the card's key slots. Unlike a key generated on the card, this one already existed off the card, so keep your backup safe. The card's PINs are unchanged.</string>
+    <string name="d_cards_move_pick_key">Key to move</string>
+    <string name="d_cards_move_no_candidates">No RSA keypair with a private key is in your keyring. Generate or import one first.</string>
+    <string name="d_cards_move_passphrase">Key passphrase (blank if none)</string>
+    <string name="d_cards_move_format">Import format</string>
+    <string name="d_cards_move_ack">I understand this overwrites the card's key slots</string>
+    <string name="d_cards_move_confirm">Move to card</string>
+    <string name="d_cards_move_done">Moved onto the card — %1$s</string>
+    <string name="d_cards_move_no_secret">Could not load the key's private material.</string>
 
 </resources>

@@ -42,6 +42,8 @@ private val GENERATABLE = listOf(
     KeyAlgorithm.V6_ED25519,
     KeyAlgorithm.MLKEM768_X25519_V6,
     KeyAlgorithm.MLKEM768_X25519_LIBREPGP,
+    KeyAlgorithm.MLKEM1024_X448_V6,
+    KeyAlgorithm.MLKEM1024_X448_LIBREPGP,
     KeyAlgorithm.RSA_4096,
     KeyAlgorithm.RSA_2048
 )
@@ -51,6 +53,8 @@ private fun hintFor(algo: KeyAlgorithm): String = when (algo) {
     KeyAlgorithm.V6_ED25519 -> tr("d_gen_hint_v6")
     KeyAlgorithm.MLKEM768_X25519_V6 -> tr("d_gen_hint_pq_v6")
     KeyAlgorithm.MLKEM768_X25519_LIBREPGP -> tr("d_gen_hint_pq_librepgp")
+    KeyAlgorithm.MLKEM1024_X448_V6 -> tr("d_gen_hint_pq_1024_v6")
+    KeyAlgorithm.MLKEM1024_X448_LIBREPGP -> tr("d_gen_hint_pq_1024_librepgp")
     KeyAlgorithm.RSA_4096 -> tr("d_gen_hint_rsa4096")
     KeyAlgorithm.RSA_2048 -> tr("d_gen_hint_rsa2048")
     else -> ""

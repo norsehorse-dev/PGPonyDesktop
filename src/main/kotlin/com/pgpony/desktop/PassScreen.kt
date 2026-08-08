@@ -15,12 +15,10 @@
 // Read-only, like Android 3.0: nothing here writes to the store. Decryption is lazy and one
 // entry at a time — browsing never decrypts.
 //
-// TOTP is LIVE, from the shared core. D8 adds `crypto/pass/PassTotp.kt` upstream in
-// PGPonyAndroid — RFC 6238 written once, vendored here, RFC 6238 Appendix B vectors in the
-// vendored test suite — so an `otpauth://` line becomes a rolling code with a countdown instead
-// of a URI and an apology. Android 4.1.0 §7 wires the same object into PassEntryScreen; the
-// generator is not written twice. The URI itself stays hidden behind a toggle (it carries the
-// TOTP secret) but is still copyable, for moving the entry to another authenticator.
+// TOTP is DISPLAY-ONLY, matching the shared core as of 3.0 (desktop 2.0.0). The shared core
+// removed `crypto/pass/PassTotp.kt`, so PGPony no longer generates rolling codes on device: an
+// `otpauth://` line is surfaced read-only for copying into an authenticator app. The URI carries
+// the TOTP secret, so this section shows it plainly for that copy and nothing more.
 //
 // D11b — LOCALIZATION. Android already ships this surface as three screens
 // (PassStoreListScreen / PassBrowserScreen / PassEntryScreen), so seventeen strings here are
@@ -95,7 +93,6 @@ import com.pgpony.android.crypto.pass.PassNode
 import com.pgpony.android.crypto.pass.PassRoute
 import com.pgpony.android.crypto.pass.PassStorePrefs
 import com.pgpony.android.crypto.pass.PassStoreRef
-import com.pgpony.android.crypto.pass.PassTotp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -750,98 +747,23 @@ private fun ShownContent(
 
 @Composable
 private fun OtpSection(uri: String, onStatus: (String) -> Unit) {
-    val config = remember(uri) { PassTotp.parse(uri) }
-
     Spacer(Modifier.height(Spacing.Section))
     SubHeading(tr("pass_entry_otp_label"))
 
-    if (config == null) {
-        // Not a TOTP URI (hotp, a bad secret, an algorithm we don't do). Show it rather than
-        // swallow it — the user's authenticator app may well understand it.
-        Text(uri, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-        Text(
-            tr("d_pass_otp_unparsable"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(4.dp))
-        OutlinedButton(onClick = {
-            DesktopClipboard.copy(uri)
-            onStatus(tr("d_pass_otp_uri_copied"))
-        }) { Text(tr("d_pass_copy_uri")) }
-        return
-    }
-
-    // One tick a second. `now` is the whole clock source: the code is a pure function of it,
-    // so there is no timer state to get out of sync with the display.
-    var now by remember(uri) { mutableStateOf(System.currentTimeMillis() / 1000) }
-    LaunchedEffect(uri) {
-        while (true) {
-            delay(1000)
-            now = System.currentTimeMillis() / 1000
-        }
-    }
-    val step = now / config.periodSeconds
-    val code = remember(config, step) { PassTotp.code(config, now) }
-    val remaining = PassTotp.secondsRemaining(config, now)
-    var showUri by remember(uri) { mutableStateOf(false) }
-
-    if (code == null) {
-        Text(
-            tr("d_pass_otp_no_provider", config.algorithm),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
-        )
-        return
-    }
-
-    // WrapRow: "läuft in %d s ab" and 「%d 秒後に更新」 are both wider than the English, and this
-    // row already carries a headline-sized monospace code that will not give width back.
-    WrapRow(horizontalSpacing = Spacing.Small) {
-        Text(
-            PassTotp.grouped(code),
-            style = MaterialTheme.typography.headlineSmall,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        IconButton(onClick = {
-            DesktopClipboard.copy(code)
-            onStatus(
-                if (DesktopClipboard.autoClear())
-                    tr("d_pass_code_copied_clearing", DesktopClipboard.clearSeconds())
-                else tr("d_pass_code_copied")
-            )
-        }) { Icon(Icons.Filled.ContentCopy, contentDescription = tr("d_pass_copy_code")) }
-        BrandBadge(
-            tr("d_pass_otp_rolls_in", remaining),
-            if (remaining <= 5) BadgeTone.Error else BadgeTone.Neutral
-        )
-    }
+    // Display-only, matching the shared core as of 3.0: the `otpauth://` URI is surfaced read-only
+    // for copying into an authenticator app; PGPony does not generate codes on device. The URI
+    // embeds the TOTP secret, so it is shown here for that copy and nothing more.
+    Text(uri, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
     Text(
-        tr(
-            "d_pass_otp_meta",
-            config.label, config.algorithm, config.digits, config.periodSeconds
-        ),
+        tr("d_pass_otp_display_only"),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-
     Spacer(Modifier.height(4.dp))
-    WrapRow(horizontalSpacing = Spacing.Tight) {
-        // The URI embeds the TOTP secret, so it stays folded away by default — but it is the
-        // only way to move this entry into another authenticator, so it stays reachable.
-        TextButton(onClick = { showUri = !showUri }) {
-            Text(if (showUri) tr("d_pass_hide_uri") else tr("d_pass_show_uri"))
-        }
-        TextButton(onClick = {
-            DesktopClipboard.copy(uri)
-            onStatus(tr("d_pass_otp_uri_copied"))
-        }) { Text(tr("d_pass_copy_setup_uri")) }
-    }
-    if (showUri) {
-        Text(uri, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-    }
+    OutlinedButton(onClick = {
+        DesktopClipboard.copy(uri)
+        onStatus(tr("d_pass_otp_uri_copied"))
+    }) { Text(tr("d_pass_copy_uri")) }
 }
 
 // ── Folder picker ──────────────────────────────────────────────────────

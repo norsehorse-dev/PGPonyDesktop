@@ -42,19 +42,18 @@ class CompositeEncryptionMethodGenerator(
         dataEncryptorBuilder: PGPDataEncryptorBuilder,
         sessionKey: ByteArray
     ): ContainedPacket {
-        if (recipientSubkey.algorithm != CompositeKem.ALGORITHM_ID) {
-            throw PGPException("recipient subkey is not an ML-KEM+X25519 composite (algo 35)")
-        }
+        val suite = CompositeSuite.ietfFor(recipientSubkey.algorithm)
+            ?: throw PGPException("recipient subkey is not an IETF ML-KEM composite (algo 35/36)")
         val (xPub, mPub) = CompositeKeyMaterial.publicMaterial(recipientSubkey)
             ?: throw PGPException("composite subkey material is malformed")
 
-        val enc = CompositeKem.encapsulate(xPub, mPub, random)
+        val enc = CompositeKem.encapsulate(xPub, mPub, random, suite)
         val wrapped = CompositeKem.wrapSessionKey(enc.kek, sessionKey)
 
         // Algorithm-specific fields for a v6 algo-35 PKESK:
         //   X25519 ephemeral (32) || ML-KEM ct (1088) || len (1) || wrapped
         val algoFields = CompositePkesk.encodeAlgoFields(
-            enc.ephemeralX25519, enc.mlkemCiphertext, wrapped
+            enc.ephemeralX25519, enc.mlkemCiphertext, wrapped, suite
         )
 
         // v6 fingerprint of the encryption subkey (32 bytes). BC writes the
@@ -62,7 +61,7 @@ class CompositeEncryptionMethodGenerator(
         return PublicKeyEncSessionPacket.createV6PKESKPacket(
             PublicKeyPacket.VERSION_6,
             recipientSubkey.fingerprint,
-            CompositeKem.ALGORITHM_ID,
+            suite.ietfAlgId,
             arrayOf(algoFields)
         )
     }

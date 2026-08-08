@@ -228,6 +228,7 @@
     <string name="d_pass_relock_note">%1$d 秒後に自動でロックされます。</string>
     <string name="d_pass_otp_unparsable">この URI からはコードを生成できません — TOTP の URI ではないか、シークレットが正しい Base32 ではありません。このエントリーには認証アプリを使ってください。</string>
     <string name="d_pass_otp_uri_copied">otpauth URI をコピーしました</string>
+    <string name="d_pass_otp_display_only">PGPony はこのセットアップ URI を表示しますが、この端末ではコードを生成しません。認証アプリにコピーしてください。</string>
     <string name="d_pass_copy_uri">URI をコピー</string>
     <string name="d_pass_otp_no_provider">この JVM には HMAC-%1$s プロバイダーがないため、ここではコードを生成できません。</string>
     <string name="d_pass_code_copied">コードをコピーしました</string>
@@ -411,6 +412,8 @@
     <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id 保護。最新のツールに最適です</string>
     <string name="d_gen_hint_pq_v6">ポスト量子（IETF ドラフト、v6）— ML-KEM-768 + X25519</string>
     <string name="d_gen_hint_pq_librepgp">ポスト量子（LibrePGP）— GnuPG 2.5 と相互運用できます</string>
+    <string name="d_gen_hint_pq_1024_v6">ポスト量子（IETF ドラフト、v6）— ML-KEM-1024 + X448</string>
+    <string name="d_gen_hint_pq_1024_librepgp">ポスト量子（LibrePGP）— ML-KEM-1024 + X448、GnuPG 2.5 と相互運用できます</string>
     <string name="d_gen_hint_rsa4096">大きく低速。旧来のソフトウェアとの互換性は最大です</string>
     <string name="d_gen_hint_rsa2048">旧来のソフトウェアとの互換性のためだけ</string>
     <string name="d_gen_no_passphrase_warning">パスフレーズなし：秘密鍵はこのコンピューターに保護されないまま保存されます。</string>
@@ -667,5 +670,26 @@
     <string name="d_settings_watch_delete_warning">元ファイルは取り消せずに削除されます。確信がなければオフのままにしてください。</string>
     <string name="d_watch_notif_encrypted">監視フォルダー: 暗号化しました</string>
     <string name="d_watch_notif_failed">監視フォルダー: 失敗</string>
+
+    <string name="d_crypto_add_folder">フォルダーを追加…</string>
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">スマートカードサービスが実行されていません。</string>
+    <string name="d_cards_pcsc_sharing">別のプログラムがリーダーを使用しています — それ(GnuPG や OpenSC など)を閉じて再スキャンしてください。</string>
+    <string name="d_cards_pcsc_unknown">リーダーサービスの報告: %1$s。</string>
+    <string name="d_cards_pcsc_unknown_generic">リーダーサービスが問題を報告しました。</string>
+
+    <string name="d_cards_keygen_algo_label">鍵の種類</string>
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">鍵をカードに移動…</string>
+    <string name="d_cards_move_title">鍵をカードに移動する</string>
+    <string name="d_cards_move_warning">これは既存の鍵をカードに書き込み、カードの鍵スロットを上書きします。カード上で生成した鍵と異なり、この鍵はすでにカードの外に存在していたため、バックアップを安全に保管してください。カードの PIN は変更されません。</string>
+    <string name="d_cards_move_pick_key">移動する鍵</string>
+    <string name="d_cards_move_no_candidates">秘密鍵を持つ RSA 鍵ペアが鍵束にありません。先に生成またはインポートしてください。</string>
+    <string name="d_cards_move_passphrase">鍵のパスフレーズ(なければ空欄)</string>
+    <string name="d_cards_move_format">インポート形式</string>
+    <string name="d_cards_move_ack">これによりカードの鍵スロットが上書きされることを理解しました</string>
+    <string name="d_cards_move_confirm">カードに移動</string>
+    <string name="d_cards_move_done">カードに移動しました — %1$s</string>
+    <string name="d_cards_move_no_secret">鍵の秘密情報を読み込めませんでした。</string>
 
 </resources>

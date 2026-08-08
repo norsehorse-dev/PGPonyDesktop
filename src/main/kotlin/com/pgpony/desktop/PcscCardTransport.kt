@@ -71,6 +71,29 @@ internal fun causeChain(t: Throwable): String {
 }
 
 /**
+ * Turn the raw PC/SC cause chain ([causeChain], stored in [PcscCardTransport.lastListError]) into
+ * a sentence a person can act on — or null when the "plug your key in" headline already says it
+ * all. A tester's screenshot showed the chain leaking verbatim to users
+ * (`CardException: list() failed <- PCSCException: SCARD_E_NO_READERS_AVAILABLE`); the `SCARD_E_*`
+ * token is the whole diagnosis and the Java wrapper around it is noise, so users see the meaning,
+ * never the chain. `NO_READERS_AVAILABLE` is exactly the headline's case, so it returns null; an
+ * unrecognized fault keeps the bare code (not the wrapper) so a bug report still carries the one
+ * fact that matters. The full chain stays available through `pgpony card-info`.
+ */
+internal fun friendlyPcscReason(rawChain: String?): String? {
+    val upper = rawChain?.uppercase() ?: return null
+    return when {
+        "SCARD_E_NO_READERS_AVAILABLE" in upper -> null // the headline already covers this
+        "SCARD_E_NO_SERVICE" in upper || "SCARD_E_SERVICE_STOPPED" in upper ->
+            tr("d_cards_pcsc_no_service")
+        "SCARD_E_SHARING_VIOLATION" in upper -> tr("d_cards_pcsc_sharing")
+        else -> Regex("SCARD_[A-Z_]+").find(upper)?.value
+            ?.let { tr("d_cards_pcsc_unknown", it) }
+            ?: tr("d_cards_pcsc_unknown_generic")
+    }
+}
+
+/**
  * Reader discovery + the per-operation session runner. All entry points are blocking PC/SC
  * I/O — call from Dispatchers.IO (the screen helpers do).
  */
@@ -190,9 +213,12 @@ object DesktopCardReader {
             pcscRetry { terminal.connect("*") }
         } catch (e: CardException) {
             throw OpenPgpCardException.Communication(
-                // causeChain, not e.message: a connect failure is where an exclusive-access
-                // holder shows up as SCARD_E_SHARING_VIOLATION, and the JDK wraps that too.
-                tr("d_card_err_connect", terminal.name, causeChain(e)), e
+                // A connect failure is where an exclusive-access holder shows up as
+                // SCARD_E_SHARING_VIOLATION (another program has the reader). friendlyPcscReason
+                // turns that into a plain sentence instead of the raw JDK chain (D19 caught the
+                // enumeration path; this is the connect path — a tester saw the chain here too).
+                tr("d_card_err_connect", terminal.name,
+                    friendlyPcscReason(causeChain(e)) ?: tr("d_cards_pcsc_unknown_generic")), e
             )
         }
         try {
@@ -204,17 +230,40 @@ object DesktopCardReader {
         }
     }
 
+    /**
+     * Like [withCard] but hands the RAW [CardTransport] instead of a session. D21 key import needs
+     * the odd PUT DATA instruction the vendored session's putData (even, 0xDA) can't send, so the
+     * caller builds a session on this transport for the high-level ops (verify, attributes,
+     * fingerprints) AND sends the import APDU straight through [CardTransport.transceive].
+     */
+    fun <T> withCardTransport(readerName: String?, operation: (com.pgpony.android.crypto.card.CardTransport) -> T): T {
+        val terminal = findTerminal(readerName)
+        val card = try {
+            pcscRetry { terminal.connect("*") }
+        } catch (e: CardException) {
+            throw OpenPgpCardException.Communication(
+                tr("d_card_err_connect", terminal.name,
+                    friendlyPcscReason(causeChain(e)) ?: tr("d_cards_pcsc_unknown_generic")), e
+            )
+        }
+        try {
+            return operation(PcscCardTransport(card.basicChannel))
+        } finally {
+            runCatching { card.disconnect(false) }
+        }
+    }
+
     private fun findTerminal(readerName: String?): CardTerminal {
         val terminals = try {
             pcscRetry { TerminalFactory.getDefault().terminals().list() }
         } catch (e: Exception) {
             throw OpenPgpCardException.Communication(
-                // The two suffixes carry their own leading space: the XML reader does not
-                // trim, and ja swaps the ASCII parentheses for full-width ones.
+                // The friendly no-service message plus the pcscd hint on Linux says everything;
+                // the raw SCARD chain is dropped from the GUI (it stays in `pgpony card-info`),
+                // matching the D19 cleanup of the enumeration path.
                 tr("d_card_err_no_service") +
                     (if (System.getProperty("os.name").lowercase().contains("linux"))
-                        tr("d_card_err_pcscd_hint") else "") +
-                    tr("d_card_err_detail_suffix", causeChain(e)),
+                        tr("d_card_err_pcscd_hint") else ""),
                 e
             )
         }

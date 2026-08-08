@@ -38,6 +38,7 @@ class CompositeLibrePGPEncryptionMethodGenerator(
             throw PGPException("recipient subkey is not a LibrePGP composite (algo 8)")
         }
         val packet = recipientSubkey.encoded
+        val suite = CompositeLibrePGPKeyMaterial.suiteOf(packet)
         val (xPub, kyberPub) = CompositeLibrePGPKeyMaterial.publicMaterial(packet)
         val v5fp = CompositeLibrePGPKeyMaterial.v5Fingerprint(packet)
 
@@ -45,7 +46,7 @@ class CompositeLibrePGPEncryptionMethodGenerator(
         val symAlgo = dataEncryptorBuilder.algorithm
 
         val fixedInfo = CompositeKemLibrePGP.fixedInfo(symAlgo, v5fp)
-        val enc = CompositeKemLibrePGP.encapsulate(xPub, kyberPub, fixedInfo, random)
+        val enc = CompositeKemLibrePGP.encapsulate(xPub, kyberPub, fixedInfo, random, suite)
         val wrapped = CompositeKemLibrePGP.wrapSessionKey(enc.kek, sessionKey)
 
         val algoFields = ByteArrayOutputStream().apply {
@@ -65,13 +66,14 @@ class CompositeLibrePGPEncryptionMethodGenerator(
     }
 
     private fun eccSos(value: ByteArray): ByteArray {
-        // Fixed 256-bit SOS, byte-identical to iOS / GnuPG 2.5.x: the X25519
-        // KEM ciphertext is a plain 32-octet value (no 0x40 native-point
-        // prefix, no leading-zero stripping). gpg reads exactly (256+7)/8 = 32
-        // octets and uses them raw, so any high-byte value — including 0x00 —
-        // round-trips. This removes the need for the ephemeral-regeneration
-        // guard that minimal-MPI encoding required.
-        return byteArrayOf(0x01, 0x00) + value
+        // Fixed-width SOS, byte-identical to iOS / GnuPG 2.5.x: the X25519 or
+        // X448 KEM ciphertext is a plain keyLen-octet value (no 0x40 native-
+        // point prefix, no leading-zero stripping), so the bit length is
+        // exactly value.size * 8 (256 for X25519, 448 for X448). gpg reads
+        // (bits + 7) / 8 octets and uses them raw, so any high byte value,
+        // 0x00 included, round-trips, with no ephemeral-regeneration guard.
+        val bits = value.size * 8
+        return byteArrayOf((bits ushr 8).toByte(), bits.toByte()) + value
     }
 
     private fun uint32(v: Int): ByteArray =

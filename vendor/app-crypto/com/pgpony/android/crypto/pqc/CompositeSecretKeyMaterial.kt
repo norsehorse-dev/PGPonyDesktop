@@ -54,7 +54,7 @@ object CompositeSecretKeyMaterial {
      * the key is protected but no passphrase was supplied.
      */
     fun extract(secKey: PGPSecretKey, passphrase: CharArray? = null): Material? {
-        if (secKey.publicKey.algorithm != ALGORITHM_ID) return null
+        if (CompositeSuite.ietfFor(secKey.publicKey.algorithm) == null) return null
         return extractFromPacket(secKey.encoded, passphrase)
     }
 
@@ -71,10 +71,11 @@ object CompositeSecretKeyMaterial {
         require(version == 6) { "composite secret key must be v6, got v$version" }
         i += 4 // creation time
         val algo = body[i++].toInt() and 0xFF
-        require(algo == ALGORITHM_ID) { "expected algo $ALGORITHM_ID, got $algo" }
+        val suite = CompositeSuite.ietfFor(algo)
+            ?: throw IllegalArgumentException("expected composite algo 35 or 36, got $algo")
         val pkMatLen = readUInt32(body, i); i += 4
-        require(pkMatLen == CompositeKem.COMPOSITE_PUB_LEN) {
-            "composite public material must be ${CompositeKem.COMPOSITE_PUB_LEN}, got $pkMatLen"
+        require(pkMatLen == suite.compositePubLen) {
+            "composite public material must be ${suite.compositePubLen}, got $pkMatLen"
         }
         // AEAD AAD = the public-key packet contents (ver..pubMat), i.e. exactly
         // what BC's PublicKeyPacket.getEncodedContents() returns for v6.
@@ -84,7 +85,7 @@ object CompositeSecretKeyMaterial {
         val s2kUsage = body[i++].toInt() and 0xFF
         val secretMaterial: ByteArray = when (s2kUsage) {
             USAGE_NONE -> {
-                val need = CompositeKem.X25519_KEY_LEN + MLKEM768_SEED_LEN
+                val need = suite.curve.keyLen + suite.mlkem.seedLen
                 require(body.size - i >= need) { "composite secret material truncated" }
                 body.copyOfRange(i, i + need)
             }
@@ -93,16 +94,16 @@ object CompositeSecretKeyMaterial {
                 if (passphrase == null) {
                     throw ProtectedKeyException("composite secret key is passphrase-protected")
                 }
-                decryptProtected(tag, version, s2kUsage, body, i, pubkeyContents, passphrase)
+                decryptProtected(tag, version, s2kUsage, body, i, pubkeyContents, passphrase, suite)
             }
 
             else -> throw ProtectedKeyException("unsupported S2K usage $s2kUsage")
         }
 
-        val x = secretMaterial.copyOfRange(0, CompositeKem.X25519_KEY_LEN)
+        val x = secretMaterial.copyOfRange(0, suite.curve.keyLen)
         val seed = secretMaterial.copyOfRange(
-            CompositeKem.X25519_KEY_LEN,
-            CompositeKem.X25519_KEY_LEN + MLKEM768_SEED_LEN
+            suite.curve.keyLen,
+            suite.curve.keyLen + suite.mlkem.seedLen
         )
         return Material(x, seed)
     }
@@ -116,7 +117,8 @@ object CompositeSecretKeyMaterial {
         body: ByteArray,
         offset: Int,
         pubkeyContents: ByteArray,
-        passphrase: CharArray
+        passphrase: CharArray,
+        suite: CompositeSuite
     ): ByteArray {
         var i = offset
         // v6: a one-octet count of all following conditional params (up to IV).
@@ -146,7 +148,7 @@ object CompositeSecretKeyMaterial {
             // need the leading composite material; a wrong passphrase is
             // caught downstream when the recovered key fails to decrypt.
             val plain = decryptor.recoverKeyData(symAlg, s2kKey, iv, encData, 0, encData.size)
-            val need = CompositeKem.X25519_KEY_LEN + MLKEM768_SEED_LEN
+            val need = suite.curve.keyLen + suite.mlkem.seedLen
             require(plain.size >= need) { "recovered composite secret material too short" }
             plain.copyOfRange(0, need)
         }

@@ -77,6 +77,27 @@ class MultiKeyServerService {
         }
 
     /**
+     * 4.1.0 Phase 14e. The by-keyid twin of [fetchByFingerprint], same
+     * contract: armor on 200, null on any other status, throws on
+     * transport failure so the caller can tell "not there" from
+     * "couldn't reach it".
+     *
+     * Exists for the signer lookup on the decrypt path, which has only
+     * the 64-bit key ID from the signature packets to go on: the
+     * issuer-fingerprint subpacket is read by VerifyService but is not
+     * carried through DecryptResult or DecryptStreamResult.
+     */
+    suspend fun fetchByKeyId(server: KeyServer, keyId: String): String? =
+        withContext(Dispatchers.IO) {
+            val id = keyId.uppercase().replace(" ", "").removePrefix("0X")
+            if (id.isEmpty()) return@withContext null
+            val response = client.get("${base(server)}/vks/v1/by-keyid/$id") {
+                accept(ContentType.Application.OctetStream)
+            }
+            if (response.status == HttpStatusCode.OK) response.bodyAsText() else null
+        }
+
+    /**
      * Fetch a key's armored material by EMAIL from one server's VKS
      * by-email endpoint. Returns the armor on 200, null on any other
      * status (Hagrid/VKS 404s addresses it hasn't verified), THROWS on
