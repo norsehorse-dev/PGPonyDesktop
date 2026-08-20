@@ -615,6 +615,17 @@ class DesktopKeyRepository(
 
     fun exportArmoredPrivateKey(fingerprint: String): String? = materials.loadSecret(fingerprint)
 
+    /** issue #2 symptom D: export a composite secret in GnuPG's native format
+     *  so gpg 2.5.x / GPG4WIN can import it. [exportPassphrase] both unlocks a
+     *  protected source and, when non-blank, AES-128-OCB protects the export. */
+    fun exportArmoredPrivateKeyGpgCompat(fingerprint: String, exportPassphrase: String?): String? {
+        val armor = materials.loadSecret(fingerprint) ?: return null
+        val ring = runCatching { crypto.importArmoredKey(armor).secretKeyRing }.getOrNull() ?: return null
+        val source = if (crypto.isPassphraseProtected(ring)) exportPassphrase else null
+        val protect = exportPassphrase?.takeIf { it.isNotBlank() }
+        return runCatching { crypto.exportArmoredPrivateKeyGpgCompat(ring, source, protect) }.getOrNull()
+    }
+
     // ── Key detail (D2b read view) ──────────────────────────────────────
 
     data class SubkeyInfo(

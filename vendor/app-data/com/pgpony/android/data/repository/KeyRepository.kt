@@ -736,6 +736,24 @@ class KeyRepository(
         return crypto.exportArmoredPrivateKey(ring)
     }
 
+    /**
+     * issue #2 symptom D: export in GnuPG's native composite-secret format
+     * (a GNU S-expression gpg 2.5.x can import; standard OpenPGP composite
+     * secrets are rejected). [exportPassphrase] both unlocks a protected
+     * source ring and, when non-blank, AES-128-OCB protects the ECC secret
+     * exactly as gpg does. Blank/null → unprotected export.
+     */
+    fun exportArmoredPrivateKeyGpgCompat(fingerprint: String, exportPassphrase: String?): String? {
+        val ring = loadSecretKeyRing(fingerprint) ?: return null
+        val source = if (crypto.isPassphraseProtected(ring)) exportPassphrase else null
+        val protect = exportPassphrase?.takeIf { it.isNotBlank() }
+        return try {
+            crypto.exportArmoredPrivateKeyGpgCompat(ring, source, protect)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     // ── Delete ─────────────────────────────────────────────────────────
 
     suspend fun deleteKey(entity: PGPKeyEntity) {

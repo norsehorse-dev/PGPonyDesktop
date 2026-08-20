@@ -172,7 +172,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Msi)
             packageName = "PGPony"
-            packageVersion = "2.0.0"
+            packageVersion = "2.1.0"
             description = "OpenPGP on the desktop — encrypt, decrypt, sign, verify, manage keys"
             vendor = "NorseHorse"
             copyright = "Copyright 2026 NorseHorse"

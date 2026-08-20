@@ -239,6 +239,9 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                         OutlinedButton(onClick = { saveTarget = SaveTarget.SECRET }) {
                             Text(tr("d_keydetail_export_secret"))
                         }
+                        OutlinedButton(onClick = { saveTarget = SaveTarget.SECRET_GPG }) {
+                            Text(tr("d_keydetail_export_secret_gpg"))
+                        }
                     }
                 }
                 if (key.isKeyPair) {
@@ -341,6 +344,7 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
         val suggested = when (target) {
             SaveTarget.PUBLIC -> "${key.shortFingerprint.lowercase()}-public.asc"
             SaveTarget.SECRET -> "${key.shortFingerprint.lowercase()}-SECRET.asc"
+            SaveTarget.SECRET_GPG -> "${key.shortFingerprint.lowercase()}-SECRET-gnupg.asc"
             SaveTarget.REVOCATION_CERT -> "${key.shortFingerprint.lowercase()}-revocation.asc"
         }
         SaveFileDialog(suggested) { file ->
@@ -349,6 +353,7 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                 val armor = when (target) {
                     SaveTarget.PUBLIC -> state.repository.exportArmoredPublicKeyForSharing(key.fingerprint)
                     SaveTarget.SECRET -> state.repository.exportArmoredPrivateKey(key.fingerprint)
+                    SaveTarget.SECRET_GPG -> state.repository.exportArmoredPrivateKeyGpgCompat(key.fingerprint, null)
                     SaveTarget.REVOCATION_CERT -> state.repository.exportRevocationCertificate(key.fingerprint)
                 }
                 if (armor != null) {
@@ -360,7 +365,7 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
     }
 }
 
-private enum class SaveTarget { PUBLIC, SECRET, REVOCATION_CERT }
+private enum class SaveTarget { PUBLIC, SECRET, SECRET_GPG, REVOCATION_CERT }
 
 /**
  * D9 — render the public key as a QR for scan-to-import on another device. A large key

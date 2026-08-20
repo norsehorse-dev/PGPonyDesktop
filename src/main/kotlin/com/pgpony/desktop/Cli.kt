@@ -204,11 +204,14 @@ object Cli {
     private fun export(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
         val o = Options(args)
         val secret = o.flag("--secret")
+        val gpgCompat = o.flag("--gpg-compat")
         val selector = o.positional() ?: throw CliError(ExitCode.USAGE, "export: <key selector>")
         val outPath = o.value("--output", "-o")
         val e = resolveOne(repo, selector, requireSecret = secret)
-        val armor = if (secret) repo.exportArmoredPrivateKey(e.fingerprint)
-        else repo.exportArmoredPublicKeyForSharing(e.fingerprint)
+        val armor = if (secret) {
+            if (gpgCompat) repo.exportArmoredPrivateKeyGpgCompat(e.fingerprint, o.value("--passphrase", "-p"))
+            else repo.exportArmoredPrivateKey(e.fingerprint)
+        } else repo.exportArmoredPublicKeyForSharing(e.fingerprint)
         armor ?: throw CliError(ExitCode.NOT_FOUND, "no ${if (secret) "secret" else "public"} material for ${e.shortFingerprint}")
         writeAll(outPath, armor.toByteArray(Charsets.UTF_8))
         ExitCode.OK

@@ -295,6 +295,7 @@
     <string name="d_keydetail_export_public">Exportar pública…</string>
     <string name="d_keydetail_show_qr">Mostrar QR…</string>
     <string name="d_keydetail_export_secret">Exportar secreta…</string>
+    <string name="d_keydetail_export_secret_gpg">Exportar para o GnuPG</string>
     <string name="d_keydetail_status_pub_copied">Chave pública copiada — %1$s</string>
     <string name="d_keydetail_err_no_public_armor">Nenhuma armadura pública armazenada</string>
     <string name="d_keydetail_secret_export_note">As chaves secretas exportadas mantêm sua proteção por frase secreta (S2K).</string>

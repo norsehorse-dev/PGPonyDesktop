@@ -38,6 +38,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair
 import com.pgpony.android.crypto.card.CardPGPContentSignerBuilder
 import com.pgpony.android.crypto.card.OpenPgpCardSession
 import com.pgpony.android.crypto.pqc.CompositeKeyGen
+import com.pgpony.android.crypto.pqc.LibrePGPGnuSecretExport
 import com.pgpony.android.crypto.pqc.LibrePGPV5Interop
 import com.pgpony.android.data.ArmorCommentHeader
 import java.io.ByteArrayInputStream
@@ -836,6 +837,29 @@ class PGPCryptoService private constructor() {
         // expect (drop the condLen + checksum octets). No-op for other keys.
         val wireBytes = LibrePGPV5Interop.toLibrePGPFormat(secretKeyRing.encoded)
         return armorSecretKeyBytes(wireBytes)
+    }
+
+    /**
+     * issue #2 symptom D: export a secret ring in a form GnuPG 2.5.x can
+     * import. gpg does not accept a standard OpenPGP v5 algo-8 composite
+     * secret; it only reads composite secrets as its native GNU S-expression
+     * (full expanded ML-KEM key, not the 64-byte seed). This rewrites the
+     * composite (sub)key to that form and leaves all other packets untouched.
+     * Only unprotected composite keys are rewritten; pass [passphrase] to
+     * unlock a protected composite subkey first. Non-gpg tools (Sequoia,
+     * PGPony) read the standard [exportArmoredPrivateKey] output instead.
+     */
+    fun exportArmoredPrivateKeyGpgCompat(
+        secretKeyRing: PGPSecretKeyRing,
+        sourcePassphrase: String? = null,
+        protectPassphrase: String? = null
+    ): String {
+        val gnuBytes = LibrePGPGnuSecretExport.toGnuComposite(
+            secretKeyRing.encoded,
+            sourcePassphrase?.toCharArray(),
+            protectPassphrase?.toCharArray()
+        )
+        return armorSecretKeyBytes(gnuBytes)
     }
 
     /**

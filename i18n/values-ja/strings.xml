@@ -296,6 +296,7 @@
     <string name="d_keydetail_export_public">公開鍵をエクスポート…</string>
     <string name="d_keydetail_show_qr">QR を表示…</string>
     <string name="d_keydetail_export_secret">秘密鍵をエクスポート…</string>
+    <string name="d_keydetail_export_secret_gpg">GnuPG用にエクスポート</string>
     <string name="d_keydetail_status_pub_copied">公開鍵をコピーしました — %1$s</string>
     <string name="d_keydetail_err_no_public_armor">保存された公開鍵の ASCII アーマーがありません</string>
     <string name="d_keydetail_secret_export_note">エクスポートした秘密鍵はパスフレーズ保護 (S2K) を保ったままです。</string>
