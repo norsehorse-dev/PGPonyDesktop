@@ -77,6 +77,54 @@ object MimeEnvelope {
     }
 
     /**
+     * 4.2.0 RC6 (#32, tail-4): streaming envelope support. Returns the
+     * byte offset at which the armored PGP MESSAGE begins inside the
+     * input, or -1 when no armor marker appears in the first
+     * [OFFSET_SCAN_BYTES]. The streamed decrypt paths were feeding a
+     * raw .eml straight to the crypto layer — only the buffered path
+     * (≤ INLINE_FILE_LIMIT) unwrapped the RFC 3156 envelope, so any
+     * .eml past 4 MB failed with "invalid header encountered". Callers
+     * probe with one open of the source, then reopen and skip to the
+     * offset for the real pass:
+     *   • plain armored file → marker on line one → offset 0, harmless
+     *   • binary ciphertext → no marker in the scan window → -1,
+     *     stream passes through untouched
+     *   • .eml → offset of the BEGIN line inside the ciphertext part
+     * The trailing envelope close after END is never consumed: the
+     * armor parser stops at the END line on its own.
+     */
+    fun armoredPayloadOffset(input: java.io.InputStream): Long {
+        val marker = "-----BEGIN PGP MESSAGE-----"
+        val bin = java.io.BufferedInputStream(input)
+        val lineBuf = StringBuilder()
+        var lineStart = 0L
+        var pos = 0L
+        while (pos < OFFSET_SCAN_BYTES) {
+            val b = bin.read()
+            if (b < 0) break
+            pos++
+            when (b) {
+                '\n'.code -> {
+                    if (lineBuf.toString() == marker) return lineStart
+                    lineBuf.setLength(0)
+                    lineStart = pos
+                }
+                '\r'.code -> { /* dropped; CRLF handled at the \n */ }
+                else -> if (lineBuf.length <= marker.length) lineBuf.append(b.toChar())
+            }
+        }
+        // A final unterminated line can still be the marker (armored
+        // content follows in the same stream past the scan cap).
+        if (lineBuf.toString() == marker) return lineStart
+        return -1L
+    }
+
+    /** Scan window for [armoredPayloadOffset]. An RFC 3156 prefix is a
+     *  few hundred bytes; 64 KiB leaves room for oversized mail headers
+     *  (Autocrypt keydata etc.) while keeping the probe cheap. */
+    private const val OFFSET_SCAN_BYTES = 64L * 1024
+
+    /**
      * Cheap, bounded "is this an RFC 5322 header block" test, replacing the
      * old fixed-prefix marker scan. Deliberately conservative: a false
      * negative means an envelope is not unwrapped, a false positive only costs

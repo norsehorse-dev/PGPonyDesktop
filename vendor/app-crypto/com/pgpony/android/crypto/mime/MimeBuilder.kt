@@ -92,6 +92,46 @@ object MimeBuilder {
         attachments: List<MimeAttachment>,
         boundary: String = randomBoundary(),
         onProgress: ((Long) -> Unit)? = null
+    ) = writeMixedSources(
+        out = out,
+        body = body,
+        sources = attachments.map { att ->
+            MimeSource(att.filename, att.contentType) {
+                java.io.ByteArrayInputStream(att.data)
+            }
+        },
+        boundary = boundary,
+        onProgress = onProgress
+    )
+
+    /**
+     * 4.2.0 RC6 (#32, AraafRoyall): one attachment the streaming form
+     * reads on demand. [open] is invoked exactly once per assembly pass
+     * and the stream is closed by the writer. Backing can be a
+     * ByteArray (the buffered callers above) or a content:// URI opened
+     * at encrypt time, which is what lets a bundle carry attachments
+     * that were never resident in memory.
+     */
+    class MimeSource(
+        val filename: String,
+        val contentType: String,
+        val open: () -> java.io.InputStream
+    )
+
+    /**
+     * 4.2.0 RC6 (#32): the byte-source generalization of [writeMixed].
+     * Identical wire output for identical content: the base64 chunking
+     * reads whole [B64_CHUNK] blocks (a multiple of 57, so every full
+     * block ends on a whole 76 column line), and the one-block lookahead
+     * reproduces the original's end-of-part handling, where the final
+     * line takes no trailing CRLF of its own.
+     */
+    fun writeMixedSources(
+        out: OutputStream,
+        body: String?,
+        sources: List<MimeSource>,
+        boundary: String = randomBoundary(),
+        onProgress: ((Long) -> Unit)? = null
     ) {
         fun put(s: String) = out.write(s.toByteArray(Charsets.UTF_8))
 
@@ -111,36 +151,66 @@ object MimeBuilder {
 
         val encoder = java.util.Base64.getEncoder()
         var consumed = 0L
-        for (att in attachments) {
-            val safeName = sanitizeFilename(att.filename)
+        for (src in sources) {
+            val safeName = sanitizeFilename(src.filename)
             put("--" + boundary + CRLF)
-            put("Content-Type: " + att.contentType + "; name=\"" + safeName + "\"" + CRLF)
+            put("Content-Type: " + src.contentType + "; name=\"" + safeName + "\"" + CRLF)
             put("Content-Transfer-Encoding: base64" + CRLF)
             put("Content-Disposition: attachment; filename=\"" + safeName + "\"" + CRLF)
             put(CRLF)
 
-            var off = 0
-            while (off < att.data.size) {
-                val end = minOf(off + B64_CHUNK, att.data.size)
-                val enc = encoder.encode(att.data.copyOfRange(off, end))
-                var i = 0
-                while (i < enc.size) {
-                    val lineEnd = minOf(i + 76, enc.size)
-                    out.write(enc, i, lineEnd - i)
-                    // No terminator after the final line of the final
-                    // chunk: the part's own CRLF below closes it, which is
-                    // what base64Wrapped + append(CRLF) produced before.
-                    if (lineEnd < enc.size || end < att.data.size) put(CRLF)
-                    i = lineEnd
+            src.open().use { input ->
+                // Double-buffered lookahead: `cur` is the block being
+                // written, `nxt` tells us whether it is the last one, so
+                // the no-CRLF-after-the-final-line rule can be applied
+                // without knowing the total size upfront. readBlock fills
+                // the whole block or hits EOF; a content:// stream is
+                // free to return short reads, so a plain read() would
+                // break the 76 column alignment.
+                var cur = ByteArray(B64_CHUNK)
+                var nxt = ByteArray(B64_CHUNK)
+                var curLen = readBlock(input, cur)
+                while (curLen > 0) {
+                    val nxtLen = if (curLen == B64_CHUNK) readBlock(input, nxt) else 0
+                    val isLastChunk = nxtLen == 0
+                    val enc = encoder.encode(
+                        if (curLen == cur.size) cur else cur.copyOf(curLen)
+                    )
+                    var i = 0
+                    while (i < enc.size) {
+                        val lineEnd = minOf(i + 76, enc.size)
+                        out.write(enc, i, lineEnd - i)
+                        // No terminator after the final line of the final
+                        // chunk: the part's own CRLF below closes it, which
+                        // is what base64Wrapped + append(CRLF) produced
+                        // before.
+                        if (lineEnd < enc.size || !isLastChunk) put(CRLF)
+                        i = lineEnd
+                    }
+                    consumed += curLen.toLong()
+                    onProgress?.invoke(consumed)
+                    val t = cur; cur = nxt; nxt = t
+                    curLen = nxtLen
                 }
-                consumed += (end - off).toLong()
-                off = end
-                onProgress?.invoke(consumed)
             }
             put(CRLF)
         }
 
         put("--" + boundary + "--" + CRLF)
+    }
+
+    /**
+     * 4.2.0 RC6 (#32): fill [buf] completely or read to EOF. Returns the
+     * number of bytes placed in [buf]; 0 only at EOF.
+     */
+    private fun readBlock(input: java.io.InputStream, buf: ByteArray): Int {
+        var off = 0
+        while (off < buf.size) {
+            val n = input.read(buf, off, buf.size - off)
+            if (n < 0) break
+            off += n
+        }
+        return off
     }
 
     /**
@@ -204,6 +274,63 @@ object MimeBuilder {
         sb.append(CRLF)
         sb.append("--").append(boundary).append("--").append(CRLF)
         return sb.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    /**
+     * 4.2.0 RC6 (#32): the streaming form of [wrapEncrypted], for
+     * armored ciphertext too large to hold as a String (a 750 MB bundle
+     * armors to ~1.4 GB). Same envelope bytes for the same boundary:
+     * the armored content is normalized to CRLF line by line, and
+     * trailing blank lines are withheld until a further non-blank line
+     * proves they are interior, which reproduces trimEnd() without
+     * buffering the content.
+     */
+    fun wrapEncryptedTo(
+        out: OutputStream,
+        armoredSource: () -> java.io.InputStream,
+        boundary: String = randomBoundary(),
+        autocryptHeader: String? = null
+    ) {
+        fun put(s: String) = out.write(s.toByteArray(Charsets.UTF_8))
+        put("MIME-Version: 1.0" + CRLF)
+        put("Content-Type: multipart/encrypted;" + CRLF)
+        put(" protocol=\"application/pgp-encrypted\";" + CRLF)
+        put(" boundary=\"" + boundary + "\"" + CRLF)
+        if (!autocryptHeader.isNullOrBlank()) {
+            put(autocryptHeader.replace("\r\n", "\n").replace("\n", CRLF) + CRLF)
+        }
+        put(CRLF)
+        put("--" + boundary + CRLF)
+        put("Content-Type: application/pgp-encrypted" + CRLF)
+        put("Content-Description: PGP/MIME version identification" + CRLF)
+        put(CRLF)
+        put("Version: 1" + CRLF)
+        put(CRLF)
+        put("--" + boundary + CRLF)
+        put("Content-Type: application/octet-stream; name=\"encrypted.asc\"" + CRLF)
+        put("Content-Description: OpenPGP encrypted message" + CRLF)
+        put("Content-Disposition: inline; filename=\"encrypted.asc\"" + CRLF)
+        put(CRLF)
+        armoredSource().bufferedReader(Charsets.UTF_8).use { reader ->
+            var pendingBlanks = 0
+            var wroteAny = false
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (line.isEmpty()) {
+                    pendingBlanks++
+                    continue
+                }
+                repeat(pendingBlanks) { put(CRLF) }
+                pendingBlanks = 0
+                put(line + CRLF)
+                wroteAny = true
+            }
+            // Trailing blanks are dropped (trimEnd); an all-blank source
+            // degenerates to an empty part, matching wrapEncrypted("").
+            if (!wroteAny) put(CRLF)
+        }
+        put(CRLF)
+        put("--" + boundary + "--" + CRLF)
     }
 
     // ── Internals ───────────────────────────────────────────────────────

@@ -16,17 +16,12 @@
 //
 // The advanced method is tried first; if it fails (DNS, 404, network),
 // the direct method is tried as a fallback. The response body is BINARY
-// OpenPGP key data — NOT ASCII armor. This service wraps the binary in
-// standard ASCII armor (matching RFC 4880 §6.2 + CRC24) so the caller
-// can hand the result to the existing armored-key import flow without
-// branching on format.
-//
-// Why we don't use BC's ArmoredOutputStream here:
-//   • Keeps the network layer free of cross-package coupling to BC.
-//   • This is a small write-once-then-throw-away string; we don't need
-//     BC's full armor machinery (chunk-counted CRC, header table, etc).
-//   • The manual CRC24 + base64 wrap is ~30 lines and easier to verify
-//     against RFC 4880 than threading binary key bytes through BC.
+// OpenPGP key data, not ASCII armor, so this service wraps it in ASCII
+// armor with BouncyCastle's ArmoredOutputStream (the same path exports
+// use) before handing the result to the existing armored-key import
+// flow. Earlier versions hand-rolled the armor here; that mis-framed
+// some keys and broke import (issue #41), so the hand-rolled base64 and
+// CRC24 wrap was removed.
 
 package com.pgpony.android.network
 
@@ -39,8 +34,9 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.bouncycastle.bcpg.ArmoredOutputStream
+import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
-import java.util.Base64
 
 // ── Result types ───────────────────────────────────────────────────────
 
@@ -151,7 +147,7 @@ class WkdService {
             "https://openpgpkey.$domain/.well-known/openpgpkey/$domain/hu/$hash?l=$encodedLocalpart"
         tryFetch(advancedUrl)?.let { binary ->
             return@withContext KeyLookupResult(
-                armoredKey = armorBinaryPublicKey(binary),
+                armoredKey = armorFetchedKey(binary),
                 source = KeyLookupSource.WKD_ADVANCED
             )
         }
@@ -163,7 +159,7 @@ class WkdService {
             "https://$domain/.well-known/openpgpkey/hu/$hash?l=$encodedLocalpart"
         tryFetch(directUrl)?.let { binary ->
             return@withContext KeyLookupResult(
-                armoredKey = armorBinaryPublicKey(binary),
+                armoredKey = armorFetchedKey(binary),
                 source = KeyLookupSource.WKD_DIRECT
             )
         }
@@ -235,71 +231,27 @@ class WkdService {
     }
 
     /**
-     * Wrap binary OpenPGP key bytes in RFC 4880 §6.2 ASCII armor.
+     * Armor a public key fetched from WKD so the result can flow into the
+     * same armored-import and preview path the keyserver sources use.
      *
-     * Output format:
-     *   -----BEGIN PGP PUBLIC KEY BLOCK-----
-     *   <blank line>
-     *   <base64 of bytes, 64 chars per line>
-     *   =<base64 of 24-bit CRC>
-     *   -----END PGP PUBLIC KEY BLOCK-----
+     * WKD serves BINARY OpenPGP key data. Earlier versions hand-rolled the
+     * base64 and CRC24 wrap here, which mis-framed some keys and made them
+     * fail to import with "Couldn't parse key" (issue #41). We now wrap the
+     * bytes with BouncyCastle's ArmoredOutputStream, the same path exports
+     * already use: it derives the correct BEGIN and END header from the
+     * leading packet tag and computes the CRC24 itself.
      *
-     * Notes:
-     *   • Blank line after BEGIN is REQUIRED by RFC 4880 — gpg warns
-     *     "invalid armor header" without it (same regression A7 Fix2
-     *     fixed in PGPCryptoService).
-     *   • No Version or Comment headers — matches the post-Fix2
-     *     behavior elsewhere in PGPony. We do NOT add a "Comment:
-     *     PGPony Android" here because this is a key we DOWNLOADED,
-     *     not one we produced; attributing it to PGPony would be
-     *     misleading.
-     *   • CRC24 polynomial per RFC 4880 §6.1: initial 0xB704CE, poly
-     *     0x1864CFB.
-     *   • base64 uses java.util.Base64.getEncoder() — RFC 4648
-     *     standard alphabet, no URL-safe nonsense, no newlines (we
-     *     wrap manually to 64 char lines).
+     * If an endpoint serves ASCII armor directly (rare, but some do) the
+     * bytes already start with an armor header, so pass them through
+     * untouched rather than double-wrapping, which was one way #41 failed.
      */
-    private fun armorBinaryPublicKey(bytes: ByteArray): String {
-        val base64 = Base64.getEncoder().encodeToString(bytes)
-        val wrapped = base64.chunked(64).joinToString("\n")
-        val crc = crc24(bytes)
-        val crcBytes = byteArrayOf(
-            ((crc shr 16) and 0xFF).toByte(),
-            ((crc shr 8) and 0xFF).toByte(),
-            (crc and 0xFF).toByte()
-        )
-        val crcBase64 = Base64.getEncoder().encodeToString(crcBytes)
-        return buildString {
-            append("-----BEGIN PGP PUBLIC KEY BLOCK-----\n")
-            append("\n")
-            append(wrapped)
-            append("\n=")
-            append(crcBase64)
-            append("\n-----END PGP PUBLIC KEY BLOCK-----\n")
+    private fun armorFetchedKey(bytes: ByteArray): String {
+        val head = String(bytes, 0, minOf(15, bytes.size), Charsets.US_ASCII)
+        if (head.trimStart().startsWith("-----BEGIN PGP")) {
+            return bytes.toString(Charsets.UTF_8)
         }
-    }
-
-    /**
-     * CRC-24 from RFC 4880 §6.1.
-     *   crc_init      = 0xB704CE
-     *   crc_polynom   = 0x1864CFB
-     *   output mask   = 0xFFFFFF (24 bits)
-     *
-     * Verified against the spec example. Used only for armoring
-     * downloaded WKD keys; PGPony's own exports go through BC's
-     * ArmoredOutputStream which does its own CRC.
-     */
-    private fun crc24(data: ByteArray): Int {
-        var crc = 0xB704CE
-        for (byte in data) {
-            crc = crc xor ((byte.toInt() and 0xFF) shl 16)
-            repeat(8) {
-                crc = crc shl 1
-                if ((crc and 0x1000000) != 0) {
-                    crc = crc xor 0x1864CFB
-                }
-            }
-        }
-        return crc and 0xFFFFFF
+        val out = ByteArrayOutputStream()
+        ArmoredOutputStream(out).use { it.write(bytes) }
+        return out.toString(Charsets.UTF_8.name())
     }
 }

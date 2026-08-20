@@ -33,9 +33,22 @@ import org.bouncycastle.pqc.crypto.mlkem.MLKEMParameters
  * the DER object-identifier body (no length prefix) as it appears in a v5
  * LibrePGP key packet: 1.3.101.110 for X25519, 1.3.101.111 for X448.
  */
-enum class EccCurve(val keyLen: Int, val oidTail: ByteArray) {
-    X25519(32, byteArrayOf(0x2b, 0x65, 0x6e)),
-    X448(56, byteArrayOf(0x2b, 0x65, 0x6f));
+enum class EccCurve(
+    val keyLen: Int,
+    val oidTail: ByteArray,
+    val pointLen: Int,
+    val kdfHashBits: Int,
+    val weierstrass: Boolean
+) {
+    X25519(32, byteArrayOf(0x2b, 0x65, 0x6e), 32, 256, false),
+    X448(56, byteArrayOf(0x2b, 0x65, 0x6f), 56, 512, false),
+
+    // issue #2: brainpoolP384r1 (OID 1.3.36.3.3.2.8.1.1.11). gpg pairs it with
+    // ML-KEM-1024 in a v5 algo-8 composite. Weierstrass, so a 48-octet scalar,
+    // an uncompressed 0x04 || X(48) || Y(48) = 97-octet point, and SHA3-512 in
+    // the ECC KEM KDF (gpg common/kem.c ecc_table). keyLen is the scalar length;
+    // pointLen is the uncompressed point on the wire.
+    BRAINPOOL_P384R1(48, byteArrayOf(0x2b, 0x24, 0x03, 0x03, 0x02, 0x08, 0x01, 0x01, 0x0b), 97, 512, true);
 
     /**
      * Adjust a raw ECC point value to exactly [keyLen] octets. A LibrePGP
@@ -46,10 +59,15 @@ enum class EccCurve(val keyLen: Int, val oidTail: ByteArray) {
      * MPI bytes instead makes the KDF disagree with gpg and the session-key
      * unwrap fail with "checksum failed".
      */
-    fun normalizePoint(b: ByteArray): ByteArray = when {
-        b.size == keyLen -> b
-        b.size > keyLen -> b.copyOfRange(b.size - keyLen, b.size)
-        else -> ByteArray(keyLen - b.size) + b
+    fun normalizePoint(b: ByteArray): ByteArray {
+        require(!weierstrass) {
+            "normalizePoint is for native (Montgomery) curves; $name uses an uncompressed point"
+        }
+        return when {
+            b.size == keyLen -> b
+            b.size > keyLen -> b.copyOfRange(b.size - keyLen, b.size)
+            else -> ByteArray(keyLen - b.size) + b
+        }
     }
 
     companion object {
@@ -89,7 +107,11 @@ enum class CompositeSuite(
     IETF_768(35, EccCurve.X25519, MlkemLevel.MLKEM768),
     IETF_1024(36, EccCurve.X448, MlkemLevel.MLKEM1024),
     LIBREPGP_768(8, EccCurve.X25519, MlkemLevel.MLKEM768),
-    LIBREPGP_1024(8, EccCurve.X448, MlkemLevel.MLKEM1024);
+    LIBREPGP_1024(8, EccCurve.X448, MlkemLevel.MLKEM1024),
+
+    // issue #2: gpg also pairs ML-KEM-1024 with brainpoolP384r1 in a v5 algo-8
+    // composite (homehsu's key). Same algo id, told apart by the curve OID.
+    LIBREPGP_1024_BP384(8, EccCurve.BRAINPOOL_P384R1, MlkemLevel.MLKEM1024);
 
     /** Composite public-key material length: ECC point || ML-KEM public. */
     val compositePubLen: Int get() = curve.keyLen + mlkem.pubLen
@@ -97,7 +119,8 @@ enum class CompositeSuite(
     /** Raw composite secret material length: ECC secret || ML-KEM seed. */
     val secretLen: Int get() = curve.keyLen + mlkem.seedLen
 
-    val isLibrePgp: Boolean get() = this == LIBREPGP_768 || this == LIBREPGP_1024
+    val isLibrePgp: Boolean get() =
+        this == LIBREPGP_768 || this == LIBREPGP_1024 || this == LIBREPGP_1024_BP384
 
     companion object {
         /** The IETF (v6) suite for algorithm id 35 or 36, if either. */
@@ -108,7 +131,10 @@ enum class CompositeSuite(
         }
 
         /** The LibrePGP (v5) suite for a given curve. */
-        fun librePgpFor(curve: EccCurve): CompositeSuite =
-            if (curve == EccCurve.X448) LIBREPGP_1024 else LIBREPGP_768
+        fun librePgpFor(curve: EccCurve): CompositeSuite = when (curve) {
+            EccCurve.X448 -> LIBREPGP_1024
+            EccCurve.BRAINPOOL_P384R1 -> LIBREPGP_1024_BP384
+            else -> LIBREPGP_768
+        }
     }
 }

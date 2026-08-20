@@ -23,6 +23,9 @@ import org.bouncycastle.bcpg.S2K
 import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder
 import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider
 import java.security.MessageDigest
+import org.bouncycastle.openpgp.PGPPublicKeyRing
+import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
+import java.io.ByteArrayInputStream
 
 object CompositeLibrePGPKeyMaterial {
 
@@ -84,11 +87,51 @@ object CompositeLibrePGPKeyMaterial {
         p += oidLen
         val bits = ((pub[p].toInt() and 0xFF) shl 8) or (pub[p + 1].toInt() and 0xFF); p += 2
         val pointLen = (bits + 7) / 8
-        val ecc = curve.normalizePoint(pub.copyOfRange(p, p + pointLen))
+        val rawPoint = pub.copyOfRange(p, p + pointLen)
+        // Montgomery curves normalize the minimal MPI back to the fixed curve
+        // length; a Weierstrass curve keeps its uncompressed 0x04 || X || Y point.
+        val ecc = if (curve.weierstrass) rawPoint else curve.normalizePoint(rawPoint)
         p += pointLen
         val kyberLen = readUInt32(pub, p); p += 4
         val kyber = pub.copyOfRange(p, p + kyberLen)
         return ecc to kyber
+    }
+
+    /**
+     * 4.2.0 RC2 workstream F. Before the three gpg wire fixes (d6f8d0d,
+     * db59eb4, ee22242) PGPony's own LibrePGP composite generator wrote the
+     * ECC point as a 0x40-prefixed, fixed-[EccCurve.keyLen]-plus-one-octet
+     * "native point" MPI. gpg 2.5.x itself writes (and expects) a raw point
+     * as a MINIMAL MPI (leading zero octets stripped, no 0x40 prefix) — see
+     * CompositeKeyGen.v5Bodies's canonicalMpi call. [publicMaterial] already
+     * copes with either shape on read (EccCurve.normalizePoint trims a
+     * longer point down to keyLen), which is why decrypt still works for a
+     * key generated before the fix. The problem is encrypt: gpg parses the
+     * 0x40-prefixed MPI as a keyLen-plus-one-octet value, disagrees with
+     * PGPony about the point, and produces a session key PGPony can't
+     * recover, so `gpg --encrypt` to one of these old keys fails on gpg's
+     * side (or round-trips to garbage) even though the key itself imports
+     * fine.
+     *
+     * This inspects the RAW point as stored, before normalization, and
+     * reports true only for the specific broken shape: exactly
+     * curve.keyLen + 1 octets with a leading 0x40. A key already using the
+     * minimal encoding (keyLen octets, or shorter with high zero octets
+     * stripped) returns false.
+     */
+    fun usesLegacyPointEncoding(packet: ByteArray): Boolean {
+        val body = tagAndBody(packet).second
+        val pkMatLen = readUInt32(body, 6)
+        val pub = body.copyOfRange(10, 10 + pkMatLen)
+        var p = 0
+        val oidLen = pub[p++].toInt() and 0xFF
+        val curve = EccCurve.fromOidTail(pub.copyOfRange(1, 1 + oidLen)) ?: return false
+        p += oidLen
+        val bits = ((pub[p].toInt() and 0xFF) shl 8) or (pub[p + 1].toInt() and 0xFF); p += 2
+        val pointLen = (bits + 7) / 8
+        if (pointLen != curve.keyLen + 1) return false
+        val rawPoint = pub.copyOfRange(p, p + pointLen)
+        return rawPoint[0] == 0x40.toByte()
     }
 
     /**
@@ -174,6 +217,29 @@ object CompositeLibrePGPKeyMaterial {
     private fun readUInt32(b: ByteArray, off: Int): Int =
         ((b[off].toInt() and 0xFF) shl 24) or ((b[off + 1].toInt() and 0xFF) shl 16) or
             ((b[off + 2].toInt() and 0xFF) shl 8) or (b[off + 3].toInt() and 0xFF)
+
+    /**
+     * 4.2.0 RC2 workstream F. True if [armoredPublicKey] holds a v5 algo-8
+     * LibrePGP composite subkey generated before the wire fixes, i.e. one
+     * [usesLegacyPointEncoding] flags. Used to surface a one-time
+     * "regenerate this key" hint in the keyring; a key that fails to parse
+     * (not armored, not a public key, etc.) is treated as not affected
+     * rather than throwing, since this only ever runs as an advisory check
+     * over keys the app already imported successfully.
+     */
+    fun keyNeedsRegeneration(armoredPublicKey: String): Boolean {
+        return try {
+            val decoder = org.bouncycastle.openpgp.PGPUtil.getDecoderStream(
+                ByteArrayInputStream(armoredPublicKey.toByteArray(Charsets.UTF_8))
+            )
+            val ring = PGPPublicKeyRing(decoder, JcaKeyFingerprintCalculator())
+            ring.publicKeys.asSequence().any { key ->
+                key.version == 5 && key.algorithm == ALGORITHM_ID && usesLegacyPointEncoding(key.encoded)
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     private fun tagAndBody(packet: ByteArray): Pair<Int, ByteArray> {
         var i = 0

@@ -22,6 +22,9 @@ import org.bouncycastle.openpgp.PGPSecretKeyRing
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -144,5 +147,95 @@ class CompositeStreamDecryptTest {
         )
         val (recovered, _) = decryptStreamed(ct, listOf(sec(k.privateKeyData)))
         assertArrayEquals(plaintext, recovered)
+    }
+
+    // ── 4.2.0 workstream A: session-key handoff ──────────────────────
+    //
+    // The streaming path recovers the session key from the leading ESK
+    // packets alone and never buffers the body. These prove the recovery
+    // half in isolation: strip a real ciphertext to its ESK prefix and
+    // recover from that region only. The end-to-end proof stays with the
+    // round-trip tests above (which now exercise the handoff path) and the
+    // on-device large-file check, which JVM heap cannot honestly assert.
+
+    private fun eskRegionOf(ciphertext: ByteArray): ByteArray {
+        var i = 0
+        val out = ByteArrayOutputStream()
+        while (i < ciphertext.size) {
+            val first = ciphertext[i].toInt() and 0xFF
+            if (first and 0x80 == 0) break
+            val tag = if (first and 0x40 != 0) first and 0x3F else (first shr 2) and 0x0F
+            if (tag != 1 && tag != 3) break
+            var j = i + 1
+            val bodyLen: Int
+            if (first and 0x40 != 0) {
+                val l0 = ciphertext[j++].toInt() and 0xFF
+                bodyLen = when {
+                    l0 < 192 -> l0
+                    l0 < 224 -> ((l0 - 192) shl 8) + (ciphertext[j++].toInt() and 0xFF) + 192
+                    else -> {
+                        var v = 0
+                        repeat(4) { v = (v shl 8) or (ciphertext[j++].toInt() and 0xFF) }
+                        v
+                    }
+                }
+            } else {
+                bodyLen = when (first and 0x03) {
+                    0 -> ciphertext[j++].toInt() and 0xFF
+                    1 -> (((ciphertext[j].toInt() and 0xFF) shl 8) or
+                        (ciphertext[j + 1].toInt() and 0xFF)).also { j += 2 }
+                    else -> {
+                        var v = 0
+                        repeat(4) { v = (v shl 8) or (ciphertext[j++].toInt() and 0xFF) }
+                        v
+                    }
+                }
+            }
+            out.write(ciphertext, i, (j - i) + bodyLen)
+            i = j + bodyLen
+        }
+        return out.toByteArray()
+    }
+
+    @Test
+    fun `session key recovers from the ESK region alone, v6 composite`() {
+        val k = newKey(KeyAlgorithm.MLKEM768_X25519_V6)
+        val ct = svc.encrypt(
+            data = "handoff".toByteArray(),
+            recipientPublicKeys = listOf(pub(k.publicKeyData)),
+            armor = false
+        )
+        val esk = eskRegionOf(ct)
+        assertTrue("ESK region must be a proper prefix", esk.isNotEmpty() && esk.size < ct.size)
+        val session = CompositeDecryptor.recoverSessionKey(esk, listOf(sec(k.privateKeyData)))
+        assertNotNull("v6 session key must recover without the body", session)
+    }
+
+    @Test
+    fun `session key recovers from the ESK region alone, v5 LibrePGP`() {
+        val k = newKey(KeyAlgorithm.MLKEM768_X25519_LIBREPGP)
+        val ct = svc.encrypt(
+            data = "handoff".toByteArray(),
+            recipientPublicKeys = listOf(pub(k.publicKeyData)),
+            armor = false
+        )
+        val esk = eskRegionOf(ct)
+        assertTrue("ESK region must be a proper prefix", esk.isNotEmpty() && esk.size < ct.size)
+        val session = CompositeLibrePGPDecryptor.recoverSessionKey(esk, listOf(sec(k.privateKeyData)))
+        assertNotNull("v5 session key must recover without the body", session)
+    }
+
+    @Test
+    fun `classical ESK region recovers nothing from either composite path`() {
+        val k = newKey(KeyAlgorithm.ED25519_CV25519)
+        val ct = svc.encrypt(
+            data = "classical".toByteArray(),
+            recipientPublicKeys = listOf(pub(k.publicKeyData)),
+            armor = false
+        )
+        val esk = eskRegionOf(ct)
+        assertTrue(esk.isNotEmpty())
+        assertNull(CompositeDecryptor.recoverSessionKey(esk, listOf(sec(k.privateKeyData))))
+        assertNull(CompositeLibrePGPDecryptor.recoverSessionKey(esk, listOf(sec(k.privateKeyData))))
     }
 }

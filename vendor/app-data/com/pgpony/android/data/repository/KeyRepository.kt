@@ -13,8 +13,10 @@ import android.content.SharedPreferences
 import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.KeyExpirationService
 import com.pgpony.android.crypto.PGPCryptoService
+import com.pgpony.android.crypto.ClassicalSubkeyGen
 import com.pgpony.android.crypto.RevocationError
 import com.pgpony.android.crypto.RevocationService
+import com.pgpony.android.crypto.UserIdService
 import com.pgpony.android.crypto.card.CardInfo
 import com.pgpony.android.data.*
 import org.bouncycastle.openpgp.PGPPublicKeyRing
@@ -107,13 +109,28 @@ data class ImportOutcome(
 class KeyRepository(
     private val dao: PGPKeyDao,
     private val store: SecureKeyStore,
+    // RC3 §N (#34): per-key fallback + signing-default tables. Nullable
+    // with null defaults so existing test constructions compile
+    // unchanged; production wiring in PGPonyApp passes both.
+    private val fallbackDao: com.pgpony.android.data.FallbackKeyDao? = null,
+    private val signingDefaultsDao: com.pgpony.android.data.SigningDefaultsDao? = null,
     private val crypto: PGPCryptoService = PGPCryptoService.shared,
     // Phase A6: revocation primitives. Default to the shared instance
     // since RevocationService is stateless; the parameter is here so
     // tests can inject a stub.
     private val revocation: RevocationService = RevocationService.shared,
-    private val keyExpiration: KeyExpirationService = KeyExpirationService.shared
+    private val keyExpiration: KeyExpirationService = KeyExpirationService.shared,
+    // RC3 workstream I (#29): same stateless-service DI convention as
+    // revocation/keyExpiration above.
+    private val userIdService: UserIdService = UserIdService.shared
 ) {
+
+    companion object {
+        /** §5.6.1 recycle-bin retention: a binned key is auto-purged after
+         *  this window. Manual empty removes them sooner. */
+        const val RECYCLE_BIN_RETENTION_DAYS = 14
+        const val RECYCLE_BIN_RETENTION_MS = RECYCLE_BIN_RETENTION_DAYS * 24L * 60 * 60 * 1000
+    }
 
     // 4.0.0 Phase 1 (iOS v7.1.1 F3) — fingerprint-identity guard for
     // every import path, plus the merge engine Phases 2/5/7 reuse.
@@ -690,6 +707,30 @@ class KeyRepository(
         return crypto.exportArmoredPublicKeyForSharing(ring)
     }
 
+    /**
+     * RC4 O5 (#16): export with an optional passphrase on the export
+     * copy. Blank/null passphrase → plain export. A ring that already
+     * carries its own passphrase exports as-is regardless (that
+     * passphrase already guards the file; the UI says so).
+     */
+    fun exportArmoredPrivateKey(fingerprint: String, exportPassphrase: String?): String? {
+        val ring = loadSecretKeyRing(fingerprint) ?: return null
+        if (exportPassphrase.isNullOrBlank() || crypto.isPassphraseProtected(ring)) {
+            return crypto.exportArmoredPrivateKey(ring)
+        }
+        return try {
+            crypto.exportArmoredPrivateKeyWithPassphrase(ring, exportPassphrase)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** RC4 O5: whether the stored secret ring carries its own passphrase. */
+    fun isPrivateKeyPassphraseProtected(fingerprint: String): Boolean {
+        val ring = loadSecretKeyRing(fingerprint) ?: return false
+        return crypto.isPassphraseProtected(ring)
+    }
+
     fun exportArmoredPrivateKey(fingerprint: String): String? {
         val ring = loadSecretKeyRing(fingerprint) ?: return null
         return crypto.exportArmoredPrivateKey(ring)
@@ -700,6 +741,12 @@ class KeyRepository(
     suspend fun deleteKey(entity: PGPKeyEntity) {
         store.deleteKeys(entity.fingerprint)
         dao.delete(entity)
+        // RC3 §N (#34): drop any fallback rows referencing this key on
+        // either side, and its signing-defaults row. A dangling signer
+        // fingerprint would be harmless (resolution falls back to self
+        // when the referenced key is gone) but clean is clean.
+        fallbackDao?.deleteAllReferencing(entity.fingerprint)
+        signingDefaultsDao?.deleteFor(entity.fingerprint)
     }
 
     suspend fun deleteByFingerprint(fingerprint: String) {
@@ -707,12 +754,104 @@ class KeyRepository(
         dao.getByFingerprint(fingerprint)?.let { dao.delete(it) }
     }
 
+    // ── §5.6.1 (#36 part 1) recycle bin ─────────────────────────────────
+    /** Soft-delete: move [entity] to the bin. Secret material and related
+     *  rows stay put so a restore is lossless; the DAO clears the default
+     *  flag so a binned key can never remain the default. */
+    suspend fun softDeleteKey(entity: PGPKeyEntity) {
+        dao.softDelete(entity.id, System.currentTimeMillis())
+    }
+
+    suspend fun softDeleteByFingerprint(fingerprint: String) {
+        dao.getByFingerprint(fingerprint)?.let { dao.softDelete(it.id, System.currentTimeMillis()) }
+    }
+
+    suspend fun getDeletedKeys(): List<PGPKeyEntity> = dao.getDeletedKeys()
+    suspend fun deletedKeyCount(): Int = dao.deletedCount()
+
+    /** Restore a binned key to live. Its material was never removed. */
+    suspend fun restoreKey(id: String) = dao.restoreFromBin(id)
+
+    /** Permanently destroy a binned key: secret material, related rows, and
+     *  the DB row. Mirrors the old hard-delete cleanup. */
+    suspend fun purgeKey(entity: PGPKeyEntity) {
+        store.deleteKeys(entity.fingerprint)
+        fallbackDao?.deleteAllReferencing(entity.fingerprint)
+        signingDefaultsDao?.deleteFor(entity.fingerprint)
+        dao.purgeById(entity.id)
+    }
+
+    /** Empty the bin. */
+    suspend fun emptyRecycleBin() {
+        dao.getDeletedKeys().forEach { purgeKey(it) }
+    }
+
+    /** §5.6.1 retention: purge keys binned longer than [windowMs]. Called on
+     *  launch. Returns how many were purged. */
+    suspend fun purgeExpiredDeleted(windowMs: Long): Int {
+        val cutoff = System.currentTimeMillis() - windowMs
+        val expired = dao.getDeletedKeys().filter { (it.deletedAt ?: 0L) < cutoff }
+        expired.forEach { purgeKey(it) }
+        return expired.size
+    }
+
+    // ── §4.3 last-backed-up ─────────────────────────────────────────────
+    suspend fun markBackedUp(fingerprint: String) {
+        dao.setLastBackedUp(fingerprint, System.currentTimeMillis())
+    }
+
+    suspend fun lastBackedUpAt(fingerprint: String): Long? =
+        dao.getByFingerprint(fingerprint)?.lastBackedUpAt
+
     // ── Query ──────────────────────────────────────────────────────────
 
     suspend fun getAllKeys(): List<PGPKeyEntity> = dao.getAllKeys()
     suspend fun getKeyPairs(): List<PGPKeyEntity> = dao.getKeyPairs()
     suspend fun getByFingerprint(fp: String): PGPKeyEntity? = dao.getByFingerprint(fp)
     suspend fun getByEmail(email: String): List<PGPKeyEntity> = dao.getByEmail(email)
+
+    /**
+     * 4.2.1 (#27, bluemle): resolve an email to every held key that
+     * carries it on ANY user id, primary or secondary.
+     *
+     * The indexed `userEmail` column holds only a key's PRIMARY parsed
+     * address, so [getByEmail] alone misses a key whose match is a
+     * SECONDARY identity added via multiple-identities (4.2.0 #29). That
+     * is why a mail client (which resolves a recipient address through
+     * the OpenPGP provider) could not encrypt to a secondary address:
+     * the lookup returned nothing and the client concluded there was no
+     * key. Reported by bluemle on 4.2.0 with v6 ML-KEM-1024 keys.
+     *
+     * This returns the UNION of the indexed primary matches and a scan
+     * of every key's full user-id set, deduped by fingerprint. The
+     * scan parses each stored public key once per resolve; the keyring
+     * is small and provider resolves are not a hot loop, so a scan is
+     * the right fix for a point release and needs no schema migration.
+     * A dedicated searchable user-id index is the 4.3.0 option if the
+     * scan ever proves too slow (it will not for realistic keyrings).
+     *
+     * Matching is case-insensitive on the address inside the angle
+     * brackets, which also makes this more robust than [getByEmail]'s
+     * case-sensitive column equality. Callers keep their own
+     * firstOrNull()/filter shape.
+     */
+    suspend fun getByAnyUserEmail(email: String): List<PGPKeyEntity> {
+        val target = email.substringAfterLast('<').substringBefore('>').trim()
+            .ifEmpty { email.trim() }
+        val byFingerprint = LinkedHashMap<String, PGPKeyEntity>()
+        dao.getByEmail(target).forEach { byFingerprint[it.fingerprint] = it }
+        dao.getAllKeys().forEach { entity ->
+            if (byFingerprint.containsKey(entity.fingerprint)) return@forEach
+            val ring = loadPublicKeyRing(entity.fingerprint) ?: return@forEach
+            val hit = ring.publicKey.userIDs.asSequence().any { uid ->
+                val addr = uid.substringAfterLast('<').substringBefore('>').trim()
+                    .ifEmpty { uid.trim() }
+                addr.equals(target, ignoreCase = true)
+            }
+            if (hit) byFingerprint[entity.fingerprint] = entity
+        }
+        return byFingerprint.values.toList()
+    }
     suspend fun getDefaultKey(): PGPKeyEntity? = dao.getDefaultKey()
     suspend fun keyCount(): Int = dao.count()
 
@@ -952,6 +1091,211 @@ class KeyRepository(
         return dao.getByFingerprint(fingerprint)?.revocationCertificate
     }
 
+    // ── Add Subkey (RC3 §17.2 H) ─────────────────────────────────────────
+
+    /**
+     * Add a classical subkey (RSA / Ed25519 / X25519) to an existing
+     * software key pair. Mirrors setKeyExpirationSoftware's shape: load
+     * both rings, hand them to the crypto layer (ClassicalSubkeyGen),
+     * then persist the result through the same store-both-derive-public-
+     * armor-update-entity sequence persistExpiration uses.
+     *
+     * Composite (post-quantum) subkey types are added through
+     * CompositeKeyGen.addCompositeSubkey directly rather than this
+     * method; the Add Subkey UI offers both families from one sheet but
+     * routes to whichever generator matches the chosen type.
+     *
+     * Throws KeyRepoError.NotFound if the key doesn't exist,
+     * ClassicalSubkeyGen.SubkeyAddError if the key can't take a
+     * software subkey (public-only, card-backed) or the crypto layer
+     * fails (wrong passphrase, binding failure).
+     */
+    suspend fun addSubkey(
+        fingerprint: String,
+        type: ClassicalSubkeyGen.ClassicalSubkeyType,
+        expirationSeconds: Long?,
+        passphrase: String?
+    ) {
+        val entity = dao.getByFingerprint(fingerprint)
+            ?: throw KeyRepoError.NotFound(fingerprint)
+        if (!entity.isKeyPair) {
+            throw ClassicalSubkeyGen.SubkeyAddError(
+                "Cannot add a subkey to a public-only key — the private key is required to sign the binding"
+            )
+        }
+        if (entity.isCardBacked) {
+            throw ClassicalSubkeyGen.SubkeyAddError(
+                "This key lives on a hardware key — subkeys can't be added to a card-backed key from here"
+            )
+        }
+        val secRing = loadSecretKeyRing(fingerprint)
+            ?: throw ClassicalSubkeyGen.SubkeyAddError(
+                "Secret key ring could not be loaded for $fingerprint"
+            )
+
+        val updatedSecretRing = ClassicalSubkeyGen.addSubkey(
+            secretRing = secRing,
+            type = type,
+            passphrase = passphrase,
+            expirationSeconds = expirationSeconds
+        )
+        val updatedPublicRing = PGPPublicKeyRing(updatedSecretRing.publicKeys.asSequence().toList())
+
+        store.storePublicKey(fingerprint, updatedPublicRing.encoded)
+        store.storePrivateKey(fingerprint, updatedSecretRing.encoded)
+        dao.update(
+            entity.copy(
+                armoredPublicKey = crypto.exportArmoredPublicKey(updatedPublicRing)
+            )
+        )
+    }
+
+    // ── User ID editing (RC3 §17.2 I / #29) ──────────────────────────────
+
+    /**
+     * Add [userId] to a software key pair. When [makePrimary] is true and
+     * the new UID becomes primary, entity.userID/userName/userEmail are
+     * updated to match so KeyCard/getByEmail/contact matching pick up the
+     * new primary immediately rather than waiting on a re-derive; when
+     * false, the entity's cached fields are left alone (still describe
+     * whichever UID is actually primary).
+     */
+    suspend fun addUserId(
+        fingerprint: String,
+        userId: String,
+        makePrimary: Boolean,
+        passphrase: String?
+    ) {
+        val entity = dao.getByFingerprint(fingerprint)
+            ?: throw KeyRepoError.NotFound(fingerprint)
+        if (!entity.isKeyPair) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "Cannot add a User ID to a public-only key — the private key is required to sign it"
+            )
+        }
+        if (entity.isCardBacked) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "This key lives on a hardware key — User IDs can't be edited on a card-backed key from here"
+            )
+        }
+        val secRing = loadSecretKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Secret key ring could not be loaded for $fingerprint")
+        val pubRing = loadPublicKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Public key ring could not be loaded for $fingerprint")
+
+        val updated = userIdService.addUserId(secRing, pubRing, userId, makePrimary, passphrase)
+        persistUserIdChange(entity, updated, newPrimaryUserId = if (makePrimary) userId else null)
+    }
+
+    /** §5.6.7: read the primary UID's human-readable notations. */
+    fun readNotations(fingerprint: String): List<UserIdService.Notation> =
+        loadPublicKeyRing(fingerprint)?.let { userIdService.readNotations(it.publicKey) } ?: emptyList()
+
+    /**
+     * §5.6.7: replace the primary UID's notation set on a software key pair,
+     * re-signing the self-cert with [passphrase], then persist. Mirrors
+     * addUserId's gating and persistence.
+     */
+    suspend fun setNotations(
+        fingerprint: String,
+        notations: List<UserIdService.Notation>,
+        passphrase: String?
+    ) {
+        val entity = dao.getByFingerprint(fingerprint)
+            ?: throw KeyRepoError.NotFound(fingerprint)
+        if (!entity.isKeyPair) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "Cannot edit notations on a public-only key — the private key is required to sign them"
+            )
+        }
+        if (entity.isCardBacked) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "Notations can't be edited on a card-backed key from here"
+            )
+        }
+        val secRing = loadSecretKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Secret key ring could not be loaded for $fingerprint")
+        val pubRing = loadPublicKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Public key ring could not be loaded for $fingerprint")
+        val updated = userIdService.setNotations(secRing, pubRing, notations, passphrase)
+        persistUserIdChange(entity, updated, newPrimaryUserId = null)
+    }
+
+    /** Revoke [userId] on a software key pair. See UserIdService.revokeUserId
+     *  for the "can't revoke the last UID" guard. */
+    suspend fun revokeUserId(
+        fingerprint: String,
+        userId: String,
+        reason: RevocationReason,
+        comment: String?,
+        passphrase: String?
+    ) {
+        val entity = dao.getByFingerprint(fingerprint)
+            ?: throw KeyRepoError.NotFound(fingerprint)
+        if (!entity.isKeyPair) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "Cannot revoke a User ID on a public-only key — the private key is required to sign the revocation"
+            )
+        }
+        if (entity.isCardBacked) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "This key lives on a hardware key — User IDs can't be edited on a card-backed key from here"
+            )
+        }
+        val secRing = loadSecretKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Secret key ring could not be loaded for $fingerprint")
+        val pubRing = loadPublicKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Public key ring could not be loaded for $fingerprint")
+
+        val updated = userIdService.revokeUserId(secRing, pubRing, userId, reason, comment, passphrase)
+        persistUserIdChange(entity, updated, newPrimaryUserId = null)
+    }
+
+    /** Make [userId] the primary identity on a software key pair. */
+    suspend fun setPrimaryUserId(
+        fingerprint: String,
+        userId: String,
+        passphrase: String?
+    ) {
+        val entity = dao.getByFingerprint(fingerprint)
+            ?: throw KeyRepoError.NotFound(fingerprint)
+        if (!entity.isKeyPair) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "Cannot change the primary User ID on a public-only key — the private key is required to sign it"
+            )
+        }
+        if (entity.isCardBacked) {
+            throw UserIdService.UserIdError.UnsupportedKey(
+                "This key lives on a hardware key — User IDs can't be edited on a card-backed key from here"
+            )
+        }
+        val secRing = loadSecretKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Secret key ring could not be loaded for $fingerprint")
+        val pubRing = loadPublicKeyRing(fingerprint)
+            ?: throw UserIdService.UserIdError.UnsupportedKey("Public key ring could not be loaded for $fingerprint")
+
+        val updated = userIdService.setPrimaryUserId(secRing, pubRing, userId, passphrase)
+        persistUserIdChange(entity, updated, newPrimaryUserId = userId)
+    }
+
+    private suspend fun persistUserIdChange(
+        entity: PGPKeyEntity,
+        updated: UserIdService.UpdatedRings,
+        newPrimaryUserId: String?
+    ) {
+        store.storePublicKey(entity.fingerprint, updated.publicRing.encoded)
+        store.storePrivateKey(entity.fingerprint, updated.secretRing.encoded)
+        val parsed = newPrimaryUserId?.let { PGPKeyEntity.parseUserID(it) }
+        dao.update(
+            entity.copy(
+                armoredPublicKey = crypto.exportArmoredPublicKey(updated.publicRing),
+                userID = newPrimaryUserId ?: entity.userID,
+                userName = parsed?.first ?: entity.userName,
+                userEmail = parsed?.second ?: entity.userEmail
+            )
+        )
+    }
+
     // ── 4.0.0 Phase 2: keyserver refresh support (iOS v7.1.1 F5) ────────
 
     /**
@@ -1018,5 +1362,73 @@ class KeyRepository(
      */
     suspend fun runDedupeSweepIfNeeded(prefs: SharedPreferences) {
         dedup.runSweepIfNeeded(prefs)
+    }
+
+    // ── RC3 §N (#34): decryption fallbacks + signing defaults ──────────
+
+    /** Enabled fallback fingerprints for [primary], in user order. */
+    suspend fun fallbacksFor(primary: String): List<String> =
+        fallbackDao?.fallbacksFor(primary)?.map { it.fallbackFingerprint } ?: emptyList()
+
+    /** Replace [primary]'s fallback list with [fingerprints] in order. */
+    suspend fun setFallbacks(primary: String, fingerprints: List<String>) {
+        val d = fallbackDao ?: return
+        d.clearFor(primary)
+        if (fingerprints.isNotEmpty()) {
+            d.insertAll(fingerprints.mapIndexed { index, fp ->
+                com.pgpony.android.data.FallbackKeyEntity(primary, fp, index)
+            })
+        }
+    }
+
+    suspend fun signingDefaultsFor(fp: String): com.pgpony.android.data.SigningDefaultsEntity? =
+        signingDefaultsDao?.forKey(fp)
+
+    suspend fun setSigningDefaults(row: com.pgpony.android.data.SigningDefaultsEntity) {
+        signingDefaultsDao?.upsert(row)
+    }
+
+    /**
+     * RC3 §J (#15): the passphrase-change cache-invalidation hook.
+     * Resolves every key id on the ring (primary + subkeys) and drops
+     * any provider-cached passphrase for them, so a passphrase that
+     * just changed can never be replayed from cache. Nothing calls
+     * this yet — 4.3.0 §1.1 (change key passphrase) consumes it, and
+     * landing the hook with #15 was an explicit plan item so that
+     * feature can't ship without it.
+     */
+    fun invalidateCachedPassphrases(fingerprint: String) {
+        val ring = loadPublicKeyRing(fingerprint) ?: return
+        val ids = mutableListOf<Long>()
+        val it = ring.publicKeys
+        while (it.hasNext()) ids.add(it.next().keyID)
+        com.pgpony.android.provider.ProviderPassphraseCache.clearKeys(ids)
+    }
+
+    /**
+     * §1.1 (#26) Change [fingerprint]'s passphrase. Loads the software
+     * secret ring, re-protects it under [newPassphrase] via
+     * crypto.changePassphrase (which unlocks with [oldPassphrase]), stores
+     * the result in the same BC binary framing loadSecretKeyRing reads back
+     * (storePrivateKey, matching persistUserIdChange, NOT the toLibrePGPFormat
+     * export framing), then drops any provider-cached passphrase for the key
+     * so the old one can never be replayed.
+     *
+     * Returns false only when the key is not found. A wrong [oldPassphrase]
+     * makes BC throw PGPException, which the caller surfaces as a retry.
+     * Caller gates: software-backed keys only (card keys point at the card
+     * PIN instead), and the sheet says existing backups keep the old
+     * passphrase until re-exported.
+     */
+    suspend fun changePassphrase(
+        fingerprint: String,
+        oldPassphrase: String,
+        newPassphrase: String
+    ): Boolean {
+        val ring = loadSecretKeyRing(fingerprint) ?: return false
+        val changed = crypto.changePassphrase(ring, oldPassphrase, newPassphrase)
+        store.storePrivateKey(fingerprint, changed.encoded)
+        invalidateCachedPassphrases(fingerprint)
+        return true
     }
 }

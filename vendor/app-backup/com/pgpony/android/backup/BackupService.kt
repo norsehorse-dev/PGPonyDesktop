@@ -96,6 +96,8 @@ class BackupService(
 
         val entries = ArrayList<UstarArchive.Entry>()
         val metaKeys = JSONArray()
+        // §4.3: fingerprints whose secret material this backup captured.
+        val backedUpFps = ArrayList<String>()
 
         for (e in keys) {
             val fp = e.fingerprint.lowercase()
@@ -108,6 +110,7 @@ class BackupService(
             }) ?: continue // nothing exportable → skip
 
             val hasSecret = armored.contains("PRIVATE KEY BLOCK")
+            if (hasSecret) backedUpFps.add(e.fingerprint)
             entries.add(
                 UstarArchive.Entry("$KEYS_DIR$fp.asc", armored.toByteArray(Charsets.UTF_8))
             )
@@ -154,6 +157,8 @@ class BackupService(
             useAead = false,
             useArgon2 = false
         )
+        // §4.3: the backup captured these keys' secret material.
+        backedUpFps.forEach { repo.markBackedUp(it) }
         return armorMessage(sealed)
     }
 

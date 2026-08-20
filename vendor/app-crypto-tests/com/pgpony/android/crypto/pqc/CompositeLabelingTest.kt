@@ -61,4 +61,39 @@ class CompositeLabelingTest {
         // algo 8 is only the composite in v5 framing — not v4/v6
         assertEquals(null, KeyAlgorithm.from(8, 4))
     }
+
+    @Test
+    fun `ECDSA primary (algo 19) labels as ECDSA, not RSA`() {
+        // issue #2: gpg 2.5.x LibrePGP PQC keys carry an ECDSA primary. Before
+        // this fix it fell through detectAlgorithm's catch-all and mislabeled as
+        // RSA 4096. Lock both the v4 and v6 mappings.
+        assertEquals(KeyAlgorithm.ECDSA, KeyAlgorithm.from(19, 4))
+        assertEquals(KeyAlgorithm.ECDSA, KeyAlgorithm.from(19, 6))
+    }
+
+    @Test
+    fun `brainpoolP384r1 composite (algo 8) imports and labels as ML-KEM-1024 bp384`() {
+        // issue #2, symptom A: homehsu's gpg 2.5.21 key (ECDSA/brainpoolP384r1
+        // primary + ML-KEM-1024/brainpoolP384r1 algo-8 subkey). Before the fix,
+        // the unknown curve OID made suiteOf throw inside detectAlgorithm and the
+        // whole import failed. It must now import and label by the curve OID.
+        val pub = res("gpg-bp384-ecdsa-pub.asc")
+        assumeTrue("pqc/gpg-bp384-ecdsa-pub.asc absent", pub != null)
+        val ring = pubRing(pub!!)
+        assertEquals(
+            KeyAlgorithm.MLKEM1024_BP384_LIBREPGP,
+            PGPCryptoService.shared.detectAlgorithm(ring.publicKey, ring)
+        )
+    }
+
+    @Test
+    fun `brainpool composite public material parses as uncompressed point plus ML-KEM-1024`() {
+        val pub = res("gpg-bp384-ecdsa-pub.asc")
+        assumeTrue("pqc/gpg-bp384-ecdsa-pub.asc absent", pub != null)
+        val sub = pubRing(pub!!).publicKeys.asSequence().first { it.algorithm == 8 && it.version == 5 }
+        val (ecc, kyber) = CompositeLibrePGPKeyMaterial.publicMaterial(sub.encoded)
+        assertEquals("uncompressed bp384 point is 0x04 || X(48) || Y(48)", 97, ecc.size)
+        assertEquals(0x04, ecc[0].toInt() and 0xFF)
+        assertEquals("ML-KEM-1024 public key is 1568 octets", 1568, kyber.size)
+    }
 }

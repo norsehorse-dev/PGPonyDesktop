@@ -56,6 +56,7 @@ sourceSets {
             // VERBATIM: the entry format, the parser's tolerances and the TOTP generator are
             // identical on both apps by construction, not by copy.
             exclude("**/crypto/pass/PassStorePrefs.kt")     // SharedPreferences — twin: DesktopPassStorePrefs.kt
+            exclude("**/crypto/FallbackPrefs.kt")            // 4.3.0 (#34): SharedPreferences strict-mode flag; no desktop consumer, safe to drop
             exclude("**/crypto/pass/PassStoreService.kt")   // SAF/DocumentFile — desktop: DesktopPassStore.kt (java.nio)
             exclude("**/crypto/pass/PassDecryptCoordinator.kt") // imports KeyRepository — twin: DesktopPassDecrypt.kt
             exclude("**/card/CardPinCache.kt")              // desktop twin: DesktopCardPinCache.kt

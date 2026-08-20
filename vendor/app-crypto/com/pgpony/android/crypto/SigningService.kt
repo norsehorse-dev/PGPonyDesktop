@@ -95,9 +95,11 @@ class SigningService private constructor() {
         text: String,
         secretKeyRing: PGPSecretKeyRing,
         passphrase: String? = null,
-        hashAlgorithm: Int = DEFAULT_HASH_ALGORITHM
+        hashAlgorithm: Int = DEFAULT_HASH_ALGORITHM,
+        // §4.5 (#22): user-chosen signing subkey; null = automatic pick.
+        signingKeyId: Long? = null
     ): String {
-        val signingKey = pickSigningKey(secretKeyRing)
+        val signingKey = pickSigningKey(secretKeyRing, signingKeyId)
         val sigGen = buildSignatureGenerator(
             signingKey = signingKey,
             passphrase = passphrase,
@@ -163,9 +165,10 @@ class SigningService private constructor() {
         secretKeyRing: PGPSecretKeyRing,
         passphrase: String? = null,
         hashAlgorithm: Int = DEFAULT_HASH_ALGORITHM,
-        armor: Boolean = true
+        armor: Boolean = true,
+        signingKeyId: Long? = null
     ): ByteArray {
-        val signingKey = pickSigningKey(secretKeyRing)
+        val signingKey = pickSigningKey(secretKeyRing, signingKeyId)
         val sigGen = buildSignatureGenerator(
             signingKey = signingKey,
             passphrase = passphrase,
@@ -202,9 +205,10 @@ class SigningService private constructor() {
         secretKeyRing: PGPSecretKeyRing,
         passphrase: String? = null,
         hashAlgorithm: Int = DEFAULT_HASH_ALGORITHM,
-        armor: Boolean = true
+        armor: Boolean = true,
+        signingKeyId: Long? = null
     ): ByteArray {
-        val signingKey = pickSigningKey(secretKeyRing)
+        val signingKey = pickSigningKey(secretKeyRing, signingKeyId)
         val sigGen = buildSignatureGenerator(
             signingKey = signingKey,
             passphrase = passphrase,
@@ -292,8 +296,8 @@ class SigningService private constructor() {
      * primary only if it advertises Sign. Necessary for v6 keys, whose primary
      * is cert-only and whose signing lives on a dedicated subkey.
      */
-    private fun pickSigningKey(ring: PGPSecretKeyRing): PGPSecretKey {
-        return PGPCryptoService.shared.pickSigningSecretKey(ring)
+    private fun pickSigningKey(ring: PGPSecretKeyRing, signingKeyId: Long? = null): PGPSecretKey {
+        return PGPCryptoService.shared.pickSigningSecretKey(ring, signingKeyId)
             ?: throw SigningError.NoSigningKey()
     }
 

@@ -201,7 +201,16 @@ data class PGPKeyEntity(
     val lastUploadedAt: Long? = null,
     /** When this key was last checked/refreshed against a keyserver. Set by
      *  KeyRepository.markKeyServerChecked. */
-    val lastCheckedAt: Long? = null
+    val lastCheckedAt: Long? = null,
+    /** §5.6.1 (#36 part 1) recycle bin: when non-null, this key is soft-
+     *  deleted (epoch ms of the delete). Live queries exclude these; the
+     *  Recently Deleted view lists them; purge destroys them after the
+     *  retention window. */
+    val deletedAt: Long? = null,
+    /** §4.3 delete-safeguard: when this key was last backed up / exported
+     *  (epoch ms), so the delete sheet can say "in a backup from ..." versus
+     *  "never backed up". Null = never. */
+    val lastBackedUpAt: Long? = null
 ) {
     // ── Computed Properties ─────────────────────────────────────────
 
@@ -271,19 +280,19 @@ data class PGPKeyEntity(
 
 @Dao
 interface PGPKeyDao {
-    @Query("SELECT * FROM pgp_keys ORDER BY createdAt DESC")
+    @Query("SELECT * FROM pgp_keys WHERE deletedAt IS NULL ORDER BY createdAt DESC")
     suspend fun getAllKeys(): List<PGPKeyEntity>
 
-    @Query("SELECT * FROM pgp_keys WHERE isKeyPair = 1 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM pgp_keys WHERE isKeyPair = 1 AND deletedAt IS NULL ORDER BY createdAt DESC")
     suspend fun getKeyPairs(): List<PGPKeyEntity>
 
-    @Query("SELECT * FROM pgp_keys WHERE fingerprint = :fingerprint LIMIT 1")
+    @Query("SELECT * FROM pgp_keys WHERE fingerprint = :fingerprint AND deletedAt IS NULL LIMIT 1")
     suspend fun getByFingerprint(fingerprint: String): PGPKeyEntity?
 
-    @Query("SELECT * FROM pgp_keys WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM pgp_keys WHERE id = :id AND deletedAt IS NULL LIMIT 1")
     suspend fun getById(id: String): PGPKeyEntity?
 
-    @Query("SELECT * FROM pgp_keys WHERE userEmail = :email")
+    @Query("SELECT * FROM pgp_keys WHERE userEmail = :email AND deletedAt IS NULL")
     suspend fun getByEmail(email: String): List<PGPKeyEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -298,10 +307,10 @@ interface PGPKeyDao {
     @Query("DELETE FROM pgp_keys WHERE id = :id")
     suspend fun deleteById(id: String)
 
-    @Query("SELECT COUNT(*) FROM pgp_keys")
+    @Query("SELECT COUNT(*) FROM pgp_keys WHERE deletedAt IS NULL")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM pgp_keys WHERE isDefault = 1 LIMIT 1")
+    @Query("SELECT * FROM pgp_keys WHERE isDefault = 1 AND deletedAt IS NULL LIMIT 1")
     suspend fun getDefaultKey(): PGPKeyEntity?
 
     /**
@@ -312,6 +321,29 @@ interface PGPKeyDao {
      */
     @Query("UPDATE pgp_keys SET decryptUseCount = decryptUseCount + 1 WHERE fingerprint = :fingerprint")
     suspend fun incrementDecryptUseCount(fingerprint: String)
+
+    // ── §5.6.1 (#36 part 1) recycle bin ──
+    @Query("SELECT * FROM pgp_keys WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC")
+    suspend fun getDeletedKeys(): List<PGPKeyEntity>
+
+    @Query("SELECT * FROM pgp_keys WHERE id = :id AND deletedAt IS NOT NULL LIMIT 1")
+    suspend fun getDeletedById(id: String): PGPKeyEntity?
+
+    @Query("SELECT COUNT(*) FROM pgp_keys WHERE deletedAt IS NOT NULL")
+    suspend fun deletedCount(): Int
+
+    @Query("UPDATE pgp_keys SET deletedAt = :deletedAt, isDefault = 0 WHERE id = :id")
+    suspend fun softDelete(id: String, deletedAt: Long)
+
+    @Query("UPDATE pgp_keys SET deletedAt = NULL WHERE id = :id")
+    suspend fun restoreFromBin(id: String)
+
+    @Query("DELETE FROM pgp_keys WHERE id = :id AND deletedAt IS NOT NULL")
+    suspend fun purgeById(id: String)
+
+    // ── §4.3 last-backed-up ──
+    @Query("UPDATE pgp_keys SET lastBackedUpAt = :ts WHERE fingerprint = :fingerprint")
+    suspend fun setLastBackedUp(fingerprint: String, ts: Long)
 }
 
 // ── Database ──────────────────────────────────────────────────────────
@@ -320,9 +352,14 @@ interface PGPKeyDao {
 // table (ApiClientEntity in data/ApiClientEntity.kt) backing the OpenPGP
 // API provider's per-package, signature-pinned client allow-list.
 // MIGRATION_5_6 declared in data/RoomMigrations.kt with the others.
+// RC3 §N (#34) — schema v8 adds fallback_keys + signing_defaults
+// (FallbackKeyEntity.kt), MIGRATION_7_8 in data/RoomMigrations.kt.
 @Database(
-    entities = [PGPKeyEntity::class, ApiClientEntity::class, AutocryptPeerEntity::class],
-    version = 7,
+    entities = [
+        PGPKeyEntity::class, ApiClientEntity::class, AutocryptPeerEntity::class,
+        FallbackKeyEntity::class, SigningDefaultsEntity::class
+    ],
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(
@@ -334,4 +371,6 @@ abstract class PGPDatabase : RoomDatabase() {
     abstract fun keyDao(): PGPKeyDao
     abstract fun apiClientDao(): ApiClientDao
     abstract fun autocryptPeerDao(): AutocryptPeerDao
+    abstract fun fallbackKeyDao(): FallbackKeyDao
+    abstract fun signingDefaultsDao(): SigningDefaultsDao
 }

@@ -40,6 +40,13 @@ Re-sync: `tools/sync-vendor.sh` (delete-and-recopy), then `./gradlew test` — E
 `tools/i18n-audit.py` at the end).
 NEVER hand-edit files here — fix upstream in PGPonyAndroid and re-sync.
 
+Scoped sync [17 August 2026, for PGPonyAndroid #41]: `network/WkdService.kt`
+alone was re-synced verbatim from `~/Documents/GitHub/PGPonyAndroid` after
+the upstream WKD re-armor fix, so the network tree is at HEAD while `crypto/`
+and `data/` remain behind (about 14 files of 4.1/4.2 work). This one-file
+exception to the all-trees-together rule is recorded here on purpose; the
+owed full delete-and-recopy refresh is tracked in PLANNING_DESKTOP_2_1_0.md.
+
 ## Excluded in build.gradle.kts
 
 Excludes are SET-WIDE (every srcDir, including `src/`), so a desktop twin must never share an

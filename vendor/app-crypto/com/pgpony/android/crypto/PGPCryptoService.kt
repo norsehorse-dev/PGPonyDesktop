@@ -228,6 +228,14 @@ data class ImportResult(
 
 // ── Crypto Service ─────────────────────────────────────────────────────
 
+/** §4.5 (#22): a signing-capable key the user can choose in SignAsSheet. */
+data class SigningKeyOption(
+    val keyId: Long,
+    val keyIdHex: String,
+    val isPrimary: Boolean,
+    val algorithmLabel: String
+)
+
 class PGPCryptoService private constructor() {
 
     companion object {
@@ -705,6 +713,123 @@ class PGPCryptoService private constructor() {
         return out.toString(Charsets.UTF_8.name())
     }
 
+    /**
+     * RC4 O5 (#16, CertainBot): true when the ring's secret material is
+     * already passphrase-protected (S2K usage != 0). Such a ring exports
+     * as-is — its own passphrase already guards the file, and we could
+     * not re-encrypt it without knowing that passphrase anyway.
+     */
+    fun isPassphraseProtected(secretKeyRing: PGPSecretKeyRing): Boolean =
+        secretKeyRing.secretKey.s2KUsage != 0
+
+    /**
+     * RC4 O5 (#16, CertainBot): export an UNPROTECTED secret ring
+     * re-encrypted under [exportPassphrase] (AES-256, S2K usage 254 —
+     * the same protection CompositeKeyGen applies at generation). The
+     * stored ring is untouched; only the export copy is protected.
+     * Throws PGPException if the ring is already protected — callers
+     * gate on [isPassphraseProtected] first.
+     */
+    fun exportArmoredPrivateKeyWithPassphrase(
+        secretKeyRing: PGPSecretKeyRing,
+        exportPassphrase: String
+    ): String {
+        val digest = org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+            .get(org.bouncycastle.bcpg.HashAlgorithmTags.SHA1)
+        val encryptor = org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder(
+            org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags.AES_256, digest
+        ).build(exportPassphrase.toCharArray())
+        val protectedRing = PGPSecretKeyRing.copyWithNewPassword(secretKeyRing, null, encryptor)
+        return exportArmoredPrivateKey(protectedRing)
+    }
+
+    /**
+     * §1.1 (#26) Change a key's passphrase. Returns a NEW ring re-encrypted
+     * under [newPassphrase]; the stored ring is left untouched until the
+     * caller persists the result, so a failure mid-change can never leave the
+     * key unreadable.
+     *
+     * Unlike exportArmoredPrivateKeyWithPassphrase (which re-encrypts an
+     * UNPROTECTED ring, decryptor = null), this unlocks with [oldPassphrase]
+     * first. An empty [oldPassphrase] means the ring is unprotected; an empty
+     * [newPassphrase] strips protection (stored cleartext). Both are
+     * deliberate directions the caller confirms before calling.
+     *
+     * Per-key on purpose. The ring-level copyWithNewPassword cannot be used
+     * here: it applies one encryptor to every key and re-encodes the whole
+     * ring, which breaks on the composite algo-35/36/8 subkeys (BC cannot
+     * parse that key material). Instead each secret key is re-protected on its
+     * own and re-inserted, exactly as CompositeKeyGen protects the composite
+     * subkey at generation:
+     *   - v6 keys (RFC 9580, including the IETF composite algos 35/36): AEAD
+     *     OCB + Argon2id, S2K usage 253.
+     *   - v4 keys and the v5 LibrePGP composite subkey (algo 8): CFB + SHA-1
+     *     checksum, S2K usage 254.
+     * copyWithNewPassword re-encrypts the raw secret material without parsing
+     * the composite key, the property the keygen path already relies on.
+     *
+     * A wrong [oldPassphrase] makes BC throw PGPException; the caller surfaces
+     * that as a retry, not a failure.
+     *
+     * NOTE (composite): the unlock direction here (a real decryptor on an
+     * algo-35/8 subkey) is exercised nowhere else in the tree, so the
+     * composite round trip must be proven on device (768 and 1024, both the
+     * v6 IETF and v5 LibrePGP forms) before this ships. See the RC matrix.
+     */
+    fun changePassphrase(
+        secretKeyRing: PGPSecretKeyRing,
+        oldPassphrase: String,
+        newPassphrase: String
+    ): PGPSecretKeyRing {
+        val oldDecryptor = if (oldPassphrase.isEmpty()) null else
+            org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
+                org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+            ).build(oldPassphrase.toCharArray())
+
+        val sha1 = org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+            .get(org.bouncycastle.bcpg.HashAlgorithmTags.SHA1)
+        val random = SecureRandom()
+        val newChars = newPassphrase.toCharArray()
+        val strip = newPassphrase.isEmpty()
+
+        // Read the key list off the ORIGINAL ring; accumulate into a separate
+        // ring so insertSecretKey (replace-by-keyID) rebuilds it cleanly.
+        val keys = secretKeyRing.secretKeys.asSequence().toList()
+        var ring = secretKeyRing
+        for (key in keys) {
+            val reprotected = when {
+                // Strip: null encryptor removes protection (BC handles v4, v6,
+                // and composite alike; the round trip proves it).
+                strip ->
+                    org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(
+                        key, oldDecryptor, null
+                    )
+                key.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6 -> {
+                    val encryptor = org.bouncycastle.openpgp.operator.bc.BcAEADSecretKeyEncryptorBuilder(
+                        org.bouncycastle.bcpg.AEADAlgorithmTags.OCB,
+                        org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags.AES_256,
+                        org.bouncycastle.bcpg.S2K.Argon2Params.memoryConstrainedParameters()
+                    ).setSecureRandom(random)
+                        .build(newChars, key.publicKey.publicKeyPacket)
+                    org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(
+                        key, oldDecryptor, encryptor
+                    )
+                }
+                else -> {
+                    val encryptor = org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder(
+                        org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags.AES_256
+                    ).setSecureRandom(random)
+                        .build(newChars)
+                    org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(
+                        key, oldDecryptor, encryptor, sha1
+                    )
+                }
+            }
+            ring = PGPSecretKeyRing.insertSecretKey(ring, reprotected)
+        }
+        return ring
+    }
+
     fun exportArmoredPrivateKey(secretKeyRing: PGPSecretKeyRing): String {
         // Translate a v5 LibrePGP composite (algo-8) subkey from BC's internal
         // framing to the on-the-wire LibrePGP layout GnuPG / sq / PGPony-iOS
@@ -767,7 +892,9 @@ class PGPCryptoService private constructor() {
         cardPin: ByteArray? = null,
         cardSigningPublicKey: PGPPublicKey? = null,
         filename: String? = null,
-        armor: Boolean = true
+        armor: Boolean = true,
+        // §4.5 (#22): user-chosen signing subkey; null = automatic pick.
+        signingKeyId: Long? = null
     ): ByteArray {
         val outputStream = ByteArrayOutputStream()
         val armoredOut = if (armor) ArmoredOutputStream(outputStream).stripVersion() else null
@@ -892,7 +1019,7 @@ class PGPCryptoService private constructor() {
                 sigGen.setHashedSubpackets(cardSubpackets.generate())
                 sigGen.generateOnePassVersion(false).encode(compOut)
             } else if (signingSecretKey != null) {
-                val signingKey = pickSigningSecretKey(signingSecretKey)
+                val signingKey = pickSigningSecretKey(signingSecretKey, signingKeyId)
                     ?: throw SigningError.NoSigningKey()
                 val privateKey = try {
                     signingKey.extractPrivateKey(
@@ -1020,7 +1147,9 @@ class PGPCryptoService private constructor() {
         // large file instead of buffering it (issue #6); encryptSymmetric
         // takes and returns whole ByteArrays and cannot.
         messagePassword: String? = null,
-        useArgon2: Boolean = true
+        useArgon2: Boolean = true,
+        // §4.5 (#22): user-chosen signing subkey; null = automatic pick.
+        signingKeyId: Long? = null
     ) {
         // 1) Build the signer FIRST. Software: unlock up front (clean
         //    output guarantee). Card: the content-signer defers the tap
@@ -1039,7 +1168,7 @@ class PGPCryptoService private constructor() {
             cardSubpackets.setIssuerFingerprint(false, cardSigningPublicKey)
             sigGen.setHashedSubpackets(cardSubpackets.generate())
         } else if (signingSecretKey != null) {
-            val signingKey = pickSigningSecretKey(signingSecretKey)
+            val signingKey = pickSigningSecretKey(signingSecretKey, signingKeyId)
                 ?: throw SigningError.NoSigningKey()
             val privateKey = try {
                 signingKey.extractPrivateKey(
@@ -1589,11 +1718,16 @@ class PGPCryptoService private constructor() {
             // buffered and run through the same validated decryptors the
             // text path uses; classical messages keep the true streaming
             // path untouched, and a sniff miss falls through to BC, which
-            // fails exactly as it did before this block existed. Accepted
-            // cost for the patch: a PQC file holds its ciphertext in
-            // memory (the plaintext still streams out in chunks). The
-            // session-key handoff that would stream the ciphertext too is
-            // written into the 4.2.0 roster, not smuggled in here.
+            // fails exactly as it did before this block existed.
+            //
+            // 4.2.0 workstream A: the buffering this comment used to
+            // apologize for is gone. On a sniff hit the leading ESK
+            // packets (always definite-length) are consumed from the
+            // stream, the session key is recovered from the composite
+            // PKESK alone via the validated decryptors, and BC gets the
+            // body stream untouched, so the ciphertext is never held in
+            // memory. A false-positive sniff stitches the consumed ESK
+            // bytes back in front of the stream and falls through to BC.
             val sniffLimit = 1 shl 16
             val buffered = java.io.BufferedInputStream(input, sniffLimit)
             buffered.mark(sniffLimit)
@@ -1604,26 +1738,41 @@ class PGPCryptoService private constructor() {
             if (com.pgpony.android.crypto.pqc.CompositeDecryptor.sniffHead(sniff) ||
                 com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.sniffHead(sniff)
             ) {
-                val whole = buffered.readBytes()
-                val composite = com.pgpony.android.crypto.pqc.CompositeDecryptor.tryDecrypt(
-                    whole, secretKeyRings, passphrase
-                )
-                val librePgp = if (composite == null)
-                    com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.tryDecrypt(
-                        whole, secretKeyRings, passphrase
-                    ) else null
-                decryptedStream = composite?.stream ?: librePgp?.stream
-                if (composite != null) {
-                    integrityObj = composite.integrity
-                } else if (librePgp != null) {
-                    integrityObj = librePgp.integrity
-                }
-                if (decryptedStream == null) {
-                    // Sniff said composite but both decryptors declined
-                    // (they return null only when no composite PKESK is
-                    // present): treat it as a false positive and hand BC
-                    // the buffered bytes, since [buffered] is consumed.
-                    effectiveInput = java.io.ByteArrayInputStream(whole)
+                // Session-key handoff. Armor decodes on the fly; the
+                // decoded stream is buffered so the ESK consumer can
+                // mark/reset across packet headers.
+                val binaryIn: java.io.InputStream =
+                    if (head.isNotEmpty() && head[0].toInt() == '-'.code)
+                        java.io.BufferedInputStream(
+                            ArmoredInputStream(buffered), DECRYPT_STREAM_CHUNK
+                        )
+                    else buffered
+                val eskRegion = readLeadingEskPackets(binaryIn)
+                val session =
+                    com.pgpony.android.crypto.pqc.CompositeDecryptor
+                        .recoverSessionKey(eskRegion, secretKeyRings, passphrase)
+                        ?: com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor
+                            .recoverSessionKey(eskRegion, secretKeyRings, passphrase)
+                if (session != null) {
+                    // [binaryIn] now sits at the encrypted body packet,
+                    // framing (partial lengths included) intact; BC reads
+                    // it natively and streams.
+                    val bcpgIn = org.bouncycastle.bcpg.BCPGInputStream(binaryIn)
+                    val encList = org.bouncycastle.openpgp.PGPEncryptedDataList(bcpgIn)
+                    val sessionEnc = encList.extractSessionKeyEncryptedData()
+                    decryptedStream = sessionEnc.getDataStream(
+                        org.bouncycastle.openpgp.operator.bc.BcSessionKeyDataDecryptorFactory(session)
+                    )
+                    integrityObj = sessionEnc
+                } else {
+                    // Sniff said composite but neither recoverer found a
+                    // composite PKESK: false positive. Reassemble the
+                    // consumed ESK bytes in front of the remainder and
+                    // fall through to BC, which fails or succeeds exactly
+                    // as it would have without the sniff.
+                    effectiveInput = java.io.SequenceInputStream(
+                        java.io.ByteArrayInputStream(eskRegion), binaryIn
+                    )
                 }
             }
 
@@ -1723,6 +1872,74 @@ class PGPCryptoService private constructor() {
             off += n
         }
         return buf.copyOf(off)
+    }
+
+    /** 4.2.0 workstream A: consume the leading ESK packets (PKESK tag 1 /
+     *  SKESK tag 3) from [s], returning them verbatim (headers included)
+     *  and leaving the stream positioned at the first non-ESK packet, the
+     *  encrypted body. ESK packets always carry definite lengths (the
+     *  4.1.2 finding), so this never has to parse a partial length; any
+     *  malformed or indeterminate header stops the consume with the
+     *  stream reset to that packet's start. [s] must support mark. */
+    private fun readLeadingEskPackets(s: java.io.InputStream): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val hdr = ByteArray(6)
+        while (true) {
+            s.mark(8)
+            val first = s.read()
+            if (first < 0 || first and 0x80 == 0) { s.reset(); break }
+            val tag = if (first and 0x40 != 0) first and 0x3F else (first shr 2) and 0x0F
+            if (tag != 1 && tag != 3) { s.reset(); break }
+            hdr[0] = first.toByte()
+            var hlen = 1
+            var bodyLen = -1
+            if (first and 0x40 != 0) { // new format
+                val l0 = s.read()
+                if (l0 >= 0) {
+                    hdr[hlen++] = l0.toByte()
+                    when {
+                        l0 < 192 -> bodyLen = l0
+                        l0 < 224 -> {
+                            val l1 = s.read()
+                            if (l1 >= 0) { hdr[hlen++] = l1.toByte(); bodyLen = ((l0 - 192) shl 8) + l1 + 192 }
+                        }
+                        l0 == 255 -> {
+                            var v = 0; var ok = true
+                            repeat(4) {
+                                val b = s.read()
+                                if (b < 0) ok = false else { hdr[hlen++] = b.toByte(); v = (v shl 8) or b }
+                            }
+                            if (ok) bodyLen = v
+                        }
+                        // 224..254 would be a partial length: not legal on an ESK.
+                    }
+                }
+            } else { // old format
+                val lt = first and 0x03
+                var v = 0; var ok = true
+                val n = when (lt) { 0 -> 1; 1 -> 2; 2 -> 4; else -> 0 }
+                if (n == 0) ok = false // indeterminate: not legal on an ESK
+                repeat(n) {
+                    val b = s.read()
+                    if (b < 0) ok = false else { hdr[hlen++] = b.toByte(); v = (v shl 8) or b }
+                }
+                if (ok) bodyLen = v
+            }
+            if (bodyLen < 0) { s.reset(); break }
+            out.write(hdr, 0, hlen)
+            var remaining = bodyLen
+            val buf = ByteArray(minOf(remaining, 8192).coerceAtLeast(1))
+            while (remaining > 0) {
+                val n = s.read(buf, 0, minOf(remaining, buf.size))
+                if (n < 0) throw PGPCryptoError.DecryptionFailed("Truncated ESK packet")
+                out.write(buf, 0, n)
+                remaining -= n
+            }
+            if (out.size() > MAX_ESK_REGION) {
+                throw PGPCryptoError.DecryptionFailed("ESK region exceeds sane bounds")
+            }
+        }
+        return out.toByteArray()
     }
 
     /** 4.1.2: decode an armored head to packet bytes for the composite
@@ -2268,11 +2485,24 @@ class PGPCryptoService private constructor() {
             return KeyAlgorithm.MLKEM1024_X448_V6
         }
         ring.publicKeys.asSequence().firstOrNull { it.algorithm == 8 && it.version == 5 }?.let { sub ->
-            // algo 8 is a shared code point: the curve OID (X25519 vs X448)
-            // says whether this is the 768 or the 1024 composite.
-            return if (com.pgpony.android.crypto.pqc.CompositeLibrePGPKeyMaterial
-                    .suiteOf(sub.encoded).curve == com.pgpony.android.crypto.pqc.EccCurve.X448
-            ) KeyAlgorithm.MLKEM1024_X448_LIBREPGP else KeyAlgorithm.MLKEM768_X25519_LIBREPGP
+            // algo 8 is a shared code point: the curve OID says which composite.
+            // issue #2: suiteOf throws on an unknown/unsupported curve OID, so
+            // catch it; a key we cannot model still imports and falls through to
+            // primary detection rather than failing the whole import (symptom A).
+            val curve = try {
+                com.pgpony.android.crypto.pqc.CompositeLibrePGPKeyMaterial.suiteOf(sub.encoded).curve
+            } catch (_: Exception) {
+                null
+            }
+            when (curve) {
+                com.pgpony.android.crypto.pqc.EccCurve.X448 ->
+                    return KeyAlgorithm.MLKEM1024_X448_LIBREPGP
+                com.pgpony.android.crypto.pqc.EccCurve.BRAINPOOL_P384R1 ->
+                    return KeyAlgorithm.MLKEM1024_BP384_LIBREPGP
+                com.pgpony.android.crypto.pqc.EccCurve.X25519 ->
+                    return KeyAlgorithm.MLKEM768_X25519_LIBREPGP
+                else -> {}
+            }
         }
         return detectAlgorithm(masterKey)
     }
@@ -2355,7 +2585,13 @@ class PGPCryptoService private constructor() {
      * BC has no isSigningKey() (unlike isEncryptionKey), so capability comes from
      * SubkeyCapability, which reads each key's KEY_FLAGS self/binding signature.
      */
-    internal fun pickSigningSecretKey(ring: PGPSecretKeyRing): PGPSecretKey? {
+    internal fun pickSigningSecretKey(ring: PGPSecretKeyRing, preferredKeyId: Long? = null): PGPSecretKey? {
+        // §4.5 (#22): honor a user-chosen signing subkey when it is a
+        // signing-capable key on this ring; otherwise fall back to the
+        // automatic pick (first signing subkey, else the primary).
+        if (preferredKeyId != null) {
+            signingSecretKeys(ring).firstOrNull { it.keyID == preferredKeyId }?.let { return it }
+        }
         var primaryCandidate: PGPSecretKey? = null
         val iterator = ring.secretKeys
         while (iterator.hasNext()) {
@@ -2370,6 +2606,38 @@ class PGPCryptoService private constructor() {
         return primaryCandidate
     }
 
+    /** §4.5 (#22): every signing-capable secret key in [ring], the first
+     *  entry being the one [pickSigningSecretKey] auto-selects (signing
+     *  subkeys in ring order, then the primary if it can sign). */
+    internal fun signingSecretKeys(ring: PGPSecretKeyRing): List<PGPSecretKey> {
+        val subs = mutableListOf<PGPSecretKey>()
+        var primary: PGPSecretKey? = null
+        val it = ring.secretKeys
+        while (it.hasNext()) {
+            val sk = it.next()
+            val pub = sk.publicKey
+            val caps = SubkeyCapability.fromPgpPublicKey(pub, detectAlgorithm(pub), pub.isMasterKey)
+            if (SubkeyCapability.hasCapability(caps, SubkeyCapability.Sign)) {
+                if (pub.isMasterKey) primary = sk else subs.add(sk)
+            }
+        }
+        return if (primary != null) subs + primary else subs
+    }
+
+    /** §4.5 (#22): display-ready signing-key choices for [ring]; first entry
+     *  is the automatic pick. Size < 2 for the common single-signing-key
+     *  case, where the UI shows no picker. */
+    internal fun signingKeyOptions(ring: PGPSecretKeyRing): List<SigningKeyOption> =
+        signingSecretKeys(ring).map { sk ->
+            val pub = sk.publicKey
+            SigningKeyOption(
+                keyId = pub.keyID,
+                keyIdHex = String.format("%016X", pub.keyID),
+                isPrimary = pub.isMasterKey,
+                algorithmLabel = detectAlgorithm(pub).displayName
+            )
+        }
+
     /** Find a secret key by key ID across multiple key rings. */
     /**
      * 4.0.5 — the "hidden recipient" key ID.
@@ -2380,6 +2648,15 @@ class PGPCryptoService private constructor() {
      * that sees it should try its own secret keys against the packet.
      */
     private val WILDCARD_KEY_ID = 0L
+
+    /** Buffer size for the armored-decode wrapper on the streaming
+     *  composite path (workstream A). */
+    private val DECRYPT_STREAM_CHUNK = 1 shl 13
+
+    /** Upper bound on the leading ESK region a message may carry before
+     *  the streaming consumer refuses it (a composite PKESK is ~1.7 KB;
+     *  this allows hundreds of recipients). */
+    private val MAX_ESK_REGION = 1 shl 20
 
     /** A PKESK we managed to open, with the packet it came from. */
     private class PkeskMatch(

@@ -69,7 +69,15 @@ jobs:
           chmod +x gradlew
           ./gradlew packageDeb createDistributable
           cp build/compose/binaries/main/deb/pgpony_*_${{ matrix.debarch }}.deb ${{ matrix.deb }}
-          tar -czf ${{ matrix.tarball }} -C build/compose/binaries/main/app PGPony
+          # Wrap the tarball's launcher so it preloads the system libfreetype (issue #1: the JVM's
+          # GTK file chooser draws blank otherwise, because Skiko's bundled FreeType interposes on
+          # the system one). Done on a COPY, not the shared app image the AppImage below reuses —
+          # that one carries its own AppRun preload, and wrapping it too would only double the
+          # LD_PRELOAD.
+          chmod +x tools/linux-wrap-launcher.sh
+          rm -rf tarball-src && cp -r build/compose/binaries/main/app tarball-src
+          tools/linux-wrap-launcher.sh tarball-src/PGPony
+          tar -czf ${{ matrix.tarball }} -C tarball-src PGPony
 
       # jpackage writes its real error to a log file and Gradle only prints the path, so a
       # failure here otherwise says nothing but "exit code 1". Without this the only way to see
@@ -81,6 +89,24 @@ jobs:
             echo "===== $f ====="
             cat "$f"
           done
+
+      # Wrap the .deb's launcher the same way as the tarball (issue #1). packageDeb builds its own
+      # app image, so this cannot ride on the tarball copy above — it has to happen on the packed
+      # .deb: unpack, wrap, regenerate md5sums so integrity checks stay honest, repack with root
+      # ownership. --root-owner-group keeps files root:root without needing fakeroot here.
+      - name: Wrap the deb launcher
+        run: |
+          chmod +x tools/linux-wrap-launcher.sh
+          rm -rf debwrap && mkdir debwrap
+          dpkg-deb -R ${{ matrix.deb }} debwrap
+          launcher=$(find debwrap -type f -path '*/bin/PGPony')
+          approot=$(dirname "$(dirname "$launcher")")
+          echo "deb app root -> $approot"
+          tools/linux-wrap-launcher.sh "$approot"
+          if [ -f debwrap/DEBIAN/md5sums ]; then
+            ( cd debwrap && find . -type f ! -path './DEBIAN/*' -printf '%P\0' | xargs -0 md5sum > DEBIAN/md5sums )
+          fi
+          dpkg-deb --root-owner-group -b debwrap ${{ matrix.deb }}
 
       # build.gradle.kts injects --linux-package-deps through the jpackage task's freeArgs, and
       # that lookup degrades to a silent no-op if the property ever moves. A green build proves
@@ -103,6 +129,11 @@ jobs:
           dpkg-deb -x ${{ matrix.deb }} /tmp/debx
           grep -rh MimeType /tmp/debx --include=*.desktop
           grep -rq 'MimeType=.*pgp' /tmp/debx --include=*.desktop
+          # issue #1 — the installed launcher must be the FreeType-preload wrapper, same assertion
+          # the tarball gets. The real jpackage binary is renamed to PGPony.bin beside it.
+          wrapped=$(find /tmp/debx -type f -path '*/bin/PGPony')
+          head -n1 "$wrapped" | grep -q '^#!/bin/sh'
+          test -f "$(dirname "$wrapped")/PGPony.bin"
 
       # The tarball is a NEW distribution channel with no installer to vouch for it, so it gets
       # the checks the .deb gets for free. Running the CLI out of the extracted tree is the
@@ -113,6 +144,11 @@ jobs:
           rm -rf /tmp/tarcheck && mkdir -p /tmp/tarcheck
           tar -xzf ${{ matrix.tarball }} -C /tmp/tarcheck
           test -x /tmp/tarcheck/PGPony/bin/PGPony
+          # issue #1 — the launcher must be the FreeType-preload wrapper, with the real jpackage
+          # binary renamed beside it. A check that would notice if the wrap step ever silently
+          # stopped running and the blank-file-chooser bug came back.
+          head -n1 /tmp/tarcheck/PGPony/bin/PGPony | grep -q '^#!/bin/sh'
+          test -x /tmp/tarcheck/PGPony/bin/PGPony.bin
           # The runtime's location is NOT the same across platforms: jpackage puts it at
           # <app>/runtime on Windows, <app>/lib/runtime on Linux and Contents/runtime on macOS.
           # The first version of this step hardcoded the Windows path and failed on both Linux

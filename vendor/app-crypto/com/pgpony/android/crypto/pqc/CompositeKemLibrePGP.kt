@@ -44,6 +44,13 @@ import org.bouncycastle.pqc.crypto.mlkem.MLKEMGenerator
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPrivateKeyParameters
 import org.bouncycastle.pqc.crypto.mlkem.MLKEMPublicKeyParameters
 import java.security.SecureRandom
+import java.math.BigInteger
+import org.bouncycastle.asn1.teletrust.TeleTrusTNamedCurves
+import org.bouncycastle.crypto.generators.ECKeyPairGenerator
+import org.bouncycastle.crypto.params.ECDomainParameters
+import org.bouncycastle.crypto.params.ECKeyGenerationParameters
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters
+import org.bouncycastle.crypto.params.ECPublicKeyParameters
 
 object CompositeKemLibrePGP {
 
@@ -97,10 +104,11 @@ object CompositeKemLibrePGP {
     private fun eccKemKdf(
         suite: CompositeSuite, ecdh: ByteArray, eccCt: ByteArray, eccPk: ByteArray
     ): ByteArray {
-        // gpg's ECC key-share KDF hash scales with the curve (Kyber spec):
-        // SHA3-256 for X25519, SHA3-512 for X448. Using 256 for X448 yields a
-        // different eccKeyShare, hence a different KEK and "checksum failed".
-        val hashBits = if (suite.curve == EccCurve.X448) 512 else 256
+        // gpg's ECC key-share KDF hash scales with the curve (gpg common/kem.c
+        // ecc_table): SHA3-256 for <=256-bit curves, SHA3-512 for >=384-bit ones
+        // (X448, brainpoolP384r1). A wrong size yields a different eccKeyShare,
+        // hence a different KEK and "checksum failed".
+        val hashBits = suite.curve.kdfHashBits
         val d = SHA3Digest(hashBits)
         d.update(ecdh, 0, ecdh.size)
         d.update(eccCt, 0, eccCt.size)
@@ -123,11 +131,13 @@ object CompositeKemLibrePGP {
         fixedInfo: ByteArray,
         suite: CompositeSuite = CompositeSuite.LIBREPGP_768
     ): ByteArray {
-        // Normalize to the fixed curve length; gpg emits a minimal MPI that
-        // can be shorter, and the KEM (agreement, KDF, combiner) needs the
-        // full curve.keyLen octets on both sides.
-        val eccCt = suite.curve.normalizePoint(eccCiphertext)
-        val recipPub = suite.curve.normalizePoint(recipientX25519Pub)
+        // Montgomery curves store a minimal-length point that must be re-padded
+        // to the fixed curve length; a Weierstrass curve carries a full
+        // uncompressed 0x04||X||Y point used verbatim (validated on decode).
+        val eccCt = if (suite.curve.weierstrass) eccCiphertext
+                    else suite.curve.normalizePoint(eccCiphertext)
+        val recipPub = if (suite.curve.weierstrass) recipientX25519Pub
+                       else suite.curve.normalizePoint(recipientX25519Pub)
         val ecdh = ecdhAgree(suite, recipientX25519Sec, eccCt)
         val eccSs = eccKemKdf(suite, ecdh, eccCt, recipPub)
         val mlkemShared = MLKEMExtractor(recipientMlkemSec).extractSecret(mlkemCiphertext)
@@ -184,7 +194,15 @@ object CompositeKemLibrePGP {
 
     /** Generate an ECC ephemeral for [suite]'s curve: (secret, public). */
     private fun genEphemeral(suite: CompositeSuite, random: SecureRandom): Pair<ByteArray, ByteArray> =
-        if (suite.curve == EccCurve.X448) {
+        if (suite.curve.weierstrass) {
+            val kp = ECKeyPairGenerator()
+                .apply { init(ECKeyGenerationParameters(domainOf(suite.curve), random)) }
+                .generateKeyPair()
+            val scalar = bigIntToFixed((kp.private as ECPrivateKeyParameters).d, suite.curve.keyLen)
+            // getEncoded(false) is the uncompressed 0x04||X||Y point, which is
+            // both the wire ephemeral and the KDF's ecc_ct.
+            scalar to (kp.public as ECPublicKeyParameters).q.getEncoded(false)
+        } else if (suite.curve == EccCurve.X448) {
             val kp = X448KeyPairGenerator()
                 .apply { init(X448KeyGenerationParameters(random)) }
                 .generateKeyPair()
@@ -200,7 +218,18 @@ object CompositeKemLibrePGP {
 
     /** ECDH agreement on [suite]'s curve between a raw secret and peer public. */
     private fun ecdhAgree(suite: CompositeSuite, secret: ByteArray, peerPub: ByteArray): ByteArray =
-        if (suite.curve == EccCurve.X448) {
+        if (suite.curve.weierstrass) {
+            val dom = domainOf(suite.curve)
+            // decodePoint validates the peer point is on the curve (rejects an
+            // invalid-curve point). gpg's composite ECC-KEM feeds the FULL
+            // uncompressed shared point (0x04 || X || Y) into the ECC key-share
+            // KDF, not just the X-coordinate: confirmed by unwrapping a real
+            // gpg 2.5.x brainpool message. The X-coordinate alone yields a
+            // different KEK and the session-key unwrap fails "checksum failed".
+            val priv = BigInteger(1, secret)
+            val shared = dom.curve.decodePoint(peerPub).multiply(priv).normalize()
+            shared.getEncoded(false)
+        } else if (suite.curve == EccCurve.X448) {
             val agr = X448Agreement().apply { init(X448PrivateKeyParameters(secret, 0)) }
             val out = ByteArray(agr.agreementSize)
             agr.calculateAgreement(X448PublicKeyParameters(peerPub, 0), out, 0)
@@ -211,4 +240,26 @@ object CompositeKemLibrePGP {
             agr.calculateAgreement(X25519PublicKeyParameters(peerPub, 0), out, 0)
             out
         }
+
+    private val bp384: ECDomainParameters by lazy {
+        val x9 = TeleTrusTNamedCurves.getByName("brainpoolP384r1")
+        ECDomainParameters(x9.curve, x9.g, x9.n, x9.h)
+    }
+
+    /** Weierstrass domain parameters for a supported composite curve. */
+    private fun domainOf(curve: EccCurve): ECDomainParameters = when (curve) {
+        EccCurve.BRAINPOOL_P384R1 -> bp384
+        else -> throw IllegalArgumentException("no Weierstrass domain for $curve")
+    }
+
+    /** Big-endian, exactly [len] octets, from a non-negative [v]. */
+    private fun bigIntToFixed(v: BigInteger, len: Int): ByteArray {
+        val b = v.toByteArray()
+        return when {
+            b.size == len -> b
+            b.size == len + 1 && b[0].toInt() == 0 -> b.copyOfRange(1, b.size)
+            b.size < len -> ByteArray(len - b.size) + b
+            else -> b.copyOfRange(b.size - len, b.size)
+        }
+    }
 }

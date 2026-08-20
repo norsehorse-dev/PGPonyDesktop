@@ -61,6 +61,13 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.SecureRandom
 import java.util.Date
+import java.math.BigInteger
+import org.bouncycastle.asn1.teletrust.TeleTrusTNamedCurves
+import org.bouncycastle.crypto.generators.ECKeyPairGenerator
+import org.bouncycastle.crypto.params.ECDomainParameters
+import org.bouncycastle.crypto.params.ECKeyGenerationParameters
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters
+import org.bouncycastle.crypto.params.ECPublicKeyParameters
 
 object CompositeKeyGen {
 
@@ -99,7 +106,15 @@ object CompositeKeyGen {
         creationTime: Date = Date()
     ): PGPSecretKeyRing {
         // 1. Fresh composite material for the suite's curve and ML-KEM level.
-        val (xSec, xPub) = if (suite.curve == EccCurve.X448) {
+        val (xSec, xPub) = if (suite.curve.weierstrass) {
+            // issue #2: brainpool composite. Scalar left-padded to the field
+            // length; public point is the uncompressed 0x04 || X || Y.
+            val dom = brainpoolDomain(suite.curve)
+            val kp = ECKeyPairGenerator()
+                .apply { init(ECKeyGenerationParameters(dom, random)) }.generateKeyPair()
+            bigIntToFixed((kp.private as ECPrivateKeyParameters).d, suite.curve.keyLen) to
+                (kp.public as ECPublicKeyParameters).q.getEncoded(false)
+        } else if (suite.curve == EccCurve.X448) {
             val kp = X448KeyPairGenerator()
                 .apply { init(X448KeyGenerationParameters(random)) }.generateKeyPair()
             (kp.private as X448PrivateKeyParameters).encoded to
@@ -249,7 +264,7 @@ object CompositeKeyGen {
         ctime: Int, xPub: ByteArray, mPub: ByteArray, xSec: ByteArray, mSeed: ByteArray,
         suite: CompositeSuite
     ): Pair<ByteArray, ByteArray> {
-        val oid = byteArrayOf(0x03) + suite.curve.oidTail // len 3 + curve OID (110/111)
+        val oid = byteArrayOf(suite.curve.oidTail.size.toByte()) + suite.curve.oidTail
         // Composite ECC component: the raw curve point (no 0x40 native-point
         // prefix) as a MINIMAL-length OpenPGP MPI, byte-for-byte how gpg
         // 2.5.x stores and re-serializes it inside a composite (algo 8).
@@ -391,4 +406,23 @@ object CompositeKeyGen {
     private fun uint32read(b: ByteArray, o: Int): Int =
         ((b[o].toInt() and 0xFF) shl 24) or ((b[o + 1].toInt() and 0xFF) shl 16) or
             ((b[o + 2].toInt() and 0xFF) shl 8) or (b[o + 3].toInt() and 0xFF)
+
+    private fun brainpoolDomain(curve: EccCurve): ECDomainParameters {
+        val name = when (curve) {
+            EccCurve.BRAINPOOL_P384R1 -> "brainpoolP384r1"
+            else -> throw IllegalArgumentException("no Weierstrass domain for $curve")
+        }
+        val x9 = TeleTrusTNamedCurves.getByName(name)
+        return ECDomainParameters(x9.curve, x9.g, x9.n, x9.h)
+    }
+
+    private fun bigIntToFixed(v: BigInteger, len: Int): ByteArray {
+        val b = v.toByteArray()
+        return when {
+            b.size == len -> b
+            b.size == len + 1 && b[0].toInt() == 0 -> b.copyOfRange(1, b.size)
+            b.size < len -> ByteArray(len - b.size) + b
+            else -> b.copyOfRange(b.size - len, b.size)
+        }
+    }
 }

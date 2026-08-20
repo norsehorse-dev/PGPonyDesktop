@@ -30,6 +30,7 @@ package com.pgpony.android.crypto.card
 
 import android.content.Context
 import com.pgpony.android.PGPonyApp
+import com.pgpony.android.session.SessionPolicy
 
 object CardPinCache {
 
@@ -58,13 +59,13 @@ object CardPinCache {
 
     fun isEnabled(): Boolean = prefsOrNull()?.getBoolean(KEY_ENABLED, false) ?: false
 
-    fun durationSec(): Int =
-        prefsOrNull()?.getInt(KEY_DURATION_SEC, DEFAULT_DURATION_SEC) ?: DEFAULT_DURATION_SEC
+    // §3 (#15): unified — reads the single SessionPolicy duration.
+    fun durationSec(): Int = SessionPolicy.durationSec()
 
     /** 4.0.0 Phase 9 — true when the duration preference is the
      *  "Until I clear it" sentinel. Settings uses this to show the
      *  held state instead of a countdown. */
-    fun isUntilCleared(): Boolean = durationSec() == DURATION_UNTIL_CLEARED
+    fun isUntilCleared(): Boolean = SessionPolicy.isUntilCleared()
 
     /** Remember a successfully-verified PW1. No-op when disabled. */
     fun remember(pinValue: String) {
@@ -94,7 +95,7 @@ object CardPinCache {
      *  while Settings branches on isUntilCleared() for display. */
     fun remainingMs(): Long {
         if (pin == null) return 0L
-        if (isUntilCleared()) return Long.MAX_VALUE
+        if (SessionPolicy.isLifecycleHeld()) return Long.MAX_VALUE
         val expiresAt = capturedAt + durationSec() * 1000L
         return (expiresAt - System.currentTimeMillis()).coerceAtLeast(0L)
     }
@@ -113,12 +114,7 @@ object CardPinCache {
     }
 
     fun setDurationSec(seconds: Int) {
-        // No clamp-to-old-expiry bookkeeping needed: retrieve() and
-        // remainingMs() read the preference live (B3's countdown updates
-        // on the next tick, and a held PIN honors the new duration
-        // immediately). 4.0.0 Phase 9 — the same live read makes the
-        // DURATION_UNTIL_CLEARED sentinel take effect on a held PIN
-        // instantly, both switching to it and away from it.
-        prefsOrNull()?.edit()?.putInt(KEY_DURATION_SEC, seconds)?.apply()
+        // §3 (#15): writes the single unified SessionPolicy duration.
+        SessionPolicy.setDurationSec(seconds)
     }
 }

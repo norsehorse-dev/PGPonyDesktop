@@ -51,22 +51,7 @@ object CompositeLibrePGPDecryptor {
         val split = split(binary) ?: return null // no LibrePGP algo-8 PKESK
         val pkesk = split.pkesk
 
-        val secKey = findSecretKey(pkesk.keyId, secretKeyRings)
-            ?: throw NoMatchingKey("no held LibrePGP composite secret key for ${pkesk.keyId.toHex()}")
-        val packet = secKey.encoded
-
-        val material = CompositeLibrePGPKeyMaterial.extractFromPacket(packet, passphrase?.toCharArray())
-        val v5fp = CompositeLibrePGPKeyMaterial.v5Fingerprint(packet)
-        val (recipientXPub, _) = CompositeLibrePGPKeyMaterial.publicMaterial(packet)
-
-        // algo 8 is shared; the key's curve OID says which parameter set.
-        val suite = CompositeLibrePGPKeyMaterial.suiteOf(packet)
-        val mlkemSec = MLKEMPrivateKeyParameters(suite.mlkem.params, material.kyberSeed)
-        val fixedInfo = CompositeKemLibrePGP.fixedInfo(pkesk.symAlgo, v5fp)
-        val kek = CompositeKemLibrePGP.decapsulate(
-            pkesk.eccEphemeral, pkesk.kyberCiphertext, material.x25519Secret, recipientXPub, mlkemSec, fixedInfo, suite
-        )
-        val sessionKey = CompositeKemLibrePGP.unwrapSessionKey(kek, pkesk.wrappedSessionKey)
+        val sessionKey = recover(pkesk, secretKeyRings, passphrase)
 
         val bcpgIn = BCPGInputStream(ByteArrayInputStream(split.remainder))
         val encList = PGPEncryptedDataList(bcpgIn)
@@ -97,6 +82,101 @@ object CompositeLibrePGPDecryptor {
             i = end
         }
         return false
+    }
+
+    /** 4.2.0 workstream A: recover the session key from the leading ESK
+     *  region alone. Returns null when no v3 algo-8 composite PKESK is
+     *  present; throws like [tryDecrypt] when one is present but cannot be
+     *  opened. The symmetric algorithm comes from the PKESK itself. */
+    fun recoverSessionKey(
+        eskRegion: ByteArray,
+        secretKeyRings: List<PGPSecretKeyRing>,
+        passphrase: String? = null
+    ): PGPSessionKey? {
+        val pkesk = firstPkesk(eskRegion) ?: return null
+        return PGPSessionKey(pkesk.symAlgo, recover(pkesk, secretKeyRings, passphrase))
+    }
+
+    /** Shared decapsulation core behind [tryDecrypt] and [recoverSessionKey].
+     *  An all-zero key ID (GnuPG's wildcard, `gpg -R`) has nothing to look
+     *  up, so it trials every held v5 algo-8 secret key instead. */
+    private fun recover(
+        pkesk: Pkesk,
+        secretKeyRings: List<PGPSecretKeyRing>,
+        passphrase: String?
+    ): ByteArray {
+        if (pkesk.keyId.all { it == 0.toByte() }) {
+            return recoverAnonymous(pkesk, secretKeyRings, passphrase)
+        }
+        val secKey = findSecretKey(pkesk.keyId, secretKeyRings)
+            ?: throw NoMatchingKey("no held LibrePGP composite secret key for ${pkesk.keyId.toHex()}")
+        return open(secKey, pkesk, passphrase)
+    }
+
+    /** Decapsulate + unwrap [pkesk] with [secKey]. Errors propagate to the
+     *  caller (a locked key with no passphrase surfaces as-is on the
+     *  addressed path); [recoverAnonymous] is the one that catches
+     *  everything from this function. */
+    private fun open(secKey: PGPSecretKey, pkesk: Pkesk, passphrase: String?): ByteArray {
+        val packet = secKey.encoded
+
+        val material = CompositeLibrePGPKeyMaterial.extractFromPacket(packet, passphrase?.toCharArray())
+        val v5fp = CompositeLibrePGPKeyMaterial.v5Fingerprint(packet)
+        val (recipientXPub, _) = CompositeLibrePGPKeyMaterial.publicMaterial(packet)
+
+        // algo 8 is shared; the key's curve OID says which parameter set.
+        val suite = CompositeLibrePGPKeyMaterial.suiteOf(packet)
+        val mlkemSec = MLKEMPrivateKeyParameters(suite.mlkem.params, material.kyberSeed)
+        val fixedInfo = CompositeKemLibrePGP.fixedInfo(pkesk.symAlgo, v5fp)
+        val kek = CompositeKemLibrePGP.decapsulate(
+            pkesk.eccEphemeral, pkesk.kyberCiphertext, material.x25519Secret, recipientXPub, mlkemSec, fixedInfo, suite
+        )
+        return CompositeKemLibrePGP.unwrapSessionKey(kek, pkesk.wrappedSessionKey)
+    }
+
+    /**
+     * 4.2.0 RC2 workstream B (§3.4): same anonymous-PKESK trial as
+     * `CompositeDecryptor.recoverAnonymous`, for the v3/algo-8 LibrePGP
+     * PKESK. GnuPG's wildcard is an all-zero key ID rather than an absent
+     * field, but the trial is identical in shape: every held v5 algo-8
+     * secret key gets one attempt, locked-or-wrong candidates are silently
+     * skipped, and RFC-3394 unwrap's integrity check is what makes
+     * skipping safe.
+     */
+    private fun recoverAnonymous(
+        pkesk: Pkesk,
+        secretKeyRings: List<PGPSecretKeyRing>,
+        passphrase: String?
+    ): ByteArray {
+        for (ring in secretKeyRings) {
+            for (candidate in ring.secretKeys) {
+                if (candidate.publicKey.algorithm != CompositeLibrePGPKeyMaterial.ALGORITHM_ID ||
+                    candidate.publicKey.version != 5
+                ) continue
+                val result = try {
+                    open(candidate, pkesk, passphrase)
+                } catch (e: Exception) {
+                    null
+                }
+                if (result != null) return result
+            }
+        }
+        throw NoMatchingKey("no held LibrePGP composite secret key opens this anonymous PKESK")
+    }
+
+    /** First parseable v3 algo-8 PKESK in a region of ESK packets. */
+    private fun firstPkesk(region: ByteArray): Pkesk? {
+        var i = 0
+        while (i < region.size) {
+            val h = try { header(region, i) } catch (e: Exception) { null } ?: return null
+            val end = h.bodyStart + h.bodyLen
+            if (h.bodyLen < 0 || end > region.size || end <= i) return null
+            if (h.tag == TAG_PKESK) {
+                parsePkesk(region.copyOfRange(h.bodyStart, end))?.let { return it }
+            }
+            i = end
+        }
+        return null
     }
 
     // ── PKESK parsing ────────────────────────────────────────────────

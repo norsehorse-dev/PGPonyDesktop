@@ -9,5 +9,28 @@
 # Inside a mounted AppImage $0 is a path under /tmp/.mount_*, so readlink -f resolves through to
 # the squashfs root and HERE is the AppDir. exec rather than a subshell, so signals and the exit
 # code reach the JVM directly — the CLI's exit codes are part of its contract.
+#
+# FreeType preload (issue #1): the bundled jlink runtime carries OpenJDK's own libfreetype. When
+# AWT opens a GTK file chooser, GTK text drawing binds to that copy instead of the system FreeType,
+# every widget fails with "error occurred in libfreetype", and the picker opens blank. Preloading
+# the system libfreetype.so.6 makes the JVM and GTK share one FreeType. Skiko links its own copy
+# statically, so the main UI is unaffected. ldconfig is not on a typical login PATH, so it is tried
+# by absolute path first, then a glob of the multiarch library dirs as a fallback.
 HERE="$(dirname "$(readlink -f "$0")")"
+
+SYS_FT=""
+for LDC in ldconfig /sbin/ldconfig /usr/sbin/ldconfig; do
+  SYS_FT="$("$LDC" -p 2>/dev/null | awk '/libfreetype\.so\.6/ {print $NF; exit}')"
+  [ -n "$SYS_FT" ] && break
+done
+if [ -z "$SYS_FT" ]; then
+  for d in /usr/lib/*/ /usr/lib/ /lib/*/ /lib/; do
+    if [ -e "${d}libfreetype.so.6" ]; then SYS_FT="${d}libfreetype.so.6"; break; fi
+  done
+fi
+if [ -n "$SYS_FT" ] && [ -e "$SYS_FT" ]; then
+  LD_PRELOAD="${SYS_FT}${LD_PRELOAD:+:$LD_PRELOAD}"
+  export LD_PRELOAD
+fi
+
 exec "$HERE/bin/PGPony" "$@"
