@@ -57,6 +57,24 @@ class CryptoTest {
         db.close()
     }
 
+    // darkvegas interop: the Android app can produce Argon2id (S2K type 4) passphrase
+    // files that stock gpg on Linux (older than 2.4 / libgcrypt 1.10) cannot open. PGPony
+    // Desktop must remain the reliable reader for them, so this pins that a type-4 message
+    // round-trips through the desktop decrypt path.
+    @Test
+    fun symmetricArgon2RoundTrip() = runBlocking {
+        val (db, repo) = repo()
+        val cipher = com.pgpony.android.crypto.PGPCryptoService.shared.encryptSymmetric(
+            data = "argon2 secret".toByteArray(),
+            passphrase = "horse-battery-staple",
+            armor = true,
+            useArgon2 = true
+        )
+        val result = repo.decryptText(cipher.toString(Charsets.UTF_8), "horse-battery-staple")
+        assertEquals("argon2 secret", result.plaintext)
+        db.close()
+    }
+
     @Test
     fun clearSignVerifiesAndTamperFails() = runBlocking {
         val (db, repo) = repo()
