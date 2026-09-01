@@ -60,12 +60,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.pgpony.android.PGPonyApp
 import com.pgpony.android.crypto.pass.PassStorePrefs
 import com.pgpony.android.keyserver.KeyServer
 import com.pgpony.android.keyserver.KeyServerDirectory
 import com.pgpony.android.network.HttpClientFactory
+import com.pgpony.android.network.OfflineMode
 import com.pgpony.android.network.ProxyPrefs
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -357,8 +359,11 @@ private fun NetworkSection(state: DesktopState) {
     val cfg = remember(version) { ProxyPrefs.config(PGPonyApp.instance) }
     val onionMirror = remember(version) { ProxyPrefs.onionMirror(PGPonyApp.instance) }
     val autoRefresh = remember(version) { DesktopNetworkPrefs.autoRefresh() }
+    val offline = remember(version) { OfflineMode.isEnabled() }
     var customHost by remember { mutableStateOf("") }
     var customPort by remember { mutableStateOf("") }
+    var socksUser by remember { mutableStateOf("") }
+    var socksPass by remember { mutableStateOf("") }
     var servers by remember { mutableStateOf<List<KeyServer>>(emptyList()) }
     var showAddServer by remember { mutableStateOf(false) }
     val directory = remember { KeyServerDirectory.get(PGPonyApp.instance) }
@@ -369,6 +374,10 @@ private fun NetworkSection(state: DesktopState) {
             if (customHost.isBlank()) customHost = cfg.host.orEmpty()
             if (customPort.isBlank()) customPort = cfg.port.takeIf { it > 0 }?.toString().orEmpty()
         }
+        if (cfg.enabled) {
+            if (socksUser.isBlank()) socksUser = ProxyPrefs.username(PGPonyApp.instance)
+            if (socksPass.isBlank()) socksPass = ProxyPrefs.password(PGPonyApp.instance)
+        }
     }
 
     fun proxyChanged() {
@@ -378,6 +387,28 @@ private fun NetworkSection(state: DesktopState) {
 
     // The section's own heading and note are supplied by the enclosing SectionCard (D12); what
     // is left here are the two sub-groups, proxy and keyservers.
+    // Offline switch: the master network gate. When on, DesktopHttpClientFactory fails
+    // every request before any socket, so keyserver lookup, search, publish, and the
+    // update check all go dark. Invalidate the shared client so it takes effect at once.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(
+            checked = offline,
+            onCheckedChange = {
+                OfflineMode.set(it)
+                HttpClientFactory.invalidate()
+                version++
+            }
+        )
+        Column {
+            Text(tr("settings_offline_toggle_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                tr("settings_offline_toggle_subtitle"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    Spacer(Modifier.height(Spacing.Medium))
     SubHeading(tr("d_settings_proxy_title"))
     ProxyChoice.entries.forEach { choice ->
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -440,6 +471,36 @@ private fun NetworkSection(state: DesktopState) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+        // proxy stream isolation: SOCKS5 user/pass. A distinct pair puts PGPony on its own
+        // Tor circuit (IsolateSOCKSAuth). Blank clears; applies to Tor and Custom alike.
+        WrapRow(verticalSpacing = Spacing.Medium) {
+            OutlinedTextField(
+                value = socksUser, onValueChange = { socksUser = it },
+                label = { Text(tr("settings_proxy_socks_user")) }, singleLine = true,
+                shape = RoundedCornerShape(Radius.Small),
+                modifier = Modifier.width(220.dp)
+            )
+            OutlinedTextField(
+                value = socksPass, onValueChange = { socksPass = it },
+                label = { Text(tr("settings_proxy_socks_pass")) }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                shape = RoundedCornerShape(Radius.Small),
+                modifier = Modifier.width(220.dp)
+            )
+            OutlinedButton(
+                shape = RoundedCornerShape(Radius.Small),
+                onClick = {
+                    ProxyPrefs.setCredentials(PGPonyApp.instance, socksUser.trim(), socksPass)
+                    proxyChanged()
+                    state.status = tr("d_status_proxy_set", cfg.host ?: "")
+                }
+            ) { Text(tr("d_common_apply")) }
+        }
+        Text(
+            tr("settings_proxy_socks_note"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 
     Spacer(Modifier.height(Spacing.Large))

@@ -46,6 +46,7 @@ import com.pgpony.android.data.PGPKeyEntity
 import com.pgpony.android.keyserver.KeyServer
 import com.pgpony.android.keyserver.KeyServerDirectory
 import com.pgpony.android.network.KeyLookupResult
+import com.pgpony.android.network.OfflineMode
 import com.pgpony.android.network.KeyServerRepository
 import com.pgpony.android.keyserver.PublishOutcome
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ import kotlinx.coroutines.launch
 fun SearchKeyServersDialog(state: DesktopState, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
+    val offline = OfflineMode.enabled
     var searching by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<KeyLookupResult?>(null) }
     var resultUserId by remember { mutableStateOf("") }
@@ -120,6 +122,14 @@ fun SearchKeyServersDialog(state: DesktopState, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (offline) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        tr("settings_offline_toggle_title"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 if (searching) {
                     Spacer(Modifier.height(10.dp))
                     Text(
@@ -169,7 +179,10 @@ fun SearchKeyServersDialog(state: DesktopState, onDismiss: () -> Unit) {
                     onDismiss()
                 }) { Text(tr("d_common_import")) }
             } else {
-                TextButton(onClick = { runSearch() }, enabled = !searching && query.isNotBlank()) {
+                TextButton(
+                    onClick = { runSearch() },
+                    enabled = !searching && query.isNotBlank() && !offline
+                ) {
                     Text(tr("import_keyserver_search_button"))
                 }
             }

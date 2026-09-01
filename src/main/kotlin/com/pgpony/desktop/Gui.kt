@@ -62,6 +62,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
 import com.pgpony.android.data.PGPKeyEntity
+import com.pgpony.android.network.OfflineMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
@@ -419,6 +420,7 @@ enum class Destination(val labelKey: String, val icon: ImageVector, val enabled:
 // indentation (and therefore its diff) untouched.
 fun cmdGui() {
     I18n.init()
+    OfflineMode.initFromPrefs()
     guiApplication()
 }
 
