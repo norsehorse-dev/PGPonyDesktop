@@ -14,10 +14,15 @@ import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.KeyExpirationService
 import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.ClassicalSubkeyGen
+import com.pgpony.android.crypto.V6SubkeyGen
 import com.pgpony.android.crypto.RevocationError
 import com.pgpony.android.crypto.RevocationService
 import com.pgpony.android.crypto.UserIdService
 import com.pgpony.android.crypto.card.CardInfo
+import com.pgpony.android.crypto.pqc.CompositePrimaryKeyGen
+import com.pgpony.android.crypto.pqc.CompositeKeyFacade
+import com.pgpony.android.crypto.pqc.CompositeSigPacket
+import com.pgpony.android.crypto.pqc.CompositeSignSuite
 import com.pgpony.android.data.*
 import org.bouncycastle.openpgp.PGPPublicKeyRing
 import org.bouncycastle.openpgp.PGPSecretKeyRing
@@ -147,7 +152,12 @@ class KeyRepository(
         algorithm: KeyAlgorithm,
         passphrase: String?,
         expirationSeconds: Long? = null
-    ): PGPKeyEntity {
+    ): PGPKeyEntity = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        // 4.4.0 RC3 (#30/#31): a composite ML-DSA + EdDSA signing key cannot be
+        // held by BouncyCastle, so it takes the raw-bytes composite path.
+        if (algorithm.isCompositeSign) {
+            return@withContext generateCompositeSigningKey(name, email, algorithm, expirationSeconds, passphrase)
+        }
         val result = crypto.generateKeyPair(name, email, algorithm, passphrase, expirationSeconds)
 
         // Store key material in encrypted storage
@@ -226,6 +236,64 @@ class KeyRepository(
         )
 
         dao.insert(entity)
+        entity
+    }
+
+    /**
+     * 4.4.0 RC3 (#30/#31): generate a composite ML-DSA + EdDSA signing key.
+     * BouncyCastle cannot hold such a key (it rejects the algo-30/31
+     * signatures), so it is generated, stored, and described entirely through
+     * the raw-bytes composite path: CompositePrimaryKeyGen builds the ring and
+     * CompositeKeyFacade derives the public ring and reads the metadata. The
+     * material is stored unprotected and protected at rest by SecureKeyStore;
+     * an OpenPGP-passphrase form for composite keys is a later addition.
+     */
+    private suspend fun generateCompositeSigningKey(
+        name: String,
+        email: String,
+        algorithm: KeyAlgorithm,
+        expirationSeconds: Long?,
+        passphrase: String? = null
+    ): PGPKeyEntity {
+        val suite = if (algorithm == KeyAlgorithm.MLDSA87_ED448_V6)
+            CompositeSignSuite.MLDSA87_ED448 else CompositeSignSuite.MLDSA65_ED25519
+        val uid = "$name <$email>"
+        var secretRing = CompositePrimaryKeyGen.assemble(
+            uid, suite, expirationSeconds = expirationSeconds
+        )
+        // #26 (RC4): protect at generation when a passphrase was chosen.
+        if (!passphrase.isNullOrEmpty()) {
+            secretRing = CompositeKeyFacade.reprotect(secretRing, null, passphrase.toCharArray())
+        }
+        val publicRing = CompositeKeyFacade.publicRingOf(secretRing)
+        val info = CompositeKeyFacade.parse(secretRing)
+        val fingerprintHex = info.fingerprintHex.uppercase()
+
+        store.storePublicKey(fingerprintHex, publicRing)
+        store.storePrivateKey(fingerprintHex, secretRing)
+
+        val expiresAtMs = info.expirationSeconds?.let { info.creationTimeMillis + it * 1000 }
+        val armoredPublic = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+            "-----END PGP PUBLIC KEY BLOCK-----",
+            publicRing
+        )
+
+        val parsed = PGPKeyEntity.parseUserID(uid)
+        val entity = PGPKeyEntity(
+            id = UUID.randomUUID().toString(),
+            fingerprint = fingerprintHex,
+            userID = uid,
+            userName = parsed.first,
+            userEmail = parsed.second,
+            algorithm = algorithm,
+            isKeyPair = true,
+            createdAt = System.currentTimeMillis(),
+            expiresAt = expiresAtMs,
+            armoredPublicKey = armoredPublic,
+            revocationCertificate = null
+        )
+        dao.insert(entity)
         return entity
     }
 
@@ -255,7 +323,96 @@ class KeyRepository(
      * armor, unsupported key type). Caller surfaces the parse error
      * separately if needed.
      */
+    // ── 4.4.0 RC3 (#30/#31): composite ML-DSA + EdDSA key import ──────────
+    //
+    // BouncyCastle rejects the algo-30/31 signatures, so a composite key is
+    // dearmored, recognized, and stored as raw bytes via CompositeKeyFacade
+    // rather than through crypto.importArmoredKey. previewArmoredKey and
+    // importArmoredKeyDetailed try this path first and fall through to the
+    // BouncyCastle path for every classical key.
+
+    private fun compositeFromArmored(armoredText: String): Pair<ByteArray, CompositeKeyFacade.Info>? =
+        try {
+            val bytes = CompositeSigPacket.dearmor(armoredText)
+            if (CompositeKeyFacade.isCompositePrimary(bytes)) {
+                bytes to CompositeKeyFacade.parse(bytes)
+            } else null
+        } catch (_: Exception) { null }
+
+    private fun compositeAlgorithm(info: CompositeKeyFacade.Info): KeyAlgorithm =
+        if (info.primaryAlgId == 31) KeyAlgorithm.MLDSA87_ED448_V6
+        else KeyAlgorithm.MLDSA65_ED25519_V6
+
+    private suspend fun compositeImportPreview(armoredText: String): ImportPreview? {
+        val (bytes, info) = compositeFromArmored(armoredText) ?: return null
+        val fpHex = info.fingerprintHex.uppercase()
+        val uid = info.userIds.firstOrNull() ?: ""
+        val parsed = PGPKeyEntity.parseUserID(uid)
+        // #26 (RC4): a protected composite key still carries private material.
+        val hasPrivate = CompositeKeyFacade.hasSecret(bytes)
+        val existing = dedup.findExisting(fpHex)
+        return ImportPreview(
+            fingerprint = fpHex,
+            userId = uid,
+            userName = parsed.first,
+            userEmail = parsed.second,
+            algorithmShortName = compositeAlgorithm(info).shortName,
+            hasPrivateKey = hasPrivate,
+            isDuplicate = existing != null,
+            willUpgradeToKeyPair = existing != null && hasPrivate && !existing.isKeyPair,
+            willPairWithCard = false,
+            armoredText = armoredText
+        )
+    }
+
+    private suspend fun importCompositeKey(
+        bytes: ByteArray,
+        info: CompositeKeyFacade.Info,
+        @Suppress("UNUSED_PARAMETER") armoredText: String
+    ): ImportOutcome {
+        val fpHex = info.fingerprintHex.uppercase()
+        val hasPrivate = CompositeKeyFacade.hasSecret(bytes)
+        val publicRing = CompositeKeyFacade.publicRingOf(bytes)
+        val armoredPublic = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+            "-----END PGP PUBLIC KEY BLOCK-----",
+            publicRing
+        )
+        val existing = dedup.findExisting(fpHex)
+        if (existing != null) {
+            if (hasPrivate && !existing.isKeyPair) {
+                store.storePublicKey(fpHex, publicRing)
+                store.storePrivateKey(fpHex, bytes)
+                val upgraded = existing.copy(isKeyPair = true)
+                dao.update(upgraded)
+                return ImportOutcome(upgraded, ImportResolution.UPGRADED_TO_KEY_PAIR)
+            }
+            store.storePublicKey(fpHex, publicRing)
+            return ImportOutcome(existing, ImportResolution.ALREADY_IN_KEYRING)
+        }
+        store.storePublicKey(fpHex, publicRing)
+        if (hasPrivate) store.storePrivateKey(fpHex, bytes)
+        val uid = info.userIds.firstOrNull() ?: ""
+        val parsed = PGPKeyEntity.parseUserID(uid)
+        val expiresAtMs = info.expirationSeconds?.let { info.creationTimeMillis + it * 1000 }
+        val entity = PGPKeyEntity(
+            id = UUID.randomUUID().toString(),
+            fingerprint = fpHex,
+            userID = uid,
+            userName = parsed.first,
+            userEmail = parsed.second,
+            algorithm = compositeAlgorithm(info),
+            isKeyPair = hasPrivate,
+            createdAt = info.creationTimeMillis,
+            expiresAt = expiresAtMs,
+            armoredPublicKey = armoredPublic
+        )
+        dao.insert(entity)
+        return ImportOutcome(entity, ImportResolution.INSERTED)
+    }
+
     suspend fun previewArmoredKey(armoredText: String): ImportPreview? {
+        compositeImportPreview(armoredText)?.let { return it }
         return try {
             val importResult = crypto.importArmoredKey(armoredText)
             // 4.0.0 Phase 1 — normalized lookup (case/format variants
@@ -307,6 +464,9 @@ class KeyRepository(
      * doubles as a manual refresh and the UI can say what happened.
      */
     suspend fun importArmoredKeyDetailed(armoredText: String): ImportOutcome {
+        compositeFromArmored(armoredText)?.let { (bytes, info) ->
+            return importCompositeKey(bytes, info, armoredText)
+        }
         val importResult = crypto.importArmoredKey(armoredText)
 
         // Check for duplicate — normalized fingerprint identity via
@@ -674,10 +834,58 @@ class KeyRepository(
         } catch (_: Exception) { null }
     }
 
+    /**
+     * 4.4.1 (#36, Umotas): the public key ring to encrypt TO for a recipient.
+     * Normal keys and standalone ML-KEM keys load through BouncyCastle as
+     * usual. A composite ML-DSA signing key cannot (BC rejects its algo-30/31
+     * primary), yet it carries an ML-KEM encryption subkey; that subkey is
+     * lifted out via CompositeKeyFacade and returned as a bare ring. Returns
+     * null only when the key truly has no encryption subkey to receive a
+     * message.
+     */
+    fun loadEncryptionRecipientRing(fingerprint: String): PGPPublicKeyRing? {
+        loadPublicKeyRing(fingerprint)?.let { return it }
+        val raw = store.loadPublicKey(fingerprint) ?: return null
+        return CompositeKeyFacade.encryptionSubkeyRing(raw)
+    }
+
     fun loadSecretKeyRing(fingerprint: String): PGPSecretKeyRing? {
         val data = store.loadPrivateKey(fingerprint) ?: return null
         return try {
             crypto.importKeyData(data).secretKeyRing
+        } catch (_: Exception) { null }
+    }
+
+    /**
+     * 4.4.0 RC3 (#30/#31): load a composite ML-DSA + EdDSA key's material as a
+     * CompositeKeyFacade.Info. These keys are stored as raw OpenPGP bytes
+     * because BouncyCastle cannot parse their algo-30/31 signatures, so this is
+     * the composite counterpart of loadSecretKeyRing.
+     */
+    /** #26 (RC4): raw composite-PRIMARY private ring bytes (algo 30/31 signing
+     *  key), or null if not a composite primary or public-only. Fed to the
+     *  decrypt path so the ML-KEM subkey can open composite-encrypted mail. */
+    fun loadCompositePrivateRing(fingerprint: String): ByteArray? {
+        val raw = store.loadPrivateKey(fingerprint) ?: return null
+        return if (CompositeKeyFacade.isCompositePrimary(raw) && CompositeKeyFacade.hasSecret(raw)) raw else null
+    }
+
+    fun loadCompositeKeyInfo(
+        fingerprint: String,
+        passphrase: CharArray? = null
+    ): CompositeKeyFacade.Info? {
+        val data = store.loadPrivateKey(fingerprint) ?: return null
+        // #26 (RC4): parse threads the passphrase to unlock a protected signing
+        // key. A wrong passphrase propagates (the sign path maps it to a retry);
+        // a locked key with no passphrase yields Info with a null compositeSecret.
+        return CompositeKeyFacade.parse(data, passphrase)
+    }
+
+    /** Composite key metadata + public material from the stored PUBLIC ring. */
+    fun loadCompositePublicInfo(fingerprint: String): CompositeKeyFacade.Info? {
+        val data = store.loadPublicKey(fingerprint) ?: return null
+        return try {
+            CompositeKeyFacade.parse(data)
         } catch (_: Exception) { null }
     }
 
@@ -692,8 +900,54 @@ class KeyRepository(
     // ── Export ──────────────────────────────────────────────────────────
 
     fun exportArmoredPublicKey(fingerprint: String): String? {
+        // Composite keys must use the raw-bytes path: BouncyCastle either
+        // rejects the algo-30/31 signatures or returns a partial ring, so try
+        // the composite export first and fall back to BouncyCastle otherwise.
+        compositeArmoredPublicKey(fingerprint)?.let { return it }
         val ring = loadPublicKeyRing(fingerprint) ?: return null
         return crypto.exportArmoredPublicKey(ring)
+    }
+
+    /**
+     * 4.4.0 RC3 (#30/#31): armor a stored composite PUBLIC ring directly.
+     * Returns null when the stored key is not composite, so classical keys fall
+     * through to BouncyCastle. Accepts either the stored public ring or, as a
+     * fallback, the secret ring (publicRingOf is a no-op on a public ring and
+     * strips the secret material from a secret ring).
+     */
+    private fun compositeArmoredPublicKey(fingerprint: String): String? {
+        val raw = store.loadPublicKey(fingerprint)
+            ?: store.loadPrivateKey(fingerprint)
+            ?: return null
+        if (!CompositeKeyFacade.isCompositePrimary(raw)) return null
+        val pub = CompositeKeyFacade.publicRingOf(raw)
+        return CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+            "-----END PGP PUBLIC KEY BLOCK-----",
+            pub
+        )
+    }
+
+    /**
+     * #26 (RC4): armored composite private key for export/backup. The stored
+     * raw bytes are already the transferable secret key (protected if the key
+     * has a passphrase), so export armors them directly. When an export
+     * passphrase is asked for and the key is not already protected, the export
+     * copy is protected with it; an already-protected key exports as-is.
+     */
+    private fun compositeArmoredPrivateKey(fingerprint: String, exportPassphrase: String?): String? {
+        val raw = store.loadPrivateKey(fingerprint) ?: return null
+        if (!CompositeKeyFacade.isCompositePrimary(raw) || !CompositeKeyFacade.hasSecret(raw)) return null
+        val toExport = if (!exportPassphrase.isNullOrBlank() && !CompositeKeyFacade.isProtected(raw)) {
+            CompositeKeyFacade.reprotect(raw, null, exportPassphrase.toCharArray())
+        } else {
+            raw
+        }
+        return CompositeSigPacket.armor(
+            "-----BEGIN PGP PRIVATE KEY BLOCK-----",
+            "-----END PGP PRIVATE KEY BLOCK-----",
+            toExport
+        )
     }
 
     /**
@@ -703,6 +957,7 @@ class KeyRepository(
      * cache refreshes keep using [exportArmoredPublicKey] (comment-free).
      */
     fun exportArmoredPublicKeyForSharing(fingerprint: String): String? {
+        compositeArmoredPublicKey(fingerprint)?.let { return it }
         val ring = loadPublicKeyRing(fingerprint) ?: return null
         return crypto.exportArmoredPublicKeyForSharing(ring)
     }
@@ -714,6 +969,7 @@ class KeyRepository(
      * passphrase already guards the file; the UI says so).
      */
     fun exportArmoredPrivateKey(fingerprint: String, exportPassphrase: String?): String? {
+        compositeArmoredPrivateKey(fingerprint, exportPassphrase)?.let { return it }
         val ring = loadSecretKeyRing(fingerprint) ?: return null
         if (exportPassphrase.isNullOrBlank() || crypto.isPassphraseProtected(ring)) {
             return crypto.exportArmoredPrivateKey(ring)
@@ -727,11 +983,18 @@ class KeyRepository(
 
     /** RC4 O5: whether the stored secret ring carries its own passphrase. */
     fun isPrivateKeyPassphraseProtected(fingerprint: String): Boolean {
+        // #26 (RC4): composite signing keys are not BC rings; read their
+        // protection state from the raw bytes.
+        val rawPriv = store.loadPrivateKey(fingerprint)
+        if (rawPriv != null && CompositeKeyFacade.isCompositePrimary(rawPriv)) {
+            return CompositeKeyFacade.isProtected(rawPriv)
+        }
         val ring = loadSecretKeyRing(fingerprint) ?: return false
         return crypto.isPassphraseProtected(ring)
     }
 
     fun exportArmoredPrivateKey(fingerprint: String): String? {
+        compositeArmoredPrivateKey(fingerprint, null)?.let { return it }
         val ring = loadSecretKeyRing(fingerprint) ?: return null
         return crypto.exportArmoredPrivateKey(ring)
     }
@@ -1151,12 +1414,30 @@ class KeyRepository(
                 "Secret key ring could not be loaded for $fingerprint"
             )
 
-        val updatedSecretRing = ClassicalSubkeyGen.addSubkey(
-            secretRing = secRing,
-            type = type,
-            passphrase = passphrase,
-            expirationSeconds = expirationSeconds
-        )
+        // RC2 (planning §1.1): a v6 primary needs a v6 binding signature, which
+        // ClassicalSubkeyGen (v4) cannot emit. Route v6 keys through V6SubkeyGen
+        // (BC's high-level OpenPGPKeyEditor); v4 keys stay on the classic path.
+        val updatedSecretRing = if (entity.isV6Key) {
+            val v6Type = when (type) {
+                ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_SIGN ->
+                    V6SubkeyGen.V6SubkeyType.ED25519_SIGN
+                ClassicalSubkeyGen.ClassicalSubkeyType.X25519_ENCRYPT ->
+                    V6SubkeyGen.V6SubkeyType.X25519_ENCRYPT
+                ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_AUTH ->
+                    V6SubkeyGen.V6SubkeyType.ED25519_AUTH
+                else -> throw ClassicalSubkeyGen.SubkeyAddError(
+                    "Only Ed25519 and X25519 subkeys are supported on a v6 key."
+                )
+            }
+            V6SubkeyGen.addSubkey(secRing, v6Type, passphrase, expirationSeconds)
+        } else {
+            ClassicalSubkeyGen.addSubkey(
+                secretRing = secRing,
+                type = type,
+                passphrase = passphrase,
+                expirationSeconds = expirationSeconds
+            )
+        }
         val updatedPublicRing = PGPPublicKeyRing(updatedSecretRing.publicKeys.asSequence().toList())
 
         store.storePublicKey(fingerprint, updatedPublicRing.encoded)
@@ -1421,6 +1702,8 @@ class KeyRepository(
         val it = ring.publicKeys
         while (it.hasNext()) ids.add(it.next().keyID)
         com.pgpony.android.provider.ProviderPassphraseCache.clearKeys(ids)
+        // #2.1: also reach the provider process, where the real cache lives.
+        com.pgpony.android.provider.ProviderCacheClearReceiver.requestClearKeys(ids)
     }
 
     /**
@@ -1443,6 +1726,27 @@ class KeyRepository(
         oldPassphrase: String,
         newPassphrase: String
     ): Boolean {
+        // #26 (RC4): a composite ML-DSA signing key cannot be held by
+        // BouncyCastle, so it re-protects at the raw-bytes level via the facade.
+        // A wrong old passphrase throws (BC AEAD tag mismatch), which the caller
+        // maps to the incorrect-passphrase retry.
+        val rawPriv = store.loadPrivateKey(fingerprint)
+        if (rawPriv != null && CompositeKeyFacade.isCompositePrimary(rawPriv)) {
+            val reprotected = try {
+                CompositeKeyFacade.reprotect(
+                    rawPriv,
+                    oldPassphrase.ifEmpty { null }?.toCharArray(),
+                    newPassphrase.ifEmpty { null }?.toCharArray()
+                )
+            } catch (e: com.pgpony.android.crypto.pqc.CompositeSecretProtection.ProtectedKeyException) {
+                throw e
+            } catch (e: Exception) {
+                throw org.bouncycastle.openpgp.PGPException("composite passphrase change failed", e)
+            }
+            store.storePrivateKey(fingerprint, reprotected)
+            invalidateCachedPassphrases(fingerprint)
+            return true
+        }
         val ring = loadSecretKeyRing(fingerprint) ?: return false
         val changed = crypto.changePassphrase(ring, oldPassphrase, newPassphrase)
         store.storePrivateKey(fingerprint, changed.encoded)

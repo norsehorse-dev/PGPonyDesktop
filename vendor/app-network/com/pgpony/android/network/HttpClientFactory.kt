@@ -22,6 +22,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.ProxyBuilder
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.api.createClientPlugin
+
+/** Thrown when a request is attempted while offline mode is on. The network
+ *  call sites already catch IOException and degrade to a null/failed result,
+ *  so no request escapes and nothing crashes. */
+class OfflineModeException : java.io.IOException(
+    "PGPony offline mode is on; no network request was made"
+)
 
 object HttpClientFactory {
 
@@ -39,6 +47,53 @@ object HttpClientFactory {
 
     @Volatile private var cached: HttpClient? = null
     @Volatile private var cachedSignature: String? = null
+
+    // RC1 offline switch: fail every request fast, before any socket, when
+    // offline mode is on. This is the single choke point the whole network
+    // layer routes through (keyserver lookup/search/publish, WKD, the update
+    // check, the background refresh worker), so one guard here covers them
+    // all. Checked per request, not per client build, so a mid-session toggle
+    // takes effect immediately even though the client is cached.
+    private val offlineGuard = createClientPlugin("PGPonyOfflineGuard") {
+        onRequest { _, _ ->
+            if (OfflineMode.isEnabled()) throw OfflineModeException()
+        }
+    }
+
+    // Proxy stream isolation: SOCKS5 user/pass auth. Java exposes no per-client
+    // SOCKS credentials, so a single default Authenticator, scoped to the active
+    // proxy's port and the PROXY requestor type, hands the pair to the SOCKS
+    // handshake. It returns null for everything else, so it is inert when no
+    // proxy auth is configured. Distinct credentials put PGPony on its own Tor
+    // circuit (Orbot IsolateSOCKSAuth).
+    private val socksAuthenticator = object : java.net.Authenticator() {
+        @Volatile var port: Int = -1
+        @Volatile var auth: java.net.PasswordAuthentication? = null
+        override fun getPasswordAuthentication(): java.net.PasswordAuthentication? {
+            val a = auth ?: return null
+            if (requestorType != RequestorType.PROXY) return null
+            if (requestingPort != port) return null
+            return a
+        }
+    }
+    @Volatile private var authenticatorInstalled = false
+
+    private fun applyProxyAuth(cfg: ProxyPrefs.Config) {
+        if (cfg.enabled && cfg.host != null && cfg.hasAuth) {
+            socksAuthenticator.port = cfg.port
+            socksAuthenticator.auth =
+                java.net.PasswordAuthentication(cfg.username, cfg.password!!.toCharArray())
+            if (!authenticatorInstalled) {
+                java.net.Authenticator.setDefault(socksAuthenticator)
+                authenticatorInstalled = true
+            }
+        } else {
+            // Clear the credentials; the installed Authenticator then returns
+            // null for every request (including a proxy with no auth set).
+            socksAuthenticator.auth = null
+            socksAuthenticator.port = -1
+        }
+    }
 
     /** The shared client for the current proxy config (context-less). */
     fun client(): HttpClient = client(PGPonyApp.instance)
@@ -60,7 +115,13 @@ object HttpClientFactory {
 
     private fun build(cfg: ProxyPrefs.Config): HttpClient {
         val proxied = cfg.enabled && cfg.host != null
+        // Scope the SOCKS Authenticator to this config before the client makes
+        // its first connection (fail-closed: bad auth fails the SOCKS handshake).
+        applyProxyAuth(cfg)
         return HttpClient(Android) {
+            // RC1 offline switch: block outright when offline mode is on,
+            // before any other plugin or the socket.
+            install(offlineGuard)
             // A hard request ceiling so a stalled lookup (common over Tor)
             // can never leave the search spinner running forever. Per-call
             // sites (WKD) tighten this with a request-scoped timeout {}.

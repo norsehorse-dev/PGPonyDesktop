@@ -128,7 +128,6 @@
     <string name="settings_title">Einstellungen</string>
 
     <!-- ── Section headers ───────────────────────────────────────────── -->
-    <string name="settings_section_pgpony_pro">PGPony Pro</string>
     <string name="settings_section_security">Sicherheit</string>
     <string name="settings_section_clipboard">Zwischenablage</string>
     <string name="settings_section_appearance">Erscheinungsbild</string>
@@ -152,13 +151,6 @@
     <string name="settings_section_about">Über</string>
 
     <!-- ── Pro section ──────────────────────────────────────────────── -->
-    <string name="settings_pro_active_label">PGPony Pro</string>
-    <string name="settings_pro_active_subtitle">Alle Funktionen freigeschaltet</string>
-    <string name="settings_pro_upgrade_label">Auf Pro upgraden</string>
-    <string name="settings_pro_upgrade_subtitle">Den vollständigen Schlüsselbund und Cloud-Sync freischalten</string>
-    <string name="settings_pro_unlock_price_format">Alle Funktionen freischalten — %1$s</string>
-    <string name="settings_pro_unlock_button">Pro freischalten</string>
-    <string name="settings_pro_restore_button">Wiederherstellen</string>
 
     <!-- ── Security section ─────────────────────────────────────────── -->
     <string name="settings_biometric_lock_title">Biometrische Sperre</string>
@@ -201,6 +193,13 @@
     <string name="settings_data_clear_step2_title">Bist du dir wirklich sicher?</string>
     <string name="settings_data_clear_step2_body">Du verlierst den Zugriff auf alle verschlüsselten Nachrichten, die diese Schlüssel verwenden. Eine Wiederherstellung ist nicht möglich.</string>
     <string name="settings_data_clear_step2_confirm">ALLE DATEN LÖSCHEN</string>
+    <string name="settings_data_clear_backup_button">Zuerst ein Backup speichern</string>
+    <string name="settings_data_clear_ack2_label">Ich bin sicher. Alle Schlüssel und alle App-Daten löschen.</string>
+    <string name="settings_data_clear_biometric_title">Löschen aller Daten bestätigen</string>
+    <string name="settings_data_clear_biometric_subtitle">Authentifiziere dich, um alle Schlüssel dauerhaft zu löschen</string>
+    <string name="settings_data_clear_key_list_header_format">Schlüssel, die dauerhaft zerstört werden (%1$d):</string>
+    <string name="settings_data_clear_type_word">LÖSCHEN</string>
+    <string name="settings_data_clear_type_label_format">Gib %1$s ein, um zu bestätigen</string>
     <string name="settings_data_clear_success">Alle Daten gelöscht</string>
     <string name="settings_data_clear_error_format">Löschen fehlgeschlagen: %1$s</string>
 
@@ -226,15 +225,15 @@
     <string name="settings_about_openpgp_label">OpenPGP-Standard</string>
     <string name="settings_about_openpgp_value">RFC 4880 + 9580</string>
     <string name="settings_about_crypto_label">Krypto-Bibliothek</string>
-    <string name="settings_about_crypto_value">Bouncy Castle 1.78.1</string>
+    <string name="settings_about_crypto_value">Bouncy Castle 1.85</string>
     <string name="settings_about_replay_onboarding_title">Willkommens-Tour erneut anzeigen</string>
     <string name="settings_about_replay_onboarding_subtitle">Erstes-Start-Intro erneut anzeigen</string>
     <string name="settings_about_reset_tips_title">Tipps zurücksetzen</string>
     <string name="settings_about_reset_tips_subtitle">Kontextbezogene Hinweise auf jedem Tab wieder anzeigen</string>
     <string name="settings_about_reset_tips_success">Tipps werden beim Besuch jedes Bildschirms wieder angezeigt</string>
     <string name="settings_about_footer">PGPony für Android
-von NorseHorse (Kevin Stewart)
-pgpony.norsehor.se</string>
+von NorseHorse
+pgpony.app</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          MainActivity — small UI strings (tab labels, etc.)
@@ -453,7 +452,7 @@ pgpony.norsehor.se</string>
     <string name="keyring_title">Schlüsselbund</string>
     <string name="keyring_add_key_cd">Schlüssel hinzufügen</string>
     <string name="keyring_section_my_keys">Meine Schlüssel</string>
-    <string name="keyring_section_contact_keys">Kontaktschlüssel</string>
+    <string name="keyring_section_contacts">Kontakte</string>
 
     <!-- ── Delete confirmation ──────────────────────────────────────── -->
     <string name="keyring_delete_dialog_title">Schlüssel löschen?</string>
@@ -811,7 +810,7 @@ Nachrichten werden symmetrisch mit AES-256 im AEAD-OCB-Modus (RFC 9580) verschl�
 
 PGPony kann zur Interoperabilität mit älteren OpenPGP-Installationen auch klassische RSA- und DSA-Schlüssel lesen und importieren, generiert für neue Identitäten aber ausschließlich moderne Kurven-basierte Schlüssel.
 
-Die gesamte Kryptografie wird von Bouncy Castle 1.78.1 ausgeführt, einer in Unternehmen und Behörden weltweit auditierten und eingesetzten Industriestandard-Bibliothek.</string>
+Die gesamte Kryptografie wird von Bouncy Castle 1.85 ausgeführt, einer in Unternehmen und Behörden weltweit auditierten und eingesetzten Industriestandard-Bibliothek.</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          MainActivity tabs — adds Contacts (was missing earlier)
@@ -831,7 +830,7 @@ Die gesamte Kryptografie wird von Bouncy Castle 1.78.1 ausgeführt, einer in Unt
     <string name="security_info_block_algorithms_body">Neue Schlüssel verwenden Ed25519 zum Signieren und Curve25519 zum Verschlüsseln — dieselben elliptischen Kurven wie Signal, SSH und TLS 1.3. Symmetrische Verschlüsselung verwendet AES-256 im AEAD-OCB-Modus (RFC 9580).</string>
 
     <string name="security_info_block_library_title">Auf Bouncy Castle aufgebaut</string>
-    <string name="security_info_block_library_body">Die gesamte Kryptografie läuft über Bouncy Castle 1.78.1, die Industriestandard-Bibliothek für Java-Kryptografie, weltweit in Unternehmens- und Regierungssystemen im Einsatz. PGPony schreibt keine eigene Krypto.</string>
+    <string name="security_info_block_library_body">Die gesamte Kryptografie läuft über Bouncy Castle 1.85, die Industriestandard-Bibliothek für Java-Kryptografie, weltweit in Unternehmens- und Regierungssystemen im Einsatz. PGPony schreibt keine eigene Krypto.</string>
 
     <string name="security_info_block_on_device_title">Alles bleibt auf deinem Gerät</string>
     <string name="security_info_block_on_device_body">Deine Schlüssel verlassen dein Telefon nicht, es sei denn, du teilst sie ausdrücklich. PGPony hat keinen Server, kein Kontosystem und keine Analytik. Die App benötigt keine Internet-Berechtigung für irgendeine Kernverschlüsselungsfunktion.</string>
@@ -884,6 +883,10 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="onboarding_page_keyring_hint">Du kannst sie jederzeit im Tab „Schlüsselbund“ verwalten.</string>
     <string name="onboarding_page_biometric_toggle_title">Biometrische Sperre aktivieren</string>
     <string name="onboarding_page_biometric_toggle_subtitle">Erfordert Fingerabdruck oder Gesicht, um PGPony zu öffnen</string>
+    <string name="onboarding_slide_updates_title">Bleiben Sie aktuell</string>
+    <string name="onboarding_slide_updates_body">Sie haben PGPony außerhalb eines App-Stores installiert, daher aktualisiert es sich nicht selbst. PGPony kann GitHub nach neuen Versionen prüfen und Sie benachrichtigen. Es lädt oder installiert nichts von selbst.</string>
+    <string name="onboarding_page_updates_toggle_title">Nach Updates suchen</string>
+    <string name="onboarding_page_updates_toggle_subtitle">Benachrichtigen, wenn eine neuere Version verfügbar ist.</string>
 
     <!-- ── OnboardingScreen — Skip / Next / Get Started ─────────────── -->
     <string name="onboarding_screen_skip">Überspringen</string>
@@ -1010,40 +1013,6 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="exchange_vm_status_uploaded">Schlüssel auf keys.openpgp.org hochgeladen</string>
     <string name="exchange_vm_error_upload_failed_format">Upload fehlgeschlagen: %1$s</string>
 
-    <!-- ════════════════════════════════════════════════════════════════
-         ProGateSheet
-         ════════════════════════════════════════════════════════════════ -->
-    <string name="pro_feature_unlimited_keys_title">Unbegrenzte Schlüsselpaare</string>
-    <string name="pro_feature_unlimited_keys_body">Erstelle unbegrenzt viele Schlüsselpaare für verschiedene Identitäten – beruflich, privat, projektbezogen. In der Gratisversion ist 1 Schlüsselpaar enthalten.</string>
-    <string name="pro_feature_modern_algos_title">Ed25519-+-Cv25519-Schlüssel</string>
-    <string name="pro_feature_modern_algos_body">Erzeuge moderne Ed25519-Signaturschlüssel mit Cv25519-Verschlüsselungssubkeys. Kompakt, schnell und von Sicherheitsexperten empfohlen.</string>
-    <string name="pro_feature_keyserver_title">Hochladen auf Schlüsselserver</string>
-    <string name="pro_feature_keyserver_body">Veröffentliche deinen öffentlichen Schlüssel auf keys.openpgp.org, damit andere ihn finden und dir verschlüsselte Nachrichten senden können.</string>
-    <string name="pro_feature_multi_recipients_title">Mehrere Empfänger</string>
-    <string name="pro_feature_multi_recipients_body">Verschlüssele Nachrichten gleichzeitig für mehrere Empfänger. Free erlaubt einen Empfänger pro Nachricht.</string>
-    <string name="pro_feature_file_encryption_title">Dateiverschlüsselung</string>
-    <string name="pro_feature_file_encryption_body">Verschlüssle und entschlüssle Dateien jeden Typs – Dokumente, Fotos, Archive. Teile verschlüsselte Dateien sicher.</string>
-
-    <string name="pro_gate_sheet_title">PGPony Pro freischalten</string>
-    <string name="pro_gate_everything_in_pro">Alles in Pro enthalten</string>
-    <string name="pro_gate_you_tapped_this">Du hast diese Funktion angetippt</string>
-    <string name="pro_gate_purchasing">Wird gekauft …</string>
-    <string name="pro_gate_one_time_purchase">Einmaliger Kauf. Kein Abonnement.</string>
-    <string name="pro_gate_welcome_dialog_title">Willkommen bei Pro!</string>
-    <string name="pro_gate_welcome_dialog_body">Du hast alle Pro-Funktionen freigeschaltet. Danke, dass du PGPony unterstützt!</string>
-    <string name="pro_gate_welcome_dialog_confirm">Los geht\'s</string>
-
-    <!-- ════════════════════════════════════════════════════════════════
-         SecretUnlockScreen — promo code entry
-         ════════════════════════════════════════════════════════════════ -->
-    <string name="promo_code_title">Promo-Code eingeben</string>
-    <string name="promo_code_subtitle">Gib einen Code ein, um PGPony Pro kostenlos freizuschalten.</string>
-    <string name="promo_code_placeholder">PONY-XXXX-XXXX</string>
-    <string name="promo_code_redemption_failed_default">Einlösung fehlgeschlagen</string>
-    <string name="promo_code_redeem_in_progress">Einlösen…</string>
-    <string name="promo_code_already_pro">PGPony Pro ist bereits aktiv</string>
-    <string name="promo_code_dialog_success">Erfolgreich!</string>
-    <string name="promo_code_dialog_error">Fehler</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          SignerLookupSheet (decrypt-side signer lookup on unknown signer)
@@ -1158,6 +1127,12 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="sign_as_sheet_title">Signieren als</string>
     <string name="sign_as_sheet_explainer">Empfänger können verifizieren, dass die Nachricht von diesem Schlüssel stammt. Jeder mit deinem öffentlichen Schlüssel für diese Identität sieht deinen Namen als Unterzeichner.</string>
     <string name="sign_as_sheet_selected_cd">Ausgewählt</string>
+    <string name="sign_as_subkey_title">Signaturschlüssel</string>
+    <string name="sign_as_subkey_explainer">Dieser Schlüssel hat mehr als einen Signaturschlüssel. Wählen Sie, welcher signiert.</string>
+    <string name="sign_as_subkey_automatic">Automatisch</string>
+    <string name="sign_as_subkey_automatic_detail">%1$s · %2$s</string>
+    <string name="sign_as_subkey_primary_label">Hauptschlüssel (%1$s)</string>
+    <string name="sign_as_subkey_subkey_label">Unterschlüssel (%1$s)</string>
     <string name="sign_as_sheet_default_badge">STANDARD</string>
     <string name="sign_as_sheet_empty">Keine Schlüsselpaare verfügbar.</string>
 
@@ -1279,6 +1254,8 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="bundle_result_share_eml">Als E-Mail teilen (.eml)</string>
     <string name="bundle_result_share_asc">Verschlüsselte .asc teilen</string>
     <string name="bundle_result_copy_inline">Inline-Block kopieren</string>
+    <string name="bundle_result_copy_too_large">Zu groß zum Kopieren. Teile oder speichere es stattdessen als Datei.</string>
+    <string name="bundle_result_export_writing">Datei wird geschrieben… bei einem großen Bündel kann das dauern.</string>
     <!-- 3.1.0 Phase 5 Fix1 — Bundle result Save-to-Files -->
     <string name="bundle_result_save_eml">.eml in Dateien speichern</string>
     <string name="bundle_result_save_asc">.asc in Dateien speichern</string>
@@ -1305,6 +1282,11 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="settings_email_format_attachment">Anhang</string>
     <string name="settings_email_format_both">Beides</string>
     <string name="settings_email_format_subtitle">Inline fügt den verschlüsselten Block in den E-Mail-Text ein, sodass PGP-fähige Programme ihn automatisch entschlüsseln; Anhang sendet eine .asc-Datei.</string>
+    <string name="settings_section_sharing">Teilen</string>
+    <string name="settings_share_format_label">Standard-Freigabemethode</string>
+    <string name="settings_share_format_inline">Inline-Text</string>
+    <string name="settings_share_format_file">.asc-Datei</string>
+    <string name="settings_share_format_subtitle">Wie die Teilen-Schaltfläche ein verschlüsseltes oder signiertes Ergebnis verpackt.</string>
     <!-- 3.1.0 Phase 8 Fix1 — file import read error -->
     <string name="keyring_error_file_read">Datei konnte nicht gelesen werden. Speichern Sie sie lokal (Dateien-App) und importieren Sie erneut.</string>
     <!-- 3.1.0 Phase 8 Fix2 — file import diagnostic -->
@@ -1638,6 +1620,7 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="settings_biometric_sign_title">Fingerabdruck zum Signieren verlangen</string>
     <string name="settings_card_pin_cache_held_until_cleared">PIN wird gemerkt, bis du sie löschst.</string>
     <string name="settings_card_pin_cache_until_cleared">Bis ich sie lösche</string>
+    <string name="settings_session_until_locked">Bis das Telefon gesperrt wird</string>
     <string name="settings_clear_inputs_subtitle">Nachricht, Dateien und Passwörter löschen, wenn du ein Verschlüsselungsergebnis schließt</string>
     <string name="settings_clear_inputs_title">Eingaben nach dem Verschlüsseln leeren</string>
     <string name="settings_key_refresh_disclosure">Wenn aktiviert, sendet PGPony regelmäßig die Fingerabdrücke deiner Schlüssel an deine aktivierten Schlüsselserver (einschließlich keys.pgpony.app), um Updates zu holen. Nutze die Onion-Option unter Proxy, um das über Tor zu leiten.</string>
@@ -1685,4 +1668,206 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
         <item quantity="one">%1$d Empfänger</item>
         <item quantity="other">%1$d Empfänger</item>
     </plurals>
+
+    <!-- ── 4.1.0 Phase 12b translation pass ──────────────────────────
+         Machine-translated in one sweep at the end of 4.1.0, covering
+         Phase 8 (bundle file list), Phase 9 (multi-part QR), Phase 11
+         (USB connection vocabulary) and Phase 12b (keyring sections).
+         Positional specifiers are preserved; argument order may differ
+         from English where the language requires it. -->
+    <string name="output_truncated_notice">Nur Vorschau: die ersten %1$d von %2$d Zeichen. Kopieren übernimmt den gesamten Text; öffne den vollständigen Text, um einen Teil auszuwählen.</string>
+    <string name="output_open_full">Vollständigen Text öffnen</string>
+    <string name="provider_cardop_done_remove_card">Fertig. Du kannst deinen Schlüssel abziehen.</string>
+    <string name="encdec_progress_format">%1$s von %2$s</string>
+    <string name="encdec_error_file_too_large_for_card">Diese Datei ist zu groß für einen Hardware-Schlüssel. Nutze für Dateien dieser Größe einen Software-Schlüssel.</string>
+    <string name="encdec_error_file_too_large">Diese Datei ist zu groß für den verfügbaren Speicher. Schließe andere Apps und versuche es erneut.</string>
+    <string name="keyring_section_public_keys">Öffentliche Schlüssel</string>
+    <string name="qr_too_large">Dieser Schlüssel ist zu groß für einen QR-Code. Nutze stattdessen Teilen oder Kopieren.</string>
+    <string name="qr_part_of_format">Teil %1$d von %2$d</string>
+    <string name="qr_multipart_hint">Scanne jeden Teil mit PGPony. Andere QR-Reader können einen geteilten Schlüssel nicht zusammensetzen.</string>
+    <string name="qr_part_previous">Vorheriger Teil</string>
+    <string name="qr_part_next">Nächster Teil</string>
+    <string name="qr_autorotate_play_cd">Automatisches Wechseln fortsetzen</string>
+    <string name="qr_autorotate_pause_cd">Automatisches Wechseln pausieren</string>
+    <string name="qr_scan_progress_format">%1$d von %2$d Teilen gescannt. Weiter so.</string>
+    <string name="qr_scan_restarted">Das ist ein anderer Schlüssel. Es geht von vorn los.</string>
+    <string name="share_target_decrypt_passphrase_required">Dieser Schlüssel ist mit einer Passphrase geschützt. Gib sie ein und versuche es erneut.</string>
+    <string name="card_scan_usb_permission">Warte auf die Berechtigung für den angeschlossenen Sicherheitsschlüssel.</string>
+    <string name="card_usb_working">Arbeite mit deinem Sicherheitsschlüssel…</string>
+    <string name="card_usb_no_reader">Es ist kein Sicherheitsschlüssel angeschlossen.</string>
+    <string name="card_scan_usb_reading">Lese deinen Sicherheitsschlüssel über USB…</string>
+    <string name="decrypt_card_message_note_hidden">Diese Nachricht verbirgt ihren Empfänger. Gib deine PIN ein und tippe auf \"%1$s\", um es mit deinem Hardware-Schlüssel zu versuchen.</string>
+    <string name="decrypt_hidden_recipient_no_software_key">Keiner deiner Software-Schlüssel konnte diese Nachricht öffnen. Sie verbirgt ihren Empfänger, es gab also keine Schlüssel-ID zum Abgleichen.</string>
+    <string name="encrypt_bundle_show_all_format">Alle %1$d Dateien anzeigen</string>
+    <string name="encrypt_bundle_show_fewer">Weniger anzeigen</string>
+
+    <!-- 4.2.0 RC3 workstream M: localization sweep for strings added by workstreams A-N. -->
+    <string name="encdec_error_bundle_signing_key">Dieses Bündel konnte nicht signiert werden: Der gewählte Signaturschlüssel konnte nicht entsperrt werden. Wähle einen anderen Signaturschlüssel oder schalte das Signieren aus.</string>
+    <string name="encrypt_mode_sign_file">Datei signieren</string>
+    <string name="key_delete_ack_label">Ich verstehe, dass er nach dem Wiederherstellungszeitraum gelöscht wird</string>
+    <string name="key_delete_backup_button">Zuerst ein Backup speichern (.asc)</string>
+    <string name="key_delete_biometric_subtitle">Authentifiziere dich, um dieses Schlüsselpaar zu löschen</string>
+    <string name="key_delete_biometric_title">Schlüssellöschung bestätigen</string>
+    <string name="key_delete_confirm_button">Schlüsselpaar löschen</string>
+    <string name="key_delete_backed_up_on">In einer Sicherung vom %1$s</string>
+    <string name="key_delete_never_backed_up">Nie gesichert. Erstellen Sie zuerst eine Sicherung, falls Sie ihn noch benötigen.</string>
+    <string name="settings_section_keys">Schlüssel</string>
+    <string name="settings_recycle_bin_title">Zuletzt gelöscht</string>
+    <string name="settings_recycle_bin_subtitle">Gelöschte Schlüssel wiederherstellen oder endgültig entfernen</string>
+    <string name="recycle_bin_title">Zuletzt gelöscht</string>
+    <string name="recycle_bin_empty_state">Nichts hier. Gelöschte Schlüssel bleiben %1$d Tage, bevor sie gelöscht werden.</string>
+    <string name="recycle_bin_empty_action">Papierkorb leeren</string>
+    <string name="recycle_bin_restore">Wiederherstellen</string>
+    <string name="recycle_bin_delete_now">Endgültig löschen</string>
+    <string name="recycle_bin_deleted_on">Gelöscht %1$s</string>
+    <string name="recycle_bin_purge_confirm_body">Diesen Schlüssel endgültig löschen? Das kann nicht rückgängig gemacht werden.</string>
+    <string name="recycle_bin_empty_confirm_body">Alle Schlüssel im Papierkorb endgültig löschen? Das kann nicht rückgängig gemacht werden.</string>
+    <string name="recycle_bin_restored">Schlüssel wiederhergestellt</string>
+    <string name="key_delete_sheet_body">Dieser Schlüssel wird für %1$d Tage in Zuletzt gelöscht verschoben und danach endgültig gelöscht. Bis dahin können Sie ihn wiederherstellen. Danach kann alles, was damit verschlüsselt wurde, nie wieder entschlüsselt werden.</string>
+    <string name="key_delete_sheet_title">Schlüsselpaar löschen?</string>
+    <string name="key_detail_add_subkey_apply">Unterschlüssel hinzufügen</string>
+    <string name="key_detail_add_subkey_expiry_label">Ablauf</string>
+    <string name="key_detail_add_subkey_failed">Der Unterschlüssel konnte nicht hinzugefügt werden. Bitte versuche es erneut.</string>
+    <string name="key_detail_add_subkey_passphrase_label">Passphrase</string>
+    <string name="key_detail_add_subkey_sheet_subtitle">Neuer Unterschlüssel für %1$s</string>
+    <string name="key_detail_add_subkey_sheet_title">Unterschlüssel hinzufügen</string>
+    <string name="key_detail_add_subkey_type_ed25519_sign">Ed25519 (Signieren)</string>
+    <string name="key_detail_add_subkey_type_label">Schlüsseltyp</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_encrypt">RSA 2048 (Verschlüsseln)</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_sign">RSA 2048 (Signieren)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_encrypt">RSA 4096 (Verschlüsseln)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_sign">RSA 4096 (Signieren)</string>
+    <string name="key_detail_add_subkey_type_x25519_encrypt">X25519 (Verschlüsseln)</string>
+    <string name="key_detail_add_userid_apply">Benutzer-ID hinzufügen</string>
+    <string name="key_detail_notations_title">Notationen</string>
+    <string name="key_detail_notations_empty">Keine Notationen für diesen Schlüssel.</string>
+    <string name="key_detail_notations_edit_action">Notationen bearbeiten</string>
+    <string name="key_detail_notations_sheet_title">Notationen bearbeiten</string>
+    <string name="key_detail_notations_sheet_subtitle">Notationen der primären Identität von %1$s.</string>
+    <string name="key_detail_notations_sheet_empty">Noch keine Notationen. Fügen Sie unten eine hinzu.</string>
+    <string name="key_detail_notations_name_label">Name</string>
+    <string name="key_detail_notations_value_label">Wert</string>
+    <string name="key_detail_notations_remove_row">Entfernen</string>
+    <string name="key_detail_notations_add_row">Notation hinzufügen</string>
+    <string name="key_detail_notations_name_hint">Jeder Notationsname muss @ enthalten und einen Wert haben, zum Beispiel use@example.com.</string>
+    <string name="key_detail_notations_apply">Notationen speichern</string>
+    <string name="key_detail_notations_failed">Notationen konnten nicht aktualisiert werden</string>
+    <string name="key_detail_add_userid_email_label">E-Mail</string>
+    <string name="key_detail_add_userid_failed">Die Benutzer-ID konnte nicht hinzugefügt werden. Bitte versuche es erneut.</string>
+    <string name="key_detail_add_userid_make_primary_label">Zur primären Benutzer-ID machen</string>
+    <string name="key_detail_add_userid_name_label">Name</string>
+    <string name="key_detail_add_userid_passphrase_label">Passphrase</string>
+    <string name="key_detail_add_userid_sheet_subtitle">Neue Identität für %1$s</string>
+    <string name="key_detail_add_userid_sheet_title">Benutzer-ID hinzufügen</string>
+    <string name="key_detail_fallbacks_explainer">Wenn sich eine Nachricht mit diesem Schlüssel nicht entschlüsseln lässt, werden diese Schlüssel der Reihe nach als Nächstes versucht. Deine übrigen Schlüssel werden zuletzt trotzdem versucht, damit nichts unentschlüsselbar wird, was vorher entschlüsselbar war.</string>
+    <string name="key_detail_fallbacks_move_down">Nach unten</string>
+    <string name="key_detail_fallbacks_move_up">Nach oben</string>
+    <string name="key_detail_fallbacks_none">Keine anderen privaten Schlüssel als Ausweichmöglichkeit.</string>
+    <string name="key_detail_section_fallbacks">Entschlüsselungs-Fallbacks</string>
+    <string name="key_detail_section_signing_defaults">Signatur-Voreinstellungen</string>
+    <string name="key_detail_signing_default_classical">Beim Verschlüsseln an klassische Empfänger</string>
+    <string name="key_detail_signing_default_pqc">Beim Verschlüsseln an Post-Quanten-Empfänger</string>
+    <string name="key_detail_signing_default_self">Dieser Schlüssel</string>
+    <string name="key_detail_signing_default_sign_only">Beim Signieren ohne Verschlüsselung</string>
+    <string name="key_detail_signing_defaults_explainer">Wenn dieser Schlüssel signieren würde, verwende stattdessen in der jeweiligen Situation diese Schlüssel. „Dieser Schlüssel“ behält das normale Verhalten bei.</string>
+    <string name="key_detail_subkeys_add_action">Unterschlüssel hinzufügen…</string>
+    <string name="key_detail_subkeys_card_backed_badge">Auf Karte</string>
+    <string name="key_detail_subkeys_created_expires_format">Erstellt %1$s, läuft ab %2$s</string>
+    <string name="key_detail_subkeys_created_no_expiry_format">Erstellt %1$s, läuft nie ab</string>
+    <string name="key_detail_subkeys_key_id_format">Schlüssel-ID: %1$s</string>
+    <string name="key_detail_subkeys_title">Unterschlüssel</string>
+    <string name="key_detail_userid_action_apply_make_primary">Zur primären machen</string>
+    <string name="key_detail_userid_action_apply_revoke">Widerrufen</string>
+    <string name="key_detail_userid_action_failed">Die Aktion konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
+    <string name="key_detail_userid_action_passphrase_label">Passphrase</string>
+    <string name="key_detail_userid_action_sheet_subtitle_make_primary">%1$s wird zur primären Identität dieses Schlüssels.</string>
+    <string name="key_detail_userid_action_sheet_subtitle_revoke">%1$s wird als widerrufen markiert. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="key_detail_userid_action_sheet_title_make_primary">Primäre Benutzer-ID festlegen</string>
+    <string name="key_detail_userid_action_sheet_title_revoke">Benutzer-ID widerrufen</string>
+    <string name="key_detail_userids_add_action">Benutzer-ID hinzufügen…</string>
+    <string name="key_detail_userids_make_primary">Zur primären machen</string>
+    <string name="key_detail_userids_revoke">Widerrufen</string>
+    <string name="keyring_generate_algorithm_caption_pqc_ietf">Post-Quanten-Hybrid: ML-KEM plus eine elliptische Kurve auf einem modernen v6-Schlüssel, gemäß RFC 9980, dem OpenPGP-Post-Quanten-Standard. Widersteht Quantenangriffen; nur von aktueller OpenPGP-Software lesbar. ML-KEM-1024 ist die stärkere Option.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_librepgp">Post-Quanten-Hybrid: ML-KEM (der Algorithmus, den GnuPG noch Kyber nennt) plus eine elliptische Kurve, im LibrePGP-Format von GnuPG 2.5.x. gpg zeigt diese Schlüssel als ky768_cv25519 und ky1024_cv448 an. ML-KEM-1024 ist die stärkere Option.</string>
+    <string name="keyring_regen_hint_body">Wurde vor einer Wire-Format-Korrektur in dieser Version erzeugt, daher kann gpg nicht an diesen Schlüssel verschlüsseln. Erzeuge einen neuen Post-Quanten-Schlüssel als Ersatz.</string>
+    <string name="keyring_regen_hint_dismiss_cd">Schließen</string>
+    <string name="result_sheet_share_button">Teilen…</string>
+    <string name="settings_category_appearance_subtitle">Design und Sprache</string>
+    <string name="settings_category_appearance_title">Darstellung &amp; Sprache</string>
+    <string name="settings_category_backup_subtitle">Schlüssel sichern, App-Daten löschen</string>
+    <string name="settings_category_backup_title">Backup &amp; Daten</string>
+    <string name="settings_category_encryption_subtitle">E-Mail-Format, Armor-Kommentar, Standardempfänger</string>
+    <string name="settings_category_encryption_title">Verschlüsselung</string>
+    <string name="settings_category_help_subtitle">Support, Feedback, mehr von NorseHorse</string>
+    <string name="settings_category_help_title">Hilfe &amp; Info</string>
+    <string name="settings_category_keys_subtitle">Erinnerungen, Schlüsselserver, Aktualisierung, Proxy, verbundene Apps</string>
+    <string name="settings_category_keys_title">Schlüssel &amp; Server</string>
+    <string name="settings_category_security_subtitle">Biometrie, Karten-PIN, Zwischenablage, Passwortspeicher</string>
+    <string name="settings_category_security_title">Sicherheit &amp; Datenschutz</string>
+    <string name="settings_more_burnpony_subtitle">Sende ein Geheimnis. Auf deinem Telefon verschlüsselt, nach dem Lesen verbrannt</string>
+    <string name="settings_more_carrierpony_subtitle">Private Nachrichten und Dateiübertragung, Ende-zu-Ende versiegelt</string>
+    <string name="settings_more_passpony_subtitle">Dein Speicher für Pässe und Passagen, immer dabei</string>
+    <string name="settings_more_ponyfamily_subtitle">Die ganze Familie auf pony.norsehor.se</string>
+    <string name="settings_more_ponyfamily_title">Alle Pony-Apps</string>
+    <string name="settings_desktop_title">PGPony for Desktop</string>
+    <string name="settings_desktop_subtitle">OpenPGP für macOS, Linux und Windows.</string>
+    <string name="update_channel_name">Aktualisierungen</string>
+    <string name="update_channel_description">Benachrichtigt Sie, wenn ein neuerer sideloaded Build verfügbar ist.</string>
+    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_text">PGPony %1$s ist verfügbar. Tippen, um die Version zu öffnen.</string>
+    <string name="settings_section_updates">Aktualisierungen</string>
+    <string name="settings_updates_toggle_title">Nach Updates suchen</string>
+    <string name="settings_updates_toggle_subtitle">Sucht auf GitHub nach neueren Versionen und benachrichtigt Sie. Umgeht den F-Droid-Update-Weg und lädt oder installiert nichts.</string>
+    <string name="settings_updates_check_now">Jetzt suchen</string>
+    <string name="settings_updates_found">Update verfügbar: %1$s</string>
+    <string name="settings_updates_uptodate">Auf dem neuesten Stand.</string>
+    <string name="settings_updates_failed">Suche nach Updates fehlgeschlagen.</string>
+    <string name="settings_more_quorumpony_subtitle">Teile ein Geheimnis in Karten auf. Wenige genügen zum Wiederherstellen.</string>
+    <string name="settings_more_relaypony_subtitle">Verschlüsselte Dateiübertragung von Telefon zu Telefon</string>
+    <string name="settings_more_vaultpony_subtitle">VeraCrypt-kompatible verschlüsselte Tresore, vollständig auf deinem Gerät</string>
+    <string name="settings_passphrase_cache_countdown_format">Passphrase gemerkt – wird gelöscht in %1$s</string>
+    <string name="settings_passphrase_cache_held_until_cleared">Passphrase gemerkt, bis du sie löschst.</string>
+    <string name="settings_passphrase_cache_none_held">Derzeit ist keine Passphrase gemerkt.</string>
+    <string name="settings_passphrase_cache_subtitle">Halte für verbundene Apps eingegebene Passphrasen für eine gewählte Dauer im Speicher. Nie auf der Festplatte gespeichert; gelöscht bei falscher Passphrase oder beim Schließen der App.</string>
+    <string name="settings_passphrase_cache_title">Schlüssel-Passphrasen merken</string>
+    <string name="sign_file_save_button">In Dateien speichern</string>
+    <string name="sign_verify_error_file_unreadable">Die ausgewählte Datei konnte nicht gelesen werden. Wähle sie erneut aus.</string>
+    <string name="verify_file_error_sig_not_signature">Diese Datei ist zu groß für eine abgetrennte Signatur. Wähle die .asc- oder .sig-Datei, nicht den signierten Inhalt.</string>
+
+    <!-- 4.2.0 RC4 workstream O8: strings added by O3/O5. -->
+    <string name="key_detail_fallbacks_strict_title">Nur aktivierte Fallbacks verwenden</string>
+    <string name="key_detail_fallbacks_strict_subtitle">Ohne das Übrige-Schlüssel-Netz: Es werden nur dieser Schlüssel und die oben aktivierten Fallbacks versucht.</string>
+    <string name="export_passphrase_label">Export mit einer Passphrase schützen (optional)</string>
+    <string name="export_passphrase_backup_label">Backup mit einer Passphrase schützen (optional; wird ignoriert, wenn der Schlüssel schon eine hat)</string>
+    <string name="export_passphrase_confirm_label">Export-Passphrase bestätigen</string>
+    <string name="export_passphrase_mismatch">Die Passphrasen stimmen nicht überein.</string>
+    <string name="export_passphrase_already_protected_note">Dieser Schlüssel hat bereits eine eigene Passphrase; der Export behält sie.</string>
+    <!-- 4.3.0 (#26): change key passphrase -->
+    <string name="key_detail_action_change_passphrase">Passphrase ändern</string>
+    <string name="change_passphrase_sheet_title">Passphrase ändern</string>
+    <string name="change_passphrase_sheet_subtitle">Passphrase, die diesen Schlüssel auf diesem Gerät schützt, festlegen, ändern oder entfernen.</string>
+    <string name="change_passphrase_current_label">Aktuelle Passphrase</string>
+    <string name="change_passphrase_new_label">Neue Passphrase</string>
+    <string name="change_passphrase_remove_warning">Lass die neue Passphrase leer, um den Schutz zu entfernen. Der Schlüssel wird dann ohne Passphrase auf diesem Gerät gespeichert, und jeder, der das Gerät verwenden kann, kann ihn nutzen.</string>
+    <string name="change_passphrase_remove_ack">Diesen Schlüssel ohne Passphrase speichern</string>
+    <string name="change_passphrase_backup_note">Vorhandene Backups behalten die alte Passphrase, bis du den Schlüssel erneut exportierst.</string>
+    <string name="change_passphrase_apply">Ändern</string>
+    <string name="change_passphrase_failed">Passphrase konnte nicht geändert werden.</string>
+    <!-- 4.3.0 (#31): zip output packaging -->
+    <string name="enc_result_wrap_zip_label">In .zip verpacken</string>
+    <string name="enc_result_wrap_zip_note">Verpackung für den Transport, keine Verschlüsselung. Nützlich, wenn ein Kanal .gpg- oder .asc-Dateien verändert.</string>
+    <!-- 4.3.0 (#31): zip decrypt -->
+    <string name="decrypt_zip_no_pgp">In dieser .zip wurde keine verschlüsselte Nachricht gefunden.</string>
+    <string name="decrypt_zip_multiple">Diese .zip enthält mehrere verschlüsselte Dateien. Entpacke sie und entschlüssle sie einzeln.</string>
+    <string name="decrypt_zip_failed">Die .zip konnte nicht gelesen werden.</string>
+    <!-- 4.3.0 (#36): Key Detail top-bar content descriptions -->
+    <string name="key_detail_show_qr_cd">QR-Code anzeigen</string>
+    <string name="key_detail_actions_menu_cd">Weitere Aktionen</string>
+    <!-- 4.3.0 (#36/§5.5.2): storage-level row -->
+    <string name="key_detail_detail_storage">Speicher</string>
+    <string name="key_detail_detail_storage_software">Software-Schlüsselspeicher</string>
+    <string name="key_detail_detail_storage_card">Hardware-Sicherheitskarte</string>
+    <string name="export_private_gpg_compat_label">GnuPG-kompatibles Format</string>
+    <string name="export_private_gpg_compat_caption">Gibt den zusammengesetzten Schlüssel so aus, wie GnuPG (GPG4WIN) es erwartet, damit er dort importiert werden kann. Für andere Apps ausgeschaltet lassen.</string>
+    <string name="keyring_more_cd">Mehr</string>
 </resources>

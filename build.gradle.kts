@@ -50,6 +50,7 @@ sourceSets {
                                                             //   DesktopBackupService
             exclude("**/network/HttpClientFactory.kt")      // Context-typed — twin: DesktopHttpClientFactory.kt
             exclude("**/network/ProxyPrefs.kt")             // SharedPreferences — twin: DesktopProxyPrefs.kt
+            exclude("**/network/OfflineMode.kt")     // 4.4.0 offline flag; SharedPreferences+Context, desktop twin deferred to parity P4
             exclude("**/keyserver/KeyServerDirectory.kt")   // Context+DataStore — twin: DesktopKeyServerDirectory.kt
             // D8 — the pass (password-store) layer. PassModels.kt, PassEntryParser.kt and
             // PassTotp.kt (RFC 6238, added upstream in D8) are pure Kotlin/JDK, so they compile
