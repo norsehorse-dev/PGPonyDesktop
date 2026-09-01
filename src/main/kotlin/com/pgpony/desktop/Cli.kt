@@ -18,6 +18,7 @@ import com.pgpony.android.crypto.SignedInputType
 import com.pgpony.android.crypto.SigningService
 import com.pgpony.android.crypto.VerificationResult
 import com.pgpony.android.crypto.VerifyService
+import com.pgpony.android.crypto.pqc.CompositeDocumentSigner
 import com.pgpony.android.data.PGPKeyEntity
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -93,7 +94,7 @@ object Cli {
         } else {
             val rings = recipients.map { sel ->
                 val e = resolveOne(repo, sel, requireSecret = false)
-                repo.loadPublicKeyRing(e.fingerprint)
+                repo.loadEncryptionRecipientRing(e.fingerprint)
                     ?: throw CliError(ExitCode.FAILED, "no public key material for ${e.shortFingerprint}")
             }
             val signerRing = signAs?.let { sel ->
@@ -141,6 +142,21 @@ object Cli {
         val outPath = o.value("--output", "-o")
 
         val e = resolveOne(repo, signAs, requireSecret = true)
+        if (e.algorithm.isCompositeSign) {
+            val info = repo.loadCompositeKeyInfo(e.fingerprint, passphraseOrNull(o)?.toCharArray())
+                ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} could not be loaded")
+            val secret = info.compositeSecret
+                ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} is passphrase-protected; pass --passphrase")
+            val data = readAll(input)
+            val out = if (detached)
+                CompositeDocumentSigner.signDetachedArmored(info.suite, secret, info.fingerprint, data)
+                    .toByteArray(Charsets.UTF_8)
+            else
+                CompositeDocumentSigner.signCleartext(info.suite, secret, info.fingerprint, String(data, Charsets.UTF_8))
+                    .toByteArray(Charsets.UTF_8)
+            writeAll(outPath, out)
+            return@runBlocking ExitCode.OK
+        }
         val ring = repo.loadSecretKeyRing(e.fingerprint)
             ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} could not be loaded")
         val pass = passphraseOrNull(o)
@@ -164,13 +180,17 @@ object Cli {
 
         val result: VerificationResult = if (sigFile != null) {
             val sigBytes = Files.readAllBytes(Path.of(sigFile))
-            readAll(input).inputStream().use { content ->
-                VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
-            }
+            val data = readAll(input)
+            DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), data)
+                ?: data.inputStream().use { content ->
+                    VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
+                }
         } else {
             val text = String(readAll(input), Charsets.UTF_8)
             when (VerifyService.shared.detectInputType(text)) {
-                SignedInputType.CLEAR_SIGNED -> VerifyService.shared.verifyClearSigned(text, publicRings)
+                SignedInputType.CLEAR_SIGNED ->
+                    DesktopCompositeVerify.verifyText(repo, text)
+                        ?: VerifyService.shared.verifyClearSigned(text, publicRings)
                 SignedInputType.DETACHED_SIGNATURE ->
                     throw CliError(ExitCode.USAGE, "verify: detached signature — pass the signed file with --signature")
                 SignedInputType.ENCRYPTED ->
@@ -300,6 +320,8 @@ object Cli {
         "mlkem-librepgp", "mlkem-v5" -> KeyAlgorithm.MLKEM768_X25519_LIBREPGP
         "mlkem-1024", "mlkem-1024-v6", "pqc-1024" -> KeyAlgorithm.MLKEM1024_X448_V6
         "mlkem-1024-librepgp", "mlkem-1024-v5" -> KeyAlgorithm.MLKEM1024_X448_LIBREPGP
+        "mldsa", "mldsa-65", "ml-dsa", "pqc-sign" -> KeyAlgorithm.MLDSA65_ED25519_V6
+        "mldsa-87", "ml-dsa-87", "pqc-sign-87" -> KeyAlgorithm.MLDSA87_ED448_V6
         else -> throw CliError(
             ExitCode.USAGE,
             "gen-key: unknown --algo \"$name\" (ed25519, rsa2048, rsa4096, v6-ed25519, v6-x25519, " +

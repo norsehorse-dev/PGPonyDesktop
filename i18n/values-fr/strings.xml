@@ -116,6 +116,7 @@
     <string name="d_crypto_result_ok">OK</string>
     <string name="d_crypto_result_failed">ÉCHEC</string>
     <string name="d_crypto_signer_pass_label">Phrase secrète du signataire (vide si non protégée)</string>
+    <string name="d_crypto_err_composite_pass">Cette clé de signature est protégée par une phrase secrète. Saisissez sa phrase secrète pour signer.</string>
     <string name="d_crypto_armor_gpg">Armure ASCII (.asc au lieu du binaire .gpg)</string>
     <string name="d_crypto_armor_sig">Armure ASCII (.asc au lieu du binaire .sig)</string>
     <string name="d_crypto_decrypt_pass_label">Phrase secrète de la clé ou du message</string>
@@ -424,6 +425,7 @@
     <string name="d_gen_hint_pq_1024_v6">Post-quantique (brouillon IETF, v6) — ML-KEM-1024 + X448</string>
     <string name="d_gen_hint_pq_1024_librepgp">Post-quantique (LibrePGP) — ML-KEM-1024 + X448, interopère avec GnuPG 2.5</string>
     <string name="d_gen_hint_rsa4096">Volumineux, lent, compatibilité maximale avec l\'existant</string>
+    <string name="d_gen_hint_mldsa">Clé de signature post-quantique. Signe et vérifie ; ne chiffre pas.</string>
     <string name="d_gen_hint_rsa2048">Compatibilité avec l\'existant uniquement</string>
     <string name="d_gen_no_passphrase_warning">Sans phrase secrète : la clé secrète sera stockée sans protection sur cet ordinateur.</string>
 

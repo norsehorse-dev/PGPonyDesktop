@@ -77,6 +77,7 @@ import com.pgpony.android.crypto.SignedInputType
 import com.pgpony.android.crypto.SigningService
 import com.pgpony.android.crypto.VerificationResult
 import com.pgpony.android.crypto.VerifyService
+import com.pgpony.android.crypto.pqc.CompositeDocumentSigner
 import com.pgpony.android.crypto.mime.MimeAttachment
 import com.pgpony.android.data.PGPKeyEntity
 import androidx.compose.ui.awt.AwtWindow
@@ -766,7 +767,7 @@ fun CryptoScreen(state: DesktopState) {
                                         com.pgpony.android.crypto.card.CardSigningService.shared
                                             .signingPublicKey(it, signWith0.cardSigFingerprint)
                                     }
-                                    val rings = selectedRecipients.mapNotNull { crypto.loadPublicKeyRing(it) }
+                                    val rings = selectedRecipients.mapNotNull { crypto.loadEncryptionRecipientRing(it) }
                                     if (cardPubKey == null || rings.size != selectedRecipients.size) {
                                         banner = Banner.Bad(tr("d_crypto_err_card_or_recipient_load"))
                                     } else {
@@ -800,7 +801,7 @@ fun CryptoScreen(state: DesktopState) {
                                     output = when (encryptWith) {
                                         EncryptWith.PUBLIC_KEYS -> {
                                             if (attachments.isEmpty()) {
-                                                val loaded = selectedRecipients.map { fp -> fp to crypto.loadPublicKeyRing(fp) }
+                                                val loaded = selectedRecipients.map { fp -> fp to crypto.loadEncryptionRecipientRing(fp) }
                                                 loaded.firstOrNull { it.second == null }?.let { (fp, _) ->
                                                     val name = state.keys.firstOrNull { it.fingerprint == fp }
                                                         ?.userID?.ifBlank { null } ?: fp.take(16)
@@ -989,6 +990,29 @@ fun CryptoScreen(state: DesktopState) {
                                             )
                                         }
                                     }
+                                } else if (signer.algorithm.isCompositeSign) run {
+                                    // RFC 9980 composite ML-DSA signing (P2b): BouncyCastle cannot
+                                    // sign with the composite key, so route through CompositeDocumentSigner.
+                                    val info = crypto.loadCompositeKeyInfo(
+                                        signer.fingerprint, signerPass.ifBlank { null }?.toCharArray()
+                                    ) ?: error(tr("d_crypto_err_signer_ring"))
+                                    val secret = info.compositeSecret
+                                        ?: error(tr("d_crypto_err_composite_pass"))
+                                    output = if (detachedMode)
+                                        CompositeDocumentSigner.signDetachedArmored(
+                                            info.suite, secret, info.fingerprint,
+                                            input.toByteArray(Charsets.UTF_8)
+                                        )
+                                    else
+                                        CompositeDocumentSigner.signCleartext(
+                                            info.suite, secret, info.fingerprint, input
+                                        )
+                                    banner = Banner.Good(
+                                        tr(
+                                            "d_crypto_banner_signed",
+                                            tr(signatureKindKey(detachedMode)), signer.userEmail
+                                        )
+                                    )
                                 } else run {
                                     val ring = crypto.loadSecretKeyRing(signer.fingerprint)
                                         ?: error(tr("d_crypto_err_signer_ring"))
@@ -1029,14 +1053,15 @@ fun CryptoScreen(state: DesktopState) {
                                     val rings = state.keys.mapNotNull { crypto.loadPublicKeyRing(it.fingerprint) }
                                     val result = when (VerifyService.shared.detectInputType(input)) {
                                         SignedInputType.CLEAR_SIGNED ->
-                                            VerifyService.shared.verifyClearSigned(input, rings)
+                                            DesktopCompositeVerify.verifyText(crypto, input)
+                                                ?: VerifyService.shared.verifyClearSigned(input, rings)
                                         SignedInputType.DETACHED_SIGNATURE -> {
                                             check(detachedContent.isNotBlank()) {
                                                 tr("d_crypto_err_detached_needs_text")
                                             }
-                                            VerifyService.shared.verifyDetached(
-                                                input, detachedContent.toByteArray(Charsets.UTF_8), rings
-                                            )
+                                            val data = detachedContent.toByteArray(Charsets.UTF_8)
+                                            DesktopCompositeVerify.verifyDetached(crypto, input, data)
+                                                ?: VerifyService.shared.verifyDetached(input, data, rings)
                                         }
                                         SignedInputType.ENCRYPTED ->
                                             error(tr("d_crypto_err_is_encrypted"))

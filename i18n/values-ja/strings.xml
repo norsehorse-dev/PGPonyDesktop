@@ -118,6 +118,7 @@
     <string name="d_crypto_result_ok">成功</string>
     <string name="d_crypto_result_failed">失敗</string>
     <string name="d_crypto_signer_pass_label">署名鍵のパスフレーズ（保護されていない場合は空欄）</string>
+    <string name="d_crypto_err_composite_pass">この署名鍵はパスフレーズで保護されています。署名するにはパスフレーズを入力してください。</string>
     <string name="d_crypto_armor_gpg">ASCII アーマー（バイナリ .gpg ではなく .asc）</string>
     <string name="d_crypto_armor_sig">ASCII アーマー（バイナリ .sig ではなく .asc）</string>
     <string name="d_crypto_decrypt_pass_label">鍵またはメッセージのパスフレーズ</string>
@@ -416,6 +417,7 @@
     <string name="d_gen_hint_pq_1024_v6">ポスト量子（IETF ドラフト、v6）— ML-KEM-1024 + X448</string>
     <string name="d_gen_hint_pq_1024_librepgp">ポスト量子（LibrePGP）— ML-KEM-1024 + X448、GnuPG 2.5 と相互運用できます</string>
     <string name="d_gen_hint_rsa4096">大きく低速。旧来のソフトウェアとの互換性は最大です</string>
+    <string name="d_gen_hint_mldsa">ポスト量子署名鍵。署名と検証を行い、暗号化はしません。</string>
     <string name="d_gen_hint_rsa2048">旧来のソフトウェアとの互換性のためだけ</string>
     <string name="d_gen_no_passphrase_warning">パスフレーズなし：秘密鍵はこのコンピューターに保護されないまま保存されます。</string>
 

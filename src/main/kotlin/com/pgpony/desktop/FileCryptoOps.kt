@@ -49,7 +49,7 @@ class FileCryptoOps(
         outputDir: Path? = null
     ): FileOutcome = try {
         val rings = recipientFingerprints.map {
-            repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
+            repo.loadEncryptionRecipientRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
         }
         // The Phase A3 rule — a requested signature must never silently drop.
         val signerRing = signerFingerprint?.let {
@@ -109,7 +109,7 @@ class FileCryptoOps(
         isCancelled: () -> Boolean = NOT_CANCELLED
     ): FileOutcome = try {
         val rings = recipientFingerprints.map {
-            repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
+            repo.loadEncryptionRecipientRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
         }
         val signerRing = signerFingerprint?.let {
             repo.loadSecretKeyRing(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
@@ -205,7 +205,9 @@ class FileCryptoOps(
 
         if (armoredFromText != null) {
             // Byte path (armored text is base64-bounded in size).
-            val result = crypto.decryptArmored(armoredFromText, secretRings, passphrase, publicRings)
+            val result = crypto.decryptArmored(
+                armoredFromText, secretRings, passphrase, publicRings, repo.compositePrimarySecretRings()
+            )
             val sigNote = sigNote(result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw)
             val mime = MimeParser.parse(result.data)
             if (TarStreamer.looksLikeTar(result.data)) {
@@ -443,7 +445,7 @@ class FileCryptoOps(
         armor: Boolean
     ): FileOutcome = try {
         val rings = recipientFingerprints.map {
-            repo.loadPublicKeyRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
+            repo.loadEncryptionRecipientRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
         }
         val out = uniquePath(file.resolveSibling(file.name + if (armor) ".asc" else ".gpg"))
         Files.newInputStream(file).use { input ->
@@ -470,11 +472,17 @@ class FileCryptoOps(
     }
 
     suspend fun verifyFileDetached(signatureFile: Path, contentFile: Path): FileOutcome = try {
-        val publicRings = repo.allKeys().mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
         val sigBytes = Files.readAllBytes(signatureFile)
-        val result = Files.newInputStream(contentFile).use { content ->
-            VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
-        }
+        val contentBytes = Files.readAllBytes(contentFile)
+        // Composite ML-DSA (RFC 9980) detached signatures verify whole-document; BouncyCastle
+        // cannot parse them, so try the composite path first and fall back to VerifyService.
+        val result = DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), contentBytes)
+            ?: run {
+                val publicRings = repo.allKeys().mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
+                contentBytes.inputStream().use { content ->
+                    VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
+                }
+            }
         when (result) {
             is VerificationResult.Verified -> FileOutcome(
                 contentFile, null, true,

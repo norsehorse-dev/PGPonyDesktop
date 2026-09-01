@@ -40,7 +40,7 @@ class MimeOps(
     ): String {
         val mimeBytes = MimeBuilder.buildMixed(body.ifBlank { null }, loadAttachments(attachmentPaths))
         val rings = recipientFingerprints.map {
-            repo.loadPublicKeyRing(it) ?: error("Recipient ring failed to load: ${it.take(16)}")
+            repo.loadEncryptionRecipientRing(it) ?: error("Recipient ring failed to load: ${it.take(16)}")
         }
         // The Phase A3 rule — a requested signature must never silently drop.
         val signerRing = signerFingerprint?.let {
@@ -70,7 +70,7 @@ class MimeOps(
     ): String {
         val mimeBytes = MimeBuilder.buildMixed(body.ifBlank { null }, loadAttachments(attachmentPaths))
         val rings = recipientFingerprints.map {
-            repo.loadPublicKeyRing(it) ?: error("Recipient ring failed to load: ${it.take(16)}")
+            repo.loadEncryptionRecipientRing(it) ?: error("Recipient ring failed to load: ${it.take(16)}")
         }
         val encrypted = crypto.encrypt(
             data = mimeBytes,

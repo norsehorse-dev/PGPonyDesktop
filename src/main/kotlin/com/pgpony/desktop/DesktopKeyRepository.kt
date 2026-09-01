@@ -25,6 +25,10 @@ import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.RevocationError
 import com.pgpony.android.crypto.RevocationService
 import com.pgpony.android.crypto.SubkeyCapability
+import com.pgpony.android.crypto.pqc.CompositeKeyFacade
+import com.pgpony.android.crypto.pqc.CompositePrimaryKeyGen
+import com.pgpony.android.crypto.pqc.CompositeSigPacket
+import com.pgpony.android.crypto.pqc.CompositeSignSuite
 import com.pgpony.android.data.PGPDatabase
 import com.pgpony.android.data.PGPKeyEntity
 import com.pgpony.android.data.RevocationReason
@@ -83,6 +87,9 @@ class DesktopKeyRepository(
         passphrase: String?,
         expirationSeconds: Long? = null
     ): PGPKeyEntity {
+        if (algorithm.isCompositeSign) {
+            return generateCompositeSigningKey(name, email, algorithm, passphrase, expirationSeconds)
+        }
         val result = crypto.generateKeyPair(name, email, algorithm, passphrase, expirationSeconds)
 
         materials.storePublic(result.fingerprint, result.armoredPublicKey)
@@ -121,6 +128,58 @@ class DesktopKeyRepository(
             expiresAt = expiresAtMs,
             armoredPublicKey = result.armoredPublicKey,
             revocationCertificate = preCachedRevocationCert
+        )
+        dao.insert(entity)
+        return entity
+    }
+
+    /**
+     * Composite ML-DSA signing keygen (P2c; the desktop port of the Android
+     * KeyRepository.generateCompositeSigningKey). BouncyCastle cannot build or sign with a
+     * composite primary, so the key is assembled, described, and stored via the raw-bytes
+     * composite path and kept as ASCII armor at rest like every other desktop key.
+     */
+    private suspend fun generateCompositeSigningKey(
+        name: String,
+        email: String,
+        algorithm: KeyAlgorithm,
+        passphrase: String?,
+        expirationSeconds: Long?
+    ): PGPKeyEntity {
+        val suite = if (algorithm == KeyAlgorithm.MLDSA87_ED448_V6)
+            CompositeSignSuite.MLDSA87_ED448 else CompositeSignSuite.MLDSA65_ED25519
+        val uid = "$name <$email>"
+        var secretRing = CompositePrimaryKeyGen.assemble(uid, suite, expirationSeconds = expirationSeconds)
+        if (!passphrase.isNullOrEmpty()) {
+            secretRing = CompositeKeyFacade.reprotect(secretRing, null, passphrase.toCharArray())
+        }
+        val publicRing = CompositeKeyFacade.publicRingOf(secretRing)
+        val info = CompositeKeyFacade.parse(secretRing)
+        val fingerprintHex = info.fingerprintHex.uppercase()
+
+        val armoredPublic = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----", "-----END PGP PUBLIC KEY BLOCK-----", publicRing
+        )
+        val armoredSecret = CompositeSigPacket.armor(
+            "-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----", secretRing
+        )
+        materials.storePublic(fingerprintHex, armoredPublic)
+        materials.storeSecret(fingerprintHex, armoredSecret)
+
+        val expiresAtMs = info.expirationSeconds?.let { info.creationTimeMillis + it * 1000 }
+        val parsed = PGPKeyEntity.parseUserID(uid)
+        val entity = PGPKeyEntity(
+            id = UUID.randomUUID().toString(),
+            fingerprint = fingerprintHex,
+            userID = uid,
+            userName = parsed.first,
+            userEmail = parsed.second,
+            algorithm = algorithm,
+            isKeyPair = true,
+            createdAt = System.currentTimeMillis(),
+            expiresAt = expiresAtMs,
+            armoredPublicKey = armoredPublic,
+            revocationCertificate = null
         )
         dao.insert(entity)
         return entity
@@ -478,7 +537,7 @@ class DesktopKeyRepository(
         val all = allKeys()
         val secretRings = all.filter { it.isKeyPair }.mapNotNull { loadSecretKeyRing(it.fingerprint) }
         val publicRings = all.mapNotNull { loadPublicKeyRing(it.fingerprint) }
-        return crypto.decryptArmored(armored, secretRings, passphrase, publicRings)
+        return crypto.decryptArmored(armored, secretRings, passphrase, publicRings, compositePrimarySecretRings())
     }
 
     // ── Ring loaders (desktop analogs of the Android load*KeyRing) ──────
@@ -486,6 +545,62 @@ class DesktopKeyRepository(
     suspend fun loadPublicKeyRing(fingerprint: String): PGPPublicKeyRing? =
         exportArmoredPublicKey(fingerprint)
             ?.let { runCatching { crypto.importArmoredKey(it).publicKeyRing }.getOrNull() }
+
+    /**
+     * The public key ring to encrypt TO for a recipient (4.4.1, #36; the desktop
+     * twin of the Android KeyRepository.loadEncryptionRecipientRing). Normal keys
+     * and standalone ML-KEM keys load through loadPublicKeyRing. A composite ML-DSA
+     * signing key cannot (BouncyCastle rejects its algo-30/31 primary), yet it
+     * carries an ML-KEM encryption subkey; that subkey is lifted out via
+     * CompositeKeyFacade and returned as a bare ring. Returns null only when the key
+     * truly has no encryption subkey to receive a message.
+     */
+    suspend fun loadEncryptionRecipientRing(fingerprint: String): PGPPublicKeyRing? {
+        loadPublicKeyRing(fingerprint)?.let { return it }
+        val raw = rawPublicBytes(fingerprint) ?: return null
+        return CompositeKeyFacade.encryptionSubkeyRing(raw)
+    }
+
+    private suspend fun rawPublicBytes(fingerprint: String): ByteArray? {
+        val armored = exportArmoredPublicKey(fingerprint) ?: return null
+        return runCatching { CompositeSigPacket.dearmor(armored) }.getOrNull()
+    }
+
+    /**
+     * Parse a composite ML-DSA key's public material (P2a). BouncyCastle cannot load a
+     * composite primary, so the key is stored armored and parsed here via CompositeKeyFacade.
+     * Null for a non-composite or unreadable key.
+     */
+    suspend fun loadCompositePublicInfo(fingerprint: String): CompositeKeyFacade.Info? {
+        val raw = rawPublicBytes(fingerprint) ?: return null
+        return runCatching { CompositeKeyFacade.parse(raw) }.getOrNull()
+    }
+
+    private fun rawSecretBytes(fingerprint: String): ByteArray? {
+        val armored = materials.loadSecret(fingerprint) ?: return null
+        return runCatching { CompositeSigPacket.dearmor(armored) }.getOrNull()
+    }
+
+    /**
+     * Composite ML-DSA key metadata + secret material from the stored SECRET half (P2b).
+     * Threads [passphrase] into CompositeKeyFacade.parse: a wrong passphrase propagates (the
+     * sign path shows it as an error), a locked key with no passphrase yields Info with a null
+     * compositeSecret. Null when there is no stored secret for this key.
+     */
+    fun loadCompositeKeyInfo(fingerprint: String, passphrase: CharArray? = null): CompositeKeyFacade.Info? {
+        val raw = rawSecretBytes(fingerprint) ?: return null
+        return CompositeKeyFacade.parse(raw, passphrase)
+    }
+
+    /**
+     * Raw (still passphrase-protected) secret rings of held composite ML-DSA key pairs (P2d).
+     * A composite signing key carries an ML-KEM encryption subkey, so a message can be encrypted
+     * to it; the message-decrypt path passes these to PGPCryptoService, which trials the subkey
+     * packet-level (BouncyCastle cannot load the composite primary) and unlocks with the passphrase.
+     */
+    suspend fun compositePrimarySecretRings(): List<ByteArray> =
+        allKeys().filter { it.isKeyPair && it.algorithm.isCompositeSign }
+            .mapNotNull { rawSecretBytes(it.fingerprint) }
 
     fun loadSecretKeyRing(fingerprint: String): PGPSecretKeyRing? =
         materials.loadSecret(fingerprint)

@@ -116,6 +116,7 @@
     <string name="d_crypto_result_ok">OK</string>
     <string name="d_crypto_result_failed">ERROR</string>
     <string name="d_crypto_signer_pass_label">Frase de contraseña del firmante (vacía si no está protegida)</string>
+    <string name="d_crypto_err_composite_pass">Esta clave de firma está protegida con una frase de contraseña. Introduce su frase de contraseña para firmar.</string>
     <string name="d_crypto_armor_gpg">Armadura ASCII (.asc en vez de .gpg binario)</string>
     <string name="d_crypto_armor_sig">Armadura ASCII (.asc en vez de .sig binario)</string>
     <string name="d_crypto_decrypt_pass_label">Frase de contraseña de la clave o del mensaje</string>
@@ -424,6 +425,7 @@
     <string name="d_gen_hint_pq_1024_v6">Poscuántico (borrador del IETF, v6): ML-KEM-1024 + X448</string>
     <string name="d_gen_hint_pq_1024_librepgp">Poscuántico (LibrePGP): ML-KEM-1024 + X448, interopera con GnuPG 2.5</string>
     <string name="d_gen_hint_rsa4096">Grande, lento, máxima compatibilidad con sistemas antiguos</string>
+    <string name="d_gen_hint_mldsa">Clave de firma post-cuántica. Firma y verifica; no cifra.</string>
     <string name="d_gen_hint_rsa2048">Solo por compatibilidad con sistemas antiguos</string>
     <string name="d_gen_no_passphrase_warning">Sin contraseña: la clave secreta se guardará sin protección en este equipo.</string>
 
