@@ -317,6 +317,52 @@ class DesktopState(private val scope: CoroutineScope) {
         refresh()
     }
 
+    /**
+     * 3.0.0 stage 2: run a Key Detail edit off the UI thread. On success [success] becomes the
+     * status line, the keyring reloads and [onDone] runs; a failure goes to [onError] so the
+     * dialog that asked can show it and stay open.
+     */
+    fun runEdit(
+        success: String?,
+        onError: (Throwable) -> Unit,
+        onDone: () -> Unit = {},
+        block: suspend () -> Unit
+    ) = scope.launch {
+        busy = true
+        try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { block() }
+            success?.let { status = it }
+            refresh()
+            onDone()
+        } catch (t: Throwable) {
+            onError(t)
+        } finally {
+            busy = false
+        }
+    }
+
+    /** 3.0.0 (plan 3.2): Clear All Data. The flow closes the app once [onDone] is shown. */
+    fun clearAllData(onDone: () -> Unit, onError: (String) -> Unit) = scope.launch {
+        busy = true
+        try {
+            ClearAllData.run(edits)
+            refresh()
+            onDone()
+        } catch (t: Throwable) {
+            onError(tr("settings_data_clear_error_format", t.message ?: t::class.simpleName.orEmpty()))
+        } finally {
+            busy = false
+        }
+    }
+
+    /** 3.0.0 (plan 3.10): Key Detail's Encrypt to / Decrypt with shortcuts. CryptoScreen consumes it. */
+    var cryptoPreset by mutableStateOf<CryptoPreset?>(null)
+    fun openCrypto(preset: CryptoPreset) {
+        cryptoPreset = preset
+        destination = Destination.Crypto
+    }
+    fun consumeCryptoPreset() { cryptoPreset = null }
+
     // ── D2c mutations ───────────────────────────────────────────────────
 
     fun setTrust(entity: PGPKeyEntity, trust: com.pgpony.android.data.TrustLevel) = scope.launch {
@@ -433,6 +479,9 @@ private const val EXPIRY_SCAN_TICK_MS = 24 * 60 * 60 * 1000L
 
 /** D9 — menu-bar requests a screen fulfills by opening a dialog. */
 enum class UiRequest { NEW_KEY, RESTORE }
+
+/** Where Key Detail sends the Crypto screen: a recipient to preselect, or a key to decrypt with. */
+data class CryptoPreset(val encryptTo: String? = null, val decryptWith: String? = null)
 
 // Public (not private): DesktopState.destination and TrayNav.request reference it across the
 // public surface, so a private enum would trip "exposes private type".

@@ -211,6 +211,23 @@ fun CryptoScreen(state: DesktopState) {
         }
     }
 
+    // 3.0.0 (plan 3.10): Key Detail's Encrypt to / Decrypt with. Encrypt preselects the one
+    // recipient; decrypt opens Decrypt, where every held key is tried (the "Decrypt with" picker
+    // that carries the key and its fallbacks is checkpoint 2c).
+    androidx.compose.runtime.LaunchedEffect(state.cryptoPreset) {
+        val preset = state.cryptoPreset ?: return@LaunchedEffect
+        tab = CryptoTab.MESSAGE
+        banner = null
+        if (preset.encryptTo != null) {
+            messageOp = MessageOp.ENCRYPT
+            encryptWith = EncryptWith.PUBLIC_KEYS
+            selectedRecipients = setOf(preset.encryptTo)
+        } else if (preset.decryptWith != null) {
+            messageOp = MessageOp.DECRYPT
+        }
+        state.consumeCryptoPreset()
+    }
+
     // Window drops land here: append, auto-route the operation, switch to the Files tab.
     androidx.compose.runtime.LaunchedEffect(state.droppedFiles) {
         if (state.droppedFiles.isNotEmpty()) {

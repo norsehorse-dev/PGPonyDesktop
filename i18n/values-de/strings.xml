@@ -741,4 +741,28 @@
         <item quantity="one">Noch %1$d Tag</item>
         <item quantity="other">Noch %1$d Tage</item>
     </plurals>
+    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
+    <string name="d_edit_err_v6_subkey_type">Einem v6-Schlüssel lassen sich nur Ed25519- und X25519-Unterschlüssel hinzufügen.</string>
+    <string name="d_edit_err_v4_mlkem768_only">Ein v4-Schlüssel nimmt nur den Post-Quanten-Unterschlüssel ML-KEM-768 auf. ML-KEM-1024 braucht einen v6-Schlüssel.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">Ein Post-Quanten-Signaturunterschlüssel braucht einen v6-Schlüssel.</string>
+    <string name="d_keydetail_decrypt_with">Mit diesem Schlüssel entschlüsseln</string>
+    <string name="d_keydetail_last_backed_up">Zuletzt gesichert</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">Passphrase</string>
+    <string name="d_keydetail_passphrase_on">Durch eine Passphrase geschützt.</string>
+    <string name="d_keydetail_passphrase_off">Keine Passphrase. Auf diesem Computer schützen nur die Dateiberechtigungen die Schlüsseldatei; wer Ihr Benutzerkonto verwenden kann, kann auch den Schlüssel verwenden.</string>
+    <string name="d_keydetail_subkey_revoke_title">Unterschlüssel %1$s widerrufen</string>
+    <string name="d_keydetail_subkey_revoke_body">Der Widerruf veröffentlicht eine Signatur, die Ihren Kontakten sagt, diesen Unterschlüssel nicht mehr zu verwenden, sobald sie Ihren Schlüssel aktualisieren. Das lässt sich nicht rückgängig machen.</string>
+    <string name="d_settings_clear_ack1">Mir ist klar, dass jeder Schlüssel sofort vernichtet wird, ohne Wiederherstellungsfrist.</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">PGPony wird jetzt geschlossen. Beim nächsten Start beginnt alles von vorn.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">Ebenfalls entfernt: alle PGPony-Einstellungen (Schlüsselserver, Netzwerk, SSH-Agent, überwachte Ordner, Passwortspeicher), die Überwachungsregeln und die zwischengespeicherte Karten-PIN. Ihr Passwortspeicher-Ordner und anderswo gespeicherte Dateien bleiben unberührt.</string>
+    <string name="d_status_userid_added">Benutzer-ID hinzugefügt</string>
+    <string name="d_status_userid_revoked">Benutzer-ID widerrufen</string>
+    <string name="d_status_userid_removed">Benutzer-ID entfernt</string>
+    <string name="d_status_primary_userid">Primäre Benutzer-ID geändert</string>
+    <string name="d_status_subkey_added">Unterschlüssel hinzugefügt</string>
+    <string name="d_status_subkey_revoked">Unterschlüssel widerrufen</string>
+    <string name="d_status_notations_saved">Notationen gespeichert</string>
 </resources>

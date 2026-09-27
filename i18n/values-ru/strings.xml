@@ -815,4 +815,28 @@
         <item quantity="many">Осталось %1$d дней</item>
         <item quantity="other">Осталось %1$d дня</item>
     </plurals>
+    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
+    <string name="d_edit_err_v6_subkey_type">К ключу v6 можно добавить только подключи Ed25519 и X25519.</string>
+    <string name="d_edit_err_v4_mlkem768_only">Ключ v4 принимает только постквантовый подключ ML-KEM-768. Для ML-KEM-1024 нужен ключ v6.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">Для постквантового подключа подписи нужен ключ v6.</string>
+    <string name="d_keydetail_decrypt_with">Расшифровать этим ключом</string>
+    <string name="d_keydetail_last_backed_up">Последняя резервная копия</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">Парольная фраза</string>
+    <string name="d_keydetail_passphrase_on">Защищён парольной фразой.</string>
+    <string name="d_keydetail_passphrase_off">Без парольной фразы. На этом компьютере файл ключа защищён только правами доступа к файлу, поэтому ключом может воспользоваться любой, кто может войти в вашу учётную запись.</string>
+    <string name="d_keydetail_subkey_revoke_title">Отозвать подключ %1$s</string>
+    <string name="d_keydetail_subkey_revoke_body">Отзыв публикует подпись, которая сообщает вашим корреспондентам, что этим подключом больше нельзя пользоваться, как только они обновят ваш ключ. Отменить это нельзя.</string>
+    <string name="d_settings_clear_ack1">Я понимаю, что все ключи уничтожаются сейчас, без периода восстановления.</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">PGPony сейчас закроется. Следующий запуск начнётся с чистого листа.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">Также удаляются: все настройки PGPony (серверы ключей, сеть, SSH-агент, отслеживаемые папки, хранилище паролей), правила отслеживания и кэшированный PIN карты. Папка вашего хранилища паролей и файлы, сохранённые в других местах, не затрагиваются.</string>
+    <string name="d_status_userid_added">Идентификатор пользователя добавлен</string>
+    <string name="d_status_userid_revoked">Идентификатор пользователя отозван</string>
+    <string name="d_status_userid_removed">Идентификатор пользователя удалён</string>
+    <string name="d_status_primary_userid">Основной идентификатор пользователя изменён</string>
+    <string name="d_status_subkey_added">Подключ добавлен</string>
+    <string name="d_status_subkey_revoked">Подключ отозван</string>
+    <string name="d_status_notations_saved">Нотации сохранены</string>
 </resources>

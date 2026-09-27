@@ -16,16 +16,23 @@
 
 package com.pgpony.desktop
 
+import com.pgpony.android.crypto.AddSubkeyChoice
 import com.pgpony.android.crypto.CertificateBindings
 import com.pgpony.android.crypto.ClassicalSubkeyGen
+import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.RevocationError
 import com.pgpony.android.crypto.RevocationService
 import com.pgpony.android.crypto.SubkeyCapability
 import com.pgpony.android.crypto.UserIdService
+import com.pgpony.android.crypto.V6SubkeyGen
 import com.pgpony.android.crypto.pqc.CompositeKeyFacade
+import com.pgpony.android.crypto.pqc.CompositeKeyGen
 import com.pgpony.android.crypto.pqc.CompositePrimaryKeyGen
 import com.pgpony.android.crypto.pqc.CompositeSigPacket
+import com.pgpony.android.crypto.pqc.CompositeSignSubkeyGen
+import com.pgpony.android.crypto.pqc.CompositeSignSuite
+import com.pgpony.android.crypto.pqc.CompositeSuite
 import com.pgpony.android.crypto.pqc.V4Algo35Carry
 import com.pgpony.android.crypto.pqc.V4Algo35Edit
 import com.pgpony.android.data.FallbackKeyEntity
@@ -131,6 +138,19 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
         val deletedAt = entity.deletedAt ?: return RETENTION_DAYS
         val left = deletedAt + RETENTION_DAYS * DAY_MS - nowMs
         return if (left <= 0) 0 else (left / DAY_MS).toInt()
+    }
+
+    /** Clear All Data, database half (Android 4.2.0 RC5, plan 3.2): every key, live or in Recently
+     *  Deleted, with its material and related rows, then the Autocrypt peer and API client tables.
+     *  Settings and the files beside the database are ClearAllData's. */
+    suspend fun purgeEverything() {
+        // The DAO's purge only deletes rows already in the bin, so live keys go there first.
+        val now = System.currentTimeMillis()
+        repo.allKeys().forEach { dao.softDelete(it.id, now) }
+        deletedKeys().forEach { purge(it) }
+        repo.db.autocryptPeerDao().clear()
+        val clients = repo.db.apiClientDao()
+        clients.getAll().forEach { clients.deleteByPackage(it.packageName) }
     }
 
     // ── Last backed up (Android 4.3.0) ──────────────────────────────────
@@ -299,6 +319,149 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
                 userEmail = parsed?.second ?: entity.userEmail
             )
         )
+    }
+
+    // ── Add subkey (Android 4.2.0 RC3 H, 4.5.0 item 7 #55, 4.6.0 items 16 and 21) ──
+
+    /** Add the subkey kind the Add Subkey dialog picked, then stamp lastLocalEditAt. */
+    suspend fun addSubkey(fingerprint: String, choice: AddSubkeyChoice, expirationSeconds: Long?, passphrase: String?) {
+        when (choice) {
+            is AddSubkeyChoice.Classical -> addClassicalSubkeyEdit(fingerprint, choice.type, expirationSeconds, passphrase)
+            is AddSubkeyChoice.PqEncryption -> addPqEncryptionSubkeyEdit(fingerprint, choice.suite, expirationSeconds, passphrase)
+            is AddSubkeyChoice.PqSigning -> addPqSigningSubkeyEdit(fingerprint, choice.suite, expirationSeconds, passphrase)
+        }
+        stampLocalEdit(fingerprint)
+    }
+
+    /** Keygen's SSH authentication subkey (Android 4.6.0 item 16): the same edit without the
+     *  local-edit stamp, since a brand-new key has nothing published to fall behind. An RSA key
+     *  gets an RSA subkey of the same size, every other key Ed25519. */
+    suspend fun addSshAuthSubkeyAtGeneration(
+        fingerprint: String,
+        algorithm: KeyAlgorithm,
+        expirationSeconds: Long?,
+        passphrase: String?
+    ) = addClassicalSubkeyEdit(fingerprint, ClassicalSubkeyGen.sshAuthTypeFor(algorithm), expirationSeconds, passphrase)
+
+    private suspend fun addClassicalSubkeyEdit(
+        fingerprint: String,
+        type: ClassicalSubkeyGen.ClassicalSubkeyType,
+        expirationSeconds: Long?,
+        passphrase: String?
+    ) {
+        val entity = requireOwnSoftwareKey(fingerprint)
+        if (entity.algorithm.isCompositeSign) {
+            storeCompositeSubkeyEdit(entity, passphrase) { raw, pass ->
+                CompositePrimaryKeyGen.addClassicalSubkey(raw, type, expirationSeconds, pass)
+            }
+            return
+        }
+        val secRing = secretRing(fingerprint)
+        // A v6 primary needs a v6 binding signature, which ClassicalSubkeyGen (v4) cannot emit.
+        val updated = if (entity.isV6Key) {
+            val v6Type = when (type) {
+                ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_SIGN -> V6SubkeyGen.V6SubkeyType.ED25519_SIGN
+                ClassicalSubkeyGen.ClassicalSubkeyType.X25519_ENCRYPT -> V6SubkeyGen.V6SubkeyType.X25519_ENCRYPT
+                ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_AUTH -> V6SubkeyGen.V6SubkeyType.ED25519_AUTH
+                else -> throw KeyEditException(tr("d_edit_err_v6_subkey_type"))
+            }
+            V6SubkeyGen.addSubkey(secRing, v6Type, passphrase, expirationSeconds)
+        } else {
+            ClassicalSubkeyGen.addSubkey(
+                secretRing = secRing,
+                type = type,
+                passphrase = passphrase,
+                expirationSeconds = expirationSeconds
+            )
+        }
+        storeRingEdit(entity, updated)
+    }
+
+    /** ML-KEM encryption subkey. v6 keeps a BouncyCastle-parseable ring; v4 takes the RFC 9980
+     *  algo-35 shape, converts to raw-octet storage and relabels as MLKEM768_X25519_V4. */
+    private suspend fun addPqEncryptionSubkeyEdit(
+        fingerprint: String,
+        suite: CompositeSuite,
+        expirationSeconds: Long?,
+        passphrase: String?
+    ) {
+        val entity = requireOwnSoftwareKey(fingerprint)
+        if (entity.algorithm.isCompositeSign) {
+            storeCompositeSubkeyEdit(entity, passphrase) { raw, pass ->
+                CompositePrimaryKeyGen.addCompositeEncryptionSubkey(raw, suite, expirationSeconds, pass)
+            }
+            return
+        }
+        val secRing = secretRing(fingerprint)
+        if (entity.isV6Key) {
+            storeRingEdit(
+                entity,
+                CompositeKeyGen.addCompositeSubkey(
+                    secretRing = secRing,
+                    suite = suite,
+                    passphrase = passphrase,
+                    expirationSeconds = expirationSeconds
+                )
+            )
+            return
+        }
+        if (suite.ietfAlgId != 35) throw KeyEditException(tr("d_edit_err_v4_mlkem768_only"))
+        val rings = CompositeKeyGen.addV4Algo35SubkeyRings(
+            baseSecretRing = secRing,
+            passphrase = passphrase,
+            expirationSeconds = expirationSeconds
+        )
+        // Android 4.6.0 (item 19): the carry keeps an earlier ML-KEM subkey beside the new one.
+        val armor = storeEditedPublic(fingerprint, rings.publicRaw)
+        storeEditedSecret(fingerprint, rings.secretRaw)
+        dao.update(entity.copy(algorithm = KeyAlgorithm.MLKEM768_X25519_V4, armoredPublicKey = armor))
+    }
+
+    /** ML-DSA + EdDSA signing subkey (algo 30/31). v6 primaries only. */
+    private suspend fun addPqSigningSubkeyEdit(
+        fingerprint: String,
+        suite: CompositeSignSuite,
+        expirationSeconds: Long?,
+        passphrase: String?
+    ) {
+        val entity = requireOwnSoftwareKey(fingerprint)
+        if (!entity.isV6Key) throw KeyEditException(tr("d_edit_err_pq_sign_needs_v6"))
+        if (entity.algorithm.isCompositeSign) {
+            storeCompositeSubkeyEdit(entity, passphrase) { raw, pass ->
+                CompositePrimaryKeyGen.addCompositeSigningSubkey(raw, suite, expirationSeconds, pass)
+            }
+            return
+        }
+        storeRingEdit(
+            entity,
+            CompositeSignSubkeyGen.addCompositeSigningSubkey(
+                secretRing = secretRing(fingerprint),
+                suite = suite,
+                passphrase = passphrase,
+                expirationSeconds = expirationSeconds
+            )
+        )
+    }
+
+    private suspend fun storeRingEdit(entity: PGPKeyEntity, updatedSecretRing: PGPSecretKeyRing) {
+        val updatedPublicRing = PGPPublicKeyRing(updatedSecretRing.publicKeys.asSequence().toList())
+        val armor = storeEditedPublic(entity.fingerprint, updatedPublicRing.encoded)
+        storeEditedSecret(entity.fingerprint, updatedSecretRing.encoded)
+        dao.update(entity.copy(armoredPublicKey = armor))
+    }
+
+    /** Composite ML-DSA primaries are not BouncyCastle rings (#55): edit the raw octets. */
+    private suspend fun storeCompositeSubkeyEdit(
+        entity: PGPKeyEntity,
+        passphrase: String?,
+        edit: (ByteArray, CharArray?) -> ByteArray
+    ) {
+        val raw = repo.rawSecretBytes(entity.fingerprint)
+            ?: throw KeyEditException(tr("d_repo_err_secret_ring_load", entity.fingerprint))
+        val pass = passphrase?.takeIf { it.isNotEmpty() }?.toCharArray()
+        val updated = edit(raw, pass)
+        val restored = if (pass != null) CompositeKeyFacade.reprotect(updated, pass, pass) else updated
+        storeCompositeEdit(entity, restored)
     }
 
     // ── Subkeys: list, revoke, remove (Android 4.5.0 item 16 #54, 4.6.0 item 19) ──

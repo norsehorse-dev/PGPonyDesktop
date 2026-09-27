@@ -741,4 +741,28 @@
         <item quantity="one">Resta %1$d dia</item>
         <item quantity="other">Restam %1$d dias</item>
     </plurals>
+    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
+    <string name="d_edit_err_v6_subkey_type">Só é possível adicionar subchaves Ed25519 e X25519 a uma chave v6.</string>
+    <string name="d_edit_err_v4_mlkem768_only">Uma chave v4 aceita apenas a subchave pós-quântica ML-KEM-768. ML-KEM-1024 exige uma chave v6.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">Uma subchave de assinatura pós-quântica exige uma chave v6.</string>
+    <string name="d_keydetail_decrypt_with">Descriptografar com esta chave</string>
+    <string name="d_keydetail_last_backed_up">Último backup</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">Frase-senha</string>
+    <string name="d_keydetail_passphrase_on">Protegida por uma frase-senha.</string>
+    <string name="d_keydetail_passphrase_off">Sem frase-senha. Neste computador o arquivo da chave é protegido apenas pelas permissões do arquivo, então qualquer pessoa que use sua conta pode usar a chave.</string>
+    <string name="d_keydetail_subkey_revoke_title">Revogar a subchave %1$s</string>
+    <string name="d_keydetail_subkey_revoke_body">Revogar publica uma assinatura que diz aos seus contatos para pararem de usar esta subchave quando atualizarem sua chave. Não pode ser desfeito.</string>
+    <string name="d_settings_clear_ack1">Entendo que todas as chaves são destruídas agora, sem prazo de recuperação.</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">O PGPony será fechado agora. A próxima abertura começa do zero.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">Também são removidos: todas as configurações do PGPony (servidores de chaves, rede, agente SSH, pastas monitoradas, armazenamento de senhas), as regras de monitoramento e o PIN do cartão em cache. A pasta do seu armazenamento de senhas e os arquivos salvos em outros lugares não são tocados.</string>
+    <string name="d_status_userid_added">ID de usuário adicionado</string>
+    <string name="d_status_userid_revoked">ID de usuário revogado</string>
+    <string name="d_status_userid_removed">ID de usuário removido</string>
+    <string name="d_status_primary_userid">ID de usuário principal alterado</string>
+    <string name="d_status_subkey_added">Subchave adicionada</string>
+    <string name="d_status_subkey_revoked">Subchave revogada</string>
+    <string name="d_status_notations_saved">Notações salvas</string>
 </resources>

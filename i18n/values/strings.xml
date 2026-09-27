@@ -872,4 +872,28 @@
         <item quantity="one">%1$d day left</item>
         <item quantity="other">%1$d days left</item>
     </plurals>
+    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
+    <string name="d_edit_err_v6_subkey_type">Only Ed25519 and X25519 subkeys can be added to a v6 key.</string>
+    <string name="d_edit_err_v4_mlkem768_only">A v4 key takes the ML-KEM-768 post-quantum subkey only. ML-KEM-1024 needs a v6 key.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">A post-quantum signing subkey needs a v6 key.</string>
+    <string name="d_keydetail_decrypt_with">Decrypt with this key</string>
+    <string name="d_keydetail_last_backed_up">Last backed up</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">Passphrase</string>
+    <string name="d_keydetail_passphrase_on">Protected by a passphrase.</string>
+    <string name="d_keydetail_passphrase_off">No passphrase. On this computer the key file is protected only by its file permissions, so anyone who can use your account can use the key.</string>
+    <string name="d_keydetail_subkey_revoke_title">Revoke subkey %1$s</string>
+    <string name="d_keydetail_subkey_revoke_body">Revoking publishes a signature that tells your correspondents to stop using this subkey once they refresh your key. It can’t be undone.</string>
+    <string name="d_settings_clear_ack1">I understand every key is destroyed now, with no recovery window.</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">PGPony will close now. The next launch starts fresh.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">Also removed: every PGPony setting (key servers, network, SSH agent, watch folders, password store), the watch rules and the cached card PIN. Your password store folder and files you saved elsewhere are not touched.</string>
+    <string name="d_status_userid_added">User ID added</string>
+    <string name="d_status_userid_revoked">User ID revoked</string>
+    <string name="d_status_userid_removed">User ID removed</string>
+    <string name="d_status_primary_userid">Primary User ID changed</string>
+    <string name="d_status_subkey_added">Subkey added</string>
+    <string name="d_status_subkey_revoked">Subkey revoked</string>
+    <string name="d_status_notations_saved">Notations saved</string>
 </resources>

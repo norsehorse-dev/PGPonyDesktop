@@ -716,4 +716,28 @@
     <plurals name="d_recycle_days_left">
         <item quantity="other">残り %1$d 日</item>
     </plurals>
+    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
+    <string name="d_edit_err_v6_subkey_type">v6 鍵に追加できるのは Ed25519 と X25519 のサブキーだけです。</string>
+    <string name="d_edit_err_v4_mlkem768_only">v4 鍵に追加できる耐量子サブキーは ML-KEM-768 だけです。ML-KEM-1024 には v6 鍵が必要です。</string>
+    <string name="d_edit_err_pq_sign_needs_v6">耐量子署名サブキーには v6 鍵が必要です。</string>
+    <string name="d_keydetail_decrypt_with">この鍵で復号</string>
+    <string name="d_keydetail_last_backed_up">最終バックアップ</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">パスフレーズ</string>
+    <string name="d_keydetail_passphrase_on">パスフレーズで保護されています。</string>
+    <string name="d_keydetail_passphrase_off">パスフレーズなし。このコンピューターでは鍵ファイルはファイルのアクセス権でしか保護されないため、あなたのアカウントを使える人は誰でもこの鍵を使えます。</string>
+    <string name="d_keydetail_subkey_revoke_title">サブキー %1$s を失効</string>
+    <string name="d_keydetail_subkey_revoke_body">失効させると署名が公開され、相手があなたの鍵を更新した時点でこのサブキーを使わなくなります。元に戻せません。</string>
+    <string name="d_settings_clear_ack1">すべての鍵が復元期間なしで今すぐ破棄されることを理解しました。</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">PGPony を終了します。次回の起動は初期状態から始まります。</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">あわせて削除されるもの: PGPony のすべての設定 (鍵サーバー、ネットワーク、SSH エージェント、監視フォルダー、パスワードストア)、監視ルール、キャッシュされたカード PIN。パスワードストアのフォルダーや別の場所に保存したファイルには触れません。</string>
+    <string name="d_status_userid_added">ユーザーIDを追加しました</string>
+    <string name="d_status_userid_revoked">ユーザーIDを失効しました</string>
+    <string name="d_status_userid_removed">ユーザーIDを削除しました</string>
+    <string name="d_status_primary_userid">プライマリユーザーIDを変更しました</string>
+    <string name="d_status_subkey_added">サブキーを追加しました</string>
+    <string name="d_status_subkey_revoked">サブキーを失効しました</string>
+    <string name="d_status_notations_saved">ノーテーションを保存しました</string>
 </resources>

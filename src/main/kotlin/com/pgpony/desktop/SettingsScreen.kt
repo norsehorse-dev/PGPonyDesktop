@@ -77,6 +77,7 @@ fun SettingsScreen(state: DesktopState) {
     val current by ThemeState.current
     var showExportBackup by remember { mutableStateOf(false) }
     var showRestoreBackup by remember { mutableStateOf(false) }
+    var showClearAll by remember { mutableStateOf(false) }
     var restoreInitialFile by remember { mutableStateOf<java.io.File?>(null) }
 
     // D9 — restore opened from the menu bar (no file) or from opening a .pgpony file.
@@ -190,6 +191,13 @@ fun SettingsScreen(state: DesktopState) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            // 3.0.0 (plan 3.2): reset to first run. Gone with "Hide destructive actions".
+            if (!DestructiveGuard.hidden()) {
+                Spacer(Modifier.height(Spacing.Medium))
+                OutlinedButton(onClick = { showClearAll = true }) {
+                    Text(tr("settings_data_clear_all_button"), color = MaterialTheme.colorScheme.error)
+                }
+            }
         }
         Spacer(Modifier.height(Spacing.Large))
 
@@ -214,6 +222,13 @@ fun SettingsScreen(state: DesktopState) {
 
     if (showExportBackup) ExportBackupDialog(state) { showExportBackup = false }
     if (showRestoreBackup) RestoreBackupDialog(state, restoreInitialFile) { showRestoreBackup = false }
+    if (showClearAll) {
+        ClearAllDataFlow(
+            state,
+            onBackup = { showClearAll = false; showExportBackup = true },
+            onDismiss = { showClearAll = false }
+        )
+    }
 }
 
 @Composable

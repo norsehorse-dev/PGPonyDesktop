@@ -4,17 +4,22 @@
 
 package com.pgpony.desktop
 
+import com.pgpony.android.crypto.AddSubkeyChoice
+import com.pgpony.android.crypto.ClassicalSubkeyGen
 import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.UserIdService
 import com.pgpony.android.crypto.pqc.CompositeKeyGen
 import com.pgpony.android.crypto.pqc.CompositeSigPacket
+import com.pgpony.android.crypto.pqc.CompositeSignSuite
+import com.pgpony.android.crypto.pqc.CompositeSuite
 import com.pgpony.android.data.PGPDatabase
 import com.pgpony.android.data.RemovedUserIdStore
 import com.pgpony.android.data.RevocationReason
 import com.pgpony.android.data.settings.SettingsStores
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
+import java.util.prefs.AbstractPreferences
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -107,6 +112,10 @@ class KeyEditsTest {
         assertEquals("Ids Work <work@pgpony.app>", rows.single { it.isPrimary }.raw)
         assertEquals("work@pgpony.app", repo.byFingerprint(k.fingerprint)!!.userEmail)
 
+        // UserIdService.isRevoked needs the revocation strictly newer than the newest
+        // certification, and setPrimaryUserId just re-signed this User ID. Signature times have
+        // one-second resolution, so a revocation in the same second reads as not revoked.
+        Thread.sleep(1100)
         edits.revokeUserId(k.fingerprint, k.userID, RevocationReason.NO_REASON, null, pass)
         assertTrue(edits.userIdRows(repo.byFingerprint(k.fingerprint)!!).single { it.raw == k.userID }.isRevoked)
 
@@ -157,8 +166,150 @@ class KeyEditsTest {
         db.close()
     }
 
+    // ── 2b: add subkey (Android 4.2.0 H, 4.5.0 item 7, 4.6.0 items 16 and 21) ──
+
+    @Test
+    fun addClassicalSubkeyUsesALifetimeAndStampsTheEdit() = runBlocking {
+        val (db, repo, edits) = temp()
+        val k = repo.generateKey("Add", "add@pgpony.app", KeyAlgorithm.ED25519_CV25519, pass)
+        val year = 365L * 24 * 3600
+        edits.addSubkey(k.fingerprint, AddSubkeyChoice.Classical(ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_AUTH), year, pass)
+        val entity = repo.byFingerprint(k.fingerprint)!!
+        val rows = edits.subkeyRows(entity)
+        assertEquals(2, rows.size)
+        val auth = rows.single { (it.capabilities and 0x08) != 0 }
+        assertEquals(year * 1000, auth.expiresAt!! - auth.createdAt, "the generators take seconds after creation, not an epoch time")
+        assertNotNull(entity.lastLocalEditAt, "an added subkey marks the published copy out of date")
+        db.close()
+    }
+
+    @Test
+    fun v6KeysRefuseRsaAndV4KeysRefuseMlDsa() = runBlocking {
+        val (db, repo, edits) = temp()
+        val v6 = repo.generateKey("Six", "six@pgpony.app", KeyAlgorithm.V6_ED25519, pass)
+        assertFailsWith<KeyEditException> {
+            edits.addSubkey(v6.fingerprint, AddSubkeyChoice.Classical(ClassicalSubkeyGen.ClassicalSubkeyType.RSA_2048_ENCRYPT), null, pass)
+        }
+        val before = edits.subkeyRows(repo.byFingerprint(v6.fingerprint)!!).size
+        edits.addSubkey(v6.fingerprint, AddSubkeyChoice.Classical(ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_SIGN), null, pass)
+        assertEquals(before + 1, edits.subkeyRows(repo.byFingerprint(v6.fingerprint)!!).size)
+
+        val v4 = repo.generateKey("Four", "four@pgpony.app", KeyAlgorithm.ED25519_CV25519, pass)
+        assertFailsWith<KeyEditException> {
+            edits.addSubkey(v4.fingerprint, AddSubkeyChoice.PqSigning(CompositeSignSuite.MLDSA65_ED25519), null, pass)
+        }
+        assertFailsWith<KeyEditException> {
+            edits.addSubkey(v4.fingerprint, AddSubkeyChoice.PqEncryption(CompositeSuite.IETF_1024), null, pass)
+        }
+        db.close()
+    }
+
+    @Test
+    fun mlKemOnAV4KeyConvertsItAndSurvivesTheNextAdd() = runBlocking {
+        val (db, repo, edits) = temp()
+        val k = repo.generateKey("Kem", "kem@pgpony.app", KeyAlgorithm.ED25519_CV25519, pass)
+        edits.addSubkey(k.fingerprint, AddSubkeyChoice.PqEncryption(CompositeSuite.IETF_768), null, pass)
+        assertEquals(KeyAlgorithm.MLKEM768_X25519_V4, repo.byFingerprint(k.fingerprint)!!.algorithm)
+        assertNotNull(repo.loadV4Algo35Recipient(k.fingerprint), "the v4 ML-KEM subkey is usable")
+
+        edits.addSubkey(k.fingerprint, AddSubkeyChoice.Classical(ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_SIGN), null, pass)
+        assertNotNull(repo.loadV4Algo35Recipient(k.fingerprint), "a later classical add carries the ML-KEM subkey")
+        assertEquals(3, edits.subkeyRows(repo.byFingerprint(k.fingerprint)!!).size)
+        db.close()
+    }
+
+    @Test
+    fun compositePrimaryTakesAClassicalSubkeyAndKeepsItsPassphrase() = runBlocking {
+        val (db, repo, edits) = temp()
+        val k = repo.generateKey("ML Add", "mladd@pgpony.app", KeyAlgorithm.MLDSA65_ED25519_V6, pass)
+        val before = edits.subkeyRows(repo.byFingerprint(k.fingerprint)!!).size
+        edits.addSubkey(k.fingerprint, AddSubkeyChoice.Classical(ClassicalSubkeyGen.ClassicalSubkeyType.X25519_ENCRYPT), null, pass)
+        assertEquals(before + 1, edits.subkeyRows(repo.byFingerprint(k.fingerprint)!!).size)
+        assertNotNull(repo.loadCompositeKeyInfo(k.fingerprint, pass.toCharArray())?.compositeSecret, "still opens with the passphrase")
+        db.close()
+    }
+
+    @Test
+    fun v6KeyTakesAnMlDsaSigningSubkey() = runBlocking {
+        val (db, repo, edits) = temp()
+        val k = repo.generateKey("PQ Sign", "pqsign@pgpony.app", KeyAlgorithm.V6_ED25519, pass)
+        edits.addSubkey(k.fingerprint, AddSubkeyChoice.PqSigning(CompositeSignSuite.MLDSA65_ED25519), null, pass)
+        assertTrue(edits.subkeyRows(repo.byFingerprint(k.fingerprint)!!).any { it.algorithmLabel.contains("ML-DSA") })
+        db.close()
+    }
+
+    // ── 2b: fallback ordering (Android KeyDetailViewModel) ──
+
+    @Test
+    fun fallbackRowsToggleAndMove() = runBlocking {
+        val (db, repo, _) = temp()
+        val a = repo.generateKey("A", "a@pgpony.app", KeyAlgorithm.ED25519_CV25519, null)
+        val b = repo.generateKey("B", "b@pgpony.app", KeyAlgorithm.ED25519_CV25519, null)
+        val c = repo.generateKey("C", "c@pgpony.app", KeyAlgorithm.ED25519_CV25519, null)
+        val pool = listOf(a, b, c)
+        var rows = fallbackRows(pool, listOf(c.fingerprint, "GONE"))
+        assertEquals(listOf(c.fingerprint, a.fingerprint, b.fingerprint), rows.map { it.key.fingerprint })
+        assertEquals(listOf(true, false, false), rows.map { it.enabled })
+
+        rows = toggleFallback(rows, b.fingerprint)
+        assertEquals(listOf(c.fingerprint, b.fingerprint, a.fingerprint), rows.map { it.key.fingerprint })
+        rows = moveFallback(rows, b.fingerprint, -1)
+        assertEquals(listOf(b.fingerprint, c.fingerprint), rows.filter { it.enabled }.map { it.key.fingerprint })
+        assertEquals(rows, moveFallback(rows, c.fingerprint, 1), "cannot move past the enabled block")
+        rows = toggleFallback(rows, b.fingerprint)
+        assertEquals(listOf(c.fingerprint), rows.filter { it.enabled }.map { it.key.fingerprint })
+        assertEquals(b.fingerprint, rows[1].key.fingerprint, "switched off lands at the head of the disabled block")
+        db.close()
+    }
+
+    // ── 2b: Clear All Data (plan 3.2) ──
+
+    @Test
+    fun clearAllDataResetsToFirstRun() = runBlocking {
+        val dir = Files.createTempDirectory("pgpony-clear-test")
+        val db = Db.open(dir.resolve("pgpony.db"))
+        val repo = DesktopKeyRepository(db, KeyMaterialStore(dir.resolve("keys")))
+        val edits = DesktopKeyEdits(repo)
+        val a = repo.generateKey("Keep", "keep@pgpony.app", KeyAlgorithm.ED25519_CV25519, pass)
+        val b = repo.generateKey("Binned", "binned@pgpony.app", KeyAlgorithm.ED25519_CV25519, pass)
+        edits.setFallbacks(a.fingerprint, listOf(b.fingerprint))
+        edits.softDelete(b.fingerprint)
+        Files.writeString(dir.resolve("watch-rules.json"), "[]")
+        val root = TreePreferences(null, "")
+        root.node(ClearAllData.PREFS_NODE).putBoolean("anything", true)
+        ClearAllData.dataDirOverride = dir
+        ClearAllData.prefsRootOverride = root
+        try {
+            ClearAllData.run(edits)
+        } finally {
+            ClearAllData.dataDirOverride = null
+            ClearAllData.prefsRootOverride = null
+        }
+        assertTrue(repo.allKeys().isEmpty(), "live keys gone")
+        assertEquals(0, edits.deletedCount(), "Recently Deleted emptied too")
+        assertTrue(edits.fallbacksFor(a.fingerprint).isEmpty())
+        assertFalse(Files.exists(dir.resolve("watch-rules.json")))
+        assertFalse(Files.exists(dir.resolve("keys")), "no key material left on disk")
+        assertFalse(root.nodeExists(ClearAllData.PREFS_NODE), "every desktop setting removed")
+        db.close()
+    }
+
     private suspend fun assertFails(block: suspend () -> Unit) {
         val failed = try { block(); false } catch (_: Exception) { true }
         assertTrue(failed, "expected a failure")
     }
+}
+
+/** A preferences tree in memory (MemoryPreferences is flat), for the Clear All Data test. */
+private class TreePreferences(parent: TreePreferences?, name: String) : AbstractPreferences(parent, name) {
+    private val values = mutableMapOf<String, String>()
+    override fun putSpi(key: String, value: String) { values[key] = value }
+    override fun getSpi(key: String): String? = values[key]
+    override fun removeSpi(key: String) { values.remove(key) }
+    override fun removeNodeSpi() { values.clear() }
+    override fun keysSpi(): Array<String> = values.keys.toTypedArray()
+    override fun childrenNamesSpi(): Array<String> = emptyArray()
+    override fun childSpi(name: String): AbstractPreferences = TreePreferences(this, name)
+    override fun syncSpi() {}
+    override fun flushSpi() {}
 }

@@ -9,6 +9,8 @@
 // Android's phone-sized sentences). TrustLevel.displayName and RevocationReason's
 // displayName/description stay untouched: DesktopBackupService matches displayName as a
 // backup wire value, so the enum -> key mapping lives in this file instead (bottom).
+// 3.0.0 stage 2: the key management sections moved to KeyDetailManage.kt; this file adds the
+// last-backed-up line and the Encrypt to / Decrypt with shortcuts.
 // The "YYYY-MM-DD" token in the expiry label stays literal in every locale — the field is
 // parsed with DateTimeFormatter.ofPattern("yyyy-MM-dd") and accepts nothing else.
 
@@ -138,6 +140,29 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                     }
                 }
 
+                if (key.isKeyPair) {
+                    InfoLine(
+                        tr("d_keydetail_last_backed_up"),
+                        key.lastBackedUpAt?.let { dateOf(it) } ?: tr("key_detail_timestamp_never")
+                    )
+                }
+                // 3.0.0 (plan 3.10): the desktop form of Android's avatar shortcut.
+                Spacer(Modifier.height(6.dp))
+                WrapRow {
+                    if (!key.isRevoked) {
+                        OutlinedButton(onClick = {
+                            state.openCrypto(CryptoPreset(encryptTo = key.fingerprint))
+                            onDismiss()
+                        }) { Text(tr("import_button_encrypt_to_key")) }
+                    }
+                    if (key.isKeyPair) {
+                        OutlinedButton(onClick = {
+                            state.openCrypto(CryptoPreset(decryptWith = key.fingerprint))
+                            onDismiss()
+                        }) { Text(tr("d_keydetail_decrypt_with")) }
+                    }
+                }
+
                 // ── Trust (D2c) ─────────────────────────────────────────
                 Spacer(Modifier.height(10.dp))
                 Label(tr("key_detail_trust_level_label"))
@@ -176,45 +201,9 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
-                Label(tr("d_keydetail_section_keys", subkeys.size))
-                subkeys.forEach { sk ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                        Column(Modifier.padding(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    if (sk.isPrimary) tr("key_detail_userids_primary")
-                                    else tr("d_keydetail_subkey"),
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                DetailPill(sk.algorithmLabel)
-                            }
-                            Text(
-                                sk.keyIdHex.chunked(4).joinToString(" "),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            val expiry = sk.expiresAtMs
-                            Text(
-                                if (expiry == null) {
-                                    tr(
-                                        "d_keydetail_subkey_meta",
-                                        sk.capabilitiesLabel, dateOf(sk.createdAtMs)
-                                    )
-                                } else {
-                                    tr(
-                                        "d_keydetail_subkey_meta_expires",
-                                        sk.capabilitiesLabel, dateOf(sk.createdAtMs), dateOf(expiry)
-                                    )
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+                // 3.0.0 stage 2: passphrase, User IDs, keys and subkeys, notations, fallbacks and
+                // signing defaults (KeyDetailManage.kt).
+                KeyManageSections(state, key, subkeys.firstOrNull { it.isPrimary })
 
                 Spacer(Modifier.height(14.dp))
                 // D12 — this is the row the German build clipped: four buttons whose English
@@ -693,7 +682,7 @@ internal fun reasonName(reason: RevocationReason): String = when (reason) {
     RevocationReason.USER_ID_INVALID -> tr("revocation_reason_user_id_invalid_name")
 }
 
-private fun reasonDescription(reason: RevocationReason): String = when (reason) {
+internal fun reasonDescription(reason: RevocationReason): String = when (reason) {
     RevocationReason.NO_REASON -> tr("revocation_reason_no_reason_description")
     RevocationReason.SUPERSEDED -> tr("revocation_reason_superseded_description")
     RevocationReason.COMPROMISED -> tr("revocation_reason_compromised_description")

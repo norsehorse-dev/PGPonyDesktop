@@ -741,4 +741,28 @@
         <item quantity="one">Queda %1$d día</item>
         <item quantity="other">Quedan %1$d días</item>
     </plurals>
+    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
+    <string name="d_edit_err_v6_subkey_type">A una clave v6 solo se le pueden añadir subclaves Ed25519 y X25519.</string>
+    <string name="d_edit_err_v4_mlkem768_only">Una clave v4 solo admite la subclave poscuántica ML-KEM-768. ML-KEM-1024 necesita una clave v6.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">Una subclave de firma poscuántica necesita una clave v6.</string>
+    <string name="d_keydetail_decrypt_with">Descifrar con esta clave</string>
+    <string name="d_keydetail_last_backed_up">Última copia de seguridad</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">Frase de contraseña</string>
+    <string name="d_keydetail_passphrase_on">Protegida con una frase de contraseña.</string>
+    <string name="d_keydetail_passphrase_off">Sin frase de contraseña. En este ordenador el archivo de la clave solo está protegido por sus permisos, así que cualquiera que pueda usar tu cuenta puede usar la clave.</string>
+    <string name="d_keydetail_subkey_revoke_title">Revocar la subclave %1$s</string>
+    <string name="d_keydetail_subkey_revoke_body">Revocar publica una firma que indica a tus contactos que dejen de usar esta subclave cuando actualicen tu clave. No se puede deshacer.</string>
+    <string name="d_settings_clear_ack1">Entiendo que todas las claves se destruyen ahora, sin periodo de recuperación.</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">PGPony se cerrará ahora. El próximo inicio empezará desde cero.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">También se eliminan: todos los ajustes de PGPony (servidores de claves, red, agente SSH, carpetas vigiladas, almacén de contraseñas), las reglas de vigilancia y el PIN de tarjeta en caché. La carpeta de tu almacén de contraseñas y los archivos que guardaste en otro lugar no se tocan.</string>
+    <string name="d_status_userid_added">ID de usuario añadido</string>
+    <string name="d_status_userid_revoked">ID de usuario revocado</string>
+    <string name="d_status_userid_removed">ID de usuario quitado</string>
+    <string name="d_status_primary_userid">ID de usuario principal cambiado</string>
+    <string name="d_status_subkey_added">Subclave añadida</string>
+    <string name="d_status_subkey_revoked">Subclave revocada</string>
+    <string name="d_status_notations_saved">Notaciones guardadas</string>
 </resources>
