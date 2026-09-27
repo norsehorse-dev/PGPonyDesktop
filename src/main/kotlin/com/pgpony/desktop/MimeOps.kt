@@ -102,9 +102,16 @@ class MimeOps(
      * Android ViewModel: `pgpMimeEncryptedPayload(raw) ?: raw`, then `MimeParser.parse(bytes)`
      * — body-only MIME surfaces its body, non-MIME plaintext passes through.
      */
-    suspend fun decryptStructured(input: String, passphrase: String?): Structured {
+    suspend fun decryptStructured(input: String, passphrase: String?, selected: String? = null): Structured {
         val armored = pgpPayload(input)
-        val result = repo.decryptText(armored, passphrase)
+        // 3.0.0 (plan 3.7): [selected] and its fallbacks first; a failure names the case (#46).
+        val result = try {
+            repo.decryptText(armored, passphrase, selected)
+        } catch (t: Throwable) {
+            throw repo.explainDecryptFailure(
+                { PGPCryptoService.shared.recipientKeyIDs(armored) }, selected, t
+            )
+        }
         val mime = MimeParser.parse(result.data)
         val body = when {
             mime == null -> result.plaintext

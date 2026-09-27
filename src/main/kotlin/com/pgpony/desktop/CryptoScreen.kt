@@ -172,6 +172,9 @@ fun CryptoScreen(state: DesktopState) {
 
     // Decrypt options
     var decryptPass by remember { mutableStateOf("") }
+    // 3.0.0 (plan 3.7): the key to decrypt with first (null = any of my keys, in keyring order).
+    // Its enabled fallbacks follow it, then every other key unless it is in strict mode.
+    var decryptWith by remember { mutableStateOf<String?>(null) }
 
     // Sign options
     var detachedMode by remember { mutableStateOf(false) }
@@ -212,8 +215,7 @@ fun CryptoScreen(state: DesktopState) {
     }
 
     // 3.0.0 (plan 3.10): Key Detail's Encrypt to / Decrypt with. Encrypt preselects the one
-    // recipient; decrypt opens Decrypt, where every held key is tried (the "Decrypt with" picker
-    // that carries the key and its fallbacks is checkpoint 2c).
+    // recipient; decrypt opens Decrypt with that key in the "Decrypt with" picker.
     androidx.compose.runtime.LaunchedEffect(state.cryptoPreset) {
         val preset = state.cryptoPreset ?: return@LaunchedEffect
         tab = CryptoTab.MESSAGE
@@ -224,6 +226,7 @@ fun CryptoScreen(state: DesktopState) {
             selectedRecipients = setOf(preset.encryptTo)
         } else if (preset.decryptWith != null) {
             messageOp = MessageOp.DECRYPT
+            decryptWith = preset.decryptWith
         }
         state.consumeCryptoPreset()
     }
@@ -249,12 +252,33 @@ fun CryptoScreen(state: DesktopState) {
         !it.isRevoked && (!it.isExpired || KeyUsePolicy.allowExpiredKeys()) &&
             (!it.isCardBacked || it.armoredPublicKey != null)
     }
+    // Decrypt with: software key pairs, revoked ones included (old mail still opens). A card key
+    // is found by the recipient match and decrypts on the card, so it is not offered here.
+    val decryptKeys = state.keys.filter { it.isKeyPair && !it.isCardBacked }
     // Signers: software key pairs OR paired card-backed keys (the Android availableSigners set).
     val signers = state.keys.filter {
         !it.isRevoked && (it.isKeyPair || (it.isCardBacked && it.armoredPublicKey != null))
     }
-    val effectiveSigner = signerFp?.let { fp -> signers.firstOrNull { it.fingerprint == fp } }
+    val pickedSigner = signerFp?.let { fp -> signers.firstOrNull { it.fingerprint == fp } }
         ?: signers.firstOrNull { it.isDefault } ?: signers.firstOrNull()
+    // 3.0.0 (plan 3.8, Android #34): the picked key's signing defaults can hand the signature to
+    // another of your keys. The picker shows the picked key; encryptSigner and signOnlySigner are
+    // the keys that actually sign, and a note under the picker names a substitute so the
+    // passphrase typed is the right one.
+    var signingRow by remember { mutableStateOf<com.pgpony.android.data.SigningDefaultsEntity?>(null) }
+    androidx.compose.runtime.LaunchedEffect(pickedSigner?.fingerprint, state.keys) {
+        signingRow = pickedSigner?.let { state.edits.signingDefaultsFor(it.fingerprint) }
+    }
+    val encryptSigner = pickedSigner?.let { base ->
+        SigningDefaults.pick(
+            base, signingRow,
+            selectedRecipients.mapNotNull { fp -> state.keys.firstOrNull { it.fingerprint == fp } },
+            signOnly = false, keys = state.keys
+        )
+    }
+    val signOnlySigner = pickedSigner?.let { base ->
+        SigningDefaults.pick(base, signingRow, emptyList(), signOnly = true, keys = state.keys)
+    }
 
     // D7 — a pending hardware-key operation; when set, the PIN-and-run dialog is shown.
     var pendingCardOp by remember { mutableStateOf<CardOpRequest?>(null) }
@@ -389,15 +413,16 @@ fun CryptoScreen(state: DesktopState) {
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
-                                checked = signEnabled && effectiveSigner != null,
+                                checked = signEnabled && pickedSigner != null,
                                 onCheckedChange = { signEnabled = it },
-                                enabled = effectiveSigner != null
+                                enabled = pickedSigner != null
                             )
                             Text(tr("encrypt_sign_as_label"))
                             Spacer(Modifier.width(8.dp))
-                            SignerPicker(signers, effectiveSigner, enabled = signEnabled) { signerFp = it }
+                            SignerPicker(signers, pickedSigner, enabled = signEnabled) { signerFp = it }
                         }
-                        if (signEnabled && effectiveSigner != null) {
+                        SigningDefaultNote(pickedSigner, encryptSigner, signEnabled)
+                        if (signEnabled && pickedSigner != null) {
                             OutlinedTextField(
                                 value = signerPass, onValueChange = { signerPass = it },
                                 label = { Text(tr("d_crypto_signer_pass_label")) },
@@ -412,6 +437,7 @@ fun CryptoScreen(state: DesktopState) {
                         }
                     }
                     FileOp.DECRYPT -> {
+                        DecryptWithPicker(decryptKeys, decryptWith) { decryptWith = it }
                         OutlinedTextField(
                             value = decryptPass, onValueChange = { decryptPass = it },
                             label = { Text(tr("d_crypto_decrypt_pass_label")) }, singleLine = true,
@@ -428,8 +454,9 @@ fun CryptoScreen(state: DesktopState) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(tr("d_crypto_sign_as_colon"), style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.width(8.dp))
-                            SignerPicker(signers, effectiveSigner, enabled = true) { signerFp = it }
+                            SignerPicker(signers, pickedSigner, enabled = true) { signerFp = it }
                         }
+                        SigningDefaultNote(pickedSigner, signOnlySigner, true)
                         OutlinedTextField(
                             value = signerPass, onValueChange = { signerPass = it },
                             label = { Text(tr("d_crypto_signer_pass_label")) },
@@ -456,19 +483,19 @@ fun CryptoScreen(state: DesktopState) {
                 fun doFileOp() {
                         // D7 — does this batch need the card? SIGN/ENCRYPT when the signer is a
                         // card key; DECRYPT when any file is addressed to a paired card key.
-                        val signerOnCard = DesktopCardOps.signsOnCard(effectiveSigner)
+                        val signerOnCard = DesktopCardOps.signsOnCard(if (fileOp == FileOp.SIGN) signOnlySigner else encryptSigner)
                         run {
                             val cardBatch: CardOpRequest? = when (fileOp) {
                                 FileOp.SIGN -> if (signerOnCard)
-                                    buildCardFileSign(state, fileOps, fileList, effectiveSigner!!, fileArmor) {
+                                    buildCardFileSign(state, fileOps, fileList, signOnlySigner!!, fileArmor) {
                                         r -> fileResults = r; banner = fileBanner(r)
                                     } else null
                                 FileOp.ENCRYPT -> if (signEnabled && signerOnCard)
                                     buildCardFileEncrypt(
-                                        state, fileOps, fileList, selectedRecipients, effectiveSigner!!, fileArmor
+                                        state, fileOps, fileList, selectedRecipients, encryptSigner!!, fileArmor
                                     ) { r -> fileResults = r; banner = fileBanner(r) } else null
                                 FileOp.DECRYPT -> buildCardFileDecrypt(
-                                    state, fileOps, fileList, decryptPass.ifBlank { null }
+                                    state, fileOps, fileList, decryptPass.ifBlank { null }, decryptWith
                                 ) { r -> fileResults = r; banner = fileBanner(r) }
                                 FileOp.VERIFY -> null
                             }
@@ -480,7 +507,7 @@ fun CryptoScreen(state: DesktopState) {
                             // up front (a batch fails before any file is touched), and ask the
                             // Android 4.6.0 item 14 question once for the batch if it applies.
                             if (fileOp == FileOp.ENCRYPT) {
-                                val signerForPlan = if (signEnabled) effectiveSigner else null
+                                val signerForPlan = if (signEnabled) encryptSigner else null
                                 try {
                                     EncryptOps(crypto).plan(
                                         selectedRecipients, signerForPlan, signerPass.ifBlank { null }, fileV4Decision
@@ -505,8 +532,8 @@ fun CryptoScreen(state: DesktopState) {
                                 val acc = mutableListOf<FileCryptoOps.FileOutcome>()
                                 when (fileOp) {
                                     FileOp.ENCRYPT -> {
-                                        val signFp = if (signEnabled && effectiveSigner != null)
-                                            effectiveSigner.fingerprint else null
+                                        val signFp = if (signEnabled && encryptSigner != null)
+                                            encryptSigner.fingerprint else null
                                         // D16 — a directory tars-then-encrypts (§3a); a file goes
                                         // straight through. The card-signer batch above handles
                                         // files only, so a folder always lands on this path.
@@ -520,9 +547,9 @@ fun CryptoScreen(state: DesktopState) {
                                             )
                                     }
                                     FileOp.DECRYPT -> for (f in fileList)
-                                        acc += fileOps.decryptFile(f, decryptPass.ifBlank { null }, tick(f), cancelled)
+                                        acc += fileOps.decryptFile(f, decryptPass.ifBlank { null }, tick(f), cancelled, selected = decryptWith)
                                     FileOp.SIGN -> {
-                                        val s = effectiveSigner ?: error(tr("d_crypto_err_no_signer"))
+                                        val s = signOnlySigner ?: error(tr("d_crypto_err_no_signer"))
                                         for (f in fileList) acc += fileOps.signFileDetached(
                                             f, s.fingerprint, signerPass.ifBlank { null }, fileArmor
                                         )
@@ -550,7 +577,7 @@ fun CryptoScreen(state: DesktopState) {
                 BrandButton(
                     enabled = !busy && fileList.isNotEmpty() && when (fileOp) {
                         FileOp.ENCRYPT -> selectedRecipients.isNotEmpty()
-                        FileOp.SIGN -> effectiveSigner != null
+                        FileOp.SIGN -> pickedSigner != null
                         else -> true
                     },
                     onClick = { fileV4Decision = null; doFileOp() }
@@ -726,15 +753,16 @@ fun CryptoScreen(state: DesktopState) {
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
-                                    checked = signEnabled && effectiveSigner != null,
+                                    checked = signEnabled && pickedSigner != null,
                                     onCheckedChange = { signEnabled = it },
-                                    enabled = effectiveSigner != null
+                                    enabled = pickedSigner != null
                                 )
                                 Text(tr("encrypt_sign_as_label"))
                                 Spacer(Modifier.width(8.dp))
-                                SignerPicker(signers, effectiveSigner, enabled = signEnabled) { signerFp = it }
+                                SignerPicker(signers, pickedSigner, enabled = signEnabled) { signerFp = it }
                             }
-                            if (signEnabled && effectiveSigner != null) {
+                            SigningDefaultNote(pickedSigner, encryptSigner, signEnabled)
+                            if (signEnabled && pickedSigner != null) {
                                 OutlinedTextField(
                                     value = signerPass, onValueChange = { signerPass = it },
                                     label = { Text(tr("d_crypto_signer_pass_label")) },
@@ -794,7 +822,7 @@ fun CryptoScreen(state: DesktopState) {
                         Spacer(Modifier.height(10.dp))
                         // 3.0.0: a named action so the ML-DSA-to-v4 prompt can re-run it with the answer.
                         fun doTextEncrypt() {
-                                val signWith0 = if (signEnabled && effectiveSigner != null) effectiveSigner else null
+                                val signWith0 = if (signEnabled && encryptSigner != null) encryptSigner else null
                                 // D7 — card-signed encrypt (PUBLIC_KEYS only; the whole encrypt
                                 // runs with the card connected because the signer taps it).
                                 if (signWith0 != null && DesktopCardOps.signsOnCard(signWith0) &&
@@ -896,6 +924,7 @@ fun CryptoScreen(state: DesktopState) {
                     }
 
                     MessageOp.DECRYPT -> {
+                        DecryptWithPicker(decryptKeys, decryptWith) { decryptWith = it }
                         OutlinedTextField(
                             value = decryptPass, onValueChange = { decryptPass = it },
                             label = { Text(tr("d_crypto_decrypt_pass_label")) }, singleLine = true,
@@ -960,7 +989,7 @@ fun CryptoScreen(state: DesktopState) {
                                         }
                                         return@run
                                     }
-                                    val result = mimeOps.decryptStructured(input, decryptPass.ifBlank { null })
+                                    val result = mimeOps.decryptStructured(input, decryptPass.ifBlank { null }, decryptWith)
                                     output = result.body
                                     decryptedAttachments = result.attachments
                                     val attachNote = if (result.attachments.isEmpty()) ""
@@ -1011,8 +1040,9 @@ fun CryptoScreen(state: DesktopState) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(tr("d_crypto_sign_as_colon"), style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.width(8.dp))
-                            SignerPicker(signers, effectiveSigner, enabled = true) { signerFp = it }
+                            SignerPicker(signers, pickedSigner, enabled = true) { signerFp = it }
                         }
+                        SigningDefaultNote(pickedSigner, signOnlySigner, true)
                         OutlinedTextField(
                             value = signerPass, onValueChange = { signerPass = it },
                             label = { Text(tr("d_crypto_signer_pass_label")) },
@@ -1026,9 +1056,9 @@ fun CryptoScreen(state: DesktopState) {
                         }
                         Spacer(Modifier.height(10.dp))
                         BrandButton(
-                            enabled = !busy && input.isNotBlank() && effectiveSigner != null,
+                            enabled = !busy && input.isNotBlank() && pickedSigner != null,
                             onClick = {
-                                val signer = effectiveSigner!!
+                                val signer = signOnlySigner!!
                                 if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(signer)) {
                                     // 3.0.0 (Android 4.5.3): an expired key does not sign.
                                     banner = Banner.Bad(tr("encrypt_expired_signing_blocked"))
@@ -1478,6 +1508,42 @@ private fun CryptoSaveDialog(suggestedName: String, onResult: (java.io.File?) ->
     dispose = FileDialog::dispose
 )
 
+/** 3.0.0 (plan 3.7): which key a decrypt tries first. Null is "any of my keys". */
+@Composable
+private fun DecryptWithPicker(keys: List<PGPKeyEntity>, current: String?, onPick: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val any = tr("d_crypto_decrypt_with_any")
+    val label = current?.let { fp -> keys.firstOrNull { it.fingerprint == fp } }
+        ?.let { it.userID.ifBlank { it.shortFingerprint } } ?: any
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("decrypt_with_key_label"), style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.width(8.dp))
+        Column {
+            OutlinedButton(onClick = { open = true }, enabled = keys.isNotEmpty()) { Text(label) }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                DropdownMenuItem(text = { Text(any) }, onClick = { onPick(null); open = false })
+                keys.forEach { k ->
+                    DropdownMenuItem(
+                        text = { Text(k.userID.ifBlank { k.shortFingerprint }) },
+                        onClick = { onPick(k.fingerprint); open = false }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 3.0.0 (plan 3.8): names the key a signing default hands the signature to. */
+@Composable
+private fun SigningDefaultNote(picked: PGPKeyEntity?, actual: PGPKeyEntity?, shown: Boolean) {
+    if (!shown || picked == null || actual == null || actual.fingerprint == picked.fingerprint) return
+    Text(
+        tr("d_crypto_signing_default_note", actual.userID.ifBlank { actual.shortFingerprint }),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
 @Composable
 private fun SignerPicker(
     signers: List<PGPKeyEntity>,
@@ -1590,6 +1656,7 @@ private suspend fun buildCardFileDecrypt(
     fileOps: FileCryptoOps,
     files: List<java.nio.file.Path>,
     passphrase: String?,
+    decryptWith: String?,
     onResult: (List<FileCryptoOps.FileOutcome>) -> Unit
 ): CardOpRequest? {
     val repo = state.repository
@@ -1607,7 +1674,7 @@ private suspend fun buildCardFileDecrypt(
         val outcomes = files.map { f ->
             val m = matches[f]
             if (m != null) fileOps.decryptFileWithCard(f, session, m.ring, pin)
-            else fileOps.decryptFile(f, passphrase)
+            else fileOps.decryptFile(f, passphrase, selected = decryptWith)
         }
         onResult(outcomes)
     }

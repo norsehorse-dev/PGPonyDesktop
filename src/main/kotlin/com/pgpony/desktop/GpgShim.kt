@@ -91,8 +91,11 @@ object GpgShim {
         val payload = stdin.readBytes()
         return withRepo { repo ->
             val keys = runBlocking { repo.allKeys() }.filter { it.isKeyPair }
-            val match = Cli.matchKeys(keys, selector).firstOrNull()
+            val picked = Cli.matchKeys(keys, selector).firstOrNull()
                 ?: return@withRepo fail(stderr, "sign: no secret key matches \"$selector\"")
+            // 3.0.0 (plan 3.8): the key's sign-only signing default, as Android's OpenPGP API
+            // provider applies it. SIG_CREATED below names the key that actually signed.
+            val match = runBlocking { repo.signerAfterDefaults(picked, emptyList(), signOnly = true) }
             // 3.0.0 (Android 4.5.3): an expired key does not sign, here as everywhere else. A
             // commit signed by an expired key would show as bad on the other side anyway.
             if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(match)) {

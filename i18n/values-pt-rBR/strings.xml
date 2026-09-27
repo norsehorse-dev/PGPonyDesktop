@@ -765,4 +765,7 @@
     <string name="d_status_subkey_added">Subchave adicionada</string>
     <string name="d_status_subkey_revoked">Subchave revogada</string>
     <string name="d_status_notations_saved">Notações salvas</string>
+    <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
+    <string name="d_crypto_decrypt_with_any">Qualquer uma das minhas chaves</string>
+    <string name="d_crypto_signing_default_note">Assina como %1$s, a assinatura padrão desta chave. Digite a frase-senha dessa chave.</string>
 </resources>

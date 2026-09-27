@@ -740,4 +740,7 @@
     <string name="d_status_subkey_added">サブキーを追加しました</string>
     <string name="d_status_subkey_revoked">サブキーを失効しました</string>
     <string name="d_status_notations_saved">ノーテーションを保存しました</string>
+    <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
+    <string name="d_crypto_decrypt_with_any">自分のいずれかの鍵</string>
+    <string name="d_crypto_signing_default_note">この鍵の既定の署名鍵 %1$s で署名します。その鍵のパスフレーズを入力してください。</string>
 </resources>

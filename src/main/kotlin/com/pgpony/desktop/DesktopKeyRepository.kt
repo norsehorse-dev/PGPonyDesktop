@@ -704,13 +704,98 @@ class DesktopKeyRepository(
     fun encryptTextSymmetric(message: String, passphrase: String): String =
         crypto.encryptSymmetricMessage(message, passphrase)
 
-    /** Decrypt with every held secret ring; all public rings serve as verification keys. */
-    suspend fun decryptText(armored: String, passphrase: String?): com.pgpony.android.crypto.DecryptResult {
-        val all = allKeys()
-        val secretRings = all.filter { it.isKeyPair }.mapNotNull { loadSecretKeyRing(it.fingerprint) }
-        val publicRings = all.mapNotNull { loadPublicKeyRing(it.fingerprint) }
-        return crypto.decryptArmored(armored, secretRings, passphrase, publicRings, compositePrimarySecretRings())
+    /**
+     * Decrypt with the held secret rings in DecryptOrder (3.0.0, plan 3.7): [selected] first, its
+     * fallbacks, then the rest unless strict. All public rings serve as verification keys.
+     */
+    suspend fun decryptText(
+        armored: String,
+        passphrase: String?,
+        selected: String? = null
+    ): com.pgpony.android.crypto.DecryptResult {
+        val k = decryptKeys(selected)
+        return DecryptOrder.cascade(k.secretRings) { rings ->
+            crypto.decryptArmored(armored, rings, passphrase, k.verificationRings, k.compositeRings)
+        }
     }
+
+    /**
+     * The keys a decrypt tries, in order (Android fallbackOrderedKeys, #34): [selected], then
+     * its enabled fallbacks, then every other key pair unless the selected key is strict.
+     */
+    suspend fun decryptKeys(selected: String? = null): DecryptKeys {
+        val all = allKeys()
+        val available = all.filter { it.isKeyPair }
+        val fallbacks = selected?.let { fp -> db.fallbackKeyDao().fallbacksFor(fp).map { it.fallbackFingerprint } }.orEmpty()
+        val strict = selected != null && com.pgpony.android.crypto.FallbackPrefs.isStrict(selected)
+        val ordered = DecryptOrder.ordered(selected, available, fallbacks, strict)
+        return DecryptKeys(
+            keys = ordered,
+            secretRings = ordered.mapNotNull { secretRingForDecrypt(it) },
+            compositeRings = ordered.mapNotNull { compositeDecryptRing(it) },
+            verificationRings = all.mapNotNull { loadPublicKeyRing(it.fingerprint) }
+        )
+    }
+
+    /**
+     * The BouncyCastle ring a decrypt tries for [e] (Android 4.6.0 item 21). A composite ML-DSA
+     * key is not a BouncyCastle ring; its ML-KEM subkey goes through [compositeDecryptRing] and
+     * its classical encryption subkeys (an RSA or X25519 subkey added for other clients) come
+     * as a separate ring here. Before 3.0.0 desktop could not open mail sent to those.
+     */
+    fun secretRingForDecrypt(e: PGPKeyEntity): PGPSecretKeyRing? =
+        loadSecretKeyRing(e.fingerprint)
+            ?: if (e.algorithm.isCompositeSign) loadCompositeClassicalDecryptionRing(e.fingerprint) else null
+
+    /** Android KeyRepository.loadCompositeClassicalDecryptionRing. */
+    fun loadCompositeClassicalDecryptionRing(fingerprint: String): PGPSecretKeyRing? =
+        rawSecretBytes(fingerprint)
+            ?.takeIf { CompositeKeyFacade.isCompositePrimary(it) && CompositeKeyFacade.hasSecret(it) }
+            ?.let { runCatching { CompositeKeyFacade.classicalDecryptionRing(it) }.getOrNull() }
+
+    /** Android loadCompositePrivateRing: a composite primary with secret material, or a v4
+     *  interop key (decrypt matches its 20-octet algo-35 subkey fingerprint). */
+    fun compositeDecryptRing(e: PGPKeyEntity): ByteArray? =
+        rawSecretBytes(e.fingerprint)?.takeIf { raw ->
+            (CompositeKeyFacade.isCompositePrimary(raw) && CompositeKeyFacade.hasSecret(raw)) ||
+                CompositeKeyFacade.hasV4Algo35Subkey(raw)
+        }
+
+    /**
+     * Android #46: when a decrypt with [selected] failed, say which of the two usual cases it
+     * was. The selected key is not a recipient (no recipient key ID is one of its keys, and no
+     * recipient is hidden), or it is and the passphrase was wrong. Anything else, or a key
+     * whose key IDs cannot be read here (composite, v4 algo-35), keeps [error].
+     */
+    suspend fun explainDecryptFailure(
+        recipientKeyIds: () -> List<Long>,
+        selected: String?,
+        error: Throwable
+    ): Throwable {
+        val entity = selected?.let { byFingerprint(it) } ?: return error
+        val label = entity.userName.ifBlank { entity.userEmail }.ifBlank { entity.shortFingerprint }
+        val recipients = runCatching { recipientKeyIds() }.getOrDefault(emptyList())
+        val ring = loadPublicKeyRing(entity.fingerprint)
+        if (ring != null && recipients.isNotEmpty() && 0L !in recipients) {
+            val ids = ring.publicKeys.asSequence().map { it.keyID }.toSet()
+            if (recipients.none { it in ids }) {
+                return IllegalStateException(tr("encdec_error_selected_key_not_recipient_format", label), error)
+            }
+        }
+        if (error is com.pgpony.android.crypto.PGPCryptoError.InvalidPassphrase ||
+            error is com.pgpony.android.crypto.PGPCryptoError.PassphraseRequired
+        ) {
+            return IllegalStateException(tr("encdec_error_incorrect_passphrase_for_format", label), error)
+        }
+        return error
+    }
+
+    /**
+     * 3.0.0 (plan 3.8): the key that signs when [base] would, after [base]'s signing defaults
+     * (SigningDefaults.pick).
+     */
+    suspend fun signerAfterDefaults(base: PGPKeyEntity, recipients: List<PGPKeyEntity>, signOnly: Boolean): PGPKeyEntity =
+        SigningDefaults.pick(base, db.signingDefaultsDao().forKey(base.fingerprint), recipients, signOnly, allKeys())
 
     /**
      * The keyring row whose primary OR any subkey has the 64-bit key id [keyIdHex] (16 hex).
@@ -788,14 +873,7 @@ class DesktopKeyRepository(
      * packet-level (BouncyCastle cannot load the composite primary) and unlocks with the passphrase.
      */
     suspend fun compositePrimarySecretRings(): List<ByteArray> =
-        allKeys().filter { it.isKeyPair }.mapNotNull { e ->
-            // Android loadCompositePrivateRing: a composite primary with secret material, or a
-            // v4 interop key (decrypt matches its 20-octet algo-35 subkey fingerprint).
-            rawSecretBytes(e.fingerprint)?.takeIf { raw ->
-                (CompositeKeyFacade.isCompositePrimary(raw) && CompositeKeyFacade.hasSecret(raw)) ||
-                    CompositeKeyFacade.hasV4Algo35Subkey(raw)
-            }
-        }
+        allKeys().filter { it.isKeyPair }.mapNotNull { compositeDecryptRing(it) }
 
     fun loadSecretKeyRing(fingerprint: String): PGPSecretKeyRing? {
         val armored = materials.loadSecret(fingerprint) ?: return null

@@ -188,11 +188,13 @@ class FileCryptoOps(
         file: Path,
         passphrase: String?,
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
-        isCancelled: () -> Boolean = NOT_CANCELLED
+        isCancelled: () -> Boolean = NOT_CANCELLED,
+        selected: String? = null
     ): FileOutcome = try {
-        val all = repo.allKeys()
-        val secretRings = all.filter { it.isKeyPair }.mapNotNull { repo.loadSecretKeyRing(it.fingerprint) }
-        val publicRings = all.mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
+        // 3.0.0 (plan 3.7): [selected], its fallbacks, then the rest unless strict.
+        val keys = repo.decryptKeys(selected)
+        val secretRings = keys.secretRings
+        val publicRings = keys.verificationRings
 
         val headText = peekText(file)
         val armoredFromText: String? = if (headText != null) {
@@ -207,9 +209,9 @@ class FileCryptoOps(
 
         if (armoredFromText != null) {
             // Byte path (armored text is base64-bounded in size).
-            val result = crypto.decryptArmored(
-                armoredFromText, secretRings, passphrase, publicRings, repo.compositePrimarySecretRings()
-            )
+            val result = DecryptOrder.cascade(secretRings) { rings ->
+                crypto.decryptArmored(armoredFromText, rings, passphrase, publicRings, keys.compositeRings)
+            }
             val sigNote = SignatureSummary.fileNote(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
@@ -255,8 +257,9 @@ class FileCryptoOps(
                         // 3.0.0 (Android 4.5.0, #36): the streaming path gets the raw composite and
                         // v4 algo-35 secret rings too, so a file encrypted to such a key opens
                         // here the same as pasted text does.
+                        // A stream cannot be re-read, so no cascade here: the order alone.
                         crypto.decryptStream(
-                            input, output, secretRings, passphrase, publicRings, repo.compositePrimarySecretRings()
+                            input, output, secretRings, passphrase, publicRings, keys.compositeRings
                         )
                     }
                 }
@@ -287,7 +290,10 @@ class FileCryptoOps(
             }
         }
     } catch (t: Throwable) {
-        cancelledOrError(file, t) { tr("d_file_err_decrypt") }
+        val explained = if (t is CancelledException) t else repo.explainDecryptFailure(
+            { Files.newInputStream(file).use { crypto.inspectEncryptedMessage(it).publicKeyIDs } }, selected, t
+        )
+        cancelledOrError(file, explained) { tr("d_file_err_decrypt") }
     }
 
     /**

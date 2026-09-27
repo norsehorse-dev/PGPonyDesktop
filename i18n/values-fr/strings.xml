@@ -765,4 +765,7 @@
     <string name="d_status_subkey_added">Sous-clé ajoutée</string>
     <string name="d_status_subkey_revoked">Sous-clé révoquée</string>
     <string name="d_status_notations_saved">Notations enregistrées</string>
+    <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
+    <string name="d_crypto_decrypt_with_any">N\'importe laquelle de mes clés</string>
+    <string name="d_crypto_signing_default_note">Signe en tant que %1$s, la clé de signature par défaut de cette clé. Saisissez la phrase secrète de cette clé-là.</string>
 </resources>

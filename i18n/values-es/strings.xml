@@ -765,4 +765,7 @@
     <string name="d_status_subkey_added">Subclave añadida</string>
     <string name="d_status_subkey_revoked">Subclave revocada</string>
     <string name="d_status_notations_saved">Notaciones guardadas</string>
+    <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
+    <string name="d_crypto_decrypt_with_any">Cualquiera de mis claves</string>
+    <string name="d_crypto_signing_default_note">Firma como %1$s, la firma predeterminada de esta clave. Introduce la frase de contraseña de esa clave.</string>
 </resources>

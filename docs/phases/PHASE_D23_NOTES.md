@@ -65,10 +65,35 @@ encryption subkey, v4 ML-KEM survival; 2b: subkey lifetime and edit stamp, v6 an
 ML-KEM on v4 plus a later classical add, classical subkey on a composite primary, ML-DSA signing
 subkey on v6, fallback ordering, Clear All Data reset).
 
-### Checkpoint 2c (next)
+### Checkpoint 2c: fallbacks and signing defaults in use
 
-The consumers: a "Decrypt with" picker in Crypto that Decrypt with this key preselects, trying
-that key, then its enabled fallbacks in order, then (unless strict) every other key; and the
-signing-default resolver in text, file, MIME and CLI signing (all-PQC recipients, any classical
-recipient, sign only). Passphrase change clears the agent's held unlock once SessionPolicy lands
-(stage 4).
+- **Decrypt order** (`DecryptOrder.kt`, `DesktopKeyRepository.decryptKeys`): the key picked in
+  the new "Decrypt with" picker (text and files; Key Detail's Decrypt with this key preselects
+  it), then its enabled fallbacks in order, then every other key pair unless the key is strict.
+  "Any of my keys" keeps the old keyring order. Text and armored files use Android's cascade
+  (each key alone, then the whole list, so the final error is the pre-fallback one); binary
+  files and the CLI stream take the order only. `pgpony decrypt --decrypt-with <key>`.
+- **Failure wording** (Android #46): with a key picked, a failure says whether that key is not
+  a recipient or its passphrase was wrong.
+- **Composite classical subkeys decrypt** (Android 4.6.0 item 21): a composite ML-DSA key's
+  X25519 or RSA subkey (added in 2b for clients that cannot use ML-KEM) now opens mail. Desktop
+  could add such a subkey and not decrypt with it.
+- **Signing defaults** (`SigningDefaults.pick`, `signerAfterDefaults`): applied in text and file
+  encrypt and sign, MIME bundles, `pgpony encrypt` and `sign` (a stderr note names the key;
+  `--no-signing-defaults` opts out) and the gpg shim's sign-only path. Crypto shows a note under
+  the signer picker when a default takes over, so the passphrase typed is the right one.
+
+Upstream finding: Android picks the post-quantum default when every recipient
+`isComposite`, which leaves out composite ML-DSA keys (they receive on their ML-KEM subkey).
+Desktop uses `isPostQuantum`; Android should too.
+
+Watch-folder rules name their own signer and are not routed through signing defaults.
+
+### Tests added in 2c
+
+`DecryptOrderTest`: order and strict mode, the cascade rule, signing-default picks (and the
+table read), strict mode on real keys with the not-a-recipient wording, a composite key's
+X25519 subkey decrypting.
+
+Still open for stage 4: passphrase change clears the agent's held unlock once SessionPolicy
+lands.

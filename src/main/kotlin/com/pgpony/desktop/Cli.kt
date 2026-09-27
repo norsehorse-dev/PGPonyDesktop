@@ -97,7 +97,13 @@ object Cli {
             // included. The CLI cannot prompt, so a composite signature to a v4-only recipient is
             // kept and a warning goes to stderr (the "sign and warn" decision).
             val fps = recipients.map { sel -> resolveOne(repo, sel, requireSecret = false).fingerprint }
-            val signer = signAs?.let { sel -> resolveOne(repo, sel, requireSecret = true) }
+            val picked = signAs?.let { sel -> resolveOne(repo, sel, requireSecret = true) }
+            // 3.0.0 (plan 3.8): the picked key's signing defaults, unless --no-signing-defaults.
+            val signer = picked?.let { base ->
+                if (o.flag("--no-signing-defaults")) base
+                else repo.signerAfterDefaults(base, fps.mapNotNull { fp -> repo.byFingerprint(fp) }, signOnly = false)
+                    .also { if (it.fingerprint != base.fingerprint) err("note: signing as ${it.shortFingerprint} (signing default of ${base.shortFingerprint})") }
+            }
             val pass = if (signer != null) passphraseOrNull(o) else null
             val ops = EncryptOps(repo)
             val plan = try {
@@ -128,15 +134,23 @@ object Cli {
         val o = Options(args)
         val input = o.value("--input", "-i") ?: o.positional()
         val outPath = o.value("--output", "-o")
-        val all = repo.allKeys()
-        val secretRings = all.filter { it.isKeyPair }.mapNotNull { repo.loadSecretKeyRing(it.fingerprint) }
-        val publicRings = all.mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
+        // 3.0.0 (plan 3.7): --decrypt-with tries that key first, then its fallbacks, then the
+        // rest unless the key is in strict mode (set in the app's Key Detail).
+        val selected = o.value("--decrypt-with")?.let { sel -> resolveOne(repo, sel, requireSecret = true).fingerprint }
+        val keys = repo.decryptKeys(selected)
         val pass = passphraseOrNull(o)
+        val data = readAll(input)
 
         outStream(outPath).use { output ->
-            val result = crypto.decryptStream(
-                readAll(input).inputStream(), output, secretRings, pass, publicRings, repo.compositePrimarySecretRings()
-            )
+            val result = try {
+                crypto.decryptStream(
+                    data.inputStream(), output, keys.secretRings, pass, keys.verificationRings, keys.compositeRings
+                )
+            } catch (t: Throwable) {
+                // Same exit path as before (message to stderr, exit 3); only the text is sharper
+                // when a --decrypt-with key is not a recipient or its passphrase was wrong.
+                throw repo.explainDecryptFailure({ crypto.recipientKeyIDs(data) }, selected, t)
+            }
             reportSignature(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
@@ -157,7 +171,11 @@ object Cli {
         val input = o.value("--input", "-i") ?: o.positional()
         val outPath = o.value("--output", "-o")
 
-        val e = resolveOne(repo, signAs, requireSecret = true)
+        val picked = resolveOne(repo, signAs, requireSecret = true)
+        // 3.0.0 (plan 3.8): the sign-only signing default, unless --no-signing-defaults.
+        val e = if (o.flag("--no-signing-defaults")) picked
+        else repo.signerAfterDefaults(picked, emptyList(), signOnly = true)
+            .also { if (it.fingerprint != picked.fingerprint) err("note: signing as ${it.shortFingerprint} (signing default of ${picked.shortFingerprint})") }
         if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(e)) {
             throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} has expired (turn on Allow expired keys in Settings to sign with it)")
         }
@@ -485,7 +503,7 @@ object Cli {
 
             Verbs:
               encrypt   -r <key> [-r …] [-u <key>] [-c] [-a] [-o out] [file|-]
-              decrypt   [-o out] [file|-]
+              decrypt   [--decrypt-with <key>] [-o out] [file|-]
               sign      [-u <key>] [-b] [-a] [-o out] [file|-]
               verify    [-s <sigfile>] [file|-]
               import    [file|-]
@@ -499,6 +517,8 @@ object Cli {
               -o, --output <file>    write to file (default: stdout)
               -r, --recipient <key>  recipient (fingerprint, key id, or email)
               -u, --sign-as <key>    signing key
+              --no-signing-defaults  sign with the -u key itself, not its signing default
+              --decrypt-with <key>   try this key first, then its fallbacks
               --passphrase-env VAR   read passphrase from an environment variable
               --passphrase-fd N      read passphrase from a file descriptor
 
@@ -532,7 +552,7 @@ internal class Options(args: List<String>) {
     private val valued = setOf(
         "--output", "-o", "--input", "-i", "--recipient", "-r", "--sign-as", "-u",
         "--signature", "-s", "--passphrase-env", "--passphrase-fd", "--name", "--email",
-        "--algo", "--expires",
+        "--algo", "--expires", "--decrypt-with",
         "--op" // D14 — `pgpony open --op <verb>` (Main.parseOpenArgs)
     )
 

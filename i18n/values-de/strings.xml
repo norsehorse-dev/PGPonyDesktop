@@ -765,4 +765,7 @@
     <string name="d_status_subkey_added">Unterschlüssel hinzugefügt</string>
     <string name="d_status_subkey_revoked">Unterschlüssel widerrufen</string>
     <string name="d_status_notations_saved">Notationen gespeichert</string>
+    <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
+    <string name="d_crypto_decrypt_with_any">Beliebiger meiner Schlüssel</string>
+    <string name="d_crypto_signing_default_note">Signiert als %1$s, die Signaturvorgabe dieses Schlüssels. Geben Sie die Passphrase dieses Schlüssels ein.</string>
 </resources>
