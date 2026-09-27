@@ -726,4 +726,19 @@
     <string name="d_file_err_composite_too_large">La signature ML-DSA charge tout le fichier en mémoire et est limitée à 512 Mo. Signez un fichier plus petit ou choisissez une clé de signature classique.</string>
     <string name="d_file_verify_ok_unconfirmed">Signé, clé non vérifiée : %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Déchiffré · signé, clé non vérifiée</string>
+    <string name="d_edit_err_public_only">Cela nécessite la clé privée, et seule la clé publique est dans votre trousseau.</string>
+    <string name="d_edit_err_card">Cette clé se trouve sur une clé matérielle et ne peut pas être modifiée ici.</string>
+    <string name="d_edit_err_last_encryption_subkey">C’est la dernière sous-clé de chiffrement de la clé. Sans elle, personne ne pourra chiffrer pour cette clé.</string>
+    <string name="d_edit_err_subkey_not_found">La sous-clé %1$s ne fait pas partie de cette clé.</string>
+    <string name="d_edit_err_primary_as_subkey">La clé principale ne peut pas être supprimée ou révoquée comme une sous-clé.</string>
+    <string name="d_settings_protect_destructive_subtitle">Vous demande de taper DELETE avant de supprimer une clé, de retirer une sous-clé ou un User ID, ou d’effacer toutes les données. Activé par défaut.</string>
+    <string name="d_keyring_recently_deleted_button">Supprimés récemment (%1$d)</string>
+    <string name="d_recycle_less_than_day">Moins d’un jour restant</string>
+    <string name="d_status_moved_to_bin">%1$s déplacé vers Supprimés récemment</string>
+    <string name="d_status_purged">%1$s détruit définitivement</string>
+    <string name="d_status_bin_emptied">Supprimés récemment vidé</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">%1$d jour restant</item>
+        <item quantity="other">%1$d jours restants</item>
+    </plurals>
 </resources>

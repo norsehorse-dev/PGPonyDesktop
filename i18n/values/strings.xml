@@ -857,4 +857,19 @@
     <string name="d_file_err_composite_too_large">ML-DSA signing reads the whole file into memory and is limited to 512 MB. Sign a smaller file, or pick a classical signing key.</string>
     <string name="d_file_verify_ok_unconfirmed">Signed, key not verified: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Decrypted · signed, key not verified</string>
+    <string name="d_edit_err_public_only">This needs the private key, and only the public key is in your keyring.</string>
+    <string name="d_edit_err_card">This key lives on a hardware key, so it can’t be edited from here.</string>
+    <string name="d_edit_err_last_encryption_subkey">This is the key’s last encryption subkey. Without it, nobody can encrypt to this key.</string>
+    <string name="d_edit_err_subkey_not_found">Subkey %1$s is not on this key.</string>
+    <string name="d_edit_err_primary_as_subkey">The primary key can’t be removed or revoked as a subkey.</string>
+    <string name="d_settings_protect_destructive_subtitle">Ask you to type DELETE before a key is deleted, a subkey or User ID is removed, or all data is cleared. On by default.</string>
+    <string name="d_keyring_recently_deleted_button">Recently Deleted (%1$d)</string>
+    <string name="d_recycle_less_than_day">Less than a day left</string>
+    <string name="d_status_moved_to_bin">Moved %1$s to Recently Deleted</string>
+    <string name="d_status_purged">Permanently destroyed %1$s</string>
+    <string name="d_status_bin_emptied">Recently Deleted emptied</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
 </resources>

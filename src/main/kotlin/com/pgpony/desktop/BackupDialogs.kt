@@ -116,6 +116,9 @@ fun ExportBackupDialog(state: DesktopState, onDismiss: () -> Unit) {
                 busy = true
                 try {
                     file.writeBytes(backup.exportBackup(recovery.canonical))
+                    // 3.0.0 (plan 3.9, Android 4.3.0): stamp every key that went into the file,
+                    // so Key Detail and the delete confirmation can say when it was last backed up.
+                    state.markAllBackedUp()
                     state.status = tr("d_backup_saved_status", file.name)
                     onDismiss()
                 } catch (t: Throwable) {

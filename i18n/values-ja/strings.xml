@@ -702,4 +702,18 @@
     <string name="d_file_err_composite_too_large">ML-DSA 署名はファイル全体をメモリに読み込むため、512 MB までに制限されています。より小さいファイルに署名するか、従来の署名鍵を選んでください。</string>
     <string name="d_file_verify_ok_unconfirmed">署名あり、鍵は未確認: %1$s &lt;%2$s&gt;・%3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">復号しました · 署名あり、鍵は未確認</string>
+    <string name="d_edit_err_public_only">この操作には秘密鍵が必要ですが、キーリングには公開鍵しかありません。</string>
+    <string name="d_edit_err_card">この鍵はハードウェアキー上にあるため、ここでは編集できません。</string>
+    <string name="d_edit_err_last_encryption_subkey">これはこの鍵の最後の暗号化サブキーです。これがないと、誰もこの鍵宛てに暗号化できません。</string>
+    <string name="d_edit_err_subkey_not_found">サブキー %1$s はこの鍵にありません。</string>
+    <string name="d_edit_err_primary_as_subkey">主鍵はサブキーとして削除・失効できません。</string>
+    <string name="d_settings_protect_destructive_subtitle">鍵の削除、サブキーや User ID の削除、全データの消去の前に DELETE と入力するよう求めます。既定でオンです。</string>
+    <string name="d_keyring_recently_deleted_button">最近削除した項目 (%1$d)</string>
+    <string name="d_recycle_less_than_day">残り 1 日未満</string>
+    <string name="d_status_moved_to_bin">%1$s を「最近削除した項目」に移動しました</string>
+    <string name="d_status_purged">%1$s を完全に破棄しました</string>
+    <string name="d_status_bin_emptied">「最近削除した項目」を空にしました</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="other">残り %1$d 日</item>
+    </plurals>
 </resources>

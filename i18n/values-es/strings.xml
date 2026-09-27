@@ -726,4 +726,19 @@
     <string name="d_file_err_composite_too_large">La firma ML-DSA lee el archivo completo en memoria y está limitada a 512 MB. Firma un archivo más pequeño o elige una clave de firma clásica.</string>
     <string name="d_file_verify_ok_unconfirmed">Firmado, clave no verificada: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Descifrado · firmado, clave no verificada</string>
+    <string name="d_edit_err_public_only">Esto necesita la clave privada y en tu llavero solo está la pública.</string>
+    <string name="d_edit_err_card">Esta clave está en una llave de hardware, así que no se puede editar desde aquí.</string>
+    <string name="d_edit_err_last_encryption_subkey">Esta es la última subclave de cifrado de la clave. Sin ella, nadie podrá cifrar para esta clave.</string>
+    <string name="d_edit_err_subkey_not_found">La subclave %1$s no está en esta clave.</string>
+    <string name="d_edit_err_primary_as_subkey">La clave principal no se puede quitar ni revocar como subclave.</string>
+    <string name="d_settings_protect_destructive_subtitle">Pide escribir DELETE antes de borrar una clave, quitar una subclave o un User ID, o borrar todos los datos. Activado por defecto.</string>
+    <string name="d_keyring_recently_deleted_button">Eliminados recientemente (%1$d)</string>
+    <string name="d_recycle_less_than_day">Queda menos de un día</string>
+    <string name="d_status_moved_to_bin">%1$s movido a Eliminados recientemente</string>
+    <string name="d_status_purged">%1$s destruido para siempre</string>
+    <string name="d_status_bin_emptied">Eliminados recientemente vaciado</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">Queda %1$d día</item>
+        <item quantity="other">Quedan %1$d días</item>
+    </plurals>
 </resources>

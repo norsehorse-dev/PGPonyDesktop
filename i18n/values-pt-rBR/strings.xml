@@ -726,4 +726,19 @@
     <string name="d_file_err_composite_too_large">A assinatura ML-DSA lê o arquivo inteiro na memória e está limitada a 512 MB. Assine um arquivo menor ou escolha uma chave de assinatura clássica.</string>
     <string name="d_file_verify_ok_unconfirmed">Assinado, chave não verificada: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Descriptografado · assinado, chave não verificada</string>
+    <string name="d_edit_err_public_only">Isso precisa da chave privada, e só a pública está no seu chaveiro.</string>
+    <string name="d_edit_err_card">Esta chave está em uma chave de hardware, então não pode ser editada aqui.</string>
+    <string name="d_edit_err_last_encryption_subkey">Esta é a última subchave de criptografia da chave. Sem ela, ninguém poderá criptografar para esta chave.</string>
+    <string name="d_edit_err_subkey_not_found">A subchave %1$s não está nesta chave.</string>
+    <string name="d_edit_err_primary_as_subkey">A chave principal não pode ser removida nem revogada como subchave.</string>
+    <string name="d_settings_protect_destructive_subtitle">Pede que você digite DELETE antes de excluir uma chave, remover uma subchave ou User ID, ou apagar todos os dados. Ativado por padrão.</string>
+    <string name="d_keyring_recently_deleted_button">Excluídos recentemente (%1$d)</string>
+    <string name="d_recycle_less_than_day">Resta menos de um dia</string>
+    <string name="d_status_moved_to_bin">%1$s movido para Excluídos recentemente</string>
+    <string name="d_status_purged">%1$s destruído permanentemente</string>
+    <string name="d_status_bin_emptied">Excluídos recentemente esvaziado</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">Resta %1$d dia</item>
+        <item quantity="other">Restam %1$d dias</item>
+    </plurals>
 </resources>

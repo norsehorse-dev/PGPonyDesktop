@@ -74,8 +74,8 @@ data class ImportReport(
 }
 
 class DesktopKeyRepository(
-    private val db: PGPDatabase,
-    private val materials: KeyMaterialStore,
+    internal val db: PGPDatabase,
+    internal val materials: KeyMaterialStore,
     private val crypto: PGPCryptoService = PGPCryptoService.shared,
     private val revocation: RevocationService = RevocationService.shared,
     private val keyExpiration: KeyExpirationService = KeyExpirationService.shared
@@ -750,7 +750,7 @@ class DesktopKeyRepository(
         return CompositeKeyFacade.encryptionSubkeyRing(raw)
     }
 
-    private suspend fun rawPublicBytes(fingerprint: String): ByteArray? {
+    internal suspend fun rawPublicBytes(fingerprint: String): ByteArray? {
         val armored = exportArmoredPublicKey(fingerprint) ?: return null
         return runCatching { CompositeSigPacket.dearmor(armored) }.getOrNull()
     }
@@ -765,7 +765,7 @@ class DesktopKeyRepository(
         return runCatching { CompositeKeyFacade.parse(raw) }.getOrNull()
     }
 
-    private fun rawSecretBytes(fingerprint: String): ByteArray? {
+    internal fun rawSecretBytes(fingerprint: String): ByteArray? {
         val armored = materials.loadSecret(fingerprint) ?: return null
         return runCatching { CompositeSigPacket.dearmor(armored) }.getOrNull()
     }
@@ -916,11 +916,12 @@ class DesktopKeyRepository(
             secretKeyRing = secRing, reason = reason, comment = comment, passphrase = passphrase
         )
         val revokedRing = revocation.applyRevocation(pubRing, armoredCert)
-        val updatedArmored = revocation.armorPublicKeyRing(revokedRing)
-        materials.storePublic(fingerprint, updatedArmored)
+        // 3.0.0 (Android 4.6.0 item 19): carry a v4 ML-KEM subkey BouncyCastle cannot see.
+        val updatedArmored = storeCarriedPublic(fingerprint, revokedRing.encoded)
         dao.update(
             entity.copy(
                 armoredPublicKey = updatedArmored,
+                lastLocalEditAt = System.currentTimeMillis(),
                 isRevoked = true,
                 revokedAt = System.currentTimeMillis(),
                 revocationReason = reason,
@@ -970,14 +971,70 @@ class DesktopKeyRepository(
             expiresAtEpochSeconds = expiresAtEpochSeconds,
             passphrase = passphrase
         )
-        materials.storePublic(fingerprint, crypto.exportArmoredPublicKey(updated.publicRing))
-        // UpdatedRings.secretRing is nullable (the card path has none) — guard like Android's
-        // persistExpiration; the software path always produces one.
-        updated.secretRing?.let { materials.storeSecret(fingerprint, crypto.exportArmoredPrivateKey(it)) }
+        // 3.0.0 (Android 4.6.0 item 19 follow-up): new bindings for any v4 ML-KEM subkey are made
+        // FIRST, so a failure leaves the stored key untouched; then everything is stored with the
+        // ML-KEM subkey carried over and its binding replaced.
+        val v4Bindings = v4Algo35Bindings(fingerprint, secRing, passphrase, expiresAtEpochSeconds)
+        val armor = storeCarriedPublic(fingerprint, updated.publicRing.encoded)
+        // UpdatedRings.secretRing is nullable (the card path has none); guard like Android's
+        // persistExpiration. The software path always produces one.
+        updated.secretRing?.let { storeCarriedSecret(fingerprint, it.encoded) }
         dao.update(
             entity.copy(
-                armoredPublicKey = crypto.exportArmoredPublicKey(updated.publicRing),
-                expiresAt = expiresAtEpochSeconds?.let { it * 1000L }
+                armoredPublicKey = armor,
+                expiresAt = expiresAtEpochSeconds?.let { it * 1000L },
+                lastLocalEditAt = System.currentTimeMillis()
+            )
+        )
+        if (v4Bindings.isNotEmpty()) {
+            DesktopKeyEdits(this).applyV4Algo35Edits(fingerprint) { raw ->
+                v4Bindings.fold(raw) { acc, (body, sig) ->
+                    com.pgpony.android.crypto.pqc.V4Algo35Edit.edit(acc, body, replaceBinding = sig)
+                }
+            }
+        }
+    }
+
+    private suspend fun v4Algo35Bindings(
+        fingerprint: String,
+        secRing: PGPSecretKeyRing,
+        passphrase: String?,
+        expiresAtEpochSeconds: Long?
+    ): List<Pair<ByteArray, ByteArray>> {
+        val raw = rawPublicBytes(fingerprint) ?: return emptyList()
+        val bodies = com.pgpony.android.crypto.pqc.V4Algo35Edit.publicBodies(raw)
+        if (bodies.isEmpty()) return emptyList()
+        val priv = try {
+            secRing.secretKey.extractPrivateKey(
+                org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
+                    org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+                ).build((passphrase ?: "").toCharArray())
+            )
+        } catch (e: org.bouncycastle.openpgp.PGPException) {
+            throw if (passphrase.isNullOrEmpty()) KeyExpirationService.ExpirationError.PassphraseRequired()
+            else KeyExpirationService.ExpirationError.InvalidPassphrase()
+        }
+        return bodies.map { body ->
+            body to com.pgpony.android.crypto.pqc.V4Algo35Edit.binding(secRing, priv, body, expiresAtEpochSeconds)
+        }
+    }
+
+    /** Store edited public octets armored as-is, carrying a v4 ML-KEM subkey. Returns the armor. */
+    private suspend fun storeCarriedPublic(fingerprint: String, bytes: ByteArray): String {
+        val armor = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----", "-----END PGP PUBLIC KEY BLOCK-----",
+            com.pgpony.android.crypto.pqc.V4Algo35Carry.carry(rawPublicBytes(fingerprint), bytes)
+        )
+        materials.storePublic(fingerprint, armor)
+        return armor
+    }
+
+    private fun storeCarriedSecret(fingerprint: String, bytes: ByteArray) {
+        materials.storeSecret(
+            fingerprint,
+            CompositeSigPacket.armor(
+                "-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----",
+                com.pgpony.android.crypto.pqc.V4Algo35Carry.carry(rawSecretBytes(fingerprint), bytes)
             )
         )
     }

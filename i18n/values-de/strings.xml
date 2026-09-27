@@ -726,4 +726,19 @@
     <string name="d_file_err_composite_too_large">ML-DSA-Signaturen lesen die ganze Datei in den Speicher und sind auf 512 MB begrenzt. Signieren Sie eine kleinere Datei oder wählen Sie einen klassischen Signaturschlüssel.</string>
     <string name="d_file_verify_ok_unconfirmed">Signiert, Schlüssel nicht überprüft: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Entschlüsselt · signiert, Schlüssel nicht überprüft</string>
+    <string name="d_edit_err_public_only">Dafür wird der private Schlüssel benötigt, in Ihrem Schlüsselbund ist nur der öffentliche.</string>
+    <string name="d_edit_err_card">Dieser Schlüssel liegt auf einem Hardware-Schlüssel und kann hier nicht bearbeitet werden.</string>
+    <string name="d_edit_err_last_encryption_subkey">Das ist der letzte Verschlüsselungs-Unterschlüssel. Ohne ihn kann niemand mehr an diesen Schlüssel verschlüsseln.</string>
+    <string name="d_edit_err_subkey_not_found">Der Unterschlüssel %1$s gehört nicht zu diesem Schlüssel.</string>
+    <string name="d_edit_err_primary_as_subkey">Der Hauptschlüssel kann nicht als Unterschlüssel entfernt oder widerrufen werden.</string>
+    <string name="d_settings_protect_destructive_subtitle">Vor dem Löschen eines Schlüssels, dem Entfernen eines Unterschlüssels oder einer User-ID oder dem Löschen aller Daten müssen Sie DELETE eintippen. Standardmäßig an.</string>
+    <string name="d_keyring_recently_deleted_button">Zuletzt gelöscht (%1$d)</string>
+    <string name="d_recycle_less_than_day">Weniger als ein Tag übrig</string>
+    <string name="d_status_moved_to_bin">%1$s nach „Zuletzt gelöscht“ verschoben</string>
+    <string name="d_status_purged">%1$s endgültig vernichtet</string>
+    <string name="d_status_bin_emptied">„Zuletzt gelöscht“ geleert</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">Noch %1$d Tag</item>
+        <item quantity="other">Noch %1$d Tage</item>
+    </plurals>
 </resources>

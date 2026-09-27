@@ -78,8 +78,13 @@ class DesktopState(private val scope: CoroutineScope) {
     private val db = Db.open(Config.dbFile)
     val repository = DesktopKeyRepository(db, KeyMaterialStore(Config.keysDir))
     val keyRefresh = DesktopKeyRefresh(repository)
+    /** 3.0.0 stage 2: key-management mutations (recycle bin, identities, subkeys, passphrase). */
+    val edits = DesktopKeyEdits(repository)
 
     var keys by mutableStateOf<List<PGPKeyEntity>>(emptyList())
+        private set
+    /** 3.0.0 (plan 3.1): Recently Deleted, newest first. */
+    var deletedKeys by mutableStateOf<List<PGPKeyEntity>>(emptyList())
         private set
     var status by mutableStateOf<String?>(null)
     var busy by mutableStateOf(false)
@@ -196,6 +201,8 @@ class DesktopState(private val scope: CoroutineScope) {
             repository.migrateLegacyJson(Config.legacyKeyringFile)?.let {
                 status = tr("d_status_migrated_legacy", it.summary())
             }
+            // 3.0.0 (plan 3.1): the retention sweep, at launch like Android.
+            runCatching { edits.purgeExpiredDeleted() }
             refresh()
         }
         // D4 — background refresh ticker (the Android Phase 7 worker's session-scoped analog):
@@ -241,6 +248,7 @@ class DesktopState(private val scope: CoroutineScope) {
 
     private suspend fun refresh() {
         keys = repository.allKeys()
+        deletedKeys = edits.deletedKeys()
     }
 
     fun importArmoredText(text: String) = scope.launch {
@@ -277,9 +285,35 @@ class DesktopState(private val scope: CoroutineScope) {
         }
     }
 
+    /** 3.0.0 (plan 3.1): deleting moves the key to Recently Deleted, restorable for
+     *  DesktopKeyEdits.RETENTION_DAYS. Nothing is destroyed here. */
     fun delete(entity: PGPKeyEntity) = scope.launch {
-        repository.deleteByFingerprint(entity.fingerprint)
-        status = tr("d_status_deleted", entity.userID.ifBlank { entity.shortFingerprint })
+        edits.softDelete(entity.fingerprint)
+        status = tr("d_status_moved_to_bin", entity.userID.ifBlank { entity.shortFingerprint })
+        refresh()
+    }
+
+    fun restoreFromBin(entity: PGPKeyEntity) = scope.launch {
+        edits.restore(entity.id)
+        status = tr("recycle_bin_restored")
+        refresh()
+    }
+
+    fun purgeFromBin(entity: PGPKeyEntity) = scope.launch {
+        edits.purge(entity)
+        status = tr("d_status_purged", entity.userID.ifBlank { entity.shortFingerprint })
+        refresh()
+    }
+
+    /** Stamp lastBackedUpAt on every live key (after a full backup was written). */
+    suspend fun markAllBackedUp() {
+        edits.markBackedUp(repository.allKeys().map { it.fingerprint })
+        refresh()
+    }
+
+    fun emptyBin() = scope.launch {
+        edits.emptyBin()
+        status = tr("d_status_bin_emptied")
         refresh()
     }
 

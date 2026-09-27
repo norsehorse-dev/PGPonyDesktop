@@ -78,6 +78,12 @@ fun KeyringScreen(state: DesktopState) {
     var showQrImport by remember { mutableStateOf(false) }
     var detailKey by remember { mutableStateOf<PGPKeyEntity?>(null) }
     var confirmDelete by remember { mutableStateOf<PGPKeyEntity?>(null) }
+    var showRecentlyDeleted by remember { mutableStateOf(false) }
+    var sameIdentityEmail by remember { mutableStateOf<String?>(null) }
+    val sameIdentityCounts = remember(state.keys) {
+        state.keys.filter { it.userEmail.isNotBlank() }
+            .groupingBy { it.userEmail.trim().lowercase() }.eachCount()
+    }
     var query by remember { mutableStateOf("") }
     var sortMode by remember { mutableStateOf(SortMode.RECENT) }
     var sortMenuOpen by remember { mutableStateOf(false) }
@@ -120,6 +126,11 @@ fun KeyringScreen(state: DesktopState) {
             OutlinedButton(onClick = { showPasteDialog = true }) { Text(tr("d_keyring_paste_armor")) }
             OutlinedButton(onClick = { showFilePicker = true }) { Text(tr("d_keyring_import_file")) }
             OutlinedButton(onClick = { showQrImport = true }) { Text(tr("d_keyring_import_qr")) }
+            if (state.deletedKeys.isNotEmpty()) {
+                OutlinedButton(onClick = { showRecentlyDeleted = true }) {
+                    Text(tr("d_keyring_recently_deleted_button", state.deletedKeys.size))
+                }
+            }
             BrandButton(onClick = { showGenerate = true }) { Text(tr("d_menu_new_key")) }
         }
 
@@ -198,6 +209,9 @@ fun KeyringScreen(state: DesktopState) {
                 items(displayKeys, key = { it.id }) { key ->
                     KeyCard(
                         key = key,
+                        // 3.0.0 (Android 4.6.0 item 20): how many keys share this address.
+                        sameIdentity = sameIdentityCounts[key.userEmail.trim().lowercase()] ?: 1,
+                        onSameIdentity = { sameIdentityEmail = key.userEmail },
                         onOpen = { detailKey = key },
                         onCopyPublic = {
                             scope.launch {
@@ -276,28 +290,72 @@ fun KeyringScreen(state: DesktopState) {
         KeyDetailDialog(state = state, key = fresh, onDismiss = { detailKey = null })
     }
 
-    confirmDelete?.let { key ->
+    if (showRecentlyDeleted) RecentlyDeletedDialog(state) { showRecentlyDeleted = false }
+
+    sameIdentityEmail?.let { email ->
+        val matches = state.keys.filter { it.userEmail.trim().equals(email.trim(), ignoreCase = true) }
         BrandDialog(
-            onDismissRequest = { confirmDelete = null },
-            title = tr("keyring_delete_dialog_title"),
-            destructive = true,
+            onDismissRequest = { sameIdentityEmail = null },
+            title = trQuantity("keyring_same_identity_title", matches.size, email),
             content = {
-                Text(
-                    buildString {
-                        append(key.userID.ifBlank { tr("d_keydetail_no_user_id") })
-                        append("\n")
-                        append(key.formattedFingerprint)
-                        if (key.isKeyPair) append(tr("d_keyring_delete_secret_warning"))
+                Column {
+                    Text(tr("keyring_same_identity_body"))
+                    Spacer(Modifier.height(Spacing.Medium))
+                    matches.forEach { k ->
+                        TextButton(onClick = { sameIdentityEmail = null; detailKey = k }) {
+                            Column {
+                                Text(k.userID.ifBlank { k.shortFingerprint })
+                                Text(
+                                    k.formattedFingerprint + tr("d_list_separator") + tr(
+                                        "keyring_same_identity_created_format",
+                                        DATE_FORMAT.format(Instant.ofEpochMilli(k.createdAt).atZone(ZoneId.systemDefault()))
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
                     }
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { state.delete(key); confirmDelete = null }) {
-                    Text(tr("keyring_delete_dialog_confirm"))
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = null }) { Text(tr("common_button_cancel")) }
+            confirmButton = { TextButton(onClick = { sameIdentityEmail = null }) { Text(tr("common_button_close")) } }
+        )
+    }
+
+    confirmDelete?.let { key ->
+        // 3.0.0 (plan 3.1 / 3.2): delete moves the key to Recently Deleted. A key pair gets the
+        // Android safeguards: the backup state, and "revoke instead", since a revocation
+        // certificate cannot be made once the key is gone. The typed word applies when
+        // Protect destructive actions is on.
+        val body = if (key.isKeyPair) tr("key_delete_sheet_body", DesktopKeyEdits.RETENTION_DAYS)
+        else tr(
+            "keyring_delete_dialog_body_format",
+            key.userID.ifBlank { tr("d_keydetail_no_user_id") }, key.shortFingerprint, DesktopKeyEdits.RETENTION_DAYS
+        )
+        DestructiveConfirmDialog(
+            title = if (key.isKeyPair) tr("key_delete_sheet_title") else tr("keyring_delete_dialog_title"),
+            body = (if (key.isKeyPair) key.userID.ifBlank { key.shortFingerprint } + "\n\n" else "") + body,
+            confirmLabel = if (key.isKeyPair) tr("key_delete_confirm_button") else tr("keyring_delete_dialog_confirm"),
+            onConfirm = { state.delete(key); confirmDelete = null },
+            onDismiss = { confirmDelete = null },
+            extra = {
+                if (key.isKeyPair) {
+                    Spacer(Modifier.height(Spacing.Small))
+                    Text(
+                        key.lastBackedUpAt?.let {
+                            tr("key_delete_backed_up_on", DATE_FORMAT.format(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())))
+                        } ?: tr("key_delete_never_backed_up"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!key.isRevoked) {
+                        Spacer(Modifier.height(Spacing.Small))
+                        Text(tr("key_delete_revoke_instead_note"), style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { confirmDelete = null; detailKey = key }) {
+                            Text(tr("key_delete_revoke_instead_button"))
+                        }
+                    }
+                }
             }
         )
     }
@@ -315,6 +373,8 @@ fun KeyringScreen(state: DesktopState) {
 @Composable
 private fun KeyCard(
     key: PGPKeyEntity,
+    sameIdentity: Int,
+    onSameIdentity: () -> Unit,
     onOpen: () -> Unit,
     onCopyPublic: () -> Unit,
     onDelete: () -> Unit
@@ -343,6 +403,20 @@ private fun KeyCard(
                     if (key.isDefault) BrandBadge(tr("key_detail_badge_default"))
                     if (key.isRevoked) BrandBadge(tr("key_card_revoked_badge"), BadgeTone.Error)
                     if (key.isExpired) BrandBadge(tr("d_keydetail_badge_expired"), BadgeTone.Error)
+                    if (sameIdentity > 1) {
+                        Box(Modifier.clickable(onClick = onSameIdentity)) {
+                            BrandBadge(trQuantity("key_card_same_identity_count", sameIdentity))
+                        }
+                    }
+                }
+                // 3.0.0 (Android 4.6.0 item 1): the key's note as a label on its row.
+                key.notes?.takeIf { it.isNotBlank() }?.let { note ->
+                    Spacer(Modifier.height(Spacing.Tight))
+                    Text(
+                        note.lineSequence().first().take(120),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Brand.Accent
+                    )
                 }
                 Spacer(Modifier.height(Spacing.Small))
                 Text(
@@ -369,8 +443,11 @@ private fun KeyCard(
                 IconButton(onClick = onCopyPublic) {
                     Icon(Icons.Filled.ContentCopy, contentDescription = tr("d_keyring_cd_copy_public"))
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = tr("d_keyring_cd_delete"))
+                // 3.0.0 (plan 3.2): Hide destructive actions removes delete from the app.
+                if (!DestructiveGuard.hidden()) {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Filled.Delete, contentDescription = tr("d_keyring_cd_delete"))
+                    }
                 }
             }
         }

@@ -798,4 +798,21 @@
     <string name="d_file_err_composite_too_large">Подпись ML-DSA загружает весь файл в память и ограничена 512 МБ. Подпишите файл меньшего размера или выберите классический ключ подписи.</string>
     <string name="d_file_verify_ok_unconfirmed">Подписано, ключ не проверен: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Расшифровано · подписано, ключ не проверен</string>
+    <string name="d_edit_err_public_only">Для этого нужен закрытый ключ, а в связке ключей есть только открытый.</string>
+    <string name="d_edit_err_card">Этот ключ находится на аппаратном ключе, поэтому его нельзя изменить отсюда.</string>
+    <string name="d_edit_err_last_encryption_subkey">Это последний подключ шифрования этого ключа. Без него никто не сможет зашифровать для этого ключа.</string>
+    <string name="d_edit_err_subkey_not_found">Подключа %1$s нет в этом ключе.</string>
+    <string name="d_edit_err_primary_as_subkey">Основной ключ нельзя удалить или отозвать как подключ.</string>
+    <string name="d_settings_protect_destructive_subtitle">Перед удалением ключа, подключа или User ID, а также перед удалением всех данных нужно ввести DELETE. Включено по умолчанию.</string>
+    <string name="d_keyring_recently_deleted_button">Недавно удалённые (%1$d)</string>
+    <string name="d_recycle_less_than_day">Осталось меньше суток</string>
+    <string name="d_status_moved_to_bin">%1$s перемещён в «Недавно удалённые»</string>
+    <string name="d_status_purged">%1$s уничтожен навсегда</string>
+    <string name="d_status_bin_emptied">«Недавно удалённые» очищено</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">Остался %1$d день</item>
+        <item quantity="few">Осталось %1$d дня</item>
+        <item quantity="many">Осталось %1$d дней</item>
+        <item quantity="other">Осталось %1$d дня</item>
+    </plurals>
 </resources>

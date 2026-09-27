@@ -114,7 +114,7 @@ fun SettingsScreen(state: DesktopState) {
         // Android 4.5.3: expired keys are refused for signing and encrypting unless this is on.
         // Stage 2 of 3.0.0 adds the destructive-action and passphrase-cache controls here.
         SectionCard(tr("settings_section_keys")) {
-            KeysSection()
+            KeysSection(state)
         }
         Spacer(Modifier.height(Spacing.Large))
 
@@ -217,8 +217,11 @@ fun SettingsScreen(state: DesktopState) {
 }
 
 @Composable
-private fun KeysSection() {
+private fun KeysSection(state: DesktopState) {
     var allowExpired by remember { mutableStateOf(KeyUsePolicy.allowExpiredKeys()) }
+    var protect by remember { mutableStateOf(DestructiveGuard.protect()) }
+    var hide by remember { mutableStateOf(DestructiveGuard.hidden()) }
+    var showBin by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
             checked = allowExpired,
@@ -236,6 +239,40 @@ private fun KeysSection() {
             )
         }
     }
+    // 3.0.0 (plan 3.2): the destructive-action controls. Typed confirmation stands in for
+    // Android's device authentication (plan Q3).
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = protect, onCheckedChange = { DestructiveGuard.setProtect(it); protect = it })
+        Column {
+            Text(tr("settings_protect_destructive_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                tr("d_settings_protect_destructive_subtitle"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = hide, onCheckedChange = { DestructiveGuard.setHidden(it); hide = it })
+        Column {
+            Text(tr("settings_disable_destructive_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                tr("settings_disable_destructive_subtitle"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    Spacer(Modifier.height(Spacing.Medium))
+    OutlinedButton(onClick = { showBin = true }) {
+        Text(tr("d_keyring_recently_deleted_button", state.deletedKeys.size))
+    }
+    Text(
+        tr("settings_recycle_bin_subtitle"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    if (showBin) RecentlyDeletedDialog(state) { showBin = false }
 }
 
 // ── About ──────────────────────────────────────────────────────────────
