@@ -114,8 +114,21 @@ class I18nTest {
      */
     @Test
     fun noTranslationDeclaresAKeyTheBaseDoesNot() {
+        // A translation may carry the CLDR plural quantity forms its own grammar needs
+        // (Russian few/many, for one) even where the English base declares only one/other.
+        // Such a form belongs to a plural the base does declare, so it is not a stray key;
+        // anything else absent from the base is.
+        val cldrQuantities = setOf("zero", "one", "two", "few", "many", "other")
         forEachTranslation { layer, tag, base, table ->
-            val extra = table.keys.filterNot { it in base }.sorted()
+            val basePlurals = base.keys.filter { it.contains('/') }.map { it.substringBefore('/') }.toSet()
+            val extra = table.keys.filter { key ->
+                if (key in base) return@filter false
+                val slash = key.lastIndexOf('/')
+                if (slash < 0) return@filter true
+                val name = key.substring(0, slash)
+                val quantity = key.substring(slash + 1)
+                !(name in basePlurals && quantity in cldrQuantities)
+            }.sorted()
             assertTrue(extra.isEmpty(), "$layer/$tag declares keys absent from the base: $extra")
         }
     }
@@ -132,10 +145,30 @@ class I18nTest {
     fun placeholderArityAndTypeMatchTheBase() {
         val mismatches = mutableListOf<String>()
         forEachTranslation { layer, tag, base, table ->
+            // Placeholders each base plural declares, unioned across its quantity items. A CLDR
+            // plural category covers different counts in different languages (Russian `one`
+            // covers 1, 21, 31...), so a translated `one` item legitimately carries the count
+            // placeholder even where the English `one`, only ever exactly 1, spells it out. A
+            // plural item is checked against that union; every other key stays exact.
+            val basePluralPh = HashMap<String, MutableMap<Int, Char>>()
+            for ((k, v) in base) {
+                val slash = k.lastIndexOf('/')
+                if (slash < 0) continue
+                basePluralPh.getOrPut(k.substring(0, slash)) { mutableMapOf() }.putAll(placeholders(v))
+            }
             for ((key, text) in table) {
-                val want = placeholders(base[key] ?: continue)
                 val got = placeholders(text)
-                if (want != got) mismatches += "$layer/$tag '$key': base $want, translation $got"
+                val slash = key.lastIndexOf('/')
+                val pluralName = if (slash >= 0) key.substring(0, slash) else null
+                if (pluralName != null && basePluralPh.containsKey(pluralName)) {
+                    val union = basePluralPh.getValue(pluralName)
+                    val offending = got.filterNot { (i, c) -> union[i] == c }
+                    if (offending.isNotEmpty())
+                        mismatches += "$layer/$tag '$key': $offending not in base plural $union"
+                } else {
+                    val want = placeholders(base[key] ?: continue)
+                    if (want != got) mismatches += "$layer/$tag '$key': base $want, translation $got"
+                }
             }
         }
         assertTrue(mismatches.isEmpty(), "placeholder mismatches:\n" + mismatches.joinToString("\n"))

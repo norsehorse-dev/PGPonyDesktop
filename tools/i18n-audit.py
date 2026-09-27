@@ -53,7 +53,7 @@ LAYERS = [
 ]
 
 # The locale set both layers ship. "values" is the English base.
-LOCALE_DIRS = ["values", "values-de", "values-es", "values-fr", "values-ja", "values-pt-rBR"]
+LOCALE_DIRS = ["values", "values-de", "values-es", "values-fr", "values-ja", "values-pt-rBR", "values-ru"]
 
 # Locales with a single CLDR plural category: `one` is not a missing translation there, it is a
 # form the language does not have. Everything else must translate both items of every plural.
@@ -178,7 +178,20 @@ def audit_layer(layer, note, strict, quiet):
             errors += 1
 
         missing = sorted(k for k in base if k not in entries)
-        extra = sorted(k for k in entries if k not in base)
+        # A translation may carry the CLDR plural quantity forms its grammar needs
+        # (Russian few/many, Arabic zero/two, ...) even where the English base declares
+        # only one/other. Such a form is not "extra": it belongs to a plural the base
+        # does declare. Anything else absent from the base is a real stray key.
+        base_plural_names = {k.split("/")[0] for k in base if "/" in k}
+        cldr_quantities = {"zero", "one", "two", "few", "many", "other"}
+        def _is_declared(k):
+            if k in base:
+                return True
+            if "/" in k:
+                name, q = k.rsplit("/", 1)
+                return name in base_plural_names and q in cldr_quantities
+            return False
+        extra = sorted(k for k in entries if not _is_declared(k))
 
         # `one` may legitimately be absent (ja); `other` may not.
         plural_names = {k.split("/")[0] for k in base if "/" in k}
@@ -189,13 +202,29 @@ def audit_layer(layer, note, strict, quiet):
         if d in NO_PLURAL_DISTINCTION:
             missing = [k for k in missing if not k.endswith("/one")]
 
+        # Placeholders each base plural declares, unioned across its quantity items. A CLDR
+        # category covers different counts per language (Russian `one` covers 1, 21, 31...), so
+        # a translated plural item may carry the count placeholder even where the English `one`
+        # spells the number out. A plural item is checked against that union; other keys exact.
+        base_plural_ph = {}
+        for bk, bv in base.items():
+            if "/" in bk:
+                pn = bk.rsplit("/", 1)[0]
+                merged = dict(base_plural_ph.get(pn, {}))
+                merged.update(placeholders(bv))
+                base_plural_ph[pn] = merged
         bad = []
         for k, text in entries.items():
-            if k not in base:
-                continue
-            want, got = placeholders(base[k]), placeholders(text)
-            if want != got:
-                bad.append((k, want, got))
+            got = placeholders(text)
+            pn = k.rsplit("/", 1)[0] if "/" in k else None
+            if pn is not None and pn in base_plural_ph:
+                union = base_plural_ph[pn]
+                if any(union.get(i) != c for i, c in got.items()):
+                    bad.append((k, union, got))
+            elif k in base:
+                want = placeholders(base[k])
+                if want != got:
+                    bad.append((k, want, got))
         for k, want, got in sorted(bad):
             print("  ERROR %s/%s: placeholder mismatch in '%s' — base %s, translation %s"
                   % (layer, d, k, fmt_ph(want), fmt_ph(got)))

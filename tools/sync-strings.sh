@@ -26,7 +26,7 @@ ANDROID_ROOT="${1:-$REPO_ROOT/../PGPonyAndroid}"
 RES="$ANDROID_ROOT/app/src/main/res"
 DST="$REPO_ROOT/vendor/app-strings"
 
-LOCALES=(values values-de values-es values-fr values-ja values-pt-rBR)
+LOCALES=(values values-de values-es values-fr values-ja values-pt-rBR values-ru)
 
 [ -f "$RES/values/strings.xml" ] || {
     echo "error: $RES/values/strings.xml not found (pass the PGPonyAndroid path)" >&2

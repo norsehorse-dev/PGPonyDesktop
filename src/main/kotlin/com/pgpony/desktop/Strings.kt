@@ -58,9 +58,9 @@ object I18n {
 
     /**
      * The languages that have a complete translation. English is the base and always present;
-     * the other five are the locales Android ships. Order is the picker's order.
+     * the other six are the locales Android ships. Order is the picker's order.
      */
-    val SUPPORTED = listOf("en", "de", "es", "fr", "ja", "pt-BR")
+    val SUPPORTED = listOf("en", "de", "es", "fr", "ja", "pt-BR", "ru")
 
     /** Endonyms — a language picker that names languages in a language you can't read is a joke. */
     val DISPLAY_NAMES = mapOf(
@@ -69,7 +69,8 @@ object I18n {
         "es" to "Español",
         "fr" to "Français",
         "ja" to "日本語",
-        "pt-BR" to "Português (Brasil)"
+        "pt-BR" to "Português (Brasil)",
+        "ru" to "Русский"
     )
 
     /** Test hook — a scratch node instead of the real one. */
