@@ -24,6 +24,8 @@ fun main(args: Array<String>) {
     // 3.0.0: the settings seam (vendored data/settings/KeyValueSettings.kt). First, before any
     // face of the binary can reach a vendored store.
     DesktopPrefsSettings.install()
+    // 3.0.0 (plan section 7): the armor Comment setting, read fresh by every face of the binary.
+    com.pgpony.android.data.ArmorCommentPrefs.load()
 
     val first = args.firstOrNull()
 

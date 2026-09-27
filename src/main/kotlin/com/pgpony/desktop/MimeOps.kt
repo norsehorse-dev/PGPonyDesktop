@@ -39,7 +39,8 @@ class MimeOps(
         recipientFingerprints: Collection<String>,
         signerFingerprint: String?,
         signerPassphrase: String?,
-        compositeInV1Decision: Boolean? = null
+        compositeInV1Decision: Boolean? = null,
+        subkeyChoices: Map<String, Long> = emptyMap()
     ): String {
         // 3.0.0: EncryptOps decides recipients (fail closed, v4 algo-35 channel), the expired-key
         // rule and the signer, including a composite ML-DSA signer (Android 4.5.2). The Phase A3
@@ -48,7 +49,7 @@ class MimeOps(
             repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
         val ops = EncryptOps(repo)
-        val plan = ops.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision)
+        val plan = ops.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision, subkeyChoices)
         val mimeBytes = MimeBuilder.buildMixed(body.ifBlank { null }, loadAttachments(attachmentPaths))
         return String(ops.encryptBytes(plan, mimeBytes, signerPassphrase, armor = true), Charsets.UTF_8)
     }

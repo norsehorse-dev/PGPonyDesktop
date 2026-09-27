@@ -768,4 +768,10 @@
     <string name="d_import_preview_in_keyring">Déjà dans votre trousseau. L\'import ajoute seulement ce qui est nouveau.</string>
     <string name="d_import_link_title">Importer depuis un lien</string>
     <string name="d_keyring_import_link">Importer depuis un lien…</string>
+    <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">Commentaire d\'armure</string>
+    <string name="d_settings_armor_comment_note">La ligne Comment de la sortie en armure ASCII. Elle s\'applique à l\'app, à la commande pgpony, au shim de signature git et aux dossiers surveillés.</string>
 </resources>

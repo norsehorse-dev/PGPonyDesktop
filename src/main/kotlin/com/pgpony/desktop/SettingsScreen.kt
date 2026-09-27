@@ -144,6 +144,12 @@ fun SettingsScreen(state: DesktopState) {
         }
         Spacer(Modifier.height(Spacing.Large))
 
+        // ── Armor comment (3.0.0, plan section 7) ────────────────────────
+        SectionCard(tr("d_settings_section_armor_comment"), tr("d_settings_armor_comment_note")) {
+            ArmorCommentSection()
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
         // ── Password store (D8) ─────────────────────────────────────────
         SectionCard(tr("settings_section_pass_store"), tr("d_settings_pass_note")) {
             PassStoreSection(state)
@@ -301,6 +307,44 @@ private fun KeysSection(state: DesktopState) {
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     if (showBin) RecentlyDeletedDialog(state) { showBin = false }
+}
+
+@Composable
+private fun ArmorCommentSection() {
+    val prefs = com.pgpony.android.data.ArmorCommentPrefs
+    var include by remember { mutableStateOf(prefs.include()) }
+    var pubkey by remember { mutableStateOf(prefs.pubkeyInclude()) }
+    var text by remember { mutableStateOf(prefs.text()) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = include, onCheckedChange = { prefs.setInclude(it); include = it })
+        Column {
+            Text(tr("settings_armor_comment_toggle_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(tr("settings_armor_comment_toggle_subtitle"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = pubkey, onCheckedChange = { prefs.setPubkeyInclude(it); pubkey = it })
+        Column {
+            Text(tr("settings_armor_comment_pubkey_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(tr("settings_armor_comment_pubkey_subtitle"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    if (include || pubkey) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it; prefs.setText(it) },
+            label = { Text(tr("settings_armor_comment_field_label")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+    val preview = com.pgpony.android.data.ArmorCommentValidator.validate(include, text)
+    Text(
+        preview?.let { tr("settings_armor_comment_preview_format", it) } ?: tr("settings_armor_comment_preview_none"),
+        style = MaterialTheme.typography.bodySmall,
+        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 // ── About ──────────────────────────────────────────────────────────────

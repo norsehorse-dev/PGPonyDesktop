@@ -842,4 +842,10 @@
     <string name="d_import_preview_in_keyring">Уже есть в вашей связке ключей. При импорте добавится только новое.</string>
     <string name="d_import_link_title">Импорт по ссылке</string>
     <string name="d_keyring_import_link">Импорт по ссылке…</string>
+    <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">Комментарий брони</string>
+    <string name="d_settings_armor_comment_note">Строка Comment в выводе с ASCII-бронёй. Действует для приложения, команды pgpony, шима подписи git и отслеживаемых папок.</string>
 </resources>

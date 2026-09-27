@@ -39,7 +39,10 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         /** True when a composite signature goes into a SEIPDv1 container (a v4-only recipient). */
         val compositeInSeipdV1: Boolean,
         /** False when the user chose "Send unsigned" for that case. */
-        val keepCompositeInSeipdV1: Boolean
+        val keepCompositeInSeipdV1: Boolean,
+        /** 3.0.0 (Android 4.5.0 item 13): chosen encryption subkey per recipient, keyed by the
+         *  uppercase fingerprint; a recipient left out gets the engine's automatic pick. */
+        val subkeyChoices: Map<String, Long> = emptyMap()
     ) {
         val signs: Boolean get() = classicalSigner != null || (compositeSigner != null && (!compositeInSeipdV1 || keepCompositeInSeipdV1))
         val needsBuffering: Boolean get() = compositeSigner != null
@@ -55,7 +58,8 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         recipientFingerprints: Collection<String>,
         signer: PGPKeyEntity?,
         signerPassphrase: String?,
-        compositeInV1Decision: Boolean? = null
+        compositeInV1Decision: Boolean? = null,
+        subkeyChoices: Map<String, Long> = emptyMap()
     ): Plan {
         val entities = recipientFingerprints.mapNotNull { repo.byFingerprint(it) }
         KeyUsePolicy.requireUsable(entities, signer)
@@ -74,9 +78,9 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
             }
         }
         val inV1 = composite != null &&
-            crypto.compositeSignatureInSeipdV1(recipients.rings, emptyMap(), recipients.v4Algo35)
+            crypto.compositeSignatureInSeipdV1(recipients.rings, subkeyChoices, recipients.v4Algo35)
         if (inV1 && compositeInV1Decision == null) throw CompositeV4SignDecisionNeeded()
-        return Plan(recipients, classical, composite, inV1, compositeInV1Decision ?: true)
+        return Plan(recipients, classical, composite, inV1, compositeInV1Decision ?: true, subkeyChoices)
     }
 
     /** Whole-buffer encrypt. Handles every signer kind, composite included. */
@@ -93,6 +97,7 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         passphrase = signerPassphrase,
         filename = filename,
         armor = armor,
+        recipientSubkeyChoices = plan.subkeyChoices,
         v4Algo35Recipients = plan.recipients.v4Algo35,
         compositeSignSuite = plan.compositeSigner?.suite,
         compositeSignSecret = plan.compositeSigner?.compositeSecret,
@@ -124,11 +129,51 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
             filename = filename,
             armor = armor,
             enableCompression = enableCompression,
+            recipientSubkeyChoices = plan.subkeyChoices,
             v4Algo35Recipients = plan.recipients.v4Algo35
         )
     }
 
+    /** One selected recipient's encryption targets (Android 4.5.0 items 2 and 13). */
+    data class RecipientTargets(
+        val fingerprint: String,
+        val label: String,
+        val options: List<com.pgpony.android.crypto.EncryptionKeyOption>,
+        /** A v4 interop key: it always receives on its ML-KEM (algo 35) subkey. */
+        val v4Algo35: Boolean
+    )
+
     companion object {
+        /** The encryption targets of [entities], in the engine's order (automatic pick first). */
+        suspend fun recipientTargets(repo: DesktopKeyRepository, entities: List<PGPKeyEntity>): List<RecipientTargets> =
+            entities.map { e ->
+                val ring = repo.loadEncryptionRecipientRing(e.fingerprint)
+                RecipientTargets(
+                    fingerprint = e.fingerprint.uppercase(),
+                    label = e.userName.ifBlank { e.userEmail.ifBlank { e.shortFingerprint } },
+                    options = ring?.let { runCatching { PGPCryptoService.shared.encryptionKeyOptions(it) }.getOrNull() }.orEmpty(),
+                    v4Algo35 = repo.loadV4Algo35Recipient(e.fingerprint) != null
+                )
+            }
+
+        /** Whether [t] receives this message post-quantum, given the chosen subkeys. */
+        fun receivesPostQuantum(t: RecipientTargets, choices: Map<String, Long>): Boolean {
+            if (t.v4Algo35) return true
+            val chosen = choices[t.fingerprint]?.let { id -> t.options.firstOrNull { it.keyId == id } } ?: t.options.firstOrNull()
+            return chosen?.isPostQuantum == true
+        }
+
+        /**
+         * Android 4.5.0 item 2 (#36): with two or more recipients where some receive post-quantum
+         * and some classical, the message is only as strong as its classical recipients. The
+         * labels of those, or empty when the set is uniform.
+         */
+        fun pqWeakLinks(targets: List<RecipientTargets>, choices: Map<String, Long>): List<String> {
+            if (targets.size < 2) return emptyList()
+            val (pq, classical) = targets.partition { receivesPostQuantum(it, choices) }
+            return if (pq.isNotEmpty() && classical.isNotEmpty()) classical.map { it.label } else emptyList()
+        }
+
         /** A composite signature over a file or folder is built in memory (the engine has no
          *  streaming composite signer). Past this size the operation stops with a clear error
          *  instead of exhausting the heap. */

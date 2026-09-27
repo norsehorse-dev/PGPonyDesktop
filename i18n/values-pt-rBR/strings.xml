@@ -768,4 +768,10 @@
     <string name="d_import_preview_in_keyring">Já está no seu chaveiro. Importar adiciona apenas o que for novo.</string>
     <string name="d_import_link_title">Importar de um link</string>
     <string name="d_keyring_import_link">Importar de um link…</string>
+    <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">Comentário da armadura</string>
+    <string name="d_settings_armor_comment_note">A linha Comment na saída com armadura ASCII. Vale para o app, o comando pgpony, o shim de assinatura do git e as pastas monitoradas.</string>
 </resources>

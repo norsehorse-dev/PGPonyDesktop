@@ -743,4 +743,10 @@
     <string name="d_import_preview_in_keyring">すでにキーリングにあります。インポートすると新しい部分だけが追加されます。</string>
     <string name="d_import_link_title">リンクからインポート</string>
     <string name="d_keyring_import_link">リンクからインポート…</string>
+    <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">アーマーのコメント</string>
+    <string name="d_settings_armor_comment_note">ASCII アーマー出力の Comment 行です。アプリ、pgpony コマンド、git 署名シム、監視フォルダーに適用されます。</string>
 </resources>

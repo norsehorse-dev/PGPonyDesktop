@@ -50,14 +50,15 @@ class FileCryptoOps(
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
         isCancelled: () -> Boolean = NOT_CANCELLED,
         outputDir: Path? = null,
-        compositeInV1Decision: Boolean? = true
+        compositeInV1Decision: Boolean? = true,
+        subkeyChoices: Map<String, Long> = emptyMap()
     ): FileOutcome = try {
         // The Phase A3 rule: a requested signature must never silently drop, so a signer that
         // cannot be loaded stops the op (EncryptOps.plan throws).
         val signer = signerFingerprint?.let {
             repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
-        val plan = encryptOps.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision)
+        val plan = encryptOps.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision, subkeyChoices)
         // Write to a temp sibling and MOVE on success (D17): a cancel or crash leaves the temp,
         // which the catch deletes; never a half-written .gpg beside the source, never an
         // overwrite. Output name is resolved at the end, keeping the never-overwrite guarantee.
@@ -110,12 +111,13 @@ class FileCryptoOps(
         armor: Boolean,
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
         isCancelled: () -> Boolean = NOT_CANCELLED,
-        compositeInV1Decision: Boolean? = true
+        compositeInV1Decision: Boolean? = true,
+        subkeyChoices: Map<String, Long> = emptyMap()
     ): FileOutcome = try {
         val signer = signerFingerprint?.let {
             repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
-        val plan = encryptOps.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision)
+        val plan = encryptOps.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision, subkeyChoices)
         val tarName = folder.fileName.toString() + ".tar"
         // A cheap stat walk gives a determinate total; tar headers add a little, but for a
         // progress bar the payload bytes are what the user watches move.

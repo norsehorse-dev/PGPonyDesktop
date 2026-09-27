@@ -899,4 +899,10 @@
     <string name="d_import_preview_in_keyring">Already in your keyring. Importing adds anything new.</string>
     <string name="d_import_link_title">Import from link</string>
     <string name="d_keyring_import_link">Import from link…</string>
+    <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">Armor comment</string>
+    <string name="d_settings_armor_comment_note">The Comment line in ASCII-armored output. It applies to the app, the pgpony command, the git signing shim and watch folders.</string>
 </resources>

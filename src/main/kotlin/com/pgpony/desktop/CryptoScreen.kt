@@ -164,6 +164,10 @@ fun CryptoScreen(state: DesktopState) {
     // Encrypt options
     var encryptWith by remember { mutableStateOf(EncryptWith.PUBLIC_KEYS) }
     var selectedRecipients by remember { mutableStateOf(setOf<String>()) }
+    // 3.0.0 (Android 4.5.0 items 2 and 13): each selected recipient's encryption targets, the
+    // subkey the user picked for one that offers several, and the mixed post-quantum warning.
+    var recipientTargets by remember { mutableStateOf<List<EncryptOps.RecipientTargets>>(emptyList()) }
+    var subkeyChoices by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var signEnabled by remember { mutableStateOf(true) }
     var signerFp by remember { mutableStateOf<String?>(null) }
     var signerPass by remember { mutableStateOf("") }
@@ -229,6 +233,13 @@ fun CryptoScreen(state: DesktopState) {
             decryptWith = preset.decryptWith
         }
         state.consumeCryptoPreset()
+    }
+
+    androidx.compose.runtime.LaunchedEffect(selectedRecipients, state.keys) {
+        val entities = selectedRecipients.mapNotNull { fp -> state.keys.firstOrNull { it.fingerprint == fp } }
+        recipientTargets = withContext(Dispatchers.IO) { EncryptOps.recipientTargets(crypto, entities) }
+        val keep = recipientTargets.map { it.fingerprint }.toSet()
+        subkeyChoices = subkeyChoices.filterKeys { it in keep }
     }
 
     // Window drops land here: append, auto-route the operation, switch to the Files tab.
@@ -396,21 +407,13 @@ fun CryptoScreen(state: DesktopState) {
                     FileOp.ENCRYPT -> {
                         SubHeading(tr("encrypt_recipients_label"))
                         recipients.forEach { key ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = key.fingerprint in selectedRecipients,
-                                    onCheckedChange = { checked ->
-                                        selectedRecipients =
-                                            if (checked) selectedRecipients + key.fingerprint
-                                            else selectedRecipients - key.fingerprint
-                                    }
-                                )
-                                Text(
-                                    "${key.userID.ifBlank { key.shortFingerprint }} · ${key.algorithm.displayName}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                            RecipientRow(key, key.fingerprint in selectedRecipients) { checked ->
+                                selectedRecipients =
+                                    if (checked) selectedRecipients + key.fingerprint
+                                    else selectedRecipients - key.fingerprint
                             }
                         }
+                        RecipientTargetsSection(recipientTargets, subkeyChoices) { fp, id -> subkeyChoices = subkeyChoices + (fp to id) }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
                                 checked = signEnabled && pickedSigner != null,
@@ -510,7 +513,7 @@ fun CryptoScreen(state: DesktopState) {
                                 val signerForPlan = if (signEnabled) encryptSigner else null
                                 try {
                                     EncryptOps(crypto).plan(
-                                        selectedRecipients, signerForPlan, signerPass.ifBlank { null }, fileV4Decision
+                                        selectedRecipients, signerForPlan, signerPass.ifBlank { null }, fileV4Decision, subkeyChoices
                                     )
                                 } catch (_: CompositeV4SignDecisionNeeded) {
                                     pqcV4Retry = { keep -> fileV4Decision = keep; doFileOp() }
@@ -540,10 +543,12 @@ fun CryptoScreen(state: DesktopState) {
                                         for (f in fileList) acc +=
                                             if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
                                                 f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
-                                                tick(f), cancelled, compositeInV1Decision = fileV4Decision
+                                                tick(f), cancelled, compositeInV1Decision = fileV4Decision,
+                                                subkeyChoices = subkeyChoices
                                             ) else fileOps.encryptFile(
                                                 f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
-                                                tick(f), cancelled, compositeInV1Decision = fileV4Decision
+                                                tick(f), cancelled, compositeInV1Decision = fileV4Decision,
+                                                subkeyChoices = subkeyChoices
                                             )
                                     }
                                     FileOp.DECRYPT -> for (f in fileList)
@@ -735,21 +740,13 @@ fun CryptoScreen(state: DesktopState) {
                                 )
                             }
                             recipients.forEach { key ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = key.fingerprint in selectedRecipients,
-                                        onCheckedChange = { checked ->
-                                            selectedRecipients =
-                                                if (checked) selectedRecipients + key.fingerprint
-                                                else selectedRecipients - key.fingerprint
-                                        }
-                                    )
-                                    Text(
-                                        "${key.userID.ifBlank { key.shortFingerprint }} · ${key.algorithm.displayName}",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
+                                RecipientRow(key, key.fingerprint in selectedRecipients) { checked ->
+                                    selectedRecipients =
+                                        if (checked) selectedRecipients + key.fingerprint
+                                        else selectedRecipients - key.fingerprint
                                 }
                             }
+                            RecipientTargetsSection(recipientTargets, subkeyChoices) { fp, id -> subkeyChoices = subkeyChoices + (fp to id) }
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
@@ -881,7 +878,7 @@ fun CryptoScreen(state: DesktopState) {
                                             if (attachments.isEmpty()) {
                                                 val ops = EncryptOps(crypto)
                                                 val plan = ops.plan(
-                                                    selectedRecipients, signWith, signerPass.ifBlank { null }, v4Decision
+                                                    selectedRecipients, signWith, signerPass.ifBlank { null }, v4Decision, subkeyChoices
                                                 )
                                                 String(
                                                     ops.encryptBytes(
@@ -892,7 +889,7 @@ fun CryptoScreen(state: DesktopState) {
                                                 )
                                             } else mimeOps.encryptBundle(
                                                 input, attachments, selectedRecipients,
-                                                signWith?.fingerprint, signerPass.ifBlank { null }, v4Decision
+                                                signWith?.fingerprint, signerPass.ifBlank { null }, v4Decision, subkeyChoices
                                             )
                                         } catch (_: CompositeV4SignDecisionNeeded) {
                                             pqcV4Retry = { keep -> textV4Decision = keep; doTextEncrypt() }
@@ -1507,6 +1504,66 @@ private fun CryptoSaveDialog(suggestedName: String, onResult: (java.io.File?) ->
     },
     dispose = FileDialog::dispose
 )
+
+/** 3.0.0 (Android 4.5.0 item 31): the email under the name, so same-name keys tell apart. */
+@Composable
+private fun RecipientRow(key: PGPKeyEntity, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = onChange)
+        Column {
+            Text(
+                "${key.userName.ifBlank { key.userEmail.ifBlank { key.shortFingerprint } }} · ${key.algorithm.displayName}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                if (key.userName.isNotBlank() && key.userEmail.isNotBlank()) tr("d_crypto_recipient_secondary", key.userEmail, key.shortFingerprint)
+                else key.shortFingerprint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** 3.0.0 (Android 4.5.0 items 13 and 2): subkey pickers and the post-quantum weak-link warning. */
+@Composable
+private fun RecipientTargetsSection(
+    targets: List<EncryptOps.RecipientTargets>,
+    choices: Map<String, Long>,
+    onChoose: (String, Long) -> Unit
+) {
+    targets.filter { !it.v4Algo35 && it.options.size >= 2 }.forEach { t ->
+        var open by remember(t.fingerprint) { mutableStateOf(false) }
+        val chosen = choices[t.fingerprint]?.let { id -> t.options.firstOrNull { it.keyId == id } } ?: t.options.first()
+        Text(tr("encrypt_subkey_label", t.label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column {
+            OutlinedButton(onClick = { open = true }) { Text(subkeyOptionText(chosen, chosen.keyId == t.options.first().keyId)) }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                t.options.forEachIndexed { i, opt ->
+                    DropdownMenuItem(
+                        text = { Text(subkeyOptionText(opt, i == 0)) },
+                        onClick = { open = false; onChoose(t.fingerprint, opt.keyId) }
+                    )
+                }
+            }
+        }
+    }
+    val weak = EncryptOps.pqWeakLinks(targets, choices)
+    if (weak.isNotEmpty()) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            tr("encrypt_pq_mixed_warning", weak.joinToString(", ")),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+private fun subkeyOptionText(opt: com.pgpony.android.crypto.EncryptionKeyOption, isFirst: Boolean): String {
+    val kind = if (opt.isPostQuantum) tr("encrypt_subkey_pq") else tr("encrypt_subkey_classical")
+    return if (isFirst) tr("d_crypto_subkey_option_auto", opt.algorithmLabel, kind, tr("encrypt_subkey_auto"), opt.keyIdHex)
+    else tr("d_crypto_subkey_option", opt.algorithmLabel, kind, opt.keyIdHex)
+}
 
 /** 3.0.0 (plan 3.7): which key a decrypt tries first. Null is "any of my keys". */
 @Composable
