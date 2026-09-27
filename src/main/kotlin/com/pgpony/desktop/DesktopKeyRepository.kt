@@ -645,6 +645,46 @@ class DesktopKeyRepository(
     }
 
     /** 3.0.0-KS1 — record a publish so the detail screen shows "Last uploaded". */
+    /**
+     * 3.0.0 (Android 4.6.0 item 9): what goes to the key servers, or why not. A key whose live
+     * User IDs carry more than one primary flag, or whose flagged primary is not the one shown
+     * here, would publish under a name its owner does not expect; the publish dialog says so and
+     * points at Make Primary.
+     */
+    sealed class PublishPayload {
+        data class Ready(val armored: String) : PublishPayload()
+        data class NeedsRepair(val flagged: List<String>, val shown: String) : PublishPayload()
+        object Unavailable : PublishPayload()
+    }
+
+    suspend fun publishPayload(fingerprint: String, shownUserId: String): PublishPayload {
+        val armored = exportArmoredPublicKey(fingerprint) ?: return PublishPayload.Unavailable
+        // Composite ML-DSA keys are not BouncyCastle rings; there is nothing further to check.
+        val primary = loadPublicKeyRing(fingerprint)?.publicKey ?: return PublishPayload.Ready(armored)
+        val flagged = com.pgpony.android.crypto.UserIdService.shared.primaryFlaggedLiveUserIds(primary)
+        val ok = when (flagged.size) {
+            0 -> true
+            1 -> flagged[0] == shownUserId
+            else -> false
+        }
+        return if (ok) PublishPayload.Ready(armored) else PublishPayload.NeedsRepair(flagged, shownUserId)
+    }
+
+    /** The addresses of the key's certified User IDs, for the per-server confirmation lines. */
+    suspend fun publishedAddresses(fingerprint: String): List<String> =
+        rawPublicBytes(fingerprint)
+            ?.let { CertificateBindings.analyze(it)?.certifiedUserIds }
+            ?.map { CertificateBindings.mailboxOf(it) }
+            ?.filter { it.contains('@') }
+            ?.distinct()
+            .orEmpty()
+
+    /** 3.0.0 (Android 4.6.0 item 9): [markKeyServerUploaded] plus the per-server record. */
+    suspend fun markKeyServerUploaded(fingerprint: String, serverId: String) {
+        com.pgpony.android.data.KeyPublicationStore.record(fingerprint, serverId)
+        markKeyServerUploaded(fingerprint)
+    }
+
     suspend fun markKeyServerUploaded(fingerprint: String) {
         byFingerprint(fingerprint)?.let { key ->
             dao.update(

@@ -49,6 +49,13 @@ import com.pgpony.android.network.KeyLookupResult
 import com.pgpony.android.network.OfflineMode
 import com.pgpony.android.network.KeyServerRepository
 import com.pgpony.android.keyserver.PublishOutcome
+import com.pgpony.android.keyserver.MultiKeyServerService
+import com.pgpony.android.keyserver.ServerCopy
+import com.pgpony.android.data.KeyPublicationStore
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import kotlinx.coroutines.launch
 
 // ── Search ─────────────────────────────────────────────────────────────
@@ -201,16 +208,26 @@ fun SearchKeyServersDialog(state: DesktopState, onDismiss: () -> Unit) {
 // ── Publish ────────────────────────────────────────────────────────────
 
 /**
- * Publish a public key to the publish-enabled directory servers — per-server checkboxes
- * (pre-checked, the Android PublishSheet shape) with the R5 non-coercive warning where a
- * server may not accept this key type. Outcomes render in place; verification-email notes
- * included.
+ * Publish a public key to the publish-enabled directory servers: per-server checkboxes (the
+ * Android PublishSheet shape) with the R5 non-coercive warning where a server may not accept
+ * this key type. Outcomes render in place; verification-email notes included.
+ *
+ * 3.0.0 (Android 4.6.0 item 9): also the "Update on key servers" dialog. A key published before
+ * pre-checks only the servers it went to (KeyPublicationStore) and shows when each last got a
+ * copy; under each server, every address of the key and whether that server has confirmed it,
+ * so a newly added identity's confirmation is visible. A key whose primary User ID is ambiguous
+ * is not published until Make Primary settles it.
  */
 @Composable
 fun PublishKeyDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var servers by remember { mutableStateOf<List<KeyServer>>(emptyList()) }
     val checked = remember { mutableStateMapOf<String, Boolean>() }
+    val uploadedAt = remember { mutableStateMapOf<String, Long>() }
+    val copies = remember { mutableStateMapOf<String, ServerCopy>() }
+    var addresses by remember { mutableStateOf<List<String>>(emptyList()) }
+    var payload by remember { mutableStateOf<DesktopKeyRepository.PublishPayload?>(null) }
+    var isUpdate by remember { mutableStateOf(false) }
     var publishing by remember { mutableStateOf(false) }
     var outcomes by remember {
         mutableStateOf<List<Pair<KeyServer, PublishOutcome>>?>(null)
@@ -221,17 +238,25 @@ fun PublishKeyDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Un
             KeyServerDirectory.get(PGPonyApp.instance).readOnce()
         }.getOrDefault(KeyServerDirectory.DEFAULTS)
             .filter { it.publishEnabled }
-        servers.forEach { if (it.id !in checked) checked[it.id] = true }
+        val records = KeyPublicationStore.servers(key.fingerprint)
+        uploadedAt.putAll(records)
+        isUpdate = records.isNotEmpty() || key.keyServerUploaded
+        // An update goes to the servers used before; a first upload (or a key uploaded before
+        // per-server records existed) to all of them.
+        servers.forEach { if (it.id !in checked) checked[it.id] = records.isEmpty() || it.id in records }
+        addresses = state.repository.publishedAddresses(key.fingerprint)
+        payload = state.repository.publishPayload(key.fingerprint, key.userID)
+        servers.forEach { s -> copies[s.id] = MultiKeyServerService.shared.serverCopy(s, key.fingerprint) }
     }
 
     AlertDialog(
         onDismissRequest = { if (!publishing) onDismiss() },
-        title = { Text(tr("d_publish_title")) },
+        title = { Text(if (isUpdate) tr("publish_title_update") else tr("d_publish_title")) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 440.dp)
+                    .heightIn(max = 480.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
@@ -246,14 +271,21 @@ fun PublishKeyDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Un
                     )
                 }
                 servers.forEach { server ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.Top) {
                         Checkbox(
                             checked = checked[server.id] ?: true,
                             onCheckedChange = { checked[server.id] = it },
                             enabled = !publishing && outcomes == null
                         )
-                        Column {
+                        Column(Modifier.padding(top = 12.dp)) {
                             Text(server.label, style = MaterialTheme.typography.bodyMedium)
+                            uploadedAt[server.id]?.let { at ->
+                                Text(
+                                    tr("publish_last_uploaded_format", PUBLISH_DATE.format(Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()))),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             if (server.mayNotAccept(key.algorithm)) {
                                 Text(
                                     tr("d_publish_may_not_accept", key.algorithm.displayName),
@@ -261,8 +293,17 @@ fun PublishKeyDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Un
                                     color = MaterialTheme.colorScheme.error
                                 )
                             }
+                            CopyLines(copies[server.id], addresses)
                         }
                     }
+                }
+                (payload as? DesktopKeyRepository.PublishPayload.NeedsRepair)?.let { repair ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        tr("publish_primary_repair_format", repair.flagged.joinToString(", ").ifEmpty { "-" }, repair.shown),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
                 outcomes?.let { list ->
                     Spacer(Modifier.height(10.dp))
@@ -306,30 +347,76 @@ fun PublishKeyDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Un
         },
         confirmButton = {
             if (outcomes == null) {
+                val ready = payload as? DesktopKeyRepository.PublishPayload.Ready
                 TextButton(
-                    enabled = !publishing && servers.any { checked[it.id] == true },
+                    enabled = !publishing && ready != null && servers.any { checked[it.id] == true },
                     onClick = {
+                        val armored = ready?.armored ?: return@TextButton
                         publishing = true
                         scope.launch {
                             try {
-                                outcomes = state.publishTo(
-                                    key,
-                                    servers.filter { checked[it.id] == true }
-                                )
+                                val result = state.publishTo(key, servers.filter { checked[it.id] == true }, armored)
+                                outcomes = result
+                                result.filter { it.second is PublishOutcome.Ok }.forEach { (server, _) ->
+                                    uploadedAt[server.id] = System.currentTimeMillis()
+                                    copies[server.id] = MultiKeyServerService.shared.serverCopy(server, key.fingerprint)
+                                }
                             } finally {
                                 publishing = false
                             }
                         }
                     }
-                ) { Text(if (publishing) tr("d_publish_in_progress") else tr("publish_action")) }
+                ) {
+                    Text(
+                        when {
+                            publishing -> tr("d_publish_in_progress")
+                            isUpdate -> tr("publish_action_update")
+                            else -> tr("publish_action")
+                        }
+                    )
+                }
             } else {
                 TextButton(onClick = onDismiss) { Text(tr("common_button_done")) }
             }
         },
         dismissButton = {
             if (outcomes == null) {
-                TextButton(onClick = onDismiss, enabled = !publishing) { Text(tr("common_button_cancel")) }
+                // Android item 8: an explicit skip, so the post-keygen offer is not dismissed by accident.
+                TextButton(onClick = onDismiss, enabled = !publishing) { Text(tr("publish_not_now")) }
             }
         }
     )
+}
+
+private val PUBLISH_DATE = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+
+/** 3.0.0 (Android 4.6.0 item 9): what this server holds, per address of the key. */
+@Composable
+private fun CopyLines(copy: ServerCopy?, addresses: List<String>) {
+    when (copy) {
+        null, ServerCopy.Unknown -> Unit
+        ServerCopy.NotPublished -> Text(
+            tr("publish_status_not_published"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        is ServerCopy.Published -> {
+            if (addresses.isEmpty()) {
+                Text(
+                    tr("publish_status_published"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            addresses.forEach { address ->
+                val confirmed = address in copy.addresses
+                Text(
+                    if (confirmed) tr("publish_address_confirmed_format", address)
+                    else tr("publish_address_pending_format", address),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (confirmed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }

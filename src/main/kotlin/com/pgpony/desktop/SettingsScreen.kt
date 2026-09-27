@@ -600,6 +600,33 @@ private fun NetworkSection(state: DesktopState) {
 
     Spacer(Modifier.height(Spacing.Large))
     SubHeading(tr("d_settings_keyservers_title"))
+    // 3.0.0 (Android 4.5.0 item 21): WKD is tried first for email lookups but is not a
+    // configured server, so it gets its own lookup-only row here.
+    var wkdEnabled by remember { mutableStateOf(com.pgpony.android.network.WkdLookup.isEnabled()) }
+    Card(
+        shape = RoundedCornerShape(Radius.Small),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = Spacing.Medium, vertical = Spacing.Tight)
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("keyservers_wkd_label"), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    tr("keyservers_wkd_desc"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Checkbox(checked = wkdEnabled, onCheckedChange = {
+                com.pgpony.android.network.WkdLookup.set(it)
+                wkdEnabled = it
+            })
+            Text(tr("d_keyservers_lookup"), style = MaterialTheme.typography.bodySmall)
+        }
+    }
     servers.forEachIndexed { index, server ->
         Card(
             shape = RoundedCornerShape(Radius.Small),

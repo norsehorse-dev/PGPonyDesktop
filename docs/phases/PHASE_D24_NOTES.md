@@ -58,3 +58,28 @@ granular, SSH subkey at generation, CLI names).
 Tests: `SshAgentServeTest` (a signing primary is not served, an added auth subkey is and its
 Ed25519 signature verifies; a composite key's classical auth subkey; RSA answers ssh-rsa,
 rsa-sha2-256 and rsa-sha2-512 by flag; the authorized_keys line).
+
+### Checkpoint 3c: key servers (plan 6.1 to 6.4)
+
+- **Upload status** (Android 4.6.0 item 9): each successful upload is recorded per server
+  (`KeyPublicationStore`, `markKeyServerUploaded(fp, serverId)`). The publish dialog becomes
+  "Update on key servers" once a key has been published, pre-checks the servers it went to,
+  shows when each last got a copy, and under each server lists the key's addresses as confirmed
+  or not (`MultiKeyServerService.serverCopy`). Publishing stays available after the first upload.
+- **Ambiguous primary** (item 9): a key whose live User IDs carry more than one primary flag, or
+  a flag on a different User ID than the one shown, is not published; the dialog points at Make
+  Primary (`publishPayload`).
+- **Out-of-date marker** (item 11): Key Detail shows "changed since it was last uploaded" with
+  an Update action for a published key edited since (`hasUnpublishedChanges`, fed by every
+  stage 2 edit's `lastLocalEditAt`).
+- **Offline** (item 10): Key Detail's key-server buttons and the out-of-date marker hide, and the
+  background refresh does not run.
+- **Settings** (4.5.0 items 6 and 21): custom servers were already there (verified); WKD now has
+  its own lookup-only row with an on/off switch (`WkdLookup`).
+- The publish dialog's secondary button reads "Not now" (Android item 8), so the post-keygen
+  offer has an explicit skip.
+
+Tests: `PublishStatusTest` (per-server record, out-of-date after an edit, addresses, ambiguous
+primary refused).
+
+Next, checkpoint 3d: import from a link (6.5) and paste tolerance with use-once keys (6.6).

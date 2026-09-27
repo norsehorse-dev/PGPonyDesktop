@@ -212,7 +212,8 @@ class DesktopState(private val scope: CoroutineScope) {
         scope.launch {
             kotlinx.coroutines.delay(INITIAL_REFRESH_DELAY_MS) // don't compete with startup
             while (true) {
-                if (DesktopNetworkPrefs.autoRefresh()) autoRefreshPass()
+                // 3.0.0 (Android 4.6.0 item 10): nothing is attempted while offline.
+                if (DesktopNetworkPrefs.autoRefresh() && !OfflineMode.enabled) autoRefreshPass()
                 kotlinx.coroutines.delay(REFRESH_TICK_MS)
             }
         }
@@ -473,16 +474,17 @@ class DesktopState(private val scope: CoroutineScope) {
      */
     suspend fun publishTo(
         entity: PGPKeyEntity,
-        servers: List<com.pgpony.android.keyserver.KeyServer>
+        servers: List<com.pgpony.android.keyserver.KeyServer>,
+        armored: String
     ): List<Pair<com.pgpony.android.keyserver.KeyServer, com.pgpony.android.keyserver.PublishOutcome>> {
-        val armor = repository.exportArmoredPublicKey(entity.fingerprint) ?: return emptyList()
         val outcomes = servers.map { server ->
-            server to com.pgpony.android.keyserver.MultiKeyServerService.shared.publish(server, armor)
+            server to com.pgpony.android.keyserver.MultiKeyServerService.shared.publish(server, armored)
         }
-        if (outcomes.any { it.second is com.pgpony.android.keyserver.PublishOutcome.Ok }) {
-            repository.markKeyServerUploaded(entity.fingerprint)
-            refresh()
+        // 3.0.0 (Android 4.6.0 item 9): each server that took the key is recorded, with the date.
+        outcomes.filter { it.second is com.pgpony.android.keyserver.PublishOutcome.Ok }.forEach { (server, _) ->
+            repository.markKeyServerUploaded(entity.fingerprint, server.id)
         }
+        if (outcomes.any { it.second is com.pgpony.android.keyserver.PublishOutcome.Ok }) refresh()
         return outcomes
     }
 }

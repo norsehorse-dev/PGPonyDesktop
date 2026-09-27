@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import com.pgpony.android.data.PGPKeyEntity
 import com.pgpony.android.data.RevocationReason
 import com.pgpony.android.data.TrustLevel
+import com.pgpony.android.network.OfflineMode
 import kotlinx.coroutines.launch
 import java.awt.FileDialog
 import java.awt.Frame
@@ -112,6 +113,17 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                     if (key.isExpired) {
                         Spacer(Modifier.width(6.dp))
                         DetailPill(tr("d_keydetail_badge_expired"), error = true)
+                    }
+                }
+
+                // 3.0.0 (Android 4.6.0 item 11): edited since it was published.
+                if (key.isKeyPair && key.hasUnpublishedChanges && !OfflineMode.enabled) {
+                    Spacer(Modifier.height(10.dp))
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(10.dp)) {
+                            Text(tr("key_detail_unpublished_changes_body"), style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { showPublish = true }) { Text(tr("key_detail_unpublished_changes_action")) }
+                        }
                     }
                 }
 
@@ -254,16 +266,18 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                     key.lastCheckedAt?.let { dateOf(it) } ?: tr("key_detail_timestamp_never")
                 )
                 Spacer(Modifier.height(4.dp))
-                WrapRow {
+                // 3.0.0 (Android 4.6.0 item 10): no key-server actions while offline.
+                if (!OfflineMode.enabled) WrapRow {
                     OutlinedButton(
                         onClick = { state.refreshKeyFromServers(key) },
                         enabled = !state.busy
                     ) { Text(tr("d_keydetail_refresh_servers")) }
                     if (!key.isRevoked) {
+                        // Android 4.6.0 item 9: stays after the first upload, as an update.
                         OutlinedButton(
                             onClick = { showPublish = true },
                             enabled = !state.busy
-                        ) { Text(tr("d_keyservers_publish")) }
+                        ) { Text(if (key.keyServerUploaded) tr("publish_title_update") else tr("d_keyservers_publish")) }
                     }
                 }
 
