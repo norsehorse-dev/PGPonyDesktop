@@ -1,0 +1,14 @@
+#!/bin/sh
+# PGPony Flatpak launcher. Preload the runtime's FreeType so the JVM and GTK share
+# one copy: the bundled jlink runtime ships its own libfreetype, and the GTK file
+# chooser otherwise fails with "error occurred in libfreetype" and opens blank.
+# Mirrors the AppImage AppRun.
+SYS_FT=""
+for d in /usr/lib/*/ /usr/lib/ /app/lib/*/; do
+  if [ -e "${d}libfreetype.so.6" ]; then SYS_FT="${d}libfreetype.so.6"; break; fi
+done
+if [ -n "$SYS_FT" ] && [ -e "$SYS_FT" ]; then
+  LD_PRELOAD="${SYS_FT}${LD_PRELOAD:+:$LD_PRELOAD}"
+  export LD_PRELOAD
+fi
+exec /app/pgpony/bin/PGPony "$@"

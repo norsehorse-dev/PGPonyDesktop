@@ -158,3 +158,35 @@ The pillars are independent; inside them, order matters:
 - The LAN phone↔desktop bridge wants its own design doc before 2.1 planning starts.
 - The iOS/Android IA question (whether the phones follow the 1.1.0 Message/Files shape) belongs to the phone repos once 1.1.0 has field feedback.
 - File the sparse-package `IExplorerCommand` work as a tracked 2.x item so the Windows 11 demotion isn't forgotten.
+
+## 12. Flathub packaging (Linux distribution and sandbox)
+
+Priority: medium. Origin: user request (isolation and security over the AppImage).
+
+A tester asked for the desktop app on Flathub, for two reasons. Flatpak runs the app in a
+bubblewrap sandbox with portal-mediated access to files and devices, which is a real
+security improvement over the AppImage (no sandbox, full user permissions), and Flathub
+gives signed, delta-updated distribution instead of a hand-fetched AppImage.
+
+The catch: the sandbox is in direct tension with this release's OS-integration pillars. A
+Flatpak app does not get file-manager context menus, a system-wide clipboard sentinel, or
+arbitrary agent sockets for free. Each needs an explicit portal or a documented sandbox
+hole, and some of them (a background clipboard watcher, a tray-owned ssh-agent or git
+signing socket that other processes connect to) are awkward or restricted under Flatpak.
+So Flathub is not just a packaging job; it forces a decision about which 2.0.0
+integrations can work sandboxed and which need host access declared, or stay
+AppImage-only.
+
+Work:
+
+- A Flatpak manifest (flatpak-builder), a pinned runtime, and the minimal finish-args:
+  filesystem access for import and export, device access for hardware keys (PC/SC, USB),
+  and network only where the app needs it, respecting the offline switch and proxy settings.
+- Decide the portal story for each OS-integration feature: the file-manager menus, the
+  clipboard sentinel, and the SSH and git-signing sockets. Document which are supported in
+  the Flatpak build and which remain AppImage-only.
+- Flathub submission and review: appstream metadata, screenshots, a build on their infra,
+  then delta updates.
+
+Delivery: an installable Flathub build that runs sandboxed, with a clear documented list
+of which integrations are available under Flatpak and which stay AppImage-only.

@@ -1,0 +1,72 @@
+# Flatpak manifest for PGPony Desktop. Build and test locally before submitting to
+# flathub/flathub. The gradle dependencies are resolved OFFLINE at build time, so
+# gradle-sources.json (all jars, POMs, the Skiko native, and the Gradle distribution)
+# must be regenerated with network access first. See README.md in this directory.
+app-id: org.pgpony.PGPony
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk21
+command: pgpony
+
+finish-args:
+  # Keyserver, WKD and VKS lookups, and the Tor/SOCKS proxy.
+  - --share=network
+  # Compose / Skiko UI.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Smart cards over PC/SC. javax.smartcardio dlopens libpcsclite; without this
+  # every hardware-key feature is dead, the same reason pcsclite is a hard depend
+  # in the AUR and .deb packages.
+  - --socket=pcsc
+  # Tray and desktop notifications.
+  - --talk-name=org.freedesktop.Notifications
+  # The served ssh-agent (2.0.x). The agent socket must land in a host-visible
+  # directory so host ssh and git can reach it; the app writes it under
+  # $XDG_RUNTIME_DIR/app/org.pgpony.PGPony, which this grant exposes. See the
+  # README for the SSH_AUTH_SOCK line and the git gpg.program wrapper.
+  - --filesystem=xdg-run/app/org.pgpony.PGPony:create
+  # File encryption reads and writes files the user picks. Compose Desktop uses an
+  # AWT file chooser rather than the desktop portal, so a broad grant is needed for
+  # now; revisit with a portal-based picker to narrow this to a portal grant.
+  - --filesystem=home
+
+modules:
+  # The JDK from the SDK extension, copied into /app so the build (and the bundled
+  # jlink runtime) use the exact same Java the project builds against (17+).
+  - name: openjdk
+    buildsystem: simple
+    build-commands:
+      - /usr/lib/sdk/openjdk21/install.sh
+
+  - name: pgpony
+    buildsystem: simple
+    build-options:
+      env:
+        # Populated offline maven repo assembled from gradle-sources.json.
+        GRADLE_USER_HOME: /run/build/pgpony/.gradle
+    build-commands:
+      # Enable the extension JDK for this build step.
+      - . /usr/lib/sdk/openjdk21/enable.sh &&
+        ./gradlew --offline --no-daemon
+        -Dmaven.repo.local=/run/build/pgpony/offline-repo
+        createReleaseDistributable
+      # Install the Compose release image (jlink runtime + jars + launcher) into /app.
+      - cp -r build/compose/binaries/main-release/app/PGPony /app/pgpony
+      - install -Dm755 packaging/flathub/pgpony-launcher /app/bin/pgpony
+      # Desktop entry, AppStream metainfo, and icon under the app id.
+      - install -Dm644 packaging/flathub/org.pgpony.PGPony.desktop
+        /app/share/applications/org.pgpony.PGPony.desktop
+      - install -Dm644 packaging/flathub/org.pgpony.PGPony.metainfo.xml
+        /app/share/metainfo/org.pgpony.PGPony.metainfo.xml
+      - install -Dm644 packaging/pgpony.png
+        /app/share/icons/hicolor/512x512/apps/org.pgpony.PGPony.png
+    sources:
+      # The application source. For a Flathub submission this becomes a git source
+      # pinned to the release tag; a local dir source is convenient while iterating.
+      - type: dir
+        path: ../..
+      # Generated with network access before an offline build. See README.md.
+      - gradle-sources.json
