@@ -46,3 +46,41 @@ val DESKTOP_MIGRATION_8_9 = object : Migration(8, 9) {
         connection.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `lastBackedUpAt` INTEGER")
     }
 }
+
+// 3.0.0: Android 4.6.0 took the schema from 9 to 12. Same KMP-form twins of the Android
+// migrations in data/RoomMigrations.kt, running the identical SQL.
+
+/** 9 -> 10: Autocrypt-origin marker. Desktop has no Autocrypt, so the UPDATE matches no rows,
+ *  but it runs as written so the schema stays the Android one. */
+val DESKTOP_MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `autocryptImportedAt` INTEGER")
+        connection.execSQL(
+            """
+            UPDATE `pgp_keys` SET `autocryptImportedAt` = ${System.currentTimeMillis()}
+            WHERE `isKeyPair` = 0 AND `isCardBacked` = 0 AND (
+                lower(`fingerprint`) IN (SELECT lower(`autocryptKeyFingerprint`) FROM `autocrypt_peers`
+                                         WHERE `autocryptKeyFingerprint` IS NOT NULL)
+                OR lower(`fingerprint`) IN (SELECT lower(`gossipKeyFingerprint`) FROM `autocrypt_peers`
+                                            WHERE `gossipKeyFingerprint` IS NOT NULL)
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+/** 10 -> 11: lastLocalEditAt, which drives the "published copy is out of date" marker. */
+val DESKTOP_MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `lastLocalEditAt` INTEGER")
+    }
+}
+
+/** 11 -> 12: per-grant scopes on allowed_api_clients. The table is part of the shared schema
+ *  and unused on desktop (no OpenPGP provider). */
+val DESKTOP_MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `allowed_api_clients` ADD COLUMN `scopes` INTEGER NOT NULL DEFAULT 1")
+        connection.execSQL("ALTER TABLE `allowed_api_clients` ADD COLUMN `sshKeyFingerprint` TEXT")
+    }
+}

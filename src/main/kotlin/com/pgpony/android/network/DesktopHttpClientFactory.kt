@@ -34,7 +34,7 @@ object HttpClientFactory {
 
     // Proxy stream isolation: SOCKS5 user/pass auth. Java exposes no per-client
     // SOCKS credentials, so a single default Authenticator, scoped to the active
-    // proxy's port and the PROXY requestor type, hands the pair to the SOCKS
+    // proxy's port and the SOCKS5 protocol, hands the pair to the SOCKS
     // handshake. It returns null for everything else, so it is inert when no
     // proxy auth is configured. Distinct credentials put PGPony on its own Tor
     // circuit (Orbot IsolateSOCKSAuth).
@@ -43,7 +43,12 @@ object HttpClientFactory {
         @Volatile var auth: java.net.PasswordAuthentication? = null
         override fun getPasswordAuthentication(): java.net.PasswordAuthentication? {
             val a = auth ?: return null
-            if (requestorType != RequestorType.PROXY) return null
+            // Android 4.6.0 (item 17.8): java.net.SocksSocketImpl asks through the
+            // requestPasswordAuthentication overload that leaves requestorType at
+            // SERVER, so filtering on PROXY dropped the pair every time and stream
+            // isolation silently did nothing. Match the SOCKS5 protocol string and
+            // the proxy's port instead.
+            if (!"SOCKS5".equals(requestingProtocol, ignoreCase = true)) return null
             if (requestingPort != port) return null
             return a
         }
@@ -92,7 +97,32 @@ object HttpClientFactory {
         return built
     }
 
+    // Android 4.6.0 (item 17.8): ask every server for an unencoded body, so a
+    // hostile key server or WKD host cannot turn a small compressed response into
+    // a large one before any size cap sees it.
+    private val identityEncoding = createClientPlugin("PGPonyIdentityEncoding") {
+        onRequest { request, _ ->
+            request.headers.remove("Accept-Encoding")
+            request.headers.append("Accept-Encoding", "identity")
+        }
+    }
+
     private fun build(cfg: ProxyPrefs.Config): HttpClient {
+        // Android 4.6.0 (item 17.8): a proxy mode with no usable host (Custom
+        // picked before a host was typed, the host cleared, or a restored backup
+        // with a blank host) used to build a DIRECT client while Settings showed a
+        // proxy. Fail closed instead: every request errors, nothing leaves.
+        if (cfg.enabled && cfg.host.isNullOrBlank()) {
+            applyProxyAuth(cfg.copy(mode = ProxyPrefs.MODE_OFF))
+            return HttpClient(Android) {
+                install(offlineGuard)
+                install(createClientPlugin("PGPonyProxyMissing") {
+                    onRequest { _, _ ->
+                        throw java.io.IOException("A proxy is turned on but no proxy host is set, so nothing was sent")
+                    }
+                })
+            }
+        }
         val proxied = cfg.enabled && cfg.host != null
         // Scope the SOCKS Authenticator to this config before the client makes
         // its first connection (fail-closed: bad auth fails the SOCKS handshake).
@@ -101,6 +131,7 @@ object HttpClientFactory {
             // Offline switch: block outright when offline mode is on, before any
             // other plugin or the socket.
             install(offlineGuard)
+            install(identityEncoding)
             install(HttpTimeout) {
                 requestTimeoutMillis =
                     if (proxied) TOR_REQUEST_TIMEOUT_MS else REQUEST_TIMEOUT_MS

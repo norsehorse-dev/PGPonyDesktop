@@ -402,6 +402,11 @@ pgpony.app</string>
     <string name="result_encrypt_header_signed">メッセージに署名しました</string>
     <string name="result_encrypt_header_encrypted">メッセージを暗号化しました</string>
     <string name="result_encrypt_badge_signed">署名済み</string>
+    <string name="result_encrypt_unsigned_pqc_note">署名なしで送信しました: 受信者が古い v4 鍵を使っているため、耐量子署名を省きました。メッセージはすべての受信者に対して暗号化されています。</string>
+    <string name="pqc_v4_sign_title">一部の受信者はこの署名を読み取れない可能性があります</string>
+    <string name="pqc_v4_sign_message">署名鍵は耐量子 (ML-DSA) 鍵で、少なくとも 1 人の受信者が古い v4 鍵を使っています。PGPony は署名を読み取れますが、GnuPG ではエラー付きでメッセージが表示され、Thunderbird ではメッセージを開けません。</string>
+    <string name="pqc_v4_sign_anyway">それでも署名</string>
+    <string name="pqc_v4_send_unsigned">署名なしで送信</string>
     <string name="result_encrypt_output_signed">署名された出力</string>
     <string name="result_encrypt_output_encrypted">暗号化された出力</string>
     <string name="result_encrypt_can_decrypt_label">復号できる相手</string>
@@ -456,7 +461,7 @@ pgpony.app</string>
 
     <!-- ── Delete confirmation ──────────────────────────────────────── -->
     <string name="keyring_delete_dialog_title">鍵を削除しますか?</string>
-    <string name="keyring_delete_dialog_body_format">%1$s (%2$s) を削除しますか?この操作は取り消せません。</string>
+    <string name="keyring_delete_dialog_body_format">%1$s (%2$s) を削除しますか?%3$d 日間「最近削除した項目」に移動され、その後完全に削除されます。それまでは復元できます。</string>
     <string name="keyring_delete_dialog_confirm">削除</string>
 
     <!-- ── First-visit tooltip ──────────────────────────────────────── -->
@@ -494,8 +499,8 @@ pgpony.app</string>
     <!-- ── ImportMethod enum (KeyringViewModel) ─────────────────────── -->
     <string name="import_method_paste">貼り付け</string>
     <string name="import_method_file">ファイル</string>
-    <string name="import_method_qr_code">QR コード</string>
-    <string name="import_method_key_server">鍵サーバー</string>
+    <string name="import_method_qr_code">QR</string>
+    <string name="import_method_key_server">サーバー</string>
 
     <!-- ── ExpirationOption enum (KeyringViewModel) ─────────────────── -->
     <string name="expiration_one_year">1 年</string>
@@ -621,9 +626,8 @@ pgpony.app</string>
 
     <!-- ── Delete dialog ───────────────────────────────────────────── -->
     <string name="key_detail_delete_dialog_title">鍵を削除</string>
-    <string name="key_detail_delete_dialog_intro">この操作は取り消せません。</string>
     <string name="key_detail_delete_dialog_body_key_pair">公開鍵と秘密鍵の両方が完全に削除されます。</string>
-    <string name="key_detail_delete_dialog_body_public_only">公開鍵が鍵束から削除されます。</string>
+    <string name="key_detail_delete_dialog_body_public_only">この鍵は %1$d 日間「最近削除した項目」に移動され、その後完全に削除されます。それまでは復元できます。</string>
     <string name="key_detail_delete_dialog_confirm">削除</string>
 
     <!-- ── Export Private Key dialog ───────────────────────────────── -->
@@ -851,7 +855,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="security_info_not_doing_bullet_4">Bouncy Castle 以外のサードパーティ暗号ライブラリの使用</string>
     <string name="security_info_not_doing_bullet_5">パスフレーズは保存しません（メモリ内でのみ使用されます）</string>
 
-    <string name="security_info_footer">プライバシーポリシーと技術的な詳細: pgpony.norsehor.se/privacy</string>
+    <string name="security_info_footer">プライバシーポリシーと技術的な詳細: pgpony.app/privacy</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          Onboarding — slide carousel (OnboardingSlide.kt)
@@ -1000,6 +1004,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="exchange_keyserver_query_label">メールまたはフィンガープリント</string>
     <string name="exchange_keyserver_search_cd">検索</string>
     <string name="exchange_keyserver_import_button">鍵をインポート</string>
+    <string name="exchange_keyserver_imported">キーをキーリングにインポートしました。</string>
 
     <!-- ── Tooltip ──────────────────────────────────────────────────── -->
     <string name="exchange_tooltip_qr">ここで鍵を選ぶと、QR コードまたは共有可能なファイルを取得できます。相手はそれをスキャンまたはインポートして、あなたに暗号化メッセージを送信できます。</string>
@@ -1175,7 +1180,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="share_target_root_subtitle_file_format">%1$s をどう扱うか選択してください:</string>
     <string name="share_target_action_encrypt">暗号化</string>
     <string name="share_target_action_encrypt_subtitle">受信者を選んで暗号文を生成</string>
-    <string name="share_target_action_decrypt">復号 / 検証</string>
+    <string name="share_target_action_decrypt">復号</string>
     <string name="share_target_action_decrypt_subtitle">この PGP メッセージをあなたの鍵で読む</string>
     <string name="share_target_open_full_app">PGPony で開く</string>
     <string name="share_target_open_full_app_subtitle_import">これは PGP 鍵のようです — 鍵束タブからインポートしてください</string>
@@ -1185,6 +1190,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="share_target_input_truncated_format">… 全部で %1$d 文字</string>
     <string name="share_target_input_binary_format">バイナリコンテンツ — %1$d バイト</string>
     <string name="share_target_encrypt_title">宛先を選んで暗号化…</string>
+    <string name="share_target_encrypt_recipient_unusable_format">何も暗号化されていません。PGPony は %1$s の暗号化鍵を読み込めませんでした。</string>
     <string name="share_target_encrypt_recipients_empty">鍵束に受信者の鍵がありません。先にメインアプリで公開鍵を追加してください。</string>
     <string name="share_target_encrypt_no_recipients_selected">受信者を少なくとも 1 人選んでください</string>
     <string name="share_target_encrypt_button">暗号化</string>
@@ -1869,4 +1875,194 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="export_private_gpg_compat_label">GnuPG互換フォーマット</string>
     <string name="export_private_gpg_compat_caption">GnuPG (GPG4WIN) が期待する形式で複合鍵を出力し、そちらでインポートできるようにします。他のアプリではオフのままにしてください。</string>
     <string name="keyring_more_cd">その他</string>
+    <string name="settings_more_scrubpony_subtitle">画像から識別可能なメタデータを除去します。ピクセルは移動しません。</string>
+    <string name="settings_key_default_choose">デフォルトの鍵を選択</string>
+    <string name="kd_avatar_hint_encrypt">ヒント: アバターをタップすると、この鍵に暗号化できます</string>
+    <string name="kd_avatar_hint_decrypt">ヒント: アバターをタップすると、この鍵で復号できます</string>
+    <string name="settings_security_confirm_lock_title">生体認証ロックの変更を確認</string>
+    <string name="settings_security_confirm_sign_title">署名要件の変更を確認</string>
+    <string name="settings_security_confirm_enable_subtitle">認証してこのセキュリティ設定をオンにします</string>
+    <string name="settings_security_confirm_disable_subtitle">認証してこのセキュリティ設定をオフにします</string>
+    <string name="settings_protect_destructive_title">破壊的な操作を保護</string>
+    <string name="settings_protect_destructive_subtitle">鍵の削除、サブキーの削除、すべてのデータの消去の前に、デバイス認証を必要とします。オフの場合でも確認ダイアログは表示されます。</string>
+    <string name="settings_disable_destructive_title">破壊的な操作を非表示</string>
+    <string name="settings_disable_destructive_subtitle">鍵の削除、サブキーの削除、ユーザーIDの削除、すべてのデータの消去を、それらを使わない人向けに非表示にします。失効は引き続き利用できます。既定はオフです。</string>
+    <string name="settings_security_confirm_destructive_title">破壊的操作ロックの変更を確認</string>
+    <string name="encrypt_pq_mixed_warning">耐量子の弱点: %1$s はこのメッセージを従来型の暗号化で受け取るため、メッセージ全体が耐量子的に安全ではありません。完全な保護には、すべての受信者に耐量子鍵が必要です。</string>
+    <string name="encrypt_subkey_label">%1$s: 暗号化サブキー</string>
+    <string name="encrypt_subkey_pq">耐量子</string>
+    <string name="encrypt_subkey_classical">従来型</string>
+    <string name="encrypt_subkey_auto">自動</string>
+    <string name="encrypt_sign_none_option">なし（署名しない）</string>
+    <string name="result_encrypt_password_note">パスワードを知っている人だけがこのメッセージを復号できます。</string>
+    <string name="encdec_error_incorrect_passphrase_for_format">%1$s のパスフレーズが正しくありません。</string>
+    <string name="encdec_error_selected_key_not_recipient_format">選択した鍵（%1$s）はこのメッセージの受信者ではありません。暗号化された鍵を選択してください。</string>
+    <string name="encdec_decrypted_with_format">%1$s で復号しました</string>
+    <string name="keyring_search_placeholder">名前、メモ、鍵ID、フィンガープリントを検索</string>
+    <string name="keyring_search_clear_cd">検索をクリア</string>
+    <string name="key_card_default_badge">デフォルト</string>
+    <string name="settings_offer_publish_title">新しい鍵の公開を提案</string>
+    <string name="settings_offer_publish_subtitle">鍵の生成後、鍵サーバーへの公開を提案します。オフにすると、鍵の生成を完全にローカルに保ちます。</string>
+    <string name="keyring_generate_algorithm_group_classical">従来型</string>
+    <string name="keyring_generate_algorithm_group_pqc">耐量子</string>
+    <string name="keyring_generate_algorithm_group_interop">相互運用 / 互換性</string>
+    <string name="keyring_generate_algorithm_group_advanced">詳細 / 互換性</string>
+    <string name="keyring_generate_algorithm_caption_pqc_v4">最も広く使える耐量子暗号化です。あらゆるOpenPGPツールがすでに扱える標準的なv4 Ed25519鍵に、従来型と並んで耐量子のML-KEM-768暗号化サブキーを持たせます。古いソフトウェアも引き続きあなたに暗号化でき、最新のツールはML-KEMを使います。実際の相手と使える耐量子暗号化として推奨される選択肢です。この形式の秘密鍵バックアップはまだ利用できません。</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign">従来型のフォールバックを持たない完全な耐量子です。最新のv6鍵（RFC 9980）上のML-DSA署名アイデンティティとML-KEM暗号化サブキー。署名も暗号化も量子攻撃に耐え、鍵はより弱い従来型サブキーを持たないため、ダウングレードする先がありません。最新のOpenPGPソフトウェアのみが使用できます。</string>
+    <string name="keyring_generate_granular_toggle">詳細: サブキーを構成</string>
+    <string name="keyring_generate_granular_include_default">デフォルトの暗号化サブキーを含める</string>
+    <string name="keyring_generate_granular_add_subkey">サブキーを追加</string>
+    <string name="keyring_error_email_invalid">そのメールアドレスは正しくないようです</string>
+    <string name="import_button_encrypt_to_key">この鍵に暗号化</string>
+    <string name="key_detail_copy_email_cd">メールアドレスをコピー</string>
+    <string name="key_detail_email_copied">メールをコピーしました</string>
+    <string name="key_detail_userids_remove">削除</string>
+    <string name="key_detail_userid_action_sheet_title_remove">ユーザーIDを削除</string>
+    <string name="key_detail_userid_action_sheet_subtitle_remove">%1$s をこの鍵のあなたのコピーから削除し、ここでは削除したままにします。鍵サーバーには残るため、他の人向けに取り下げるには代わりに失効してください。</string>
+    <string name="key_detail_userid_action_apply_remove">削除</string>
+    <string name="key_detail_subkey_revoke_action">サブキーを失効…</string>
+    <string name="key_detail_subkey_remove_action">サブキーを削除…</string>
+    <string name="key_detail_subkey_more_actions">サブキーの操作</string>
+    <string name="key_detail_subkey_remove_confirm_title">このサブキーを削除しますか？</string>
+    <string name="key_detail_subkey_remove_confirm_body">これはサブキーをあなたの鍵のコピーからのみ削除します。すでにあなたの公開鍵を持っている人はそれを保持し、引き続き暗号化できます。相手に知らせるには、代わりに失効してください。</string>
+    <string name="key_detail_subkey_remove_confirm_action">削除</string>
+    <string name="key_detail_subkey_revoke_instead_button">代わりにこのサブキーを失効</string>
+    <string name="key_detail_subkey_last_enc_title">最後の暗号化サブキー</string>
+    <string name="key_detail_subkey_last_enc_body">これはこの鍵で唯一の暗号化サブキーです。削除または失効すると、この鍵は暗号化されたメッセージを受け取れなくなります。それでも続けますか？</string>
+    <string name="key_detail_subkey_last_enc_action">続行</string>
+    <string name="key_detail_subkey_action_failed">サブキーの操作を完了できませんでした。もう一度お試しください。</string>
+    <string name="key_detail_add_subkey_group_classical">従来型</string>
+    <string name="key_detail_add_subkey_group_pq">耐量子</string>
+    <string name="key_detail_add_subkey_type_mlkem768">ML-KEM-768（暗号化）</string>
+    <string name="key_detail_add_subkey_type_mlkem1024">ML-KEM-1024（暗号化）</string>
+    <string name="key_detail_add_subkey_type_mldsa65">ML-DSA-65（署名）</string>
+    <string name="key_detail_add_subkey_type_mldsa87">ML-DSA-87（署名）</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_auth">RSA 2048（認証）</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_auth">RSA 4096（認証）</string>
+    <string name="key_detail_add_subkey_type_ed25519_auth">Ed25519（認証）</string>
+    <string name="key_delete_revoke_instead_note">鍵を削除した後は失効証明書を作成できません。他の人がこの鍵を持っている可能性がある場合は、代わりに失効して信頼をやめてもらってください。</string>
+    <string name="key_delete_revoke_instead_button">代わりにこの鍵を失効</string>
+    <string name="key_detail_subkey_remove_biometric_title">サブキーの削除を確認</string>
+    <string name="key_detail_subkey_remove_biometric_subtitle">認証してこのサブキーを削除します</string>
+    <string name="kd_vm_status_subkey_removed">サブキーを削除しました</string>
+    <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
+    <string name="share_encrypt_text_label">PGPonyで暗号化</string>
+    <string name="bundle_result_section_email">メールとして送信</string>
+    <string name="bundle_result_section_file">ファイルとして送信</string>
+    <string name="settings_argon2_title">より強力なパスフレーズ保護（Argon2）</string>
+    <string name="settings_argon2_subtitle">パスワードで暗号化したファイルとメッセージにArgon2idを使用します。総当たり攻撃に強くなりますが、受信者が開くにはGnuPG 2.4以降が必要です。互換性を最大にするため既定はオフです。</string>
+    <string name="provider_sign_per_address_title">アドレスごとの署名鍵</string>
+    <string name="provider_sign_per_address_subtitle">1つのアドレスにあなたの署名鍵が複数ある場合、PGPonyがどれで署名するかを選びます。送信時に確認せず、すぐに適用されます。</string>
+    <string name="provider_ask_sign_key_title">署名する鍵を尋ねる</string>
+    <string name="provider_ask_sign_key_subtitle">1つのアドレスに署名鍵が複数ある場合、PGPonyは一度尋ねてあなたの選択を記憶します。これをオンにすると、下の「アドレスごとの署名鍵」で設定していないアドレスについて、送信のたびに尋ねます。</string>
+    <string name="provider_keypicker_in_use">使用中</string>
+    <string name="provider_passphrase_change_key">別の鍵で署名</string>
+    <string name="keyservers_wkd_label">Web Key Directory</string>
+    <string name="keyservers_wkd_desc">メール検索で最初に、受信者自身のドメインから試します。公開は行いません。</string>
+    <string name="keyservers_add">鍵サーバーを追加</string>
+    <string name="keyservers_add_title">鍵サーバーを追加</string>
+    <string name="keyservers_add_label_hint">名前（任意）</string>
+    <string name="keyservers_add_url_hint">サーバーURL（例: keys.example.org）</string>
+    <string name="keyservers_add_confirm">追加</string>
+    <string name="keyservers_add_invalid_url">有効なHKPSサーバーURLを入力してください</string>
+    <string name="keyservers_remove">サーバーを削除</string>
+    <string name="publish_not_now">今はしない</string>
+    <string name="settings_proxy_socks_user">SOCKSユーザー名（任意）</string>
+    <string name="settings_proxy_socks_pass">SOCKSパスワード（任意）</string>
+    <string name="settings_proxy_socks_note">任意。ユーザー名とパスワードを設定すると、プロキシを共有する他のアプリとは別に、PGPony専用のTorサーキットが使われます。</string>
+    <string name="change_passphrase_changed">パスフレーズを変更しました</string>
+    <string name="change_passphrase_set">パスフレーズを設定しました</string>
+    <string name="change_passphrase_removed">パスフレーズを削除しました</string>
+    <string name="settings_offline_toggle_title">オフラインモード</string>
+    <string name="settings_offline_toggle_subtitle">すべてのネットワーク機能をオフにします: 鍵サーバー検索、検索と公開、バックグラウンドの鍵更新、更新チェック。デバイスから何も送信されません。</string>
+    <string name="onboarding_page_offline_toggle_title">オフラインモード</string>
+    <string name="onboarding_page_offline_toggle_subtitle">PGPonyを完全にオフラインに保ちます: 鍵サーバー検索なし、鍵更新なし、更新チェックなし。これは後で設定から変更できます。</string>
+    <string name="onboarding_page_comment_toggle_title">PGPonyコメント</string>
+    <string name="onboarding_page_comment_toggle_subtitle">暗号化・署名した出力にPGPony - PGPony.appのコメントを追加します。これは後で設定から変更できます。</string>
+    <string name="onboarding_page_destructive_toggle_title">破壊的な操作を非表示</string>
+    <string name="onboarding_page_destructive_toggle_subtitle">鍵の削除、サブキーの削除、ユーザーIDの削除、すべてのデータの消去を非表示にします。失効は引き続き利用できます。これは後で設定から変更できます。</string>
+    <string name="onboarding_scroll_more">その他のオプションは下にあります</string>
+    <string name="publish_title_update">キーサーバーで更新</string>
+    <string name="publish_action_update">更新</string>
+    <string name="publish_last_uploaded_format">最終アップロード: %1$s</string>
+    <string name="publish_address_confirmed_format">%1$s: 確認済み</string>
+    <string name="publish_address_pending_format">%1$s: このサーバーではまだ未確認</string>
+    <string name="publish_primary_repair_format">このキーのプライマリ ユーザーIDが曖昧です(プライマリに設定: %1$s、ここでの表示: %2$s)。ユーザー ID で使いたいものの「プライマリにする」をタップしてから公開してください。</string>
+    <string name="key_detail_action_update_key_servers">キーサーバーで更新</string>
+    <string name="key_detail_detail_key_server_behind">公開済み(ローカルの変更は未アップロード)</string>
+    <string name="key_detail_unpublished_changes_body">このキーは前回のアップロード後に変更されています。キーサーバーには古いコピーがあります。</string>
+    <string name="key_detail_unpublished_changes_action">更新</string>
+    <string name="revocation_result_publish_button">失効をキーサーバーに公開</string>
+    <string name="keyring_generate_algorithm_experimental">対応アプリが限定的</string>
+    <string name="keyring_generate_algorithm_experimental_note">これらのキーは PGPony では完全に動作します。多くの他のアプリはまだ耐量子キーを読めず、互いに互換性のない 2 つの耐量子形式が使われています。</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign_87">最高セキュリティの階層: v6 キー (RFC 9980) 上の ML-DSA-87 署名 ID と ML-KEM-1024 暗号化サブキー。推奨の ML-DSA-65 + ML-KEM-768 より大きく低速です。最新の OpenPGP ソフトウェアでのみ使えます。</string>
+    <string name="key_detail_label_add">ラベルを追加</string>
+    <string name="keyring_same_identity_body">どれかに暗号化したり信頼したりする前に、フィンガープリントを比べてください。</string>
+    <string name="keyring_same_identity_created_format">作成 %1$s</string>
+    <plurals name="key_card_same_identity_count">
+        <item quantity="other">%1$d 個のキー</item>
+    </plurals>
+    <plurals name="keyring_same_identity_title">
+        <item quantity="other">%2$s のキー %1$d 個</item>
+    </plurals>
+    <plurals name="exchange_keyserver_found_count">
+        <item quantity="other">このアドレスのキーが %1$d 個見つかりました。インポート後にフィンガープリントを比べてください。</item>
+    </plurals>
+    <string name="import_method_url">リンク</string>
+    <string name="import_url_label">公開鍵へのリンク</string>
+    <string name="import_url_fetch_button">キーを取得</string>
+    <string name="import_url_help">.asc ファイルでもキーを表示するページでも使えます。キーはプロキシ設定を通して取得され、フィンガープリントを確認して「インポート」をタップするまで何も追加されません。</string>
+    <string name="import_url_error_https">取得できるのは https のリンクだけです(.onion アドレスは http も可)。</string>
+    <string name="import_url_error_offline">オフラインモードがオンのため、リンクは取得されませんでした。</string>
+    <string name="import_url_error_no_key">そのリンクに公開鍵は見つかりませんでした。</string>
+    <string name="import_url_error_redirects">そのリンクはリダイレクトが多すぎます。</string>
+    <string name="import_url_error_http_format">サーバーの応答は HTTP %1$d でした。</string>
+    <string name="import_url_error_failed_format">リンクを取得できませんでした: %1$s</string>
+    <string name="import_preview_source_url_format">リンクから: %1$s</string>
+    <string name="key_detail_add_subkey_v6_note">Thunderbird と GnuPG はまだ v6 キーを読めないため、ここで追加したサブキーはそれらでは使えません。</string>
+    <string name="share_target_action_import">キーをインポート</string>
+    <string name="share_target_action_import_subtitle">フィンガープリントを確認してキーリングに追加</string>
+    <string name="share_target_action_import_encrypt">インポートしてこのキーに暗号化</string>
+    <string name="share_target_action_import_encrypt_subtitle">フィンガープリントを確認して「この鍵に暗号化」をタップ</string>
+    <string name="share_target_action_verify">署名を検証</string>
+    <string name="share_target_action_verify_subtitle">署名者を確認します。このメッセージは署名済みで、暗号化されていません</string>
+    <string name="share_target_action_sign">署名、または暗号化して署名</string>
+    <string name="share_target_action_sign_subtitle">このテキストを PGPony の暗号化画面で開きます</string>
+    <string name="share_target_action_encrypt_other">残りのテキストを暗号化</string>
+    <string name="share_target_action_encrypt_other_subtitle">PGP ブロックと一緒に共有されたテキストを暗号化します</string>
+    <string name="share_target_decrypt_result_unknown_signer">キーリングにないキーで署名されています</string>
+    <!-- 4.6.0 (item 16): SSH authentication -->
+    <string name="ssh_cardop_body">PGPony はハードウェアキーの認証スロットで SSH ログインに署名します。カードの PIN を入力してから、キーをスマートフォンの背面にかざしてください。</string>
+    <string name="ssh_cardop_slot_mismatch">このカードの認証スロットには、選択した SSH 鍵が入っていません。</string>
+    <string name="ssh_error_unsupported_algorithm">この認証鍵のアルゴリズムは SSH に使用できません。</string>
+    <string name="ssh_error_storage_recoverable">このデバイスの PGPony の安全な鍵ストレージがシステムによってリセットされました。PGPony を開き、この鍵をパスフレーズで一度ロック解除してから、もう一度お試しください。</string>
+    <string name="ssh_error_storage_unreadable">このデバイスの PGPony の安全な鍵ストレージがシステムによってリセットされ、この鍵には復元用のパスフレーズがありません。PGPony で鍵を再インポートしてください。</string>
+    <string name="ssh_keypicker_title">SSH に使う鍵を選択</string>
+    <string name="ssh_keypicker_empty">SSH 認証サブキーを持つ鍵がありません。PGPony で鍵ペアを開いて認証サブキーを追加してから、もう一度お試しください。</string>
+    <string name="key_detail_action_copy_ssh_key">SSH 公開鍵をコピー</string>
+    <string name="key_detail_ssh_key_copied">SSH 公開鍵をコピーしました</string>
+    <string name="keyring_generate_ssh_auth_toggle">SSH 認証サブキーを追加</string>
+    <string name="keyring_generate_ssh_auth_caption">ssh-agent ブリッジ経由で SSH によりサーバーにログインするためのサブキーです。RSA 鍵には RSA、それ以外の鍵には Ed25519 を使います。</string>
+    <string name="keyring_generate_ssh_auth_failed">鍵は作成されましたが、SSH サブキーを追加できませんでした: %1$s。鍵の詳細から追加できます。</string>
+    <!-- 4.6.0 (item 16): SSH from Termux via the OkcAgent fork -->
+    <string name="ssh_help_title">Termux からの SSH</string>
+    <string name="ssh_help_row_subtitle">PGPony の鍵を Termux の ssh と git で使う</string>
+    <string name="ssh_help_body">PGPony は Termux での SSH ログインに署名できます。OkcAgent が ssh の要求を PGPony に渡し、秘密鍵が PGPony の外に出ることはありません。</string>
+    <string name="ssh_help_get">PGPony 用 OkcAgent を入手</string>
+    <string name="ssh_help_steps">1. 鍵に認証サブキーを追加します (鍵の詳細、サブキーを追加)。鍵の詳細の「SSH 公開鍵をコピー」で、サーバーの authorized_keys に入れる行が得られます。
+2. 上のリンクから OkcAgent をインストールします。先に他の OkcAgent をアンインストールしてください。
+3. OkcAgent で Settings、Crypto provider を開いて PGPony を選び、OkcAgent の通知を許可します。
+4. OkcAgent で Add SSH key をタップし、鍵を選びます。
+5. Termux で pkg install okc-agents を実行し、続けて eval $(okc-ssh-agent) を実行します。これで ssh と ssh 経由の git があなたの鍵を使います。</string>
+    <string name="ssh_help_note">パスフレーズとセキュリティキーの確認は OkcAgent の通知で届きます。ssh が止まったように見えたら通知を確認してください。 GrapheneOS では OkcAgent のネットワーク権限も有効にしてください。Termux はローカル接続で OkcAgent につなぐため、権限がないと ssh が止まります。</string>
+    <string name="key_detail_action_ssh_setup">Termux で SSH を設定</string>
+    <!-- 4.6.0: API consent and SSH scope -->
+    <string name="ssh_error_dual_use_auth">この鍵の認証サブキーは署名もできます。鍵の詳細で認証専用のサブキーを追加してください。</string>
+    <string name="provider_consent_ssh_title">%1$s に SSH を許可しますか?</string>
+    <string name="provider_consent_ssh_body">%1$s (%2$s) が PGPony の認証鍵を使って SSH サーバーにログインしようとしています。メッセージの暗号化、復号、署名はできません。\n\n次に鍵を選びます。このアプリが使えるのはその鍵だけです。設定 → 接続済みアプリでいつでも削除できます。</string>
+    <string name="ssh_keypicker_confirm">%1$s がこの鍵でログインしようとしています。許可するにはタップしてください。</string>
+    <string name="provider_clients_scope_openpgp">OpenPGP: 暗号化、復号、署名</string>
+    <string name="provider_clients_scope_ssh">%1$s で SSH ログイン</string>
+    <string name="provider_clients_scope_ssh_nokey">SSH ログイン (鍵は未選択)</string>
+    <string name="provider_clients_scope_remove">削除</string>
 </resources>

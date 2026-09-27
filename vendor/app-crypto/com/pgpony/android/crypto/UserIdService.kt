@@ -113,6 +113,21 @@ class UserIdService private constructor() {
             if (currentPrimaryUid != null) {
                 primary = reissueSelfCert(primary, currentPrimaryUid, isPrimary = false, signer = ::signer)
             }
+        } else {
+            // Bug (limbodiver, Sep 2026): the new UID's self-cert is stamped "now". If
+            // no existing UID carries an explicit IsPrimaryUserId flag (the usual
+            // case, since generation never flags a lone UID), keyservers and gpg
+            // fall back to "newest self-sig wins" and show the just-added address
+            // as primary, even though the user did not ask for that. Pin the
+            // current primary by reissuing its self-cert WITH the flag, so the
+            // explicit flag beats recency and the original stays primary. A UID
+            // that is already explicitly flagged needs nothing.
+            val currentPrimaryUid = currentPrimaryUserId(primary)
+            val alreadyExplicit = currentPrimaryUid != null &&
+                latestSelfCert(primary, currentPrimaryUid)?.hashedSubPackets?.isPrimaryUserID == true
+            if (currentPrimaryUid != null && !alreadyExplicit) {
+                primary = reissueSelfCert(primary, currentPrimaryUid, isPrimary = true, signer = ::signer)
+            }
         }
 
         val sub = PGPSignatureSubpacketGenerator()
@@ -220,6 +235,31 @@ class UserIdService private constructor() {
     }
 
     /**
+     * Remove [userId] from the key locally: strip the User ID and its
+     * self-certifications from the ring. Local only, like a subkey remove:
+     * it tells no correspondent, and anyone who already holds the public key
+     * keeps the UID. Use revokeUserId to retire a UID that has been shared.
+     * Blocks removing the last User ID, which would leave the key with no
+     * identity. Structural only, so no passphrase is needed.
+     */
+    fun removeUserId(
+        secretRing: PGPSecretKeyRing,
+        publicRing: PGPPublicKeyRing,
+        userId: String
+    ): UpdatedRings {
+        val primary = publicRing.publicKey
+        if (primary.userIDs.asSequence().none { it == userId }) {
+            throw UserIdError.NotFound("This key has no such User ID")
+        }
+        if (primary.userIDs.asSequence().count() <= 1) {
+            throw UserIdError.UnsupportedKey("Cannot remove the only User ID on this key")
+        }
+        val stripped = PGPPublicKey.removeCertification(primary, userId)
+            ?: throw UserIdError.Failed("Failed to remove the User ID")
+        return reassemble(secretRing, publicRing, stripped)
+    }
+
+    /**
      * Make [userId] the primary identity: reissue its self-cert with
      * IsPrimaryUserId set, and reissue the self-cert of whichever UID
      * currently carries that flag (if any) without it. A no-op flag
@@ -248,6 +288,12 @@ class UserIdService private constructor() {
         val currentPrimaryUid = currentPrimaryUserId(primary)
         if (currentPrimaryUid != null && currentPrimaryUid != userId) {
             primary = reissueSelfCert(primary, currentPrimaryUid, isPrimary = false, signer = ::signer)
+        }
+        // 4.6.0 (item 9): clear the flag from every other User ID too, so Make
+        // Primary also repairs a key that carries more than one primary flag
+        // (the state the publish check refuses).
+        for (other in primaryFlaggedLiveUserIds(primary)) {
+            if (other != userId) primary = reissueSelfCert(primary, other, isPrimary = false, signer = ::signer)
         }
         primary = reissueSelfCert(primary, userId, isPrimary = true, signer = ::signer)
 
@@ -291,6 +337,24 @@ class UserIdService private constructor() {
      * match against the entity's cached userID field that could disagree
      * with the ring's actual primary-UID subpacket (RC3 §17.2 I bug).
      */
+    /**
+     * 4.6.0 (item 9): the live (unrevoked) User IDs whose newest self-
+     * certification carries the primary-User-ID flag. More than one means the
+     * key's primary identity is ambiguous to anyone who fetches it.
+     */
+    fun primaryFlaggedLiveUserIds(primary: PGPPublicKey): List<String> =
+        primary.userIDs.asSequence().toList().filter { uid ->
+            if (isRevoked(primary, uid)) return@filter false
+            var newest: PGPSignature? = null
+            primary.getSignaturesForID(uid)?.forEach { sig ->
+                if (sig.keyID != primary.keyID) return@forEach
+                if (sig.signatureType in PGPSignature.DEFAULT_CERTIFICATION..PGPSignature.POSITIVE_CERTIFICATION) {
+                    if (newest == null || sig.creationTime.after(newest!!.creationTime)) newest = sig
+                }
+            }
+            newest?.hashedSubPackets?.isPrimaryUserID == true
+        }
+
     fun currentPrimaryUserId(primary: PGPPublicKey): String? {
         val uids = primary.userIDs.asSequence().toList()
         for (uid in uids) {

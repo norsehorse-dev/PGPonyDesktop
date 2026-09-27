@@ -402,6 +402,11 @@ pgpony.app</string>
     <string name="result_encrypt_header_signed">Message signé</string>
     <string name="result_encrypt_header_encrypted">Message chiffré</string>
     <string name="result_encrypt_badge_signed">Signé</string>
+    <string name="result_encrypt_unsigned_pqc_note">Envoyé sans signature : tu as omis la signature post-quantique car un destinataire a une ancienne clé v4. Le message reste chiffré pour tous.</string>
+    <string name="pqc_v4_sign_title">Certains destinataires risquent de ne pas pouvoir lire cette signature</string>
+    <string name="pqc_v4_sign_message">Ta clé de signature est post-quantique (ML-DSA) et au moins un destinataire a une ancienne clé v4. PGPony lit la signature, mais GnuPG affiche le message avec une erreur et Thunderbird ne peut pas l\'ouvrir du tout.</string>
+    <string name="pqc_v4_sign_anyway">Signer quand même</string>
+    <string name="pqc_v4_send_unsigned">Envoyer sans signature</string>
     <string name="result_encrypt_output_signed">Sortie signée</string>
     <string name="result_encrypt_output_encrypted">Sortie chiffrée</string>
     <string name="result_encrypt_can_decrypt_label">Peut déchiffrer</string>
@@ -456,7 +461,7 @@ pgpony.app</string>
 
     <!-- ── Delete confirmation ──────────────────────────────────────── -->
     <string name="keyring_delete_dialog_title">Supprimer la clé ?</string>
-    <string name="keyring_delete_dialog_body_format">Supprimer %1$s (%2$s) ? Cette action est irréversible.</string>
+    <string name="keyring_delete_dialog_body_format">Supprimer %1$s (%2$s) ? Elle est déplacée vers Récemment supprimés pendant %3$d jours, puis supprimée définitivement. Vous pouvez la restaurer jusque-là.</string>
     <string name="keyring_delete_dialog_confirm">Supprimer</string>
 
     <!-- ── First-visit tooltip ──────────────────────────────────────── -->
@@ -494,8 +499,8 @@ pgpony.app</string>
     <!-- ── ImportMethod enum (KeyringViewModel) ─────────────────────── -->
     <string name="import_method_paste">Coller</string>
     <string name="import_method_file">Fichier</string>
-    <string name="import_method_qr_code">Code QR</string>
-    <string name="import_method_key_server">Serveur de clés</string>
+    <string name="import_method_qr_code">QR</string>
+    <string name="import_method_key_server">Serveur</string>
 
     <!-- ── ExpirationOption enum (KeyringViewModel) ─────────────────── -->
     <string name="expiration_one_year">1 an</string>
@@ -621,9 +626,8 @@ pgpony.app</string>
 
     <!-- ── Delete dialog ───────────────────────────────────────────── -->
     <string name="key_detail_delete_dialog_title">Supprimer la clé</string>
-    <string name="key_detail_delete_dialog_intro">Cette action est irréversible. </string>
     <string name="key_detail_delete_dialog_body_key_pair">Vos clés publique et privée seront supprimées définitivement.</string>
-    <string name="key_detail_delete_dialog_body_public_only">La clé publique sera retirée de votre trousseau.</string>
+    <string name="key_detail_delete_dialog_body_public_only">Cette clé est déplacée vers Récemment supprimés pendant %1$d jours, puis supprimée définitivement. Vous pouvez la restaurer jusque-là.</string>
     <string name="key_detail_delete_dialog_confirm">Supprimer</string>
 
     <!-- ── Export Private Key dialog ───────────────────────────────── -->
@@ -851,7 +855,7 @@ Toute la cryptographie est réalisée par Bouncy Castle 1.85, une bibliothèque 
     <string name="security_info_not_doing_bullet_4">Utiliser des bibliothèques de cryptographie tierces autres que Bouncy Castle</string>
     <string name="security_info_not_doing_bullet_5">Stocker des phrases secrètes — elles ne sont utilisées qu\'en mémoire</string>
 
-    <string name="security_info_footer">Politique de confidentialité complète et détails techniques : pgpony.norsehor.se/privacy</string>
+    <string name="security_info_footer">Politique de confidentialité complète et détails techniques : pgpony.app/privacy</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          Onboarding — slide carousel (OnboardingSlide.kt)
@@ -1000,6 +1004,7 @@ Vous pouvez aussi verrouiller l\'application derrière votre empreinte digitale 
     <string name="exchange_keyserver_query_label">E-mail ou empreinte</string>
     <string name="exchange_keyserver_search_cd">Rechercher</string>
     <string name="exchange_keyserver_import_button">Importer la clé</string>
+    <string name="exchange_keyserver_imported">Clé importée dans votre trousseau.</string>
 
     <!-- ── Tooltip ──────────────────────────────────────────────────── -->
     <string name="exchange_tooltip_qr">Choisissez une clé ici pour obtenir un QR code ou un fichier partageable. L\'autre personne le scanne ou l\'importe pour vous envoyer des messages chiffrés.</string>
@@ -1175,7 +1180,7 @@ Vous pouvez aussi verrouiller l\'application derrière votre empreinte digitale 
     <string name="share_target_root_subtitle_file_format">Choisissez comment traiter %1$s :</string>
     <string name="share_target_action_encrypt">Chiffrer</string>
     <string name="share_target_action_encrypt_subtitle">Choisir les destinataires et produire un texte chiffré</string>
-    <string name="share_target_action_decrypt">Déchiffrer / Vérifier</string>
+    <string name="share_target_action_decrypt">Déchiffrer</string>
     <string name="share_target_action_decrypt_subtitle">Lire ce message PGP avec l\'une de vos clés</string>
     <string name="share_target_open_full_app">Ouvrir dans PGPony</string>
     <string name="share_target_open_full_app_subtitle_import">Cela ressemble à une clé PGP — importez-la depuis l\'onglet Trousseau</string>
@@ -1185,6 +1190,7 @@ Vous pouvez aussi verrouiller l\'application derrière votre empreinte digitale 
     <string name="share_target_input_truncated_format">… %1$d caractères au total</string>
     <string name="share_target_input_binary_format">Contenu binaire — %1$d octets</string>
     <string name="share_target_encrypt_title">Chiffrer pour…</string>
+    <string name="share_target_encrypt_recipient_unusable_format">Rien n\'a été chiffré : PGPony n\'a pas pu charger de clé de chiffrement pour %1$s.</string>
     <string name="share_target_encrypt_recipients_empty">Aucune clé de destinataire dans votre trousseau. Ajoutez d\'abord une clé publique depuis l\'application principale.</string>
     <string name="share_target_encrypt_no_recipients_selected">Sélectionnez au moins un destinataire</string>
     <string name="share_target_encrypt_button">Chiffrer</string>
@@ -1870,4 +1876,197 @@ Vous pouvez aussi verrouiller l\'application derrière votre empreinte digitale 
     <string name="export_private_gpg_compat_label">Format compatible GnuPG</string>
     <string name="export_private_gpg_compat_caption">Exporte la clé composite au format attendu par GnuPG (GPG4WIN), afin de pouvoir l\'importer là-bas. Laissez désactivé pour les autres applications.</string>
     <string name="keyring_more_cd">Plus</string>
+    <string name="settings_more_scrubpony_subtitle">Supprime les métadonnées identifiantes des images. Aucun pixel n\'est déplacé.</string>
+    <string name="settings_key_default_choose">Choisir une clé par défaut</string>
+    <string name="kd_avatar_hint_encrypt">Astuce : touchez l\'avatar pour chiffrer vers cette clé</string>
+    <string name="kd_avatar_hint_decrypt">Astuce : touchez l\'avatar pour déchiffrer avec cette clé</string>
+    <string name="settings_security_confirm_lock_title">Confirmer la modification du verrouillage biométrique</string>
+    <string name="settings_security_confirm_sign_title">Confirmer la modification de l\'exigence de signature</string>
+    <string name="settings_security_confirm_enable_subtitle">Authentifiez-vous pour activer ce paramètre de sécurité</string>
+    <string name="settings_security_confirm_disable_subtitle">Authentifiez-vous pour désactiver ce paramètre de sécurité</string>
+    <string name="settings_protect_destructive_title">Protéger les actions destructrices</string>
+    <string name="settings_protect_destructive_subtitle">Exige l\'authentification de votre appareil avant de supprimer une clé, retirer une sous-clé ou effacer toutes les données. Les boîtes de dialogue de confirmation s\'appliquent toujours lorsque c\'est désactivé.</string>
+    <string name="settings_disable_destructive_title">Masquer les actions destructrices</string>
+    <string name="settings_disable_destructive_subtitle">Masque supprimer la clé, retirer une sous-clé, retirer un ID utilisateur et effacer toutes les données pour ceux qui ne s\'en servent jamais. Révoquer reste disponible. Désactivé par défaut.</string>
+    <string name="settings_security_confirm_destructive_title">Confirmer la modification du verrouillage des actions destructrices</string>
+    <string name="encrypt_pq_mixed_warning">Maillon faible post-quantique : %1$s recevra ce message avec un chiffrement classique, donc l\'ensemble du message n\'est pas sûr face au quantique. Chaque destinataire a besoin d\'une clé post-quantique pour une protection complète.</string>
+    <string name="encrypt_subkey_label">%1$s : sous-clé de chiffrement</string>
+    <string name="encrypt_subkey_pq">post-quantique</string>
+    <string name="encrypt_subkey_classical">classique</string>
+    <string name="encrypt_subkey_auto">automatique</string>
+    <string name="encrypt_sign_none_option">Aucune (ne pas signer)</string>
+    <string name="result_encrypt_password_note">Seule une personne connaissant le mot de passe peut déchiffrer ce message.</string>
+    <string name="encdec_error_incorrect_passphrase_for_format">Phrase secrète incorrecte pour %1$s.</string>
+    <string name="encdec_error_selected_key_not_recipient_format">La clé sélectionnée (%1$s) n\'est pas destinataire de ce message. Choisissez la clé à laquelle il a été chiffré.</string>
+    <string name="encdec_decrypted_with_format">Déchiffré avec %1$s</string>
+    <string name="keyring_search_placeholder">Rechercher un nom, une note, un ID de clé ou une empreinte</string>
+    <string name="keyring_search_clear_cd">Effacer la recherche</string>
+    <string name="key_card_default_badge">PAR DÉFAUT</string>
+    <string name="settings_offer_publish_title">Proposer de publier les nouvelles clés</string>
+    <string name="settings_offer_publish_subtitle">Après la génération d\'une clé, propose de la publier sur des serveurs de clés. Désactivez pour garder la génération de clés entièrement locale.</string>
+    <string name="keyring_generate_algorithm_group_classical">Classique</string>
+    <string name="keyring_generate_algorithm_group_pqc">Post-quantique</string>
+    <string name="keyring_generate_algorithm_group_interop">Interop / compatibilité</string>
+    <string name="keyring_generate_algorithm_group_advanced">Avancé / compatibilité</string>
+    <string name="keyring_generate_algorithm_caption_pqc_v4">Chiffrement post-quantique avec la plus grande portée. Une clé v4 Ed25519 standard que tout outil OpenPGP gère déjà, portant une sous-clé de chiffrement post-quantique ML-KEM-768 aux côtés d\'une classique, afin que les logiciels anciens puissent encore vous chiffrer tandis que les outils à jour utilisent ML-KEM. Le choix recommandé pour un chiffrement post-quantique qui fonctionne avec de vrais correspondants. La sauvegarde de la clé privée pour cette forme n\'est pas encore disponible.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign">Entièrement post-quantique sans repli classique : une identité de signature ML-DSA plus une sous-clé de chiffrement ML-KEM sur une clé v6 moderne (RFC 9980). La signature comme le chiffrement résistent aux attaques quantiques, et comme la clé ne porte aucune sous-clé classique plus faible, il n\'y a rien vers quoi se rabattre. Seuls les logiciels OpenPGP à jour peuvent l\'utiliser.</string>
+    <string name="keyring_generate_granular_toggle">Avancé : composer les sous-clés</string>
+    <string name="keyring_generate_granular_include_default">Inclure la sous-clé de chiffrement par défaut</string>
+    <string name="keyring_generate_granular_add_subkey">Ajouter une sous-clé</string>
+    <string name="keyring_error_email_invalid">Cette adresse e-mail ne semble pas correcte</string>
+    <string name="import_button_encrypt_to_key">Chiffrer vers cette clé</string>
+    <string name="key_detail_copy_email_cd">Copier l\'adresse e-mail</string>
+    <string name="key_detail_email_copied">E-mail copié</string>
+    <string name="key_detail_userids_remove">Retirer</string>
+    <string name="key_detail_userid_action_sheet_title_remove">Retirer l\'ID utilisateur</string>
+    <string name="key_detail_userid_action_sheet_subtitle_remove">Retire %1$s de votre copie de cette clé et le garde retiré ici. Les serveurs de clés le conservent, révoquez-le donc plutôt pour le retirer pour les autres.</string>
+    <string name="key_detail_userid_action_apply_remove">Retirer</string>
+    <string name="key_detail_subkey_revoke_action">Révoquer la sous-clé…</string>
+    <string name="key_detail_subkey_remove_action">Retirer la sous-clé…</string>
+    <string name="key_detail_subkey_more_actions">Actions de sous-clé</string>
+    <string name="key_detail_subkey_remove_confirm_title">Retirer cette sous-clé ?</string>
+    <string name="key_detail_subkey_remove_confirm_body">Ceci retire la sous-clé uniquement de votre copie de la clé. Quiconque possède déjà votre clé publique la conserve et peut toujours chiffrer vers elle. Pour prévenir vos correspondants, révoquez-la plutôt.</string>
+    <string name="key_detail_subkey_remove_confirm_action">Retirer</string>
+    <string name="key_detail_subkey_revoke_instead_button">Révoquer plutôt cette sous-clé</string>
+    <string name="key_detail_subkey_last_enc_title">Dernière sous-clé de chiffrement</string>
+    <string name="key_detail_subkey_last_enc_body">C\'est la seule sous-clé de chiffrement de cette clé. La retirer ou la révoquer rend la clé incapable de recevoir des messages chiffrés. Continuer quand même ?</string>
+    <string name="key_detail_subkey_last_enc_action">Continuer</string>
+    <string name="key_detail_subkey_action_failed">Impossible de terminer l\'action de sous-clé. Veuillez réessayer.</string>
+    <string name="key_detail_add_subkey_group_classical">Classique</string>
+    <string name="key_detail_add_subkey_group_pq">Post-quantique</string>
+    <string name="key_detail_add_subkey_type_mlkem768">ML-KEM-768 (Chiffrer)</string>
+    <string name="key_detail_add_subkey_type_mlkem1024">ML-KEM-1024 (Chiffrer)</string>
+    <string name="key_detail_add_subkey_type_mldsa65">ML-DSA-65 (Signer)</string>
+    <string name="key_detail_add_subkey_type_mldsa87">ML-DSA-87 (Signer)</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_auth">RSA 2048 (Authentifier)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_auth">RSA 4096 (Authentifier)</string>
+    <string name="key_detail_add_subkey_type_ed25519_auth">Ed25519 (Authentifier)</string>
+    <string name="key_delete_revoke_instead_note">Vous ne pouvez pas créer de certificat de révocation après la suppression d\'une clé. Si d\'autres personnes peuvent détenir cette clé, révoquez-la plutôt pour qu\'elles cessent de lui faire confiance.</string>
+    <string name="key_delete_revoke_instead_button">Révoquer plutôt cette clé</string>
+    <string name="key_detail_subkey_remove_biometric_title">Confirmer le retrait de la sous-clé</string>
+    <string name="key_detail_subkey_remove_biometric_subtitle">Authentifiez-vous pour retirer cette sous-clé</string>
+    <string name="kd_vm_status_subkey_removed">Sous-clé retirée</string>
+    <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
+    <string name="share_encrypt_text_label">Chiffrer dans PGPony</string>
+    <string name="bundle_result_section_email">Envoyer par e-mail</string>
+    <string name="bundle_result_section_file">Envoyer comme fichier</string>
+    <string name="settings_argon2_title">Protection renforcée de la phrase secrète (Argon2)</string>
+    <string name="settings_argon2_subtitle">Utilise Argon2id pour les fichiers et messages chiffrés par mot de passe. Plus difficile à forcer par force brute, mais le destinataire a besoin de GnuPG 2.4 ou plus récent pour les ouvrir. Désactivé par défaut pour la plus grande compatibilité.</string>
+    <string name="provider_sign_per_address_title">Clé de signature par adresse</string>
+    <string name="provider_sign_per_address_subtitle">Lorsqu\'une adresse possède plusieurs de vos clés de signature, choisissez celle avec laquelle PGPony signe. Cela s\'applique immédiatement, sans demande à l\'envoi.</string>
+    <string name="provider_ask_sign_key_title">Demander avec quelle clé signer</string>
+    <string name="provider_ask_sign_key_subtitle">Lorsqu\'une adresse possède plusieurs clés de signature, PGPony demande une fois et retient votre choix. Activez ceci pour être interrogé à chaque envoi, pour les adresses que vous n\'avez pas définies sous Clé de signature par adresse ci-dessous.</string>
+    <string name="provider_keypicker_in_use">Utilisée</string>
+    <string name="provider_passphrase_change_key">Signer avec une autre clé</string>
+    <string name="keyservers_wkd_label">Web Key Directory</string>
+    <string name="keyservers_wkd_desc">Essayé en premier pour les recherches par e-mail, depuis le domaine du destinataire. Pas de publication.</string>
+    <string name="keyservers_add">Ajouter un serveur de clés</string>
+    <string name="keyservers_add_title">Ajouter un serveur de clés</string>
+    <string name="keyservers_add_label_hint">Nom (facultatif)</string>
+    <string name="keyservers_add_url_hint">URL du serveur (par ex. keys.example.org)</string>
+    <string name="keyservers_add_confirm">Ajouter</string>
+    <string name="keyservers_add_invalid_url">Saisissez une URL de serveur HKPS valide</string>
+    <string name="keyservers_remove">Retirer le serveur</string>
+    <string name="publish_not_now">Pas maintenant</string>
+    <string name="settings_proxy_socks_user">Nom d\'utilisateur SOCKS (facultatif)</string>
+    <string name="settings_proxy_socks_pass">Mot de passe SOCKS (facultatif)</string>
+    <string name="settings_proxy_socks_note">Facultatif. Un nom d\'utilisateur et un mot de passe placent PGPony sur son propre circuit Tor, séparé des autres applications partageant le proxy.</string>
+    <string name="change_passphrase_changed">Phrase secrète modifiée</string>
+    <string name="change_passphrase_set">Phrase secrète définie</string>
+    <string name="change_passphrase_removed">Phrase secrète supprimée</string>
+    <string name="settings_offline_toggle_title">Mode hors ligne</string>
+    <string name="settings_offline_toggle_subtitle">Désactive toutes les fonctions réseau : recherche sur les serveurs de clés, recherche et publication, actualisation des clés en arrière-plan et vérification des mises à jour. Rien ne quitte votre appareil.</string>
+    <string name="onboarding_page_offline_toggle_title">Mode hors ligne</string>
+    <string name="onboarding_page_offline_toggle_subtitle">Gardez PGPony entièrement hors ligne : aucune recherche sur les serveurs de clés, aucune actualisation des clés, aucune vérification des mises à jour. Vous pourrez changer ceci plus tard dans les Réglages.</string>
+    <string name="onboarding_page_comment_toggle_title">Commentaire PGPony</string>
+    <string name="onboarding_page_comment_toggle_subtitle">Ajoute un commentaire PGPony - PGPony.app à votre sortie chiffrée et signée. Vous pourrez changer ceci plus tard dans les Réglages.</string>
+    <string name="onboarding_page_destructive_toggle_title">Masquer les actions destructrices</string>
+    <string name="onboarding_page_destructive_toggle_subtitle">Masque supprimer la clé, retirer une sous-clé, retirer un ID utilisateur et effacer toutes les données. Révoquer reste disponible. Vous pourrez changer ceci plus tard dans les Réglages.</string>
+    <string name="onboarding_scroll_more">Plus d\'options ci-dessous</string>
+    <string name="publish_title_update">Mettre à jour sur les serveurs de clés</string>
+    <string name="publish_action_update">Mettre à jour</string>
+    <string name="publish_last_uploaded_format">Dernier envoi : %1$s</string>
+    <string name="publish_address_confirmed_format">%1$s : confirmée</string>
+    <string name="publish_address_pending_format">%1$s : pas encore confirmée sur ce serveur</string>
+    <string name="publish_primary_repair_format">L\'identifiant principal de cette clé est ambigu (marqué principal : %1$s ; affiché ici : %2$s). Dans Identités, touchez Rendre principal sur celui voulu, puis publiez.</string>
+    <string name="key_detail_action_update_key_servers">Mettre à jour sur les serveurs de clés</string>
+    <string name="key_detail_detail_key_server_behind">Publiée (modifications locales non envoyées)</string>
+    <string name="key_detail_unpublished_changes_body">Cette clé a changé depuis le dernier envoi. Les serveurs de clés ont encore l\'ancienne copie.</string>
+    <string name="key_detail_unpublished_changes_action">Mettre à jour</string>
+    <string name="revocation_result_publish_button">Publier la révocation sur les serveurs de clés</string>
+    <string name="keyring_generate_algorithm_experimental">Prise en charge limitée</string>
+    <string name="keyring_generate_algorithm_experimental_note">Ces clés fonctionnent pleinement dans PGPony. Beaucoup d\'autres applications ne lisent pas encore les clés post-quantiques, et deux formats post-quantiques incompatibles entre eux sont utilisés.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign_87">Le niveau de sécurité maximal : une identité de signature ML-DSA-87 avec une sous-clé de chiffrement ML-KEM-1024 sur une clé v6 (RFC 9980). Les clés sont plus grandes et plus lentes que ML-DSA-65 avec ML-KEM-768, qui reste le choix recommandé. Seuls les logiciels OpenPGP à jour peuvent l\'utiliser.</string>
+    <string name="key_detail_label_add">Ajouter une étiquette</string>
+    <string name="keyring_same_identity_body">Comparez les empreintes avant de chiffrer pour l\'une d\'elles ou de lui faire confiance.</string>
+    <string name="keyring_same_identity_created_format">créée le %1$s</string>
+    <plurals name="key_card_same_identity_count">
+        <item quantity="one">%1$d clé</item>
+        <item quantity="other">%1$d clés</item>
+    </plurals>
+    <plurals name="keyring_same_identity_title">
+        <item quantity="one">%1$d clé pour %2$s</item>
+        <item quantity="other">%1$d clés pour %2$s</item>
+    </plurals>
+    <plurals name="exchange_keyserver_found_count">
+        <item quantity="one">%1$d clé trouvée pour cette adresse.</item>
+        <item quantity="other">%1$d clés trouvées pour cette adresse. Comparez les empreintes après l\'import.</item>
+    </plurals>
+    <string name="import_method_url">Lien</string>
+    <string name="import_url_label">Lien vers une clé publique</string>
+    <string name="import_url_fetch_button">Récupérer la clé</string>
+    <string name="import_url_help">Un fichier .asc brut ou une page qui affiche une clé conviennent. La clé est récupérée via votre réglage de proxy, et rien n\'est ajouté avant que vous vérifiiez l\'empreinte et touchiez Importer.</string>
+    <string name="import_url_error_https">Seuls les liens https peuvent être récupérés (ou http pour une adresse .onion).</string>
+    <string name="import_url_error_offline">Le mode hors ligne est activé, le lien n\'a donc pas été récupéré.</string>
+    <string name="import_url_error_no_key">Aucune clé publique trouvée à ce lien.</string>
+    <string name="import_url_error_redirects">Ce lien a été redirigé trop de fois.</string>
+    <string name="import_url_error_http_format">Le serveur a répondu HTTP %1$d.</string>
+    <string name="import_url_error_failed_format">Impossible de récupérer le lien : %1$s</string>
+    <string name="import_preview_source_url_format">Depuis le lien : %1$s</string>
+    <string name="key_detail_add_subkey_v6_note">Thunderbird et GnuPG ne lisent pas encore les clés v6, une sous-clé ajoutée ici n\'y fonctionnera donc pas.</string>
+    <string name="share_target_action_import">Importer la clé</string>
+    <string name="share_target_action_import_subtitle">Vérifiez son empreinte, puis ajoutez-la à votre trousseau</string>
+    <string name="share_target_action_import_encrypt">Importer et chiffrer pour cette clé</string>
+    <string name="share_target_action_import_encrypt_subtitle">Vérifiez son empreinte, puis touchez Chiffrer vers cette clé</string>
+    <string name="share_target_action_verify">Vérifier la signature</string>
+    <string name="share_target_action_verify_subtitle">Voir qui l\'a signé. Ce message est signé, pas chiffré</string>
+    <string name="share_target_action_sign">Signer, ou chiffrer et signer</string>
+    <string name="share_target_action_sign_subtitle">Ouvrir ce texte dans l\'écran Chiffrer de PGPony</string>
+    <string name="share_target_action_encrypt_other">Chiffrer le reste du texte</string>
+    <string name="share_target_action_encrypt_other_subtitle">Chiffrer le texte partagé avec le bloc PGP</string>
+    <string name="share_target_decrypt_result_unknown_signer">Signé par une clé absente de votre trousseau</string>
+    <!-- 4.6.0 (item 16): SSH authentication -->
+    <string name="ssh_cardop_body">PGPony va signer une connexion SSH avec l\'emplacement d\'authentification de ta clé matérielle. Saisis le PIN de la carte, puis tiens la clé contre le dos de ton téléphone.</string>
+    <string name="ssh_cardop_slot_mismatch">L\'emplacement d\'authentification de cette carte ne contient pas la clé SSH choisie.</string>
+    <string name="ssh_error_unsupported_algorithm">L\'algorithme de cette clé d\'authentification ne peut pas servir pour SSH.</string>
+    <string name="ssh_error_storage_recoverable">Le stockage sécurisé des clés de PGPony sur cet appareil a été réinitialisé par le système. Ouvre PGPony, déverrouille cette clé une fois avec sa phrase secrète, puis réessaie.</string>
+    <string name="ssh_error_storage_unreadable">Le stockage sécurisé des clés de PGPony sur cet appareil a été réinitialisé par le système et cette clé n\'a pas de phrase secrète pour la récupérer. Réimporte la clé dans PGPony.</string>
+    <string name="ssh_keypicker_title">Choisir une clé pour SSH</string>
+    <string name="ssh_keypicker_empty">Aucune de tes clés n\'a de sous-clé d\'authentification SSH. Dans PGPony, ouvre une paire de clés, ajoute une sous-clé d\'authentification, puis réessaie.</string>
+    <string name="key_detail_action_copy_ssh_key">Copier la clé publique SSH</string>
+    <string name="key_detail_ssh_key_copied">Clé publique SSH copiée</string>
+    <string name="keyring_generate_ssh_auth_toggle">Ajouter une sous-clé d\'authentification SSH</string>
+    <string name="keyring_generate_ssh_auth_caption">Une sous-clé pour se connecter à des serveurs en SSH via un pont ssh-agent : RSA sur une clé RSA, Ed25519 sur toute autre clé.</string>
+    <string name="keyring_generate_ssh_auth_failed">Clé créée, mais la sous-clé SSH n\'a pas pu être ajoutée : %1$s. Tu peux l\'ajouter depuis le détail de la clé.</string>
+    <!-- 4.6.0 (item 16): SSH from Termux via the OkcAgent fork -->
+    <string name="ssh_help_title">SSH depuis Termux</string>
+    <string name="ssh_help_row_subtitle">Utilise tes clés PGPony avec ssh et git dans Termux</string>
+    <string name="ssh_help_body">PGPony peut signer tes connexions SSH dans Termux. OkcAgent transmet les demandes de ssh à PGPony, et tes clés privées ne quittent jamais PGPony.</string>
+    <string name="ssh_help_get">Obtenir OkcAgent pour PGPony</string>
+    <string name="ssh_help_steps">1. Donne à une clé une sous-clé d\'authentification (détail de la clé, Ajouter une sous-clé). Copier la clé publique SSH dans le détail de la clé te donne la ligne pour authorized_keys sur le serveur.
+2. Installe OkcAgent avec le lien ci-dessus. Désinstalle d\'abord tout autre OkcAgent.
+3. Dans OkcAgent, ouvre Settings, Crypto provider, choisis PGPony et autorise les notifications d\'OkcAgent.
+4. Dans OkcAgent, touche Add SSH key et choisis ta clé.
+5. Dans Termux, lance pkg install okc-agents, puis eval $(okc-ssh-agent). ssh et git via ssh utilisent maintenant ta clé.</string>
+    <string name="ssh_help_note">Les demandes de phrase secrète et de clé de sécurité arrivent en notifications d\'OkcAgent. Si ssh semble bloqué, regarde les notifications. Sous GrapheneOS, active aussi l\'autorisation Réseau d\'OkcAgent : Termux le joint par une connexion locale, et sans elle ssh reste bloqué.</string>
+    <string name="key_detail_action_ssh_setup">Configurer SSH dans Termux</string>
+    <!-- 4.6.0: API consent and SSH scope -->
+    <string name="ssh_error_dual_use_auth">La sous-clé d\'authentification de cette clé peut aussi signer. Ajoute une sous-clé d\'authentification dédiée dans le détail de la clé.</string>
+    <string name="provider_consent_ssh_title">Autoriser %1$s à utiliser SSH ?</string>
+    <string name="provider_consent_ssh_body">%1$s (%2$s) veut utiliser ta clé d\'authentification PGPony pour se connecter à des serveurs SSH. Il ne peut pas chiffrer, déchiffrer ni signer de messages.\n\nTu choisis la clé ensuite, et il ne pourra utiliser que celle-là. Tu peux retirer cet accès à tout moment dans Paramètres → Applications connectées.</string>
+    <string name="ssh_keypicker_confirm">%1$s veut se connecter avec cette clé. Touche-la pour l\'autoriser.</string>
+    <string name="provider_clients_scope_openpgp">OpenPGP : chiffrer, déchiffrer et signer</string>
+    <string name="provider_clients_scope_ssh">Connexion SSH avec %1$s</string>
+    <string name="provider_clients_scope_ssh_nokey">Connexion SSH (aucune clé choisie)</string>
+    <string name="provider_clients_scope_remove">Retirer</string>
 </resources>

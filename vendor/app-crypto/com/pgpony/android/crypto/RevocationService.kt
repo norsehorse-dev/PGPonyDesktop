@@ -104,7 +104,7 @@ class RevocationService private constructor() {
         /** Map our enum to BC's RFC-4880 numeric code. BC's
          *  RevocationReasonTags constants happen to match RFC §5.2.3.23 so
          *  this is a direct conversion. */
-        private fun reasonToTag(reason: RevocationReason): Byte = when (reason) {
+        internal fun reasonToTag(reason: RevocationReason): Byte = when (reason) {
             RevocationReason.NO_REASON       -> RevocationReasonTags.NO_REASON
             RevocationReason.SUPERSEDED      -> RevocationReasonTags.KEY_SUPERSEDED
             RevocationReason.COMPROMISED     -> RevocationReasonTags.KEY_COMPROMISED
@@ -257,6 +257,110 @@ class RevocationService private constructor() {
         }
 
         return PGPPublicKeyRing.insertPublicKey(publicKeyRing, updatedPrimary)
+    }
+
+    /**
+     * item 16 (#54): generate an armored SUBKEY revocation (type 0x28) for the
+     * subkey [subkeyId] on [secretKeyRing]. A subkey does not revoke itself, so
+     * the revocation is signed by the PRIMARY key, whose secret is unlocked with
+     * [passphrase]. Output is an armored signature packet; attach it to a public
+     * ring with [applySubkeyRevocation].
+     */
+    fun generateSubkeyRevocation(
+        secretKeyRing: PGPSecretKeyRing,
+        subkeyId: Long,
+        reason: RevocationReason,
+        comment: String?,
+        passphrase: String?
+    ): String {
+        val primary = secretKeyRing.secretKey
+            ?: throw RevocationError.UnsupportedKey("No primary secret key in supplied ring")
+        val targetPub = secretKeyRing.getPublicKey(subkeyId)
+            ?: throw RevocationError.UnsupportedKey("Subkey not found in supplied ring")
+        if (targetPub.keyID == primary.keyID) {
+            throw RevocationError.UnsupportedKey(
+                "Key is the primary; use generateRevocationCertificate"
+            )
+        }
+
+        val privateKey = try {
+            val decryptor = BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider())
+                .build((passphrase ?: "").toCharArray())
+            primary.extractPrivateKey(decryptor)
+        } catch (e: PGPException) {
+            if (primary.s2KUsage.toInt() != 0) {
+                if (passphrase.isNullOrEmpty()) throw RevocationError.PassphraseRequired()
+                throw RevocationError.InvalidPassphrase()
+            }
+            throw RevocationError.GenerationFailed(e.message ?: "Failed to unlock signing key")
+        }
+
+        val sigGen = try {
+            PGPSignatureGenerator(
+                BcPGPContentSignerBuilder(primary.publicKey.algorithm, HashAlgorithmTags.SHA256),
+                primary.publicKey
+            )
+        } catch (e: Exception) {
+            throw RevocationError.GenerationFailed(
+                "Could not construct signer for algorithm ${primary.publicKey.algorithm}: ${e.message}"
+            )
+        }
+
+        try {
+            sigGen.init(PGPSignature.SUBKEY_REVOCATION, privateKey)
+        } catch (e: Exception) {
+            throw RevocationError.GenerationFailed("Could not initialize signature generator: ${e.message}")
+        }
+
+        val subpacketGen = PGPSignatureSubpacketGenerator()
+        subpacketGen.setIssuerFingerprint(false, primary.publicKey)
+        subpacketGen.setRevocationReason(false, reasonToTag(reason), comment.orEmpty())
+        sigGen.setHashedSubpackets(subpacketGen.generate())
+
+        val sig: PGPSignature = try {
+            sigGen.generateCertification(primary.publicKey, targetPub)
+        } catch (e: Exception) {
+            throw RevocationError.GenerationFailed("Signature generation failed: ${e.message}")
+        }
+
+        val bytes = ByteArrayOutputStream()
+        ArmoredOutputStream(bytes).stripVersion().use { armored ->
+            armored.setHeader("Comment", "Subkey revocation certificate")
+            sig.encode(armored)
+        }
+        return bytes.toString(Charsets.UTF_8.name())
+    }
+
+    /**
+     * item 16 (#54): apply a subkey revocation (type 0x28) to [publicKeyRing],
+     * attaching it to the subkey [subkeyId]. Returns the updated ring; the
+     * caller re-armors and persists it, exactly as the primary-revocation flow
+     * does with [applyRevocation].
+     */
+    fun applySubkeyRevocation(
+        publicKeyRing: PGPPublicKeyRing,
+        subkeyId: Long,
+        armoredCertificate: String
+    ): PGPPublicKeyRing {
+        val sig = try {
+            parseFirstSignature(armoredCertificate)
+        } catch (e: Exception) {
+            throw RevocationError.GenerationFailed("Could not parse revocation certificate: ${e.message}")
+        }
+        if (sig.signatureType != PGPSignature.SUBKEY_REVOCATION) {
+            throw RevocationError.GenerationFailed(
+                "Supplied certificate is not a subkey-revocation signature " +
+                    "(type=${sig.signatureType}); expected ${PGPSignature.SUBKEY_REVOCATION}"
+            )
+        }
+        val target = publicKeyRing.getPublicKey(subkeyId)
+            ?: throw RevocationError.GenerationFailed("Subkey not found in ring")
+        val updated = try {
+            PGPPublicKey.addCertification(target, sig)
+        } catch (e: Exception) {
+            throw RevocationError.GenerationFailed("Could not attach revocation to subkey: ${e.message}")
+        }
+        return PGPPublicKeyRing.insertPublicKey(publicKeyRing, updated)
     }
 
     /**

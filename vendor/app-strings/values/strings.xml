@@ -237,6 +237,9 @@
 
     <!-- ── Key Management section ───────────────────────────────────── -->
     <string name="settings_key_default_label">Default Key</string>
+    <string name="settings_key_default_choose">Choose a default key</string>
+    <string name="kd_avatar_hint_encrypt">Tip: tap the avatar to encrypt to this key</string>
+    <string name="kd_avatar_hint_decrypt">Tip: tap the avatar to decrypt with this key</string>
     <string name="settings_key_total_keys_label">Total Keys</string>
     <string name="settings_key_total_pairs_label">Key Pairs</string>
     <string name="settings_key_default_format">%1$s (%2$s)</string>
@@ -257,6 +260,12 @@
     <string name="settings_security_confirm_sign_title">Confirm signing requirement change</string>
     <string name="settings_security_confirm_enable_subtitle">Authenticate to turn this security setting on</string>
     <string name="settings_security_confirm_disable_subtitle">Authenticate to turn this security setting off</string>
+    <!-- #36 (Araaf): global destructive-action lock -->
+    <string name="settings_protect_destructive_title">Protect destructive actions</string>
+    <string name="settings_protect_destructive_subtitle">Require your device authentication before deleting a key, removing a subkey, or clearing all data. Confirmation dialogs still apply when this is off.</string>
+    <string name="settings_disable_destructive_title">Hide destructive actions</string>
+    <string name="settings_disable_destructive_subtitle">Hide delete key, remove subkey, remove User ID, and clear all data for people who never use them. Revoke stays available. Off by default.</string>
+    <string name="settings_security_confirm_destructive_title">Confirm destructive-action lock change</string>
     <string name="settings_data_clear_key_list_header_format">Keys that will be permanently destroyed (%1$d):</string>
     <string name="settings_data_clear_type_word">DELETE</string>
     <string name="settings_data_clear_type_label_format">Type %1$s to confirm</string>
@@ -343,6 +352,19 @@
 
     <!-- ── Recipients section ───────────────────────────────────────── -->
     <string name="encrypt_recipients_label">Recipients</string>
+    <!-- item 2 (#36): mixed-recipient post-quantum warning -->
+    <string name="encrypt_expired_signing_warning">This signing key has expired.</string>
+    <string name="encrypt_expired_recipient_warning">You are encrypting to an expired key: %1$s.</string>
+    <string name="encrypt_expired_signing_blocked">This signing key has expired. Turn on \"Allow expired keys\" in Settings to sign with it.</string>
+    <string name="encrypt_expired_recipient_blocked">An expired recipient key is selected: %1$s. Turn on \"Allow expired keys\" in Settings to encrypt to it.</string>
+    <string name="settings_allow_expired_title">Allow expired keys</string>
+    <string name="settings_allow_expired_subtitle">Let expired keys be used for signing and encryption. Off by default.</string>
+    <string name="encrypt_pq_mixed_warning">Post-quantum weak link: %1$s will receive this message under classical encryption, so the whole message is not post-quantum secure. Every recipient needs a post-quantum key for full protection.</string>
+    <!-- item 13 (#36): per-recipient encryption-subkey picker -->
+    <string name="encrypt_subkey_label">%1$s: encryption subkey</string>
+    <string name="encrypt_subkey_pq">post-quantum</string>
+    <string name="encrypt_subkey_classical">classical</string>
+    <string name="encrypt_subkey_auto">automatic</string>
     <string name="encrypt_recipients_choose">Choose recipients</string>
     <string name="encrypt_recipients_selected_count">%1$d selected</string>
     <string name="encrypt_recipients_no_keys">No keys available. Import or generate keys first.</string>
@@ -487,6 +509,11 @@
     <string name="result_encrypt_header_signed">Message Signed</string>
     <string name="result_encrypt_header_encrypted">Message Encrypted</string>
     <string name="result_encrypt_badge_signed">Signed</string>
+    <string name="result_encrypt_unsigned_pqc_note">Sent unsigned: you left out the post-quantum signature because a recipient has an older v4 key. The message is still encrypted to everyone.</string>
+    <string name="pqc_v4_sign_title">Some recipients may not read this signature</string>
+    <string name="pqc_v4_sign_message">Your signing key is post-quantum (ML-DSA) and at least one recipient has an older v4 key. PGPony reads the signature, but GnuPG shows the message with an error and Thunderbird cannot open it at all.</string>
+    <string name="pqc_v4_sign_anyway">Sign anyway</string>
+    <string name="pqc_v4_send_unsigned">Send unsigned</string>
     <string name="result_encrypt_output_signed">Signed Output</string>
     <string name="result_encrypt_output_encrypted">Encrypted Output</string>
     <string name="result_encrypt_password_note">Only someone with the password can decrypt this message.</string>
@@ -565,7 +592,7 @@
 
     <!-- ── Delete confirmation ──────────────────────────────────────── -->
     <string name="keyring_delete_dialog_title">Delete Key?</string>
-    <string name="keyring_delete_dialog_body_format">Delete %1$s (%2$s)? This cannot be undone.</string>
+    <string name="keyring_delete_dialog_body_format">Delete %1$s (%2$s)? It moves to Recently Deleted for %3$d days, then is removed for good. You can restore it until then.</string>
     <string name="keyring_delete_dialog_confirm">Delete</string>
 
     <!-- ── First-visit tooltip ──────────────────────────────────────── -->
@@ -585,17 +612,24 @@
     <!-- ── Generate Key sheet ───────────────────────────────────────── -->
     <string name="keyring_generate_title">Generate Key Pair</string>
     <string name="keyring_generate_name_label">Name</string>
-    <string name="keyring_generate_email_label">Email</string>
+    <string name="keyring_generate_email_label">Email (optional)</string>
+    <string name="settings_offer_publish_title">Offer to publish new keys</string>
+    <string name="settings_offer_publish_subtitle">After generating a key, suggest publishing it to key servers. Turn off to keep key generation fully local.</string>
     <string name="keyring_generate_algorithm_label">Algorithm</string>
     <string name="keyring_generate_algorithm_caption_v6">OpenPGP v6 (RFC 9580). Modern format with a dedicated signing subkey and hardware-key support. Pick a v4 type if your recipients use older software.</string>
     <string name="keyring_generate_algorithm_caption_ed25519">Fast, compact elliptic-curve keys (OpenPGP v4). Widely supported. A good default.</string>
     <string name="keyring_generate_algorithm_caption_rsa">Classic RSA keys (OpenPGP v4). Maximum compatibility; larger and slower than Ed25519.</string>
-    <string name="keyring_generate_algorithm_caption_pqc_ietf">Post-quantum hybrid: ML-KEM plus an elliptic curve on a modern v6 key, following RFC 9980, the OpenPGP post-quantum standard. Resists quantum attacks; readable only by up-to-date OpenPGP software. ML-KEM-1024 is the higher-strength option.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_ietf">Post-quantum with a classical fallback. ML-KEM plus an elliptic curve on a modern v6 key, following RFC 9980, the IETF OpenPGP post-quantum standard where cross-tool support is heading. The key also keeps a plain classical encryption subkey, so software that cannot do ML-KEM can still encrypt to you, but a sender that uses that subkey loses the post-quantum protection. Choose the fully post-quantum option instead if you want no classical fallback at all. ML-KEM-1024 is the higher-strength option.</string>
     <string name="keyring_generate_algorithm_group_classical">Classical</string>
     <string name="keyring_generate_algorithm_group_pqc">Post-Quantum</string>
+    <string name="keyring_generate_algorithm_group_interop">Interop / compatibility</string>
     <string name="keyring_generate_algorithm_group_advanced">Advanced / compatibility</string>
-    <string name="keyring_generate_algorithm_caption_pqc_sign">Fully post-quantum: an ML-DSA signing identity plus an ML-KEM encryption subkey on a modern v6 key (RFC 9980). Both signing and encryption resist quantum attacks; readable only by up-to-date OpenPGP software.</string>
-    <string name="keyring_generate_algorithm_caption_pqc_librepgp">Post-quantum hybrid: ML-KEM (the algorithm GnuPG still calls Kyber) plus an elliptic curve, in the LibrePGP format GnuPG 2.5.x uses. gpg shows these keys as ky768_cv25519 and ky1024_cv448. ML-KEM-1024 is the higher-strength option.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_v4">Post-quantum encryption with the widest reach. A standard v4 Ed25519 key that every OpenPGP tool already handles, carrying a post-quantum ML-KEM-768 encryption subkey alongside a classical one, so older software can still encrypt to you while up-to-date tools use ML-KEM. The recommended choice for post-quantum encryption that works with real correspondents. Private-key backup for this shape is not available yet.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign">Fully post-quantum with no classical fallback: an ML-DSA signing identity plus an ML-KEM encryption subkey on a modern v6 key (RFC 9980). Both signing and encryption resist quantum attacks, and because the key carries no weaker classical subkey there is nothing to downgrade to. Only up-to-date OpenPGP software can use it.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_librepgp">For GnuPG / LibrePGP interop only. This is the LibrePGP format GnuPG 2.5.x uses: ML-KEM (which GnuPG still calls Kyber) plus an elliptic curve, shown by gpg as ky768_cv25519 and ky1024_cv448. It is effectively GnuPG-only and is not broadly interoperable, so choose it only to exchange keys with GnuPG. For wider reach, use the RFC 9980 post-quantum option instead. ML-KEM-1024 is the higher-strength option.</string>
+    <string name="keyring_generate_granular_toggle">Advanced: compose subkeys</string>
+    <string name="keyring_generate_granular_include_default">Include default encryption subkey</string>
+    <string name="keyring_generate_granular_add_subkey">Add subkey</string>
     <string name="keyring_generate_expiration_label">Expiration</string>
     <string name="keyring_generate_passphrase_label">Passphrase (optional)</string>
     <string name="keyring_generate_passphrase_confirm_label">Confirm Passphrase</string>
@@ -606,6 +640,7 @@
     <string name="keyring_error_refresh_failed_format">Refresh failed: %1$s</string>
     <string name="keyring_error_name_required">Name is required</string>
     <string name="keyring_error_email_required">Valid email is required</string>
+    <string name="keyring_error_email_invalid">That email address does not look right</string>
     <string name="keyring_error_passphrase_mismatch">Passphrases don\'t match</string>
     <string name="keyring_status_key_generated">Key pair generated successfully</string>
     <string name="keyring_error_generation_failed_format">Generation failed: %1$s</string>
@@ -623,8 +658,8 @@
     <!-- ── ImportMethod enum (KeyringViewModel) ─────────────────────── -->
     <string name="import_method_paste">Paste</string>
     <string name="import_method_file">File</string>
-    <string name="import_method_qr_code">QR Code</string>
-    <string name="import_method_key_server">Key Server</string>
+    <string name="import_method_qr_code">QR</string>
+    <string name="import_method_key_server">Server</string>
 
     <!-- ── ExpirationOption enum (KeyringViewModel) ─────────────────── -->
     <string name="expiration_one_year">1 Year</string>
@@ -668,6 +703,11 @@
     <string name="import_preview_detail_user_empty">(none)</string>
     <string name="import_preview_detail_fingerprint_label">Fingerprint</string>
     <string name="import_preview_detail_algorithm_label">Algorithm</string>
+    <!-- 4.6.0 (item 17.9): the preview lists every key a paste or file holds. -->
+    <plurals name="import_preview_more_keys">
+        <item quantity="one">This also holds %1$d more key. It will be imported too:</item>
+        <item quantity="other">This also holds %1$d more keys. They will be imported too:</item>
+    </plurals>
     <string name="import_preview_source_file_format">From file: %1$s</string>
     <string name="import_preview_source_wkd_advanced">Found via WKD (advanced)</string>
     <string name="import_preview_source_wkd_direct">Found via WKD (direct)</string>
@@ -690,6 +730,8 @@
     <!-- ── Confirm/cancel buttons (preview card) ────────────────────── -->
     <string name="import_button_upgrade_key">Upgrade Key</string>
     <string name="import_button_import_key">Import Key</string>
+    <!-- #58 (CertainBot): encrypt to a shared public key -->
+    <string name="import_button_encrypt_to_key">Encrypt to this key</string>
     <string name="import_button_pair_card">Pair with Hardware Key</string>
 
     <!-- ════════════════════════════════════════════════════════════════
@@ -767,6 +809,7 @@
     <!-- ── 4.2.0 RC3 workstream I (#29): add/revoke/promote User IDs ── -->
     <string name="key_detail_userids_make_primary">Make Primary</string>
     <string name="key_detail_userids_revoke">Revoke</string>
+    <string name="key_detail_userids_remove">Remove</string>
     <string name="key_detail_userids_add_action">Add User ID…</string>
     <string name="key_detail_add_userid_sheet_title">Add User ID</string>
     <string name="key_detail_add_userid_sheet_subtitle">New identity for %1$s</string>
@@ -790,11 +833,14 @@
     <string name="key_detail_notations_failed">Could not update notations</string>
     <string name="key_detail_add_userid_failed">Could not add the User ID. Please try again.</string>
     <string name="key_detail_userid_action_sheet_title_revoke">Revoke User ID</string>
+    <string name="key_detail_userid_action_sheet_title_remove">Remove User ID</string>
     <string name="key_detail_userid_action_sheet_title_make_primary">Make Primary User ID</string>
     <string name="key_detail_userid_action_sheet_subtitle_revoke">%1$s will be marked revoked. This cannot be undone.</string>
+    <string name="key_detail_userid_action_sheet_subtitle_remove">Removes %1$s from your copy of this key and keeps it removed here. Key servers keep it, so revoke it instead to retire it for others.</string>
     <string name="key_detail_userid_action_sheet_subtitle_make_primary">%1$s will become the primary identity on this key.</string>
     <string name="key_detail_userid_action_passphrase_label">Passphrase</string>
     <string name="key_detail_userid_action_apply_revoke">Revoke</string>
+    <string name="key_detail_userid_action_apply_remove">Remove</string>
     <string name="key_detail_userid_action_apply_make_primary">Make Primary</string>
     <string name="key_detail_userid_action_failed">Could not complete this action. Please try again.</string>
 
@@ -814,12 +860,30 @@
     <string name="key_detail_add_subkey_passphrase_label">Passphrase</string>
     <string name="key_detail_add_subkey_apply">Add subkey</string>
     <string name="key_detail_add_subkey_failed">Could not add the subkey. Please try again.</string>
+    <!-- item 16 (#54): per-subkey revoke / remove -->
+    <string name="key_detail_subkey_revoke_action">Revoke subkey…</string>
+    <string name="key_detail_subkey_remove_action">Remove subkey…</string>
+    <string name="key_detail_subkey_more_actions">Subkey actions</string>
+    <string name="key_detail_subkey_remove_confirm_title">Remove this subkey?</string>
+    <string name="key_detail_subkey_remove_confirm_body">This removes the subkey from your copy of the key only. Anyone who already has your public key keeps it and can still encrypt to it. To tell your correspondents, revoke it instead.</string>
+    <string name="key_detail_subkey_remove_confirm_action">Remove</string>
+    <string name="key_detail_subkey_revoke_instead_button">Revoke this subkey instead</string>
+    <string name="key_detail_subkey_last_enc_title">Last encryption subkey</string>
+    <string name="key_detail_subkey_last_enc_body">This is the only encryption subkey on this key. Removing or revoking it leaves the key unable to receive encrypted messages. Continue anyway?</string>
+    <string name="key_detail_subkey_last_enc_action">Continue</string>
+    <string name="key_detail_subkey_action_failed">Could not complete the subkey action. Please try again.</string>
     <string name="key_detail_add_subkey_type_rsa_2048_sign">RSA 2048 (Sign)</string>
     <string name="key_detail_add_subkey_type_rsa_2048_encrypt">RSA 2048 (Encrypt)</string>
     <string name="key_detail_add_subkey_type_rsa_4096_sign">RSA 4096 (Sign)</string>
     <string name="key_detail_add_subkey_type_rsa_4096_encrypt">RSA 4096 (Encrypt)</string>
     <string name="key_detail_add_subkey_type_ed25519_sign">Ed25519 (Sign)</string>
     <string name="key_detail_add_subkey_type_x25519_encrypt">X25519 (Encrypt)</string>
+    <string name="key_detail_add_subkey_group_classical">Classical</string>
+    <string name="key_detail_add_subkey_group_pq">Post-Quantum</string>
+    <string name="key_detail_add_subkey_type_mlkem768">ML-KEM-768 (Encrypt)</string>
+    <string name="key_detail_add_subkey_type_mlkem1024">ML-KEM-1024 (Encrypt)</string>
+    <string name="key_detail_add_subkey_type_mldsa65">ML-DSA-65 (Sign)</string>
+    <string name="key_detail_add_subkey_type_mldsa87">ML-DSA-87 (Sign)</string>
     <string name="key_detail_add_subkey_type_rsa_2048_auth">RSA 2048 (Authenticate)</string>
     <string name="key_detail_add_subkey_type_rsa_4096_auth">RSA 4096 (Authenticate)</string>
     <string name="key_detail_add_subkey_type_ed25519_auth">Ed25519 (Authenticate)</string>
@@ -837,9 +901,8 @@
 
     <!-- ── Delete dialog ───────────────────────────────────────────── -->
     <string name="key_detail_delete_dialog_title">Delete Key</string>
-    <string name="key_detail_delete_dialog_intro">This action cannot be undone. </string>
     <string name="key_detail_delete_dialog_body_key_pair">Both your public and private key will be permanently deleted.</string>
-    <string name="key_detail_delete_dialog_body_public_only">The public key will be removed from your keyring.</string>
+    <string name="key_detail_delete_dialog_body_public_only">This key moves to Recently Deleted for %1$d days, then is removed for good. You can restore it until then.</string>
     <string name="key_detail_delete_dialog_confirm">Delete</string>
     <!-- RC3 §L (#21): key-pair delete safeguards sheet. -->
     <string name="key_delete_sheet_title">Delete key pair?</string>
@@ -847,6 +910,9 @@
     <string name="key_delete_backup_button">Save a backup first (.asc)</string>
     <string name="key_delete_ack_label">I understand it will be destroyed after the recovery window</string>
     <string name="key_delete_confirm_button">Delete key pair</string>
+    <!-- #36 (CertainBot): revoke instead of delete -->
+    <string name="key_delete_revoke_instead_note">You can\'t create a revocation certificate after a key is deleted. If others may hold this key, revoke it instead so they stop trusting it.</string>
+    <string name="key_delete_revoke_instead_button">Revoke this key instead</string>
     <string name="key_delete_backed_up_on">In a backup from %1$s</string>
     <string name="key_delete_never_backed_up">Never backed up. Save a backup first if you might need it.</string>
     <string name="settings_section_keys">Keys</string>
@@ -863,6 +929,8 @@
     <string name="recycle_bin_restored">Key restored</string>
     <string name="key_delete_biometric_title">Confirm key deletion</string>
     <string name="key_delete_biometric_subtitle">Authenticate to delete this key pair</string>
+    <string name="key_detail_subkey_remove_biometric_title">Confirm subkey removal</string>
+    <string name="key_detail_subkey_remove_biometric_subtitle">Authenticate to remove this subkey</string>
     <!-- RC4 O5 (#16, CertainBot): optional passphrase on exported/backed-up private keys. -->
     <string name="export_passphrase_label">Protect this export with a passphrase (optional)</string>
     <string name="export_private_gpg_compat_label">GnuPG-compatible format</string>
@@ -931,6 +999,7 @@
     <string name="kd_vm_status_trust_updated">Trust level updated</string>
     <string name="kd_vm_status_notes_cleared">Notes cleared</string>
     <string name="kd_vm_status_notes_saved">Notes saved</string>
+    <string name="kd_vm_status_subkey_removed">Subkey removed</string>
     <string name="kd_vm_error_no_email_to_match">This key has no email to match against</string>
     <string name="kd_vm_status_linked_to_format">Linked to %1$s</string>
     <string name="kd_vm_error_contacts_permission_needed">Contacts permission is needed to link a key to a contact</string>
@@ -1087,7 +1156,7 @@
     <string name="security_info_not_doing_bullet_4">Use third-party crypto libraries beyond Bouncy Castle</string>
     <string name="security_info_not_doing_bullet_5">Store passphrases. They\'re only ever used in memory</string>
 
-    <string name="security_info_footer">Full privacy policy and technical details: pgpony.norsehor.se/privacy</string>
+    <string name="security_info_footer">Full privacy policy and technical details: pgpony.app/privacy</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          Onboarding — slide carousel (OnboardingSlide.kt)
@@ -1234,6 +1303,7 @@
     <string name="exchange_keyserver_search_button">Search key servers</string>
     <string name="exchange_keyserver_searching">Searching…</string>
     <string name="exchange_keyserver_import_button">Import Key</string>
+    <string name="exchange_keyserver_imported">Key imported to your keyring.</string>
 
     <!-- ── Tooltip ──────────────────────────────────────────────────── -->
     <string name="exchange_tooltip_qr">Pick a key here to get a QR code or shareable file. The other person scans or imports it to send you encrypted messages.</string>
@@ -1266,6 +1336,7 @@
          VerificationBanner (decrypt-side signature outcome banner)
          ════════════════════════════════════════════════════════════════ -->
     <string name="verify_banner_verified_title">Verified</string>
+    <string name="verify_banner_verified_unconfirmed_title">Signed, key not verified</string>
     <string name="verify_banner_invalid_title">Signature invalid</string>
     <string name="verify_banner_unknown_signer_title">Unknown signer</string>
     <string name="verify_banner_unknown_signer_lookup_cd">Look up signer</string>
@@ -1413,6 +1484,7 @@
          another app. Mirrors the iOS PGPonyAction extension.
     -->
     <string name="share_target_activity_label">PGPony Quick Action</string>
+    <string name="share_encrypt_text_label">Encrypt in PGPony</string>
     <string name="share_target_dismiss_cd">Dismiss</string>
 
     <!-- Root / classification screen -->
@@ -1421,7 +1493,7 @@
     <string name="share_target_root_subtitle_file_format">Choose how to handle %1$s:</string>
     <string name="share_target_action_encrypt">Encrypt</string>
     <string name="share_target_action_encrypt_subtitle">Pick recipients and produce ciphertext</string>
-    <string name="share_target_action_decrypt">Decrypt / Verify</string>
+    <string name="share_target_action_decrypt">Decrypt</string>
     <string name="share_target_action_decrypt_subtitle">Read this PGP message with one of your keys</string>
     <string name="share_target_open_full_app">Open in PGPony</string>
     <string name="share_target_open_full_app_subtitle_import">This looks like a PGP key. Import it from the Keyring tab</string>
@@ -1435,6 +1507,7 @@
 
     <!-- Encrypt screen -->
     <string name="share_target_encrypt_title">Encrypt for…</string>
+    <string name="share_target_encrypt_recipient_unusable_format">Nothing was encrypted: PGPony could not load an encryption key for %1$s.</string>
     <string name="share_target_encrypt_recipients_empty">No recipient keys in your keyring. Add a public key in the main app first.</string>
     <string name="share_target_encrypt_no_recipients_selected">Select at least one recipient</string>
     <string name="share_target_encrypt_button">Encrypt</string>
@@ -1863,15 +1936,26 @@
     <string name="settings_keyservers_subtitle">Where PGPony looks up and publishes keys</string>
     <string name="keyservers_title">Key servers</string>
     <string name="keyservers_subtitle">PGPony looks up keys from these servers in order and publishes to the ones you enable. keys.pgpony.app is PGPony\'s own server and accepts every key type.</string>
+    <string name="keyservers_wkd_label">Web Key Directory</string>
+    <string name="keyservers_wkd_desc">Tried first for email lookups, from the recipient\'s own domain. No publishing.</string>
     <string name="keyservers_first_party_badge">FIRST-PARTY</string>
     <string name="keyservers_lookup">Use for lookup</string>
     <string name="keyservers_publish">Use for publishing</string>
     <string name="keyservers_move_up">Move up</string>
     <string name="keyservers_move_down">Move down</string>
     <string name="keyservers_reset">Reset to defaults</string>
+    <!-- item 6 (#55): custom key server entry -->
+    <string name="keyservers_add">Add key server</string>
+    <string name="keyservers_add_title">Add key server</string>
+    <string name="keyservers_add_label_hint">Name (optional)</string>
+    <string name="keyservers_add_url_hint">Server URL (e.g. keys.example.org)</string>
+    <string name="keyservers_add_confirm">Add</string>
+    <string name="keyservers_add_invalid_url">Enter a valid HKPS server URL</string>
+    <string name="keyservers_remove">Remove server</string>
     <string name="publish_title">Publish key</string>
     <string name="publish_subtitle">Upload this public key so others can find it. Choose which servers to publish to.</string>
     <string name="publish_action">Publish</string>
+    <string name="publish_not_now">Not now</string>
     <string name="publish_may_not_accept_format">May not accept %1$s keys. Your other servers still will.</string>
     <string name="publish_rejected_key_type_format">Not accepted. This server likely doesn\'t support %1$s keys yet. Still published to your other servers.</string>
     <string name="publish_failed_format">Couldn\'t publish: %1$s</string>
@@ -1943,6 +2027,9 @@
     <string name="restore_unchanged">Already up to date</string>
     <string name="restore_failed">Couldn\'t restore</string>
     <string name="restore_settings_applied">Settings restored</string>
+    <string name="restore_settings_ask">This backup also holds proxy and key server settings. Apply them? A restore never turns an existing proxy off, and trust levels are not restored.</string>
+    <string name="restore_settings_apply">Apply settings</string>
+    <string name="restore_settings_skip">Keep mine</string>
     <string name="restore_nothing">No keys were found in this backup.</string>
     <string name="backup_done">Done</string>
     <!-- 4.0.0 Phase 3 — onboarding: three paths (create / import / restore) -->
@@ -1988,4 +2075,95 @@
     <!-- RC1 offline switch: onboarding offer -->
     <string name="onboarding_page_offline_toggle_title">Offline mode</string>
     <string name="onboarding_page_offline_toggle_subtitle">Keep PGPony fully offline: no keyserver lookups, no key refresh, no update checks. You can change this later in Settings.</string>
+    <string name="onboarding_page_comment_toggle_title">PGPony comment</string>
+    <string name="onboarding_page_comment_toggle_subtitle">Add a PGPony - PGPony.app comment to your encrypted and signed output. You can change this later in Settings.</string>
+    <string name="onboarding_page_destructive_toggle_title">Hide destructive actions</string>
+    <string name="onboarding_page_destructive_toggle_subtitle">Hide delete key, remove subkey, remove User ID, and clear all data. Revoke stays available. You can change this later in Settings.</string>
+    <string name="onboarding_scroll_more">More options below</string>
+    <string name="publish_title_update">Update on key servers</string>
+    <string name="publish_action_update">Update</string>
+    <string name="publish_last_uploaded_format">Last uploaded %1$s</string>
+    <string name="publish_address_confirmed_format">%1$s: confirmed</string>
+    <string name="publish_address_pending_format">%1$s: not confirmed on this server yet</string>
+    <string name="publish_primary_repair_format">This key\'s primary User ID is ambiguous (marked primary: %1$s; shown here: %2$s). In User IDs, tap Make Primary on the one you want, then publish.</string>
+    <string name="key_detail_action_update_key_servers">Update on Key Servers</string>
+    <string name="key_detail_detail_key_server_behind">Published (local changes not uploaded)</string>
+    <string name="key_detail_unpublished_changes_body">This key changed since it was last uploaded. Key servers still have the old copy.</string>
+    <string name="key_detail_unpublished_changes_action">Update</string>
+    <string name="revocation_result_publish_button">Publish revocation to key servers</string>
+    <string name="keyring_generate_algorithm_experimental">Limited app support</string>
+    <string name="keyring_generate_algorithm_experimental_note">These keys work fully in PGPony. Many other apps cannot read post-quantum keys yet, and two post-quantum formats are in use that do not work with each other.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign_87">The maximum-security tier: an ML-DSA-87 signing identity with an ML-KEM-1024 encryption subkey on a v6 key (RFC 9980). The keys are larger and slower than ML-DSA-65 with ML-KEM-768, which stays the recommended choice. Only up-to-date OpenPGP software can use it.</string>
+    <string name="key_detail_label_add">Add a label</string>
+    <string name="keyring_same_identity_body">Compare fingerprints before you encrypt to or trust one of these.</string>
+    <string name="keyring_same_identity_created_format">created %1$s</string>
+    <plurals name="key_card_same_identity_count">
+        <item quantity="one">%1$d key</item>
+        <item quantity="other">%1$d keys</item>
+    </plurals>
+    <plurals name="keyring_same_identity_title">
+        <item quantity="one">%1$d key for %2$s</item>
+        <item quantity="other">%1$d keys for %2$s</item>
+    </plurals>
+    <plurals name="exchange_keyserver_found_count">
+        <item quantity="one">%1$d key found for this address.</item>
+        <item quantity="other">%1$d keys found for this address. Compare fingerprints after importing.</item>
+    </plurals>
+    <string name="import_method_url">Link</string>
+    <string name="import_url_label">Link to a public key</string>
+    <string name="import_url_fetch_button">Fetch key</string>
+    <string name="import_url_help">A raw .asc file or a page that shows a key both work. The key is fetched through your proxy setting, and nothing is added until you check its fingerprint and tap Import.</string>
+    <string name="import_url_error_https">Only https links can be fetched (or http for a .onion address).</string>
+    <string name="import_url_error_offline">Offline mode is on, so the link was not fetched.</string>
+    <string name="import_url_error_no_key">No public key was found at that link.</string>
+    <string name="import_url_error_redirects">That link redirected too many times.</string>
+    <string name="import_url_error_http_format">The server answered with HTTP %1$d.</string>
+    <string name="import_url_error_failed_format">Could not fetch the link: %1$s</string>
+    <string name="import_preview_source_url_format">From link: %1$s</string>
+    <string name="key_detail_add_subkey_v6_note">Thunderbird and GnuPG cannot read v6 keys yet, so a subkey added here will not work there.</string>
+    <string name="share_target_action_import">Import key</string>
+    <string name="share_target_action_import_subtitle">Check its fingerprint, then add it to your keyring</string>
+    <string name="share_target_action_import_encrypt">Import and encrypt to this key</string>
+    <string name="share_target_action_import_encrypt_subtitle">Check its fingerprint, then tap Encrypt to this key</string>
+    <string name="share_target_action_verify">Verify signature</string>
+    <string name="share_target_action_verify_subtitle">See who signed it. This message is signed, not encrypted</string>
+    <string name="share_target_action_sign">Sign, or encrypt and sign</string>
+    <string name="share_target_action_sign_subtitle">Open this text on PGPony\'s Encrypt screen</string>
+    <string name="share_target_action_encrypt_other">Encrypt the other text</string>
+    <string name="share_target_action_encrypt_other_subtitle">Encrypt the text shared along with the PGP block</string>
+    <string name="share_target_decrypt_result_unknown_signer">Signed by a key that is not in your keyring</string>
+    <!-- 4.6.0 (item 16): SSH authentication -->
+    <string name="ssh_cardop_body">PGPony will sign an SSH login with your hardware key\'s authentication slot. Enter the card PIN, then hold the key against the back of your phone.</string>
+    <string name="ssh_cardop_slot_mismatch">This card\'s authentication slot does not hold the SSH key that was chosen.</string>
+    <string name="ssh_error_unsupported_algorithm">This authentication key\'s algorithm cannot be used for SSH.</string>
+    <string name="ssh_error_storage_recoverable">PGPony\'s secure key storage on this device was reset by the system. Open PGPony and unlock this key with its passphrase once, then try again.</string>
+    <string name="ssh_error_storage_unreadable">PGPony\'s secure key storage on this device was reset by the system and this key has no passphrase to recover it. Re-import the key in PGPony.</string>
+    <string name="ssh_keypicker_title">Choose a key for SSH</string>
+    <string name="ssh_keypicker_empty">None of your keys has an SSH authentication subkey. In PGPony, open a key pair and add an Authenticate subkey, then try again.</string>
+    <string name="key_detail_action_copy_ssh_key">Copy SSH Public Key</string>
+    <string name="key_detail_ssh_key_copied">SSH public key copied</string>
+    <string name="keyring_generate_ssh_auth_toggle">Add SSH authentication subkey</string>
+    <string name="keyring_generate_ssh_auth_caption">A subkey for signing in to servers over SSH through an ssh-agent bridge: RSA on an RSA key, Ed25519 on any other key.</string>
+    <string name="keyring_generate_ssh_auth_failed">Key created, but the SSH subkey could not be added: %1$s. You can add it from Key Detail.</string>
+    <!-- 4.6.0 (item 16): SSH from Termux via the OkcAgent fork -->
+    <string name="ssh_help_title">SSH from Termux</string>
+    <string name="ssh_help_row_subtitle">Use your PGPony keys with ssh and git in Termux</string>
+    <string name="ssh_help_body">PGPony can sign your SSH logins in Termux. OkcAgent passes ssh\'s requests to PGPony, and your private keys never leave PGPony.</string>
+    <string name="ssh_help_get">Get OkcAgent for PGPony</string>
+    <string name="ssh_help_steps">1. Give a key an Authenticate subkey (Key Detail, Add Subkey). Copy SSH Public Key in Key Detail gives you the line for a server\'s authorized_keys.
+2. Install OkcAgent from the link above. Uninstall any other OkcAgent first.
+3. In OkcAgent, open Settings, Crypto provider, choose PGPony, and allow OkcAgent\'s notifications.
+4. In OkcAgent, tap Add SSH key and pick your key.
+5. In Termux, run pkg install okc-agents, then eval $(okc-ssh-agent). ssh and git over ssh now use your key.</string>
+    <string name="ssh_help_note">Passphrase and security key prompts arrive as OkcAgent notifications. If ssh seems stuck, check the notification shade. On GrapheneOS, also turn on OkcAgent\'s Network permission: Termux reaches it over a local connection, and without it ssh hangs.</string>
+    <string name="key_detail_action_ssh_setup">Set Up SSH in Termux</string>
+    <!-- 4.6.0: API consent and SSH scope -->
+    <string name="ssh_error_dual_use_auth">This key\'s authentication subkey can also sign. Add a dedicated Authenticate subkey in Key Detail.</string>
+    <string name="provider_consent_ssh_title">Allow %1$s to use SSH?</string>
+    <string name="provider_consent_ssh_body">%1$s (%2$s) wants to use your PGPony authentication key to log in to SSH servers. It cannot encrypt, decrypt or sign messages.\n\nYou choose the key next, and it can use only that key. You can remove this at any time in Settings → Connected apps.</string>
+    <string name="ssh_keypicker_confirm">%1$s wants to log in with this key. Tap it to allow.</string>
+    <string name="provider_clients_scope_openpgp">OpenPGP: encrypt, decrypt and sign</string>
+    <string name="provider_clients_scope_ssh">SSH login with %1$s</string>
+    <string name="provider_clients_scope_ssh_nokey">SSH login (no key chosen yet)</string>
+    <string name="provider_clients_scope_remove">Remove</string>
 </resources>

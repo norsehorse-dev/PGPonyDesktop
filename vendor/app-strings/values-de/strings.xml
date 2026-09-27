@@ -402,6 +402,11 @@ pgpony.app</string>
     <string name="result_encrypt_header_signed">Nachricht signiert</string>
     <string name="result_encrypt_header_encrypted">Nachricht verschlüsselt</string>
     <string name="result_encrypt_badge_signed">Signiert</string>
+    <string name="result_encrypt_unsigned_pqc_note">Unsigniert gesendet: Du hast die Post-Quanten-Signatur weggelassen, weil ein Empfänger einen älteren v4-Schlüssel hat. Die Nachricht ist trotzdem für alle verschlüsselt.</string>
+    <string name="pqc_v4_sign_title">Manche Empfänger können diese Signatur eventuell nicht lesen</string>
+    <string name="pqc_v4_sign_message">Dein Signaturschlüssel ist ein Post-Quanten-Schlüssel (ML-DSA), und mindestens ein Empfänger hat einen älteren v4-Schlüssel. PGPony liest die Signatur, aber GnuPG zeigt die Nachricht mit einem Fehler an und Thunderbird kann sie gar nicht öffnen.</string>
+    <string name="pqc_v4_sign_anyway">Trotzdem signieren</string>
+    <string name="pqc_v4_send_unsigned">Unsigniert senden</string>
     <string name="result_encrypt_output_signed">Signierte Ausgabe</string>
     <string name="result_encrypt_output_encrypted">Verschlüsselte Ausgabe</string>
     <string name="result_encrypt_can_decrypt_label">Kann entschlüsseln</string>
@@ -456,7 +461,7 @@ pgpony.app</string>
 
     <!-- ── Delete confirmation ──────────────────────────────────────── -->
     <string name="keyring_delete_dialog_title">Schlüssel löschen?</string>
-    <string name="keyring_delete_dialog_body_format">%1$s (%2$s) löschen? Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="keyring_delete_dialog_body_format">%1$s (%2$s) löschen? Er wird für %3$d Tage in Zuletzt gelöscht verschoben und danach endgültig entfernt. Bis dahin kannst du ihn wiederherstellen.</string>
     <string name="keyring_delete_dialog_confirm">Löschen</string>
 
     <!-- ── First-visit tooltip ──────────────────────────────────────── -->
@@ -494,8 +499,8 @@ pgpony.app</string>
     <!-- ── ImportMethod enum (KeyringViewModel) ─────────────────────── -->
     <string name="import_method_paste">Einfügen</string>
     <string name="import_method_file">Datei</string>
-    <string name="import_method_qr_code">QR-Code</string>
-    <string name="import_method_key_server">Schlüsselserver</string>
+    <string name="import_method_qr_code">QR</string>
+    <string name="import_method_key_server">Server</string>
 
     <!-- ── ExpirationOption enum (KeyringViewModel) ─────────────────── -->
     <string name="expiration_one_year">1 Jahr</string>
@@ -621,9 +626,8 @@ pgpony.app</string>
 
     <!-- ── Delete dialog ───────────────────────────────────────────── -->
     <string name="key_detail_delete_dialog_title">Schlüssel löschen</string>
-    <string name="key_detail_delete_dialog_intro">Diese Aktion kann nicht rückgängig gemacht werden. </string>
     <string name="key_detail_delete_dialog_body_key_pair">Sowohl dein öffentlicher als auch dein privater Schlüssel werden dauerhaft gelöscht.</string>
-    <string name="key_detail_delete_dialog_body_public_only">Der öffentliche Schlüssel wird aus deinem Schlüsselbund entfernt.</string>
+    <string name="key_detail_delete_dialog_body_public_only">Dieser Schlüssel wird für %1$d Tage in Zuletzt gelöscht verschoben und danach endgültig entfernt. Bis dahin kannst du ihn wiederherstellen.</string>
     <string name="key_detail_delete_dialog_confirm">Löschen</string>
 
     <!-- ── Export Private Key dialog ───────────────────────────────── -->
@@ -851,7 +855,7 @@ Die gesamte Kryptografie wird von Bouncy Castle 1.85 ausgeführt, einer in Unter
     <string name="security_info_not_doing_bullet_4">Verwendung von Drittanbieter-Krypto-Bibliotheken neben Bouncy Castle</string>
     <string name="security_info_not_doing_bullet_5">Passphrasen speichern – sie werden nur im Arbeitsspeicher verwendet</string>
 
-    <string name="security_info_footer">Vollständige Datenschutzerklärung und technische Details: pgpony.norsehor.se/privacy</string>
+    <string name="security_info_footer">Vollständige Datenschutzerklärung und technische Details: pgpony.app/privacy</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          Onboarding — slide carousel (OnboardingSlide.kt)
@@ -1000,6 +1004,7 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="exchange_keyserver_query_label">E-Mail oder Fingerabdruck</string>
     <string name="exchange_keyserver_search_cd">Suchen</string>
     <string name="exchange_keyserver_import_button">Schlüssel importieren</string>
+    <string name="exchange_keyserver_imported">Schlüssel in deinen Schlüsselbund importiert.</string>
 
     <!-- ── Tooltip ──────────────────────────────────────────────────── -->
     <string name="exchange_tooltip_qr">Wähle hier einen Schlüssel, um einen QR-Code oder eine teilbare Datei zu erhalten. Die andere Person scannt oder importiert ihn, um dir verschlüsselte Nachrichten zu senden.</string>
@@ -1175,7 +1180,7 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="share_target_root_subtitle_file_format">Wähle, wie %1$s behandelt werden soll:</string>
     <string name="share_target_action_encrypt">Verschlüsseln</string>
     <string name="share_target_action_encrypt_subtitle">Empfänger wählen und Chiffretext erzeugen</string>
-    <string name="share_target_action_decrypt">Entschlüsseln / Verifizieren</string>
+    <string name="share_target_action_decrypt">Entschlüsseln</string>
     <string name="share_target_action_decrypt_subtitle">Diese PGP-Nachricht mit einem deiner Schlüssel lesen</string>
     <string name="share_target_open_full_app">In PGPony öffnen</string>
     <string name="share_target_open_full_app_subtitle_import">Das sieht nach einem PGP-Schlüssel aus — importiere ihn im Schlüsselbund-Tab</string>
@@ -1185,6 +1190,7 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="share_target_input_truncated_format">… insgesamt %1$d Zeichen</string>
     <string name="share_target_input_binary_format">Binärer Inhalt — %1$d Bytes</string>
     <string name="share_target_encrypt_title">Verschlüsseln für…</string>
+    <string name="share_target_encrypt_recipient_unusable_format">Es wurde nichts verschlüsselt: PGPony konnte keinen Verschlüsselungsschlüssel für %1$s laden.</string>
     <string name="share_target_encrypt_recipients_empty">Keine Empfängerschlüssel im Schlüsselbund. Füge zuerst einen öffentlichen Schlüssel in der Haupt-App hinzu.</string>
     <string name="share_target_encrypt_no_recipients_selected">Wähle mindestens einen Empfänger</string>
     <string name="share_target_encrypt_button">Verschlüsseln</string>
@@ -1870,4 +1876,197 @@ Optional kannst du die App hinter deinem Fingerabdruck oder Gesicht sperren, um 
     <string name="export_private_gpg_compat_label">GnuPG-kompatibles Format</string>
     <string name="export_private_gpg_compat_caption">Gibt den zusammengesetzten Schlüssel so aus, wie GnuPG (GPG4WIN) es erwartet, damit er dort importiert werden kann. Für andere Apps ausgeschaltet lassen.</string>
     <string name="keyring_more_cd">Mehr</string>
+    <string name="settings_more_scrubpony_subtitle">Entfernt identifizierende Metadaten aus Bildern. Keine Pixel werden verändert.</string>
+    <string name="settings_key_default_choose">Standardschlüssel wählen</string>
+    <string name="kd_avatar_hint_encrypt">Tipp: Tippe auf das Avatar, um an diesen Schlüssel zu verschlüsseln</string>
+    <string name="kd_avatar_hint_decrypt">Tipp: Tippe auf das Avatar, um mit diesem Schlüssel zu entschlüsseln</string>
+    <string name="settings_security_confirm_lock_title">Änderung der biometrischen Sperre bestätigen</string>
+    <string name="settings_security_confirm_sign_title">Änderung der Signaturpflicht bestätigen</string>
+    <string name="settings_security_confirm_enable_subtitle">Authentifiziere dich, um diese Sicherheitseinstellung zu aktivieren</string>
+    <string name="settings_security_confirm_disable_subtitle">Authentifiziere dich, um diese Sicherheitseinstellung zu deaktivieren</string>
+    <string name="settings_protect_destructive_title">Destruktive Aktionen schützen</string>
+    <string name="settings_protect_destructive_subtitle">Erfordert deine Geräteauthentifizierung, bevor ein Schlüssel gelöscht, ein Unterschlüssel entfernt oder alle Daten gelöscht werden. Bestätigungsdialoge gelten weiterhin, wenn dies aus ist.</string>
+    <string name="settings_disable_destructive_title">Destruktive Aktionen ausblenden</string>
+    <string name="settings_disable_destructive_subtitle">Blendet Schlüssel löschen, Unterschlüssel entfernen, Benutzer-ID entfernen und alle Daten löschen für Personen aus, die sie nie nutzen. Widerrufen bleibt verfügbar. Standardmäßig aus.</string>
+    <string name="settings_security_confirm_destructive_title">Änderung der Sperre für destruktive Aktionen bestätigen</string>
+    <string name="encrypt_pq_mixed_warning">Post-Quanten-Schwachstelle: %1$s erhält diese Nachricht mit klassischer Verschlüsselung, daher ist die gesamte Nachricht nicht post-quanten-sicher. Für vollen Schutz braucht jeder Empfänger einen Post-Quanten-Schlüssel.</string>
+    <string name="encrypt_subkey_label">%1$s: Verschlüsselungs-Unterschlüssel</string>
+    <string name="encrypt_subkey_pq">post-quanten</string>
+    <string name="encrypt_subkey_classical">klassisch</string>
+    <string name="encrypt_subkey_auto">automatisch</string>
+    <string name="encrypt_sign_none_option">Keine (nicht signieren)</string>
+    <string name="result_encrypt_password_note">Nur wer das Passwort kennt, kann diese Nachricht entschlüsseln.</string>
+    <string name="encdec_error_incorrect_passphrase_for_format">Falsche Passphrase für %1$s.</string>
+    <string name="encdec_error_selected_key_not_recipient_format">Der ausgewählte Schlüssel (%1$s) ist kein Empfänger dieser Nachricht. Wähle den Schlüssel, an den sie verschlüsselt wurde.</string>
+    <string name="encdec_decrypted_with_format">Entschlüsselt mit %1$s</string>
+    <string name="keyring_search_placeholder">Name, Notiz, Schlüssel-ID oder Fingerabdruck suchen</string>
+    <string name="keyring_search_clear_cd">Suche löschen</string>
+    <string name="key_card_default_badge">STANDARD</string>
+    <string name="settings_offer_publish_title">Veröffentlichung neuer Schlüssel anbieten</string>
+    <string name="settings_offer_publish_subtitle">Schlägt nach dem Erzeugen eines Schlüssels vor, ihn auf Schlüsselservern zu veröffentlichen. Ausschalten, um die Schlüsselerzeugung vollständig lokal zu halten.</string>
+    <string name="keyring_generate_algorithm_group_classical">Klassisch</string>
+    <string name="keyring_generate_algorithm_group_pqc">Post-Quanten</string>
+    <string name="keyring_generate_algorithm_group_interop">Interop / Kompatibilität</string>
+    <string name="keyring_generate_algorithm_group_advanced">Erweitert / Kompatibilität</string>
+    <string name="keyring_generate_algorithm_caption_pqc_v4">Post-Quanten-Verschlüsselung mit der größten Reichweite. Ein standardmäßiger v4-Ed25519-Schlüssel, den jedes OpenPGP-Werkzeug bereits versteht, mit einem Post-Quanten-Unterschlüssel ML-KEM-768 neben einem klassischen, sodass ältere Software weiterhin an dich verschlüsseln kann, während aktuelle Werkzeuge ML-KEM verwenden. Die empfohlene Wahl für Post-Quanten-Verschlüsselung, die mit echten Korrespondenten funktioniert. Eine Sicherung des privaten Schlüssels für diese Form ist noch nicht verfügbar.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign">Vollständig post-quanten ohne klassischen Rückfall: eine ML-DSA-Signaturidentität plus ein ML-KEM-Verschlüsselungs-Unterschlüssel auf einem modernen v6-Schlüssel (RFC 9980). Sowohl Signatur als auch Verschlüsselung widerstehen Quantenangriffen, und da der Schlüssel keinen schwächeren klassischen Unterschlüssel trägt, gibt es nichts, worauf man herabstufen könnte. Nur aktuelle OpenPGP-Software kann ihn verwenden.</string>
+    <string name="keyring_generate_granular_toggle">Erweitert: Unterschlüssel zusammenstellen</string>
+    <string name="keyring_generate_granular_include_default">Standard-Verschlüsselungs-Unterschlüssel einschließen</string>
+    <string name="keyring_generate_granular_add_subkey">Unterschlüssel hinzufügen</string>
+    <string name="keyring_error_email_invalid">Diese E-Mail-Adresse sieht nicht richtig aus</string>
+    <string name="import_button_encrypt_to_key">An diesen Schlüssel verschlüsseln</string>
+    <string name="key_detail_copy_email_cd">E-Mail-Adresse kopieren</string>
+    <string name="key_detail_email_copied">E-Mail kopiert</string>
+    <string name="key_detail_userids_remove">Entfernen</string>
+    <string name="key_detail_userid_action_sheet_title_remove">Benutzer-ID entfernen</string>
+    <string name="key_detail_userid_action_sheet_subtitle_remove">Entfernt %1$s aus deiner Kopie dieses Schlüssels und hält sie hier entfernt. Schlüsselserver behalten sie, widerrufe sie also stattdessen, um sie für andere zurückzuziehen.</string>
+    <string name="key_detail_userid_action_apply_remove">Entfernen</string>
+    <string name="key_detail_subkey_revoke_action">Unterschlüssel widerrufen…</string>
+    <string name="key_detail_subkey_remove_action">Unterschlüssel entfernen…</string>
+    <string name="key_detail_subkey_more_actions">Unterschlüssel-Aktionen</string>
+    <string name="key_detail_subkey_remove_confirm_title">Diesen Unterschlüssel entfernen?</string>
+    <string name="key_detail_subkey_remove_confirm_body">Dies entfernt den Unterschlüssel nur aus deiner Kopie des Schlüssels. Wer deinen öffentlichen Schlüssel bereits hat, behält ihn und kann weiterhin daran verschlüsseln. Um deine Korrespondenten zu informieren, widerrufe ihn stattdessen.</string>
+    <string name="key_detail_subkey_remove_confirm_action">Entfernen</string>
+    <string name="key_detail_subkey_revoke_instead_button">Diesen Unterschlüssel stattdessen widerrufen</string>
+    <string name="key_detail_subkey_last_enc_title">Letzter Verschlüsselungs-Unterschlüssel</string>
+    <string name="key_detail_subkey_last_enc_body">Dies ist der einzige Verschlüsselungs-Unterschlüssel dieses Schlüssels. Ihn zu entfernen oder zu widerrufen macht den Schlüssel unfähig, verschlüsselte Nachrichten zu empfangen. Trotzdem fortfahren?</string>
+    <string name="key_detail_subkey_last_enc_action">Fortfahren</string>
+    <string name="key_detail_subkey_action_failed">Die Unterschlüssel-Aktion konnte nicht abgeschlossen werden. Bitte versuche es erneut.</string>
+    <string name="key_detail_add_subkey_group_classical">Klassisch</string>
+    <string name="key_detail_add_subkey_group_pq">Post-Quanten</string>
+    <string name="key_detail_add_subkey_type_mlkem768">ML-KEM-768 (Verschlüsseln)</string>
+    <string name="key_detail_add_subkey_type_mlkem1024">ML-KEM-1024 (Verschlüsseln)</string>
+    <string name="key_detail_add_subkey_type_mldsa65">ML-DSA-65 (Signieren)</string>
+    <string name="key_detail_add_subkey_type_mldsa87">ML-DSA-87 (Signieren)</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_auth">RSA 2048 (Authentifizieren)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_auth">RSA 4096 (Authentifizieren)</string>
+    <string name="key_detail_add_subkey_type_ed25519_auth">Ed25519 (Authentifizieren)</string>
+    <string name="key_delete_revoke_instead_note">Nach dem Löschen eines Schlüssels kannst du kein Widerrufszertifikat mehr erstellen. Falls andere diesen Schlüssel haben könnten, widerrufe ihn stattdessen, damit sie ihm nicht mehr vertrauen.</string>
+    <string name="key_delete_revoke_instead_button">Diesen Schlüssel stattdessen widerrufen</string>
+    <string name="key_detail_subkey_remove_biometric_title">Entfernen des Unterschlüssels bestätigen</string>
+    <string name="key_detail_subkey_remove_biometric_subtitle">Authentifiziere dich, um diesen Unterschlüssel zu entfernen</string>
+    <string name="kd_vm_status_subkey_removed">Unterschlüssel entfernt</string>
+    <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
+    <string name="share_encrypt_text_label">In PGPony verschlüsseln</string>
+    <string name="bundle_result_section_email">Als E-Mail senden</string>
+    <string name="bundle_result_section_file">Als Datei senden</string>
+    <string name="settings_argon2_title">Stärkerer Passphrasenschutz (Argon2)</string>
+    <string name="settings_argon2_subtitle">Verwendet Argon2id für passwortverschlüsselte Dateien und Nachrichten. Schwerer per Brute Force zu knacken, aber der Empfänger braucht GnuPG 2.4 oder neuer, um sie zu öffnen. Standardmäßig aus für größte Kompatibilität.</string>
+    <string name="provider_sign_per_address_title">Signaturschlüssel nach Adresse</string>
+    <string name="provider_sign_per_address_subtitle">Wenn eine Adresse mehr als einen deiner Signaturschlüssel hat, wähle, mit welchem PGPony signiert. Es gilt sofort, ohne Nachfrage beim Senden.</string>
+    <string name="provider_ask_sign_key_title">Nachfragen, mit welchem Schlüssel signiert wird</string>
+    <string name="provider_ask_sign_key_subtitle">Wenn eine Adresse mehr als einen Signaturschlüssel hat, fragt PGPony einmal und merkt sich deine Wahl. Aktiviere dies, um stattdessen bei jedem Senden gefragt zu werden, für Adressen, die du unten unter Signaturschlüssel nach Adresse nicht festgelegt hast.</string>
+    <string name="provider_keypicker_in_use">In Verwendung</string>
+    <string name="provider_passphrase_change_key">Mit einem anderen Schlüssel signieren</string>
+    <string name="keyservers_wkd_label">Web Key Directory</string>
+    <string name="keyservers_wkd_desc">Wird bei E-Mail-Abfragen zuerst versucht, aus der eigenen Domain des Empfängers. Keine Veröffentlichung.</string>
+    <string name="keyservers_add">Schlüsselserver hinzufügen</string>
+    <string name="keyservers_add_title">Schlüsselserver hinzufügen</string>
+    <string name="keyservers_add_label_hint">Name (optional)</string>
+    <string name="keyservers_add_url_hint">Server-URL (z. B. keys.example.org)</string>
+    <string name="keyservers_add_confirm">Hinzufügen</string>
+    <string name="keyservers_add_invalid_url">Gib eine gültige HKPS-Server-URL ein</string>
+    <string name="keyservers_remove">Server entfernen</string>
+    <string name="publish_not_now">Nicht jetzt</string>
+    <string name="settings_proxy_socks_user">SOCKS-Benutzername (optional)</string>
+    <string name="settings_proxy_socks_pass">SOCKS-Passwort (optional)</string>
+    <string name="settings_proxy_socks_note">Optional. Ein Benutzername und Passwort geben PGPony einen eigenen Tor-Kanal, getrennt von anderen Apps, die den Proxy nutzen.</string>
+    <string name="change_passphrase_changed">Passphrase geändert</string>
+    <string name="change_passphrase_set">Passphrase gesetzt</string>
+    <string name="change_passphrase_removed">Passphrase entfernt</string>
+    <string name="settings_offline_toggle_title">Offline-Modus</string>
+    <string name="settings_offline_toggle_subtitle">Schaltet jede Netzwerkfunktion ab: Schlüsselserver-Abfrage, Suche und Veröffentlichung, Hintergrund-Aktualisierung von Schlüsseln und die Update-Prüfung. Nichts verlässt dein Gerät.</string>
+    <string name="onboarding_page_offline_toggle_title">Offline-Modus</string>
+    <string name="onboarding_page_offline_toggle_subtitle">PGPony vollständig offline halten: keine Schlüsselserver-Abfragen, keine Schlüssel-Aktualisierung, keine Update-Prüfungen. Du kannst dies später in den Einstellungen ändern.</string>
+    <string name="onboarding_page_comment_toggle_title">PGPony-Kommentar</string>
+    <string name="onboarding_page_comment_toggle_subtitle">Fügt deiner verschlüsselten und signierten Ausgabe einen Kommentar PGPony - PGPony.app hinzu. Du kannst dies später in den Einstellungen ändern.</string>
+    <string name="onboarding_page_destructive_toggle_title">Destruktive Aktionen ausblenden</string>
+    <string name="onboarding_page_destructive_toggle_subtitle">Blendet Schlüssel löschen, Unterschlüssel entfernen, Benutzer-ID entfernen und alle Daten löschen aus. Widerrufen bleibt verfügbar. Du kannst dies später in den Einstellungen ändern.</string>
+    <string name="onboarding_scroll_more">Weitere Optionen unten</string>
+    <string name="publish_title_update">Auf Schlüsselservern aktualisieren</string>
+    <string name="publish_action_update">Aktualisieren</string>
+    <string name="publish_last_uploaded_format">Zuletzt hochgeladen: %1$s</string>
+    <string name="publish_address_confirmed_format">%1$s: bestätigt</string>
+    <string name="publish_address_pending_format">%1$s: auf diesem Server noch nicht bestätigt</string>
+    <string name="publish_primary_repair_format">Die primäre User-ID dieses Schlüssels ist nicht eindeutig (als primär markiert: %1$s; hier angezeigt: %2$s). Tippe unter Benutzer-IDs bei der gewünschten auf „Zur primären machen“ und veröffentliche dann.</string>
+    <string name="key_detail_action_update_key_servers">Auf Schlüsselservern aktualisieren</string>
+    <string name="key_detail_detail_key_server_behind">Veröffentlicht (lokale Änderungen nicht hochgeladen)</string>
+    <string name="key_detail_unpublished_changes_body">Dieser Schlüssel wurde seit dem letzten Hochladen geändert. Die Schlüsselserver haben noch die alte Kopie.</string>
+    <string name="key_detail_unpublished_changes_action">Aktualisieren</string>
+    <string name="revocation_result_publish_button">Widerruf auf Schlüsselservern veröffentlichen</string>
+    <string name="keyring_generate_algorithm_experimental">Eingeschränkte App-Unterstützung</string>
+    <string name="keyring_generate_algorithm_experimental_note">Diese Schlüssel funktionieren in PGPony vollständig. Viele andere Apps können Post-Quanten-Schlüssel noch nicht lesen, und zwei Post-Quanten-Formate sind im Umlauf, die nicht miteinander funktionieren.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign_87">Die Stufe mit maximaler Sicherheit: eine ML-DSA-87-Signaturidentität mit einem ML-KEM-1024-Verschlüsselungsunterschlüssel auf einem v6-Schlüssel (RFC 9980). Die Schlüssel sind größer und langsamer als ML-DSA-65 mit ML-KEM-768, das die empfohlene Wahl bleibt. Nur aktuelle OpenPGP-Software kann ihn nutzen.</string>
+    <string name="key_detail_label_add">Label hinzufügen</string>
+    <string name="keyring_same_identity_body">Vergleiche die Fingerabdrücke, bevor du an einen davon verschlüsselst oder ihm vertraust.</string>
+    <string name="keyring_same_identity_created_format">erstellt %1$s</string>
+    <plurals name="key_card_same_identity_count">
+        <item quantity="one">%1$d Schlüssel</item>
+        <item quantity="other">%1$d Schlüssel</item>
+    </plurals>
+    <plurals name="keyring_same_identity_title">
+        <item quantity="one">%1$d Schlüssel für %2$s</item>
+        <item quantity="other">%1$d Schlüssel für %2$s</item>
+    </plurals>
+    <plurals name="exchange_keyserver_found_count">
+        <item quantity="one">%1$d Schlüssel für diese Adresse gefunden.</item>
+        <item quantity="other">%1$d Schlüssel für diese Adresse gefunden. Vergleiche nach dem Import die Fingerabdrücke.</item>
+    </plurals>
+    <string name="import_method_url">Link</string>
+    <string name="import_url_label">Link zu einem öffentlichen Schlüssel</string>
+    <string name="import_url_fetch_button">Schlüssel abrufen</string>
+    <string name="import_url_help">Eine .asc-Datei oder eine Seite, die einen Schlüssel zeigt, funktionieren beide. Der Schlüssel wird über deine Proxy-Einstellung abgerufen, und nichts wird hinzugefügt, bis du den Fingerabdruck prüfst und auf Importieren tippst.</string>
+    <string name="import_url_error_https">Nur https-Links können abgerufen werden (oder http für eine .onion-Adresse).</string>
+    <string name="import_url_error_offline">Der Offline-Modus ist an, daher wurde der Link nicht abgerufen.</string>
+    <string name="import_url_error_no_key">Unter diesem Link wurde kein öffentlicher Schlüssel gefunden.</string>
+    <string name="import_url_error_redirects">Dieser Link wurde zu oft weitergeleitet.</string>
+    <string name="import_url_error_http_format">Der Server antwortete mit HTTP %1$d.</string>
+    <string name="import_url_error_failed_format">Link konnte nicht abgerufen werden: %1$s</string>
+    <string name="import_preview_source_url_format">Von Link: %1$s</string>
+    <string name="key_detail_add_subkey_v6_note">Thunderbird und GnuPG können v6-Schlüssel noch nicht lesen, daher funktioniert ein hier hinzugefügter Unterschlüssel dort nicht.</string>
+    <string name="share_target_action_import">Schlüssel importieren</string>
+    <string name="share_target_action_import_subtitle">Fingerabdruck prüfen, dann zum Schlüsselbund hinzufügen</string>
+    <string name="share_target_action_import_encrypt">Importieren und an diesen Schlüssel verschlüsseln</string>
+    <string name="share_target_action_import_encrypt_subtitle">Fingerabdruck prüfen, dann auf „An diesen Schlüssel verschlüsseln“ tippen</string>
+    <string name="share_target_action_verify">Signatur prüfen</string>
+    <string name="share_target_action_verify_subtitle">Sehen, wer sie signiert hat. Diese Nachricht ist signiert, nicht verschlüsselt</string>
+    <string name="share_target_action_sign">Signieren oder verschlüsseln und signieren</string>
+    <string name="share_target_action_sign_subtitle">Diesen Text im Verschlüsseln-Bildschirm von PGPony öffnen</string>
+    <string name="share_target_action_encrypt_other">Den übrigen Text verschlüsseln</string>
+    <string name="share_target_action_encrypt_other_subtitle">Den Text verschlüsseln, der zusammen mit dem PGP-Block geteilt wurde</string>
+    <string name="share_target_decrypt_result_unknown_signer">Signiert mit einem Schlüssel, der nicht in deinem Schlüsselbund ist</string>
+    <!-- 4.6.0 (item 16): SSH authentication -->
+    <string name="ssh_cardop_body">PGPony signiert eine SSH-Anmeldung mit dem Authentifizierungs-Slot deines Hardware-Schlüssels. Gib die Karten-PIN ein und halte den Schlüssel dann an die Rückseite deines Telefons.</string>
+    <string name="ssh_cardop_slot_mismatch">Der Authentifizierungs-Slot dieser Karte enthält nicht den gewählten SSH-Schlüssel.</string>
+    <string name="ssh_error_unsupported_algorithm">Der Algorithmus dieses Authentifizierungsschlüssels kann nicht für SSH verwendet werden.</string>
+    <string name="ssh_error_storage_recoverable">Der sichere Schlüsselspeicher von PGPony auf diesem Gerät wurde vom System zurückgesetzt. Öffne PGPony, entsperre diesen Schlüssel einmal mit seiner Passphrase und versuche es erneut.</string>
+    <string name="ssh_error_storage_unreadable">Der sichere Schlüsselspeicher von PGPony auf diesem Gerät wurde vom System zurückgesetzt, und dieser Schlüssel hat keine Passphrase zur Wiederherstellung. Importiere den Schlüssel in PGPony erneut.</string>
+    <string name="ssh_keypicker_title">Schlüssel für SSH wählen</string>
+    <string name="ssh_keypicker_empty">Keiner deiner Schlüssel hat einen SSH-Authentifizierungs-Unterschlüssel. Öffne in PGPony ein Schlüsselpaar, füge einen Authentifizierungs-Unterschlüssel hinzu und versuche es erneut.</string>
+    <string name="key_detail_action_copy_ssh_key">Öffentlichen SSH-Schlüssel kopieren</string>
+    <string name="key_detail_ssh_key_copied">Öffentlicher SSH-Schlüssel kopiert</string>
+    <string name="keyring_generate_ssh_auth_toggle">SSH-Authentifizierungs-Unterschlüssel hinzufügen</string>
+    <string name="keyring_generate_ssh_auth_caption">Ein Unterschlüssel, um dich über eine ssh-agent-Brücke per SSH an Servern anzumelden: RSA bei einem RSA-Schlüssel, sonst Ed25519.</string>
+    <string name="keyring_generate_ssh_auth_failed">Schlüssel erstellt, aber der SSH-Unterschlüssel konnte nicht hinzugefügt werden: %1$s. Du kannst ihn in den Schlüsseldetails hinzufügen.</string>
+    <!-- 4.6.0 (item 16): SSH from Termux via the OkcAgent fork -->
+    <string name="ssh_help_title">SSH aus Termux</string>
+    <string name="ssh_help_row_subtitle">Deine PGPony-Schlüssel mit ssh und git in Termux nutzen</string>
+    <string name="ssh_help_body">PGPony kann deine SSH-Anmeldungen in Termux signieren. OkcAgent reicht die Anfragen von ssh an PGPony weiter, und deine privaten Schlüssel verlassen PGPony nie.</string>
+    <string name="ssh_help_get">OkcAgent für PGPony holen</string>
+    <string name="ssh_help_steps">1. Gib einem Schlüssel einen Authentifizierungs-Unterschlüssel (Schlüsseldetails, Unterschlüssel hinzufügen). Mit Öffentlichen SSH-Schlüssel kopieren in den Schlüsseldetails erhältst du die Zeile für authorized_keys auf dem Server.
+2. Installiere OkcAgent über den Link oben. Deinstalliere vorher jedes andere OkcAgent.
+3. Öffne in OkcAgent Einstellungen, Crypto provider, wähle PGPony und erlaube die Benachrichtigungen von OkcAgent.
+4. Tippe in OkcAgent auf Add SSH key und wähle deinen Schlüssel.
+5. Führe in Termux pkg install okc-agents aus, dann eval $(okc-ssh-agent). ssh und git über ssh nutzen jetzt deinen Schlüssel.</string>
+    <string name="ssh_help_note">Passphrase- und Sicherheitsschlüssel-Abfragen kommen als Benachrichtigungen von OkcAgent. Wenn ssh hängt, sieh in die Benachrichtigungsleiste. Unter GrapheneOS schalte außerdem die Netzwerk-Berechtigung für OkcAgent ein: Termux erreicht es über eine lokale Verbindung, ohne sie hängt ssh.</string>
+    <string name="key_detail_action_ssh_setup">SSH in Termux einrichten</string>
+    <!-- 4.6.0: API consent and SSH scope -->
+    <string name="ssh_error_dual_use_auth">Der Authentifizierungs-Unterschlüssel dieses Schlüssels kann auch signieren. Füge in den Schlüsseldetails einen eigenen Authentifizierungs-Unterschlüssel hinzu.</string>
+    <string name="provider_consent_ssh_title">%1$s SSH erlauben?</string>
+    <string name="provider_consent_ssh_body">%1$s (%2$s) möchte deinen PGPony-Authentifizierungsschlüssel für die Anmeldung an SSH-Servern verwenden. Es kann keine Nachrichten verschlüsseln, entschlüsseln oder signieren.\n\nAls Nächstes wählst du den Schlüssel, und nur diesen kann es verwenden. Du kannst das jederzeit unter Einstellungen → Verbundene Apps entfernen.</string>
+    <string name="ssh_keypicker_confirm">%1$s möchte sich mit diesem Schlüssel anmelden. Tippe ihn an, um es zu erlauben.</string>
+    <string name="provider_clients_scope_openpgp">OpenPGP: verschlüsseln, entschlüsseln und signieren</string>
+    <string name="provider_clients_scope_ssh">SSH-Anmeldung mit %1$s</string>
+    <string name="provider_clients_scope_ssh_nokey">SSH-Anmeldung (noch kein Schlüssel gewählt)</string>
+    <string name="provider_clients_scope_remove">Entfernen</string>
 </resources>

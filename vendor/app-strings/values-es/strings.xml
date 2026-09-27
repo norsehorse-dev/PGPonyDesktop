@@ -402,6 +402,11 @@ pgpony.app</string>
     <string name="result_encrypt_header_signed">Mensaje firmado</string>
     <string name="result_encrypt_header_encrypted">Mensaje cifrado</string>
     <string name="result_encrypt_badge_signed">Firmado</string>
+    <string name="result_encrypt_unsigned_pqc_note">Enviado sin firmar: omitiste la firma poscuántica porque un destinatario tiene una clave v4 más antigua. El mensaje sigue cifrado para todos.</string>
+    <string name="pqc_v4_sign_title">Es posible que algunos destinatarios no puedan leer esta firma</string>
+    <string name="pqc_v4_sign_message">Tu clave de firma es poscuántica (ML-DSA) y al menos un destinatario tiene una clave v4 más antigua. PGPony lee la firma, pero GnuPG muestra el mensaje con un error y Thunderbird no puede abrirlo.</string>
+    <string name="pqc_v4_sign_anyway">Firmar de todos modos</string>
+    <string name="pqc_v4_send_unsigned">Enviar sin firmar</string>
     <string name="result_encrypt_output_signed">Salida firmada</string>
     <string name="result_encrypt_output_encrypted">Salida cifrada</string>
     <string name="result_encrypt_can_decrypt_label">Puede descifrar</string>
@@ -456,7 +461,7 @@ pgpony.app</string>
 
     <!-- ── Delete confirmation ──────────────────────────────────────── -->
     <string name="keyring_delete_dialog_title">¿Eliminar clave?</string>
-    <string name="keyring_delete_dialog_body_format">¿Eliminar %1$s (%2$s)? Esta acción no se puede deshacer.</string>
+    <string name="keyring_delete_dialog_body_format">¿Eliminar %1$s (%2$s)? Se mueve a Eliminados recientemente durante %3$d días y luego se elimina definitivamente. Puedes restaurarla hasta entonces.</string>
     <string name="keyring_delete_dialog_confirm">Eliminar</string>
 
     <!-- ── First-visit tooltip ──────────────────────────────────────── -->
@@ -494,8 +499,8 @@ pgpony.app</string>
     <!-- ── ImportMethod enum (KeyringViewModel) ─────────────────────── -->
     <string name="import_method_paste">Pegar</string>
     <string name="import_method_file">Archivo</string>
-    <string name="import_method_qr_code">Código QR</string>
-    <string name="import_method_key_server">Servidor de claves</string>
+    <string name="import_method_qr_code">QR</string>
+    <string name="import_method_key_server">Servidor</string>
 
     <!-- ── ExpirationOption enum (KeyringViewModel) ─────────────────── -->
     <string name="expiration_one_year">1 año</string>
@@ -621,9 +626,8 @@ pgpony.app</string>
 
     <!-- ── Delete dialog ───────────────────────────────────────────── -->
     <string name="key_detail_delete_dialog_title">Eliminar clave</string>
-    <string name="key_detail_delete_dialog_intro">Esta acción no se puede deshacer. </string>
     <string name="key_detail_delete_dialog_body_key_pair">Tanto tu clave pública como tu clave privada se eliminarán permanentemente.</string>
-    <string name="key_detail_delete_dialog_body_public_only">La clave pública se eliminará de tu llavero.</string>
+    <string name="key_detail_delete_dialog_body_public_only">Esta clave se mueve a Eliminados recientemente durante %1$d días y luego se elimina definitivamente. Puedes restaurarla hasta entonces.</string>
     <string name="key_detail_delete_dialog_confirm">Eliminar</string>
 
     <!-- ── Export Private Key dialog ───────────────────────────────── -->
@@ -851,7 +855,7 @@ Toda la criptografía la realiza Bouncy Castle 1.85, una biblioteca estándar de
     <string name="security_info_not_doing_bullet_4">Usar bibliotecas de cifrado de terceros más allá de Bouncy Castle</string>
     <string name="security_info_not_doing_bullet_5">Almacenar frases de contraseña: solo se usan en memoria</string>
 
-    <string name="security_info_footer">Política de privacidad completa y detalles técnicos: pgpony.norsehor.se/privacy</string>
+    <string name="security_info_footer">Política de privacidad completa y detalles técnicos: pgpony.app/privacy</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          Onboarding — slide carousel (OnboardingSlide.kt)
@@ -1000,6 +1004,7 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="exchange_keyserver_query_label">Correo o huella digital</string>
     <string name="exchange_keyserver_search_cd">Buscar</string>
     <string name="exchange_keyserver_import_button">Importar clave</string>
+    <string name="exchange_keyserver_imported">Clave importada a tu llavero.</string>
 
     <!-- ── Tooltip ──────────────────────────────────────────────────── -->
     <string name="exchange_tooltip_qr">Elige aquí una clave para obtener un código QR o un archivo que puedas compartir. La otra persona lo escanea o importa para enviarte mensajes cifrados.</string>
@@ -1175,7 +1180,7 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="share_target_root_subtitle_file_format">Elige cómo manejar %1$s:</string>
     <string name="share_target_action_encrypt">Cifrar</string>
     <string name="share_target_action_encrypt_subtitle">Elige destinatarios y genera texto cifrado</string>
-    <string name="share_target_action_decrypt">Descifrar / Verificar</string>
+    <string name="share_target_action_decrypt">Descifrar</string>
     <string name="share_target_action_decrypt_subtitle">Leer este mensaje PGP con una de tus claves</string>
     <string name="share_target_open_full_app">Abrir en PGPony</string>
     <string name="share_target_open_full_app_subtitle_import">Esto parece una clave PGP — impórtala desde la pestaña Llavero</string>
@@ -1185,6 +1190,7 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="share_target_input_truncated_format">… %1$d caracteres en total</string>
     <string name="share_target_input_binary_format">Contenido binario — %1$d bytes</string>
     <string name="share_target_encrypt_title">Cifrar para…</string>
+    <string name="share_target_encrypt_recipient_unusable_format">No se cifró nada: PGPony no pudo cargar una clave de cifrado para %1$s.</string>
     <string name="share_target_encrypt_recipients_empty">No hay claves de destinatarios en tu llavero. Añade primero una clave pública desde la app principal.</string>
     <string name="share_target_encrypt_no_recipients_selected">Selecciona al menos un destinatario</string>
     <string name="share_target_encrypt_button">Cifrar</string>
@@ -1870,4 +1876,197 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="export_private_gpg_compat_label">Formato compatible con GnuPG</string>
     <string name="export_private_gpg_compat_caption">Emite la clave compuesta tal como la espera GnuPG (GPG4WIN), para que pueda importarse allí. Déjalo desactivado para otras apps.</string>
     <string name="keyring_more_cd">Más</string>
+    <string name="settings_more_scrubpony_subtitle">Elimina los metadatos identificativos de las imágenes. No se mueve ningún píxel.</string>
+    <string name="settings_key_default_choose">Elegir una clave predeterminada</string>
+    <string name="kd_avatar_hint_encrypt">Consejo: toca el avatar para cifrar a esta clave</string>
+    <string name="kd_avatar_hint_decrypt">Consejo: toca el avatar para descifrar con esta clave</string>
+    <string name="settings_security_confirm_lock_title">Confirmar cambio del bloqueo biométrico</string>
+    <string name="settings_security_confirm_sign_title">Confirmar cambio del requisito de firma</string>
+    <string name="settings_security_confirm_enable_subtitle">Autentícate para activar este ajuste de seguridad</string>
+    <string name="settings_security_confirm_disable_subtitle">Autentícate para desactivar este ajuste de seguridad</string>
+    <string name="settings_protect_destructive_title">Proteger acciones destructivas</string>
+    <string name="settings_protect_destructive_subtitle">Exige la autenticación de tu dispositivo antes de eliminar una clave, quitar una subclave o borrar todos los datos. Los diálogos de confirmación siguen aplicándose cuando está desactivado.</string>
+    <string name="settings_disable_destructive_title">Ocultar acciones destructivas</string>
+    <string name="settings_disable_destructive_subtitle">Oculta eliminar clave, quitar subclave, quitar ID de usuario y borrar todos los datos para quienes nunca los usan. Revocar sigue disponible. Desactivado por defecto.</string>
+    <string name="settings_security_confirm_destructive_title">Confirmar cambio del bloqueo de acciones destructivas</string>
+    <string name="encrypt_pq_mixed_warning">Eslabón débil poscuántico: %1$s recibirá este mensaje con cifrado clásico, por lo que el mensaje completo no es seguro frente a lo cuántico. Cada destinatario necesita una clave poscuántica para una protección total.</string>
+    <string name="encrypt_subkey_label">%1$s: subclave de cifrado</string>
+    <string name="encrypt_subkey_pq">poscuántico</string>
+    <string name="encrypt_subkey_classical">clásico</string>
+    <string name="encrypt_subkey_auto">automático</string>
+    <string name="encrypt_sign_none_option">Ninguna (no firmar)</string>
+    <string name="result_encrypt_password_note">Solo quien tenga la contraseña puede descifrar este mensaje.</string>
+    <string name="encdec_error_incorrect_passphrase_for_format">Frase de contraseña incorrecta para %1$s.</string>
+    <string name="encdec_error_selected_key_not_recipient_format">La clave seleccionada (%1$s) no es destinataria de este mensaje. Elige la clave a la que se cifró.</string>
+    <string name="encdec_decrypted_with_format">Descifrado con %1$s</string>
+    <string name="keyring_search_placeholder">Buscar por nombre, nota, ID de clave o huella digital</string>
+    <string name="keyring_search_clear_cd">Borrar búsqueda</string>
+    <string name="key_card_default_badge">PREDETERMINADA</string>
+    <string name="settings_offer_publish_title">Ofrecer publicar las claves nuevas</string>
+    <string name="settings_offer_publish_subtitle">Tras generar una clave, sugiere publicarla en servidores de claves. Desactívalo para mantener la generación de claves totalmente local.</string>
+    <string name="keyring_generate_algorithm_group_classical">Clásico</string>
+    <string name="keyring_generate_algorithm_group_pqc">Poscuántico</string>
+    <string name="keyring_generate_algorithm_group_interop">Interop / compatibilidad</string>
+    <string name="keyring_generate_algorithm_group_advanced">Avanzado / compatibilidad</string>
+    <string name="keyring_generate_algorithm_caption_pqc_v4">Cifrado poscuántico con el mayor alcance. Una clave v4 Ed25519 estándar que toda herramienta OpenPGP ya admite, con una subclave de cifrado poscuántico ML-KEM-768 junto a una clásica, de modo que el software antiguo puede seguir cifrándote mientras las herramientas actuales usan ML-KEM. La opción recomendada para el cifrado poscuántico que funciona con destinatarios reales. La copia de seguridad de la clave privada para esta forma aún no está disponible.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign">Totalmente poscuántico sin recurso clásico: una identidad de firma ML-DSA más una subclave de cifrado ML-KEM en una clave v6 moderna (RFC 9980). Tanto la firma como el cifrado resisten los ataques cuánticos, y como la clave no lleva ninguna subclave clásica más débil, no hay nada a lo que degradarse. Solo el software OpenPGP actualizado puede usarla.</string>
+    <string name="keyring_generate_granular_toggle">Avanzado: componer subclaves</string>
+    <string name="keyring_generate_granular_include_default">Incluir la subclave de cifrado predeterminada</string>
+    <string name="keyring_generate_granular_add_subkey">Añadir subclave</string>
+    <string name="keyring_error_email_invalid">Esa dirección de correo no parece correcta</string>
+    <string name="import_button_encrypt_to_key">Cifrar a esta clave</string>
+    <string name="key_detail_copy_email_cd">Copiar la dirección de correo</string>
+    <string name="key_detail_email_copied">Correo copiado</string>
+    <string name="key_detail_userids_remove">Quitar</string>
+    <string name="key_detail_userid_action_sheet_title_remove">Quitar ID de usuario</string>
+    <string name="key_detail_userid_action_sheet_subtitle_remove">Quita %1$s de tu copia de esta clave y la mantiene quitada aquí. Los servidores de claves la conservan, así que revócala en su lugar para retirarla para los demás.</string>
+    <string name="key_detail_userid_action_apply_remove">Quitar</string>
+    <string name="key_detail_subkey_revoke_action">Revocar subclave…</string>
+    <string name="key_detail_subkey_remove_action">Quitar subclave…</string>
+    <string name="key_detail_subkey_more_actions">Acciones de subclave</string>
+    <string name="key_detail_subkey_remove_confirm_title">¿Quitar esta subclave?</string>
+    <string name="key_detail_subkey_remove_confirm_body">Esto quita la subclave solo de tu copia de la clave. Quien ya tenga tu clave pública la conserva y aún puede cifrar a ella. Para avisar a tus destinatarios, revócala en su lugar.</string>
+    <string name="key_detail_subkey_remove_confirm_action">Quitar</string>
+    <string name="key_detail_subkey_revoke_instead_button">Revocar esta subclave en su lugar</string>
+    <string name="key_detail_subkey_last_enc_title">Última subclave de cifrado</string>
+    <string name="key_detail_subkey_last_enc_body">Esta es la única subclave de cifrado de esta clave. Quitarla o revocarla deja la clave incapaz de recibir mensajes cifrados. ¿Continuar de todos modos?</string>
+    <string name="key_detail_subkey_last_enc_action">Continuar</string>
+    <string name="key_detail_subkey_action_failed">No se pudo completar la acción de subclave. Inténtalo de nuevo.</string>
+    <string name="key_detail_add_subkey_group_classical">Clásico</string>
+    <string name="key_detail_add_subkey_group_pq">Poscuántico</string>
+    <string name="key_detail_add_subkey_type_mlkem768">ML-KEM-768 (Cifrar)</string>
+    <string name="key_detail_add_subkey_type_mlkem1024">ML-KEM-1024 (Cifrar)</string>
+    <string name="key_detail_add_subkey_type_mldsa65">ML-DSA-65 (Firmar)</string>
+    <string name="key_detail_add_subkey_type_mldsa87">ML-DSA-87 (Firmar)</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_auth">RSA 2048 (Autenticar)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_auth">RSA 4096 (Autenticar)</string>
+    <string name="key_detail_add_subkey_type_ed25519_auth">Ed25519 (Autenticar)</string>
+    <string name="key_delete_revoke_instead_note">No puedes crear un certificado de revocación después de eliminar una clave. Si otros pudieran tener esta clave, revócala en su lugar para que dejen de confiar en ella.</string>
+    <string name="key_delete_revoke_instead_button">Revocar esta clave en su lugar</string>
+    <string name="key_detail_subkey_remove_biometric_title">Confirmar la eliminación de la subclave</string>
+    <string name="key_detail_subkey_remove_biometric_subtitle">Autentícate para quitar esta subclave</string>
+    <string name="kd_vm_status_subkey_removed">Subclave quitada</string>
+    <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
+    <string name="share_encrypt_text_label">Cifrar en PGPony</string>
+    <string name="bundle_result_section_email">Enviar como correo</string>
+    <string name="bundle_result_section_file">Enviar como archivo</string>
+    <string name="settings_argon2_title">Protección de frase de contraseña más fuerte (Argon2)</string>
+    <string name="settings_argon2_subtitle">Usa Argon2id para archivos y mensajes cifrados con contraseña. Más difícil de forzar por fuerza bruta, pero el destinatario necesita GnuPG 2.4 o posterior para abrirlos. Desactivado por defecto para la mayor compatibilidad.</string>
+    <string name="provider_sign_per_address_title">Clave de firma por dirección</string>
+    <string name="provider_sign_per_address_subtitle">Cuando una dirección tiene más de una de tus claves de firma, elige con cuál firma PGPony. Se aplica de inmediato, sin preguntar al enviar.</string>
+    <string name="provider_ask_sign_key_title">Preguntar con qué clave firmar</string>
+    <string name="provider_ask_sign_key_subtitle">Cuando una dirección tiene más de una clave de firma, PGPony pregunta una vez y recuerda tu elección. Actívalo para que te pregunte en cada envío, para las direcciones que no hayas definido en Clave de firma por dirección más abajo.</string>
+    <string name="provider_keypicker_in_use">En uso</string>
+    <string name="provider_passphrase_change_key">Firmar con otra clave</string>
+    <string name="keyservers_wkd_label">Web Key Directory</string>
+    <string name="keyservers_wkd_desc">Se intenta primero en las búsquedas por correo, desde el propio dominio del destinatario. Sin publicación.</string>
+    <string name="keyservers_add">Añadir servidor de claves</string>
+    <string name="keyservers_add_title">Añadir servidor de claves</string>
+    <string name="keyservers_add_label_hint">Nombre (opcional)</string>
+    <string name="keyservers_add_url_hint">URL del servidor (p. ej. keys.example.org)</string>
+    <string name="keyservers_add_confirm">Añadir</string>
+    <string name="keyservers_add_invalid_url">Introduce una URL de servidor HKPS válida</string>
+    <string name="keyservers_remove">Quitar servidor</string>
+    <string name="publish_not_now">Ahora no</string>
+    <string name="settings_proxy_socks_user">Usuario de SOCKS (opcional)</string>
+    <string name="settings_proxy_socks_pass">Contraseña de SOCKS (opcional)</string>
+    <string name="settings_proxy_socks_note">Opcional. Un usuario y una contraseña ponen a PGPony en su propio circuito de Tor, separado de otras apps que comparten el proxy.</string>
+    <string name="change_passphrase_changed">Frase de contraseña cambiada</string>
+    <string name="change_passphrase_set">Frase de contraseña establecida</string>
+    <string name="change_passphrase_removed">Frase de contraseña eliminada</string>
+    <string name="settings_offline_toggle_title">Modo sin conexión</string>
+    <string name="settings_offline_toggle_subtitle">Desactiva todas las funciones de red: búsqueda en servidores de claves, búsqueda y publicación, actualización de claves en segundo plano y la comprobación de actualizaciones. Nada sale de tu dispositivo.</string>
+    <string name="onboarding_page_offline_toggle_title">Modo sin conexión</string>
+    <string name="onboarding_page_offline_toggle_subtitle">Mantén PGPony totalmente sin conexión: sin búsquedas en servidores de claves, sin actualización de claves, sin comprobaciones de actualizaciones. Puedes cambiar esto más tarde en Ajustes.</string>
+    <string name="onboarding_page_comment_toggle_title">Comentario de PGPony</string>
+    <string name="onboarding_page_comment_toggle_subtitle">Añade un comentario PGPony - PGPony.app a tu salida cifrada y firmada. Puedes cambiar esto más tarde en Ajustes.</string>
+    <string name="onboarding_page_destructive_toggle_title">Ocultar acciones destructivas</string>
+    <string name="onboarding_page_destructive_toggle_subtitle">Oculta eliminar clave, quitar subclave, quitar ID de usuario y borrar todos los datos. Revocar sigue disponible. Puedes cambiar esto más tarde en Ajustes.</string>
+    <string name="onboarding_scroll_more">Más opciones abajo</string>
+    <string name="publish_title_update">Actualizar en servidores de claves</string>
+    <string name="publish_action_update">Actualizar</string>
+    <string name="publish_last_uploaded_format">Última subida: %1$s</string>
+    <string name="publish_address_confirmed_format">%1$s: confirmada</string>
+    <string name="publish_address_pending_format">%1$s: aún sin confirmar en este servidor</string>
+    <string name="publish_primary_repair_format">El ID de usuario principal de esta clave es ambiguo (marcado como principal: %1$s; mostrado aquí: %2$s). En ID de usuario, toca Hacer principal en el que quieras y luego publica.</string>
+    <string name="key_detail_action_update_key_servers">Actualizar en servidores de claves</string>
+    <string name="key_detail_detail_key_server_behind">Publicada (cambios locales sin subir)</string>
+    <string name="key_detail_unpublished_changes_body">Esta clave cambió desde la última subida. Los servidores de claves aún tienen la copia anterior.</string>
+    <string name="key_detail_unpublished_changes_action">Actualizar</string>
+    <string name="revocation_result_publish_button">Publicar revocación en servidores de claves</string>
+    <string name="keyring_generate_algorithm_experimental">Compatibilidad limitada</string>
+    <string name="keyring_generate_algorithm_experimental_note">Estas claves funcionan por completo en PGPony. Muchas otras apps aún no leen claves poscuánticas, y hay dos formatos poscuánticos en uso que no funcionan entre sí.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign_87">El nivel de máxima seguridad: una identidad de firma ML-DSA-87 con una subclave de cifrado ML-KEM-1024 en una clave v6 (RFC 9980). Las claves son más grandes y lentas que ML-DSA-65 con ML-KEM-768, que sigue siendo la opción recomendada. Solo el software OpenPGP actualizado puede usarla.</string>
+    <string name="key_detail_label_add">Añadir etiqueta</string>
+    <string name="keyring_same_identity_body">Compara las huellas antes de cifrar para una de ellas o confiar en ella.</string>
+    <string name="keyring_same_identity_created_format">creada %1$s</string>
+    <plurals name="key_card_same_identity_count">
+        <item quantity="one">%1$d clave</item>
+        <item quantity="other">%1$d claves</item>
+    </plurals>
+    <plurals name="keyring_same_identity_title">
+        <item quantity="one">%1$d clave para %2$s</item>
+        <item quantity="other">%1$d claves para %2$s</item>
+    </plurals>
+    <plurals name="exchange_keyserver_found_count">
+        <item quantity="one">Se encontró %1$d clave para esta dirección.</item>
+        <item quantity="other">Se encontraron %1$d claves para esta dirección. Compara las huellas después de importar.</item>
+    </plurals>
+    <string name="import_method_url">Enlace</string>
+    <string name="import_url_label">Enlace a una clave pública</string>
+    <string name="import_url_fetch_button">Obtener clave</string>
+    <string name="import_url_help">Sirven un archivo .asc o una página que muestre una clave. La clave se obtiene a través de tu proxy y no se añade nada hasta que compruebes la huella y toques Importar.</string>
+    <string name="import_url_error_https">Solo se pueden obtener enlaces https (o http para una dirección .onion).</string>
+    <string name="import_url_error_offline">El modo sin conexión está activado, así que no se obtuvo el enlace.</string>
+    <string name="import_url_error_no_key">No se encontró ninguna clave pública en ese enlace.</string>
+    <string name="import_url_error_redirects">Ese enlace redirigió demasiadas veces.</string>
+    <string name="import_url_error_http_format">El servidor respondió con HTTP %1$d.</string>
+    <string name="import_url_error_failed_format">No se pudo obtener el enlace: %1$s</string>
+    <string name="import_preview_source_url_format">Desde enlace: %1$s</string>
+    <string name="key_detail_add_subkey_v6_note">Thunderbird y GnuPG aún no leen claves v6, así que una subclave añadida aquí no funcionará allí.</string>
+    <string name="share_target_action_import">Importar clave</string>
+    <string name="share_target_action_import_subtitle">Comprueba su huella y añádela a tu llavero</string>
+    <string name="share_target_action_import_encrypt">Importar y cifrar para esta clave</string>
+    <string name="share_target_action_import_encrypt_subtitle">Comprueba su huella y toca Cifrar a esta clave</string>
+    <string name="share_target_action_verify">Verificar firma</string>
+    <string name="share_target_action_verify_subtitle">Mira quién la firmó. Este mensaje está firmado, no cifrado</string>
+    <string name="share_target_action_sign">Firmar, o cifrar y firmar</string>
+    <string name="share_target_action_sign_subtitle">Abrir este texto en la pantalla Cifrar de PGPony</string>
+    <string name="share_target_action_encrypt_other">Cifrar el resto del texto</string>
+    <string name="share_target_action_encrypt_other_subtitle">Cifrar el texto compartido junto al bloque PGP</string>
+    <string name="share_target_decrypt_result_unknown_signer">Firmado con una clave que no está en tu llavero</string>
+    <!-- 4.6.0 (item 16): SSH authentication -->
+    <string name="ssh_cardop_body">PGPony firmará un inicio de sesión SSH con la ranura de autenticación de tu llave de hardware. Introduce el PIN de la tarjeta y acerca la llave a la parte trasera del teléfono.</string>
+    <string name="ssh_cardop_slot_mismatch">La ranura de autenticación de esta tarjeta no contiene la clave SSH elegida.</string>
+    <string name="ssh_error_unsupported_algorithm">El algoritmo de esta clave de autenticación no se puede usar para SSH.</string>
+    <string name="ssh_error_storage_recoverable">El almacén seguro de claves de PGPony en este dispositivo fue restablecido por el sistema. Abre PGPony, desbloquea esta clave una vez con su frase de contraseña y vuelve a intentarlo.</string>
+    <string name="ssh_error_storage_unreadable">El almacén seguro de claves de PGPony en este dispositivo fue restablecido por el sistema y esta clave no tiene frase de contraseña para recuperarla. Vuelve a importar la clave en PGPony.</string>
+    <string name="ssh_keypicker_title">Elige una clave para SSH</string>
+    <string name="ssh_keypicker_empty">Ninguna de tus claves tiene una subclave de autenticación SSH. En PGPony, abre un par de claves, añade una subclave de autenticación y vuelve a intentarlo.</string>
+    <string name="key_detail_action_copy_ssh_key">Copiar clave pública SSH</string>
+    <string name="key_detail_ssh_key_copied">Clave pública SSH copiada</string>
+    <string name="keyring_generate_ssh_auth_toggle">Añadir subclave de autenticación SSH</string>
+    <string name="keyring_generate_ssh_auth_caption">Una subclave para iniciar sesión en servidores por SSH a través de un puente ssh-agent: RSA en una clave RSA, Ed25519 en cualquier otra.</string>
+    <string name="keyring_generate_ssh_auth_failed">Clave creada, pero no se pudo añadir la subclave SSH: %1$s. Puedes añadirla desde el detalle de la clave.</string>
+    <!-- 4.6.0 (item 16): SSH from Termux via the OkcAgent fork -->
+    <string name="ssh_help_title">SSH desde Termux</string>
+    <string name="ssh_help_row_subtitle">Usa tus claves de PGPony con ssh y git en Termux</string>
+    <string name="ssh_help_body">PGPony puede firmar tus inicios de sesión SSH en Termux. OkcAgent pasa las solicitudes de ssh a PGPony, y tus claves privadas nunca salen de PGPony.</string>
+    <string name="ssh_help_get">Obtener OkcAgent para PGPony</string>
+    <string name="ssh_help_steps">1. Dale a una clave una subclave de autenticación (detalle de la clave, Añadir subclave). Copiar clave pública SSH en el detalle de la clave te da la línea para authorized_keys del servidor.
+2. Instala OkcAgent desde el enlace de arriba. Desinstala antes cualquier otro OkcAgent.
+3. En OkcAgent, abre Settings, Crypto provider, elige PGPony y permite las notificaciones de OkcAgent.
+4. En OkcAgent, toca Add SSH key y elige tu clave.
+5. En Termux, ejecuta pkg install okc-agents y luego eval $(okc-ssh-agent). ssh y git por ssh ya usan tu clave.</string>
+    <string name="ssh_help_note">Las solicitudes de frase de contraseña y de llave de seguridad llegan como notificaciones de OkcAgent. Si ssh parece atascado, revisa las notificaciones. En GrapheneOS, activa también el permiso de Red de OkcAgent: Termux se conecta a él de forma local y, sin ese permiso, ssh se queda atascado.</string>
+    <string name="key_detail_action_ssh_setup">Configurar SSH en Termux</string>
+    <!-- 4.6.0: API consent and SSH scope -->
+    <string name="ssh_error_dual_use_auth">La subclave de autenticación de esta clave también puede firmar. Añade una subclave de autenticación propia en el detalle de la clave.</string>
+    <string name="provider_consent_ssh_title">¿Permitir que %1$s use SSH?</string>
+    <string name="provider_consent_ssh_body">%1$s (%2$s) quiere usar tu clave de autenticación de PGPony para iniciar sesión en servidores SSH. No puede cifrar, descifrar ni firmar mensajes.\n\nA continuación eliges la clave, y solo podrá usar esa. Puedes quitarlo cuando quieras en Ajustes → Apps conectadas.</string>
+    <string name="ssh_keypicker_confirm">%1$s quiere iniciar sesión con esta clave. Tócala para permitirlo.</string>
+    <string name="provider_clients_scope_openpgp">OpenPGP: cifrar, descifrar y firmar</string>
+    <string name="provider_clients_scope_ssh">Inicio de sesión SSH con %1$s</string>
+    <string name="provider_clients_scope_ssh_nokey">Inicio de sesión SSH (aún sin clave elegida)</string>
+    <string name="provider_clients_scope_remove">Quitar</string>
 </resources>

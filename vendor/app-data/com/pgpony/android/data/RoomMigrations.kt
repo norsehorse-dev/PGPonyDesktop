@@ -70,7 +70,7 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
 }
 
 /**
- * Phase 3.0.0-KS1 — add keyserver activity timestamps (Lukas request).
+ * Phase 3.0.0-KS1 — add keyserver activity timestamps (lukascomer request).
  *
  * Same non-destructive shape as the earlier migrations: two new nullable
  * columns, so existing rows pick up NULL ("Never" in the UI) without backfill
@@ -162,5 +162,47 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `deletedAt` INTEGER")
         db.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `lastBackedUpAt` INTEGER")
+    }
+}
+
+// 4.6.0 (item 17.4): Autocrypt-origin marker on pgp_keys. One nullable
+// column, same additive shape as 8_9. Existing public-only rows that an
+// Autocrypt peer record points at are marked as Autocrypt-origin, so a key
+// planted through Autocrypt before this release does not keep counting as
+// user-managed. Key pairs and card-backed keys (the user's own) are never marked; everything
+// else reads as user-managed, and importing a key again clears the mark.
+/** 4.6.0 (item 11): lastLocalEditAt, null for every existing row (no edit
+ *  is known to be unpublished until the next one). */
+// 4.6.0: allowed_api_clients gains per-grant scopes (OpenPGP and SSH are
+// separate consents) and the SSH key binding. Every existing row was granted
+// through the OpenPGP consent screen, so it keeps OpenPGP only; an app that
+// also used SSH asks once for the SSH scope.
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `allowed_api_clients` ADD COLUMN `scopes` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `allowed_api_clients` ADD COLUMN `sshKeyFingerprint` TEXT")
+    }
+}
+
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `lastLocalEditAt` INTEGER")
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `pgp_keys` ADD COLUMN `autocryptImportedAt` INTEGER")
+        db.execSQL(
+            """
+            UPDATE `pgp_keys` SET `autocryptImportedAt` = ${System.currentTimeMillis()}
+            WHERE `isKeyPair` = 0 AND `isCardBacked` = 0 AND (
+                lower(`fingerprint`) IN (SELECT lower(`autocryptKeyFingerprint`) FROM `autocrypt_peers`
+                                         WHERE `autocryptKeyFingerprint` IS NOT NULL)
+                OR lower(`fingerprint`) IN (SELECT lower(`gossipKeyFingerprint`) FROM `autocrypt_peers`
+                                            WHERE `gossipKeyFingerprint` IS NOT NULL)
+            )
+            """.trimIndent()
+        )
     }
 }

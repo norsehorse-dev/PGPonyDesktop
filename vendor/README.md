@@ -30,22 +30,31 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   interop artifacts). Synced D5/D6; compiled into the desktop `test` source set, gates
   (`-DrunInterop`, `-DiosSecPass`) preserved.
 
-Last sync: 2026-07-25 (D11 — `app-strings/`, the six strings.xml files, a new tree with its own
-script. D8 — addition-only: `crypto/pass/PassTotp.kt` and the test
-`crypto/pass/PassTotpTest.kt`, both written UPSTREAM in PGPonyAndroid first and copied in.
-D4 — network + keyserver trees; other trees unchanged since 2026-07-24), from
-PGPonyAndroid 4.0.3 (versionCode 403) + the D2a migrations move + the D8 TOTP core.
-Re-sync: `tools/sync-vendor.sh` (delete-and-recopy), then `./gradlew test` — EXCEPT
+Last sync: 2026-09-26 (desktop 3.0.0, stage 1). All trees, delete-and-recopy, from the
+PGPonyAndroid working tree at the v4.6.1 tag (versionCode 461) plus ONE recorded exception: the
+4.7.0 settings seam. At sync time `git diff v4.6.1` over the synced trees showed only the seam:
+`data/settings/KeyValueSettings.kt` (new) and the four stores moved onto it
+(`crypto/FallbackPrefs.kt`, `data/KeyPublicationStore.kt`, `data/RemovedUserIdStore.kt`,
+`network/WkdLookup.kt`), plus one test-only change: the ScratchFiles.safeChild case moved out
+of `crypto/LiteralFilenameTest.kt` into an Android-only UI test, so the vendored copy compiles
+here. `app-strings/` synced from the same tree (seven locales, Russian
+included); the res tree was identical to v4.6.1.
+Re-sync: `tools/sync-vendor.sh` (delete-and-recopy), then `./gradlew test`, EXCEPT
 `app-strings/`, which is `tools/sync-strings.sh` (also delete-and-recopy, and it runs
 `tools/i18n-audit.py` at the end).
-NEVER hand-edit files here — fix upstream in PGPonyAndroid and re-sync.
+NEVER hand-edit files here. Fix upstream in PGPonyAndroid and re-sync.
 
-Scoped sync [17 August 2026, for PGPonyAndroid #41]: `network/WkdService.kt`
-alone was re-synced verbatim from `~/Documents/GitHub/PGPonyAndroid` after
-the upstream WKD re-armor fix, so the network tree is at HEAD while `crypto/`
-and `data/` remain behind (about 14 files of 4.1/4.2 work). This one-file
-exception to the all-trees-together rule is recorded here on purpose; the
-owed full delete-and-recopy refresh is tracked in PLANNING_DESKTOP_2_1_0.md.
+The 17 August 2026 scoped WkdService sync (#41) is superseded by this full sync.
+
+## The settings seam (3.0.0)
+
+Portable stores that only need key/value settings reach storage through
+`data/settings/KeyValueSettings.kt` (`SettingsStores.open(name)`). Android installs a
+SharedPreferences implementation in PGPonyApp.onCreate; desktop installs
+`src/…/desktop/DesktopPrefsSettings.kt` (java.util.prefs, node `app/pgpony/desktop/kv/<name>`)
+first thing in `main()`. A store that moves onto the seam upstream loses its exclude and its
+desktop twin here. Candidates still twinned: ProxyPrefs, OfflineMode, CardPinCache, PassStorePrefs.
+With no implementation installed (unit tests), reads return defaults and writes do nothing.
 
 ## Excluded in build.gradle.kts
 

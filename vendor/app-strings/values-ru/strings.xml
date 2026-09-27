@@ -1,0 +1,2147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PGPony Android — strings.xml
+    Created in Phase A13 for the localization pass that follows in A14.
+
+    NAMING CONVENTION
+    =================
+
+    All keys follow `<feature>_<area>_<purpose>` snake_case format. The
+    feature prefix scopes ownership so two unrelated screens can use
+    similar wording without collisions, and the purpose suffix tells
+    you what role the string plays (title, body, button, error, etc.).
+
+    Examples:
+      settings_security_title           — section header
+      settings_biometric_lock_label     — toggle label
+      settings_biometric_lock_subtitle  — toggle subtitle (helper text)
+      settings_biometric_unavailable_error — error message
+      lock_screen_tagline               — small tagline below the app name
+      common_button_cancel              — reusable button label
+
+    Reusable strings (Cancel, OK, Save, Done, Copy, Share, etc.) live
+    under the `common_` prefix.
+
+    PARAMETERIZED STRINGS
+    =====================
+
+    Use Java/printf-style positional specifiers, never named placeholders:
+      <string name="clipboard_will_clear_in">Буфер обмена будет очищен через %1$d с</string>
+      <string name="key_count_summary">%1$d ключей, %2$d пар ключей</string>
+
+    Read in Kotlin via:
+      stringResource(R.string.clipboard_will_clear_in, seconds)        // Composable
+      context.getString(R.string.clipboard_will_clear_in, seconds)     // non-Composable
+      PGPonyApp.instance.getString(R.string.foo, arg1, arg2)           // ViewModel / service
+
+    PLURALS
+    =======
+
+    Strings that change form by count live in plurals.xml (created in
+    A13b alongside the first plural-using extraction — encrypt
+    recipient count). For now this file holds only singular strings.
+
+    HTML / FORMATTING
+    =================
+
+    Strings containing HTML (bold, italics, inline links) wrap in
+    <![CDATA[...]]> and are rendered via androidx.compose's
+    AnnotatedString.fromHtml or via Html.fromHtml on legacy paths.
+    None in A13a yet.
+
+    NON-COMPOSABLE ACCESS (ViewModels, services)
+    ============================================
+
+    ViewModels and services that need user-facing strings go through
+    PGPonyApp.instance.getString(R.string.foo) — Application is a
+    Context and getString reaches all string resources. Threading the
+    actual Activity Context all the way down would require touching
+    every PGPonyViewModelFactory call site; using the Application
+    singleton is the lighter pattern and matches what we already do
+    for KeyExpirationService's notification text.
+
+    SCOPE NOTES (A13a)
+    ==================
+
+    This file is created with the foundational strings from the
+    following surfaces, in order of extraction:
+
+      1. Common reusable labels         (common_*)
+      2. Lock screen                    (lock_*)
+      3. Settings screen                (settings_*)
+      4. SettingsViewModel error msgs   (settings_*_error)
+      5. MainActivity                   (main_*)
+
+    Future bundles (A13b, A13c, A13d, A13e) extend this file with the
+    remaining feature areas — see the working progress file in the
+    bundle root for the live status.
+-->
+<resources>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         App identity
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="app_name">PGPony</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Common reusable labels — used by 5+ screens
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="common_button_cancel">Отмена</string>
+    <string name="common_button_ok">OK</string>
+    <string name="common_button_save">Сохранить</string>
+    <string name="common_button_done">Готово</string>
+    <string name="common_button_close">Закрыть</string>
+    <string name="common_button_continue">Продолжить</string>
+    <string name="common_button_back">Назад</string>
+    <string name="common_button_copy">Копировать</string>
+    <string name="common_button_copy_to_clipboard">Копировать в буфер обмена</string>
+    <!-- Phase AU-3 — shared paste affordance for Encrypt / Decrypt message fields -->
+    <string name="common_paste_from_clipboard">Вставить из буфера обмена</string>
+    <string name="common_button_copied">Скопировано!</string>
+    <string name="common_button_share">Поделиться</string>
+    <string name="common_button_delete">Удалить</string>
+    <string name="common_button_retry">Повторить</string>
+    <string name="common_button_try_again">Повторить</string>
+    <string name="common_button_open">Открыть</string>
+    <string name="common_button_select">Выбрать</string>
+    <string name="common_button_select_all">Выбрать все</string>
+    <string name="common_button_clear">Очистить</string>
+    <!-- 4.0.0 Phase 9 (F6) — compact Paste label for inline editor rows -->
+    <string name="common_button_paste">Вставить</string>
+    <string name="common_button_confirm">Подтвердить</string>
+    <string name="common_button_skip">Пропустить</string>
+    <string name="common_loading">Загрузка…</string>
+    <string name="common_processing">Обработка…</string>
+    <string name="common_authenticating">Аутентификация…</string>
+    <string name="common_required_field">Обязательно</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Lock screen (Phase A11)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="lock_screen_tagline">Ваши ключи в стойле</string>
+    <string name="lock_screen_unlock_button">Разблокировать</string>
+    <string name="lock_prompt_title">Разблокировать PGPony</string>
+    <string name="lock_prompt_subtitle">Аутентифицируйтесь для доступа к ключам</string>
+    <string name="lock_error_activity_unavailable">Контекст активности недоступен.</string>
+    <string name="lock_error_biometric_unavailable">Биометрическая аутентификация недоступна. Добавьте отпечаток пальца или блокировку экрана в настройках системы.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Settings — top-level navigation
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Настройки</string>
+    <!-- RC3 §J (#20): top-level Settings category rows. -->
+    <string name="settings_category_security_title">Безопасность и конфиденциальность</string>
+    <string name="settings_category_security_subtitle">Биометрия, PIN карты, буфер обмена, хранилище паролей</string>
+    <string name="settings_category_encryption_title">Шифрование</string>
+    <string name="settings_category_encryption_subtitle">Формат письма, комментарий брони, получатель по умолчанию</string>
+    <string name="settings_category_keys_title">Ключи и серверы</string>
+    <string name="settings_category_keys_subtitle">Напоминания, серверы ключей, обновление, прокси, подключённые приложения</string>
+    <string name="settings_category_appearance_title">Оформление и язык</string>
+    <string name="settings_category_appearance_subtitle">Тема и язык</string>
+    <string name="settings_category_backup_title">Резервная копия и данные</string>
+    <string name="settings_category_backup_subtitle">Резервное копирование ключей, очистка данных приложения</string>
+    <string name="settings_category_help_title">Справка и о приложении</string>
+    <string name="settings_category_help_subtitle">Поддержка, отзывы, другое от NorseHorse</string>
+
+    <!-- ── Section headers ───────────────────────────────────────────── -->
+    <string name="settings_section_security">Безопасность</string>
+    <string name="settings_section_clipboard">Буфер обмена</string>
+    <string name="settings_section_appearance">Внешний вид</string>
+    <string name="settings_section_default_recipient">Получатель по умолчанию</string>
+    <string name="settings_default_recipient_label">Заранее выбирать получателя при шифровании</string>
+    <string name="settings_default_recipient_none">Нет</string>
+    <string name="settings_default_recipient_pinned">Закреплённый</string>
+    <string name="settings_default_recipient_last">Последний использованный</string>
+    <string name="settings_default_recipient_choose">Выберите ключ</string>
+    <string name="settings_section_pgp_output">Вывод PGP</string>
+    <string name="settings_section_reminders">Напоминания</string>
+    <string name="settings_section_key_management">Управление ключами</string>
+    <string name="settings_section_data">Данные</string>
+    <string name="settings_section_support">Поддержка</string>
+    <string name="settings_section_more">Больше от NorseHorse</string>
+    <string name="settings_more_agepony_title">AgePony</string>
+    <string name="settings_more_agepony_subtitle">Шифрование файлов в формате age</string>
+    <!-- RC3 §J: sibling-app site links. Brand names are locale-invariant; the
+         subtitles are the taglines from pony.norsehor.se and translate normally. -->
+    <string name="settings_more_ponyfamily_title">Все приложения Pony</string>
+    <string name="settings_desktop_title">PGPony для компьютера</string>
+    <string name="settings_desktop_subtitle">OpenPGP для macOS, Linux и Windows.</string>
+    <string name="update_channel_name">Обновления</string>
+    <string name="update_channel_description">Уведомляет о появлении новой загруженной вручную сборки.</string>
+    <string name="update_available_title">Доступно обновление</string>
+    <string name="update_available_text">Доступна версия PGPony %1$s. Нажмите, чтобы открыть релиз.</string>
+    <string name="settings_section_updates">Обновления</string>
+    <string name="settings_updates_toggle_title">Проверять обновления</string>
+    <string name="settings_updates_toggle_subtitle">Проверяет наличие новых релизов на GitHub и уведомляет вас. Обходит путь обновления F-Droid и ничего не загружает и не устанавливает.</string>
+    <string name="settings_updates_check_now">Проверить сейчас</string>
+    <string name="settings_updates_found">Доступно обновление: %1$s</string>
+    <string name="settings_updates_uptodate">Установлена последняя версия.</string>
+    <string name="settings_updates_failed">Не удалось проверить обновления.</string>
+    <string name="settings_more_ponyfamily_subtitle">Всё семейство на pony.norsehor.se</string>
+    <string name="settings_more_quorumpony_subtitle">Разделите секрет на карты. Любые несколько восстановят его.</string>
+    <string name="settings_more_carrierpony_subtitle">Личные сообщения и передача файлов, запечатанные сквозным шифрованием</string>
+    <string name="settings_more_burnpony_subtitle">Отправьте секрет. Зашифрован на вашем телефоне, уничтожается после прочтения</string>
+    <string name="settings_more_vaultpony_subtitle">Совместимые с VeraCrypt зашифрованные хранилища, полностью на вашем устройстве</string>
+    <string name="settings_more_passpony_subtitle">Ваше хранилище паролей и пропусков, в вашем кармане</string>
+    <string name="settings_more_relaypony_subtitle">Зашифрованная передача файлов, с телефона на телефон</string>
+    <string name="settings_more_scrubpony_subtitle">Удаляет идентифицирующие метаданные из изображений. Пиксели не меняются.</string>
+    <string name="settings_more_source_title">Движок с открытым исходным кодом</string>
+    <string name="settings_more_source_subtitle">PGPonyCore на GitHub, проверенное криптографическое ядро</string>
+    <string name="settings_more_appsource_title">Исходный код</string>
+    <string name="settings_more_appsource_subtitle">Полное приложение PGPony на GitHub</string>
+    <string name="settings_section_about">О приложении</string>
+
+    <!-- ── Pro section ──────────────────────────────────────────────── -->
+
+    <!-- ── Security section ─────────────────────────────────────────── -->
+    <string name="settings_biometric_lock_title">Биометрическая блокировка</string>
+    <string name="settings_biometric_lock_subtitle">Требовать аутентификацию для открытия приложения</string>
+    <string name="settings_biometric_decrypt_title">Требовать для расшифровки</string>
+    <string name="settings_biometric_decrypt_subtitle">Проходить аутентификацию при каждой расшифровке</string>
+    <string name="settings_biometric_unavailable_error">Сначала настройте блокировку экрана или биометрию в настройках системы.</string>
+
+    <!-- ── Clipboard section ────────────────────────────────────────── -->
+    <string name="settings_clipboard_autoclear_title">Автоочистка буфера обмена</string>
+    <string name="settings_clipboard_autoclear_subtitle">Автоматически стирать скопированное содержимое</string>
+    <string name="settings_clipboard_clear_after_label">Очищать через</string>
+    <string name="settings_clipboard_interval_30s">30 с</string>
+    <string name="settings_clipboard_interval_1m">1 мин</string>
+    <string name="settings_clipboard_interval_2m">2 мин</string>
+    <string name="settings_clipboard_interval_5m">5 мин</string>
+
+    <!-- ── PGP Output section: customizable armor comment ───────────── -->
+    <string name="settings_armor_comment_toggle_title">Включать комментарий в вывод PGP</string>
+    <string name="settings_armor_comment_toggle_subtitle">Добавлять заголовок Comment в зашифрованные и подписанные сообщения</string>
+    <string name="settings_armor_comment_field_label">Текст комментария</string>
+    <string name="settings_armor_comment_preview_format">Комментарий: %1$s</string>
+    <string name="settings_armor_comment_preview_none">Заголовок с комментарием записываться не будет</string>
+
+    <!-- ── Appearance section (Phase A12) ───────────────────────────── -->
+    <string name="settings_appearance_theme_label">Тема</string>
+    <string name="settings_appearance_theme_system">Системная</string>
+    <string name="settings_appearance_theme_light">Светлая</string>
+    <string name="settings_appearance_theme_dark">Тёмная</string>
+
+    <!-- ── Reminders section (Phase A12) ────────────────────────────── -->
+    <string name="settings_reminders_key_expiration_title">Напоминания об истечении срока ключа</string>
+    <string name="settings_reminders_key_expiration_subtitle">Получайте уведомления за 30, 7, 1 день до истечения срока ключа</string>
+    <string name="settings_reminders_permission_denied_error">Разрешение на уведомления отклонено. Напоминания не будут срабатывать, пока не будет предоставлено.</string>
+    <string name="settings_reminders_notifications_disabled_hint">Уведомления отключены в настройках системы. Откройте настройки уведомлений приложения, чтобы включить их снова.</string>
+
+    <!-- ── Key Management section ───────────────────────────────────── -->
+    <string name="settings_key_default_label">Ключ по умолчанию</string>
+    <string name="settings_key_total_keys_label">Всего ключей</string>
+    <string name="settings_key_total_pairs_label">Пары ключей</string>
+    <string name="settings_key_default_format">%1$s (%2$s)</string>
+
+    <!-- ── Data section ─────────────────────────────────────────────── -->
+    <string name="settings_data_clear_all_button">Очистить все данные</string>
+    <string name="settings_data_clear_step1_title">Очистить все данные?</string>
+    <string name="settings_data_clear_step1_body">Это безвозвратно удалит ВСЕ ключи, включая закрытые. Это нельзя отменить.</string>
+    <string name="settings_data_clear_step2_title">Вы абсолютно уверены?</string>
+    <string name="settings_data_clear_step2_body">Вы потеряете доступ ко всем зашифрованным сообщениям, которые используют эти ключи. Восстановление невозможно.</string>
+    <string name="settings_data_clear_step2_confirm">УДАЛИТЬ ВСЕ ДАННЫЕ</string>
+    <!-- RC5 P2 (#16, AraafRoyall's data loss): the clear-all gauntlet. -->
+    <string name="settings_data_clear_backup_button">Сначала сохранить резервную копию</string>
+    <string name="settings_data_clear_ack2_label">Я уверен. Удалить все ключи и все данные приложения.</string>
+    <string name="settings_data_clear_biometric_title">Подтвердите удаление всех данных</string>
+    <string name="settings_data_clear_biometric_subtitle">Аутентифицируйтесь, чтобы навсегда удалить все ключи</string>
+    <string name="settings_data_clear_key_list_header_format">Ключи, которые будут навсегда уничтожены (%1$d):</string>
+    <string name="settings_data_clear_type_word">УДАЛИТЬ</string>
+    <string name="settings_data_clear_type_label_format">Введите %1$s для подтверждения</string>
+    <string name="settings_data_clear_success">Все данные удалены</string>
+    <string name="settings_data_clear_error_format">Не удалось очистить: %1$s</string>
+
+    <!-- ── Support section ──────────────────────────────────────────── -->
+    <string name="settings_support_help_title">Справка и FAQ</string>
+    <string name="settings_support_help_subtitle">Ответы на частые вопросы</string>
+    <string name="settings_support_rate_title">Оценить PGPony в Google Play</string>
+    <string name="settings_support_rate_subtitle">Помогите другим найти приложение</string>
+    <string name="settings_support_rate_error">Не удалось открыть окно оценки</string>
+    <string name="settings_support_feedback_title">Отправить отзыв</string>
+    <string name="settings_support_feedback_subtitle">Написать разработчику напрямую</string>
+    <string name="settings_support_feedback_no_email_error">Почтовое приложение не найдено. Напишите нам на %1$s</string>
+    <string name="settings_support_privacy_title">Политика конфиденциальности</string>
+    <string name="settings_support_privacy_subtitle">Как обрабатываются ваши данные</string>
+    <string name="settings_support_browser_error">Не удалось открыть браузер</string>
+    <string name="settings_support_security_title">Безопасность и шифрование</string>
+    <string name="settings_support_security_subtitle">Как PGPony защищает ваши сообщения</string>
+
+    <!-- ── About section ────────────────────────────────────────────── -->
+    <string name="settings_about_version_label">Версия</string>
+    <string name="settings_about_compat_label">Совместимость</string>
+    <string name="settings_about_compat_value">Android 8.0+</string>
+    <string name="settings_about_openpgp_label">Стандарт OpenPGP</string>
+    <string name="settings_about_openpgp_value">RFC 4880 + 9580</string>
+    <string name="settings_about_crypto_label">Криптобиблиотека</string>
+    <string name="settings_about_crypto_value">Bouncy Castle 1.85</string>
+    <string name="settings_about_replay_onboarding_title">Показать вводный тур снова</string>
+    <string name="settings_about_replay_onboarding_subtitle">Повторить вступление при первом запуске</string>
+    <string name="settings_about_reset_tips_title">Сбросить подсказки</string>
+    <string name="settings_about_reset_tips_subtitle">Снова показывать контекстные подсказки на каждой вкладке</string>
+    <string name="settings_about_reset_tips_success">Подсказки появятся снова при переходе на каждый экран</string>
+    <string name="settings_about_footer">PGPony для Android\nот NorseHorse\npgpony.app</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         MainActivity — small UI strings (tab labels, etc.)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="main_tab_keyring">Связка ключей</string>
+    <string name="main_tab_encrypt">Зашифровать</string>
+    <string name="main_tab_decrypt">Расшифровать</string>
+    <string name="main_tab_exchange">Обмен</string>
+    <string name="main_tab_settings">Настройки</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Encrypt screen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="encrypt_screen_title">Зашифровать</string>
+
+    <!-- ── Mode picker ──────────────────────────────────────────────── -->
+    <string name="encrypt_mode_text">Текст</string>
+    <string name="encrypt_mode_file">Файл</string>
+    <string name="encrypt_mode_sign">Подписать</string>
+    <!-- RC3 §J (#16): file-only signing, promoted from a File-mode sheet to its own tab. -->
+    <string name="encrypt_mode_sign_file">Подписать файл</string>
+    <!-- RC3 §J (#16): Sign File / Verify stream the picked file from disk; these cover the two remaining failure shapes. -->
+    <string name="sign_verify_error_file_unreadable">Не удалось прочитать выбранный файл. Выберите его снова.</string>
+    <string name="verify_file_error_sig_not_signature">Этот файл слишком велик для отсоединённой подписи. Выберите файл .asc или .sig, а не подписанное содержимое.</string>
+    <string name="sign_file_save_button">Сохранить в «Файлы»</string>
+    <string name="encrypt_mode_password">Пароль</string>
+
+    <!-- ── Phase A1: symmetric / passphrase-only (Password) mode ──────── -->
+    <string name="encrypt_password_section_label">Зашифровать по паролю</string>
+    <string name="encrypt_password_hint">Ключи не нужны. Любой, у кого есть эта парольная фраза, может расшифровать сообщение — передайте её по отдельному каналу. Работает с gpg -c на другой стороне.</string>
+    <string name="encrypt_password_passphrase_label">Парольная фраза</string>
+    <string name="encrypt_password_confirm_label">Подтвердите парольную фразу</string>
+    <string name="encrypt_password_show">Показать парольную фразу</string>
+    <string name="encrypt_password_hide">Скрыть парольную фразу</string>
+
+    <!-- ── Input field labels ───────────────────────────────────────── -->
+    <string name="encrypt_input_label_message_to_sign">Сообщение для подписи</string>
+    <string name="encrypt_input_label_message_to_encrypt">Сообщение для шифрования</string>
+
+    <!-- ── Encrypt action button ────────────────────────────────────── -->
+    <string name="encrypt_action_sign">Подписать</string>
+    <string name="encrypt_action_encrypt_file">Зашифровать файл</string>
+    <string name="encrypt_action_encrypt">Зашифровать</string>
+    <string name="encrypt_action_sign_and_encrypt">Подписать и зашифровать</string>
+
+    <!-- ── Output preview headers ───────────────────────────────────── -->
+    <string name="encrypt_output_signed_message">Подписанное сообщение</string>
+    <string name="encrypt_output_encrypted_message">Зашифрованное сообщение</string>
+
+    <!-- ── Recipients section ───────────────────────────────────────── -->
+    <string name="encrypt_recipients_label">Получатели</string>
+    <string name="encrypt_recipients_choose">Выбрать получателей</string>
+    <string name="encrypt_recipients_selected_count">Выбрано: %1$d</string>
+    <string name="encrypt_recipients_no_keys">Нет доступных ключей. Сначала импортируйте или создайте ключи.</string>
+    <string name="encrypt_recipients_search_label">Поиск ключей</string>
+    <string name="encrypt_recipients_clear_search">Очистить поиск</string>
+    <string name="encrypt_recipients_select_all">Выбрать все</string>
+    <string name="encrypt_recipients_clear">Очистить</string>
+    <string name="encrypt_recipients_no_match_format">Нет ключей, соответствующих \"%1$s\".</string>
+    <string name="encrypt_recipients_remove_format">Удалить %1$s</string>
+
+    <!-- ── ASCII armor toggle ───────────────────────────────────────── -->
+    <string name="encrypt_armor_toggle_title">Вывод в ASCII-броне</string>
+    <string name="encrypt_armor_toggle_subtitle_armored">Вывод в виде текста PGP, который можно вставить в письмо или чат.</string>
+    <string name="encrypt_armor_toggle_subtitle_binary">Вывод в виде двоичного файла .pgp — сохраняется через меню \"Поделиться\".</string>
+
+    <!-- ── Sign-this-too toggle ─────────────────────────────────────── -->
+    <string name="encrypt_also_sign_message_title">Также подписать это сообщение</string>
+    <string name="encrypt_also_sign_file_title">Также подписать этот файл</string>
+    <string name="encrypt_also_sign_subtitle_format">Получатели смогут проверить, что оно от %1$s</string>
+
+    <!-- ── Sign-as picker ───────────────────────────────────────────── -->
+    <string name="encrypt_sign_as_label">Подписать как</string>
+    <string name="encrypt_sign_as_no_key">Ключ для подписи не выбран</string>
+    <string name="encrypt_sign_as_no_key_pair">Нет доступной пары ключей. Сначала создайте или импортируйте закрытый ключ.</string>
+    <string name="encrypt_sign_as_no_identity">(без идентификатора)</string>
+
+    <!-- ── Sign-only mode ───────────────────────────────────────────── -->
+    <string name="encrypt_sign_only_explainer">Создаёт сообщение с открытой подписью по RFC 4880, которое может проверить любой, у кого есть ваш открытый ключ. Без шифрования — текст доступен всем.</string>
+    <string name="encrypt_sign_detached_label">Отсоединённая подпись</string>
+    <string name="encrypt_sign_detached_explainer">Вывести отдельный блок подписи, отделённый от сообщения.</string>
+    <string name="result_save_as_file_button">Сохранить как файл</string>
+    <string name="result_save_signed_message_button">Сохранить подписанное сообщение</string>
+    <string name="result_save_saved_note">Сохранено.</string>
+    <string name="result_save_message_saved_note">Подписанное сообщение сохранено.</string>
+    <string name="result_save_failed_note">Не удалось сохранить файл.</string>
+
+    <!-- ── File picker (encrypt) ────────────────────────────────────── -->
+    <string name="encrypt_file_choose">Выберите файл для шифрования</string>
+    <string name="encrypt_file_any_type">Поддерживаются любые типы файлов</string>
+    <string name="encrypt_file_choose_different">Выбрать другой файл</string>
+    <string name="encrypt_file_remove">Удалить файл</string>
+
+    <!-- ── Passphrase dialog (encrypt-side / sign) ──────────────────── -->
+    <string name="encrypt_passphrase_dialog_title">Требуется парольная фраза</string>
+    <string name="encrypt_passphrase_label">Парольная фраза</string>
+    <string name="encrypt_passphrase_intro">Этот ключ для подписи защищён парольной фразой. </string>
+    <string name="encrypt_passphrase_intro_sign">Введите её, чтобы подписать сообщение.</string>
+    <string name="encrypt_passphrase_intro_file">Введите её, чтобы зашифровать и подписать файл.</string>
+    <string name="encrypt_passphrase_intro_text">Введите её, чтобы зашифровать и подписать сообщение.</string>
+    <string name="encrypt_passphrase_skip_signing_file">Зашифровать файл без подписи</string>
+    <string name="encrypt_passphrase_skip_signing">Зашифровать без подписи</string>
+
+    <!-- ── Inline tooltip ───────────────────────────────────────────── -->
+    <string name="encrypt_tooltip_input">Введите или вставьте сообщение сверху, выберите одного или нескольких получателей ниже, затем нажмите \"Зашифровать\", чтобы получить шифртекст, который можно скопировать и отправить куда угодно.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Decrypt screen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="decrypt_screen_title">Расшифровать</string>
+
+    <!-- ── Mode picker ──────────────────────────────────────────────── -->
+    <string name="decrypt_mode_text">Текст</string>
+    <string name="decrypt_mode_file">Файл</string>
+
+    <!-- ── Input fields ─────────────────────────────────────────────── -->
+    <string name="decrypt_input_paste_label">Вставьте зашифрованное или подписанное сообщение</string>
+    <string name="decrypt_passphrase_optional_label">Парольная фраза (если ключ защищён)</string>
+
+    <!-- ── Key picker ───────────────────────────────────────────────── -->
+    <string name="decrypt_with_key_label">Расшифровать с помощью</string>
+    <string name="decrypt_password_message_note">Сообщение, зашифрованное паролем. Введите парольную фразу для расшифровки.</string>
+    <string name="decrypt_password_passphrase_label">Парольная фраза</string>
+    <string name="decrypt_card_key_indicator">АППАРАТНЫЙ КЛЮЧ</string>
+    <!-- Phase AU-1 — Decrypt "Decrypt With" searchable key picker -->
+    <string name="decrypt_picker_title">Расшифровать с помощью</string>
+    <string name="decrypt_picker_choose">Выберите ключ</string>
+    <string name="decrypt_picker_search">Поиск ключей</string>
+    <string name="decrypt_picker_group_hardware">Аппаратные ключи</string>
+    <string name="decrypt_picker_group_software">Ключи</string>
+    <string name="decrypt_picker_none">Нет ключей, соответствующих запросу</string>
+    <string name="decrypt_key_row_format">%1$s (%2$s)</string>
+    <string name="decrypt_no_key_pairs">Нет доступных пар ключей. Сначала создайте или импортируйте закрытый ключ.</string>
+
+    <!-- ── Decrypt action button ────────────────────────────────────── -->
+    <string name="decrypt_action_decrypt_file">Расшифровать файл</string>
+    <string name="decrypt_action_decrypt">Расшифровать</string>
+    <string name="verify_file_entry_button">Проверить файл</string>
+    <string name="sign_file_entry_button">Подписать файл</string>
+    <string name="sign_file_sheet_title">Подписать файл</string>
+    <string name="sign_file_sheet_subtitle">Выберите файл и ключ для подписи, чтобы создать отдельную отсоединённую подпись, которой можно поделиться вместе с ним.</string>
+    <string name="sign_file_pick_label">Выберите файл для подписи</string>
+    <string name="sign_file_sign_with_format">Подписать ключом: %1$s</string>
+    <string name="sign_file_sign_with_none">Выбрать ключ для подписи</string>
+    <string name="sign_file_format_armored">.asc (armored)</string>
+    <string name="sign_file_format_binary">.sig (двоичный)</string>
+    <string name="sign_file_passphrase_label">Парольная фраза (если ключ защищён)</string>
+    <string name="sign_file_sign_button">Подписать</string>
+    <string name="sign_file_share_button">Поделиться подписью</string>
+    <string name="sign_file_error_pick_file">Выберите файл для подписи.</string>
+    <string name="sign_file_error_pick_key">Выберите ключ для подписи.</string>
+    <string name="sign_file_error_passphrase_required">Этот ключ защищён парольной фразой. Введите парольную фразу.</string>
+    <string name="sign_file_error_failed_format">Не удалось подписать: %1$s</string>
+    <string name="verify_file_sheet_title">Проверить файл</string>
+    <string name="verify_file_sheet_subtitle">Выберите исходный файл и его отсоединённую подпись (.sig или .asc), чтобы узнать, кто его подписал.</string>
+    <string name="verify_file_pick_signed_label">Выбрать исходный файл</string>
+    <string name="verify_file_pick_signature_label">Выберите подпись (.sig/.asc)</string>
+    <string name="verify_file_verify_button">Проверить</string>
+    <string name="verify_file_error_pick_both">Выберите и исходный файл, и его подпись.</string>
+
+    <!-- ── File picker (decrypt) ────────────────────────────────────── -->
+    <string name="decrypt_file_choose">Выбрать зашифрованный файл</string>
+    <string name="decrypt_file_types">Файлы .pgp, .gpg, .asc</string>
+
+    <!-- ── Output preview headers ───────────────────────────────────── -->
+    <string name="decrypt_output_decrypted">Расшифрованное сообщение</string>
+    <string name="decrypt_output_verified">Проверенное содержимое</string>
+    <string name="decrypt_output_signed">Подписанное содержимое</string>
+
+    <!-- ── Passphrase dialog (decrypt-side) ─────────────────────────── -->
+    <string name="decrypt_passphrase_dialog_title">Требуется парольная фраза</string>
+    <string name="decrypt_passphrase_explainer">Этот ключ защищён парольной фразой.</string>
+
+    <!-- ── Biometric gate ───────────────────────────────────────────── -->
+    <string name="decrypt_biometric_prompt_title">Аутентификация для расшифровки</string>
+    <string name="decrypt_biometric_prompt_subtitle">Подтвердите личность для доступа к сообщению</string>
+
+    <!-- ── Inline tooltip ───────────────────────────────────────────── -->
+    <string name="decrypt_tooltip_paste">Вставьте сюда зашифрованное сообщение — оно начинается с -----BEGIN PGP MESSAGE-----. PGPony определит, какой из ваших ключей может его расшифровать.</string>
+
+    <!-- ── Decrypted text clipboard label (passed to ClipboardService) ─ -->
+    <string name="decrypt_clipboard_label">Расшифрованное сообщение</string>
+    <!-- 4.1.0, issue #10: long output is held back from first paint. -->
+    <string name="output_truncated_notice">Только предпросмотр: первые %1$d из %2$d символов. Копирование берёт всё целиком; откройте полный текст, чтобы выделить его часть.</string>
+    <string name="output_open_full">Открыть полный текст</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Result sheets (EncryptionResultScreen, FileDecryptionResultScreen)
+         ════════════════════════════════════════════════════════════════ -->
+
+    <!-- ── Encryption result sheet ──────────────────────────────────── -->
+    <string name="result_encrypt_header_signed">Сообщение подписано</string>
+    <string name="result_encrypt_header_encrypted">Сообщение зашифровано</string>
+    <string name="result_encrypt_badge_signed">Подписано</string>
+    <string name="result_encrypt_unsigned_pqc_note">Отправлено без подписи: вы не добавили постквантовую подпись, так как у получателя старый ключ v4. Сообщение по-прежнему зашифровано для всех.</string>
+    <string name="pqc_v4_sign_title">Некоторые получатели могут не прочитать эту подпись</string>
+    <string name="pqc_v4_sign_message">Ваш ключ подписи постквантовый (ML-DSA), а у одного или нескольких получателей старый ключ v4. PGPony читает такую подпись, но GnuPG показывает сообщение с ошибкой, а Thunderbird вообще не может его открыть.</string>
+    <string name="pqc_v4_sign_anyway">Всё равно подписать</string>
+    <string name="pqc_v4_send_unsigned">Отправить без подписи</string>
+    <string name="result_encrypt_output_signed">Подписанный вывод</string>
+    <string name="result_encrypt_output_encrypted">Зашифрованный результат</string>
+    <string name="result_encrypt_can_decrypt_label">Может расшифровывать</string>
+    <string name="result_encrypt_clipboard_label_signed">Подписанное сообщение</string>
+    <string name="result_encrypt_clipboard_label_encrypted">Зашифрованное сообщение</string>
+    <string name="result_encrypt_share_chooser_signed">Поделиться подписанным сообщением</string>
+    <string name="result_encrypt_share_chooser_encrypted">Поделиться зашифрованным сообщением</string>
+
+    <!-- ── File decryption result sheet ─────────────────────────────── -->
+    <string name="result_file_decrypt_default_filename">decrypted_output</string>
+    <string name="result_file_decrypt_header">Файл расшифрован</string>
+    <string name="result_file_decrypt_badge_preview">Предпросмотр</string>
+    <string name="result_file_decrypt_save_button">Сохранить в «Файлы»</string>
+    <string name="result_file_decrypt_save_failed_fallback">Не удалось сохранить</string>
+    <string name="result_file_decrypt_share_button">Поделиться расшифрованным файлом</string>
+    <string name="result_file_decrypt_share_chooser">Поделиться расшифрованным файлом</string>
+    <string name="result_file_decrypt_share_failed_fallback">Не удалось поделиться</string>
+    <string name="result_file_decrypt_saved_status">Успешно сохранено</string>
+
+    <!-- ── Clipboard auto-clear countdown (Phase A12) ───────────────── -->
+    <string name="clipboard_will_clear_in_format">Буфер обмена очистится через %1$d с</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         EncryptDecryptViewModel — error and status messages
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="encdec_error_sign_no_input">Введите сообщение для подписи</string>
+    <string name="encdec_error_encrypt_no_input">Введите сообщение для шифрования</string>
+    <string name="encdec_error_no_recipients">Выберите хотя бы одного получателя</string>
+    <string name="encdec_error_password_required">Введите парольную фразу</string>
+    <string name="encdec_error_password_mismatch">Парольные фразы не совпадают</string>
+    <string name="encdec_error_no_file_to_encrypt">Сначала выберите файл для шифрования</string>
+    <string name="encdec_error_no_file_to_decrypt">Сначала выберите зашифрованный файл для расшифровки</string>
+    <!-- 4.0.5 — shown for a moment after a provider card operation succeeds,
+         while NFC reader mode is deliberately still held. See issue #7. -->
+    <string name="provider_cardop_done_remove_card">Готово. Можно извлечь ключ.</string>
+    <!-- 4.0.4 — byte progress for a streamed file operation, e.g. "12.4 MB of 105 MB". -->
+    <string name="encdec_progress_format">%1$s из %2$s</string>
+    <!-- 4.0.4 — card operations hold the NFC session open for the whole
+         operation, so they cannot stream and still need the file buffered. -->
+    <string name="encdec_error_file_too_large_for_card">Этот файл слишком велик, чтобы открыть его аппаратным ключом на этом устройстве. Для файлов такого размера используйте программный ключ.</string>
+    <!-- 4.0.4 — last-resort message if even the streaming path runs out of memory. -->
+    <string name="encdec_error_file_too_large">Этот файл слишком велик для доступной памяти. Попробуйте закрыть другие приложения и повторить.</string>
+    <string name="encdec_error_no_decrypt_input">Вставьте зашифрованное или подписанное сообщение</string>
+    <string name="encdec_error_incorrect_passphrase">Неверная парольная фраза</string>
+    <string name="encdec_error_incorrect_passphrase_retry">Неверная парольная фраза. Попробуйте снова.</string>
+    <string name="encdec_error_signing_failed_format">Не удалось подписать: %1$s</string>
+    <string name="encdec_error_encryption_failed_format">Не удалось зашифровать: %1$s</string>
+    <string name="encdec_error_decryption_failed_format">Не удалось расшифровать: %1$s</string>
+    <string name="encdec_error_detached_signature">Похоже, это отдельная отсоединённая подпись. Вставьте рядом с ней подписанное содержимое для проверки или используйте проверку файла (появится в следующем обновлении).</string>
+    <string name="encdec_error_not_pgp_message">Не удалось распознать это как сообщение PGP. Убедитесь, что вы вставили весь блок целиком, включая строки-маркеры BEGIN и END.</string>
+    <string name="encdec_error_signer_not_in_keyring">Не удалось проверить подпись — ключа подписавшего может не быть в вашей связке ключей</string>
+    <string name="encdec_error_keyserver_network">Ошибка сети при обращении к keys.openpgp.org</string>
+    <string name="encdec_error_keyserver_parse_format">Не удалось разобрать найденный ключ: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Keyring screen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="keyring_title">Связка ключей</string>
+    <string name="keyring_add_key_cd">Добавить ключ</string>
+    <string name="keyring_section_my_keys">Мои ключи</string>
+    <!-- 4.1.0 Phase 12b — "Contact Keys" split in two. Contacts are the
+         public keys with an Android contact linked; Public Keys are the
+         rest. The old key is renamed rather than left orphaned, and the
+         translations still carry the old wording until Phase 12b's
+         translation pass. -->
+    <string name="keyring_section_contacts">Контакты</string>
+    <string name="keyring_section_public_keys">Открытые ключи</string>
+
+    <!-- ── Delete confirmation ──────────────────────────────────────── -->
+    <string name="keyring_delete_dialog_title">Удалить ключ?</string>
+    <string name="keyring_delete_dialog_body_format">Удалить %1$s (%2$s)? Ключ перемещается в «Недавно удалённые» на %3$d дн., затем удаляется навсегда. До этого момента вы можете его восстановить.</string>
+    <string name="keyring_delete_dialog_confirm">Удалить</string>
+
+    <!-- ── First-visit tooltip ──────────────────────────────────────── -->
+    <string name="keyring_tooltip_fab">Нажмите кнопку + в правом нижнем углу, чтобы создать первую пару ключей или импортировать существующую.</string>
+
+    <!-- ── 4.2.0 RC2 workstream F: legacy composite regeneration hint ─
+         Shown once (dismissible) per affected key. These are LibrePGP
+         composite (ML-KEM+X25519/X448) keys generated before the RC2 wire
+         fixes; their ECC point uses an encoding gpg cannot encrypt to. -->
+    <plurals name="keyring_regen_hint_title">
+        <item quantity="one">%1$d ключ требует повторной генерации</item>
+        <item quantity="few">%1$d ключа требуют повторной генерации</item>
+        <item quantity="many">%1$d ключей требуют повторной генерации</item>
+        <item quantity="other">%1$d ключа требует повторной генерации</item>
+    </plurals>
+    <string name="keyring_regen_hint_body">Создан до исправления формата передачи в этом выпуске, поэтому gpg не может шифровать для него. Создайте новый постквантовый ключ ему на замену.</string>
+    <string name="keyring_regen_hint_dismiss_cd">Закрыть</string>
+
+    <!-- ── Generate Key sheet ───────────────────────────────────────── -->
+    <string name="keyring_generate_title">Создать пару ключей</string>
+    <string name="keyring_generate_name_label">Имя</string>
+    <string name="keyring_generate_email_label">Эл. почта</string>
+    <string name="keyring_generate_algorithm_label">Алгоритм</string>
+    <string name="keyring_generate_algorithm_caption_v6">OpenPGP v6 (RFC 9580). Современный формат с отдельным подключом для подписи и поддержкой аппаратных ключей. Выберите тип v4, если ваши получатели используют более старое ПО.</string>
+    <string name="keyring_generate_algorithm_caption_ed25519">Быстрые компактные ключи на эллиптических кривых (OpenPGP v4). Широко поддерживаются — хороший вариант по умолчанию.</string>
+    <string name="keyring_generate_algorithm_caption_rsa">Классические ключи RSA (OpenPGP v4). Максимальная совместимость; больше и медленнее, чем Ed25519.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_ietf">Постквантовый гибрид: ML-KEM плюс эллиптическая кривая на современном ключе v6, по RFC 9980 — постквантовому стандарту OpenPGP. Устойчив к квантовым атакам; читается только актуальным ПО OpenPGP. ML-KEM-1024 — вариант повышенной стойкости.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_librepgp">Постквантовый гибрид: ML-KEM (алгоритм, который GnuPG всё ещё называет Kyber) плюс эллиптическая кривая, в формате LibrePGP, используемом GnuPG 2.5.x. gpg показывает эти ключи как ky768_cv25519 и ky1024_cv448. ML-KEM-1024 — вариант повышенной стойкости.</string>
+    <string name="keyring_generate_expiration_label">Срок действия</string>
+    <string name="keyring_generate_passphrase_label">Парольная фраза (необязательно)</string>
+    <string name="keyring_generate_passphrase_confirm_label">Подтвердите парольную фразу</string>
+    <string name="keyring_generate_button">Создать пару ключей</string>
+    <string name="keyring_generate_button_in_progress">Создание…</string>
+
+    <!-- ── KeyringViewModel error / success messages ────────────────── -->
+    <string name="keyring_error_refresh_failed_format">Не удалось обновить: %1$s</string>
+    <string name="keyring_error_name_required">Требуется имя</string>
+    <string name="keyring_error_email_required">Требуется действительный адрес эл. почты</string>
+    <string name="keyring_error_passphrase_mismatch">Парольные фразы не совпадают</string>
+    <string name="keyring_status_key_generated">Пара ключей успешно создана</string>
+    <string name="keyring_error_generation_failed_format">Не удалось создать: %1$s</string>
+    <string name="keyring_error_no_key_data">Нет данных ключа — вставьте, выберите файл, отсканируйте или найдите</string>
+    <string name="keyring_error_couldnt_parse_key">Не удалось разобрать ключ — убедитесь, что armored-блок полный</string>
+    <string name="keyring_error_search_no_email_or_fp">Введите адрес эл. почты или отпечаток</string>
+    <string name="keyring_error_search_no_match_format">Ключ для \"%1$s\" не найден</string>
+    <string name="keyring_error_search_failed_format">Не удалось выполнить поиск: %1$s</string>
+    <string name="keyring_status_key_upgraded">Ключ дополнен закрытым материалом</string>
+    <string name="keyring_error_import_failed_format">Не удалось импортировать: %1$s</string>
+    <string name="keyring_error_no_armored_text">Вставьте armored-ключ PGP</string>
+    <string name="keyring_status_key_deleted">Ключ удалён</string>
+    <string name="keyring_error_delete_failed_format">Не удалось удалить: %1$s</string>
+
+    <!-- ── ImportMethod enum (KeyringViewModel) ─────────────────────── -->
+    <string name="import_method_paste">Вставить</string>
+    <string name="import_method_file">Файл</string>
+    <string name="import_method_qr_code">QR</string>
+    <string name="import_method_key_server">Сервер</string>
+
+    <!-- ── ExpirationOption enum (KeyringViewModel) ─────────────────── -->
+    <string name="expiration_one_year">1 год</string>
+    <string name="expiration_two_years">2 года</string>
+    <string name="expiration_five_years">5 лет</string>
+    <string name="expiration_never">Никогда</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Import Key screen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="import_screen_title">Импортировать ключ</string>
+
+    <!-- ── Paste tab ────────────────────────────────────────────────── -->
+    <string name="import_paste_label">Вставьте armored-ключ PGP</string>
+    <string name="import_paste_placeholder">-----BEGIN PGP PUBLIC KEY BLOCK-----\n…</string>
+    <string name="import_preview_button">Предпросмотр</string>
+    <!-- Phase AU-2 — prominent paste action on the Import → Paste tab -->
+    <string name="import_paste_from_clipboard">Вставить из буфера обмена</string>
+
+    <!-- ── File tab ─────────────────────────────────────────────────── -->
+    <string name="import_file_choose_title">Выбрать файл ключа</string>
+    <string name="import_file_choose_subtitle">.asc, .gpg, .pgp, .key — экспортированные из PGPony, GnuPG и т. п.</string>
+    <string name="import_file_browse_button">Обзор</string>
+
+    <!-- ── QR tab ───────────────────────────────────────────────────── -->
+    <string name="import_qr_title">Сканировать QR-код</string>
+    <string name="import_qr_subtitle">Наведите камеру на QR-код ключа PGP, созданный на вкладке «Обмен» на другом телефоне.</string>
+    <string name="import_qr_open_camera_button">Открыть камеру</string>
+
+    <!-- ── Key server tab ───────────────────────────────────────────── -->
+    <string name="import_keyserver_query_label">Эл. почта или отпечаток</string>
+    <string name="import_keyserver_query_placeholder">alice@example.com</string>
+    <string name="import_keyserver_search_button">Поиск</string>
+    <string name="import_keyserver_search_button_in_progress">Поиск…</string>
+    <string name="import_keyserver_help">Для адресов электронной почты PGPony сначала пробует Web Key Directory в собственном домене получателя, затем настроенные вами серверы ключей (сначала keys.pgpony.app), затем keys.openpgp.org. Отпечатки пропускают WKD и ищут по вашим серверам ключей в том же порядке.</string>
+
+    <!-- ── Preview card ─────────────────────────────────────────────── -->
+    <string name="import_preview_type_key_pair">Пара ключей (открытый + закрытый)</string>
+    <string name="import_preview_type_public_only">Только открытый ключ</string>
+    <string name="import_preview_detail_user_label">Пользователь</string>
+    <string name="import_preview_detail_user_empty">(нет)</string>
+    <string name="import_preview_detail_fingerprint_label">Отпечаток</string>
+    <string name="import_preview_detail_algorithm_label">Алгоритм</string>
+    <string name="import_preview_source_file_format">Из файла: %1$s</string>
+    <string name="import_preview_source_wkd_advanced">Найдено через WKD (расширенный)</string>
+    <string name="import_preview_source_wkd_direct">Найдено через WKD (прямой)</string>
+    <string name="import_preview_source_hagrid">Найдено через keys.openpgp.org</string>
+    <string name="import_preview_source_keyserver">Найдено через ваши серверы ключей</string>
+
+    <!-- ── Duplicate banner ─────────────────────────────────────────── -->
+    <string name="import_duplicate_will_upgrade">Этот ключ уже есть в вашей связке ключей. Импорт добавит закрытый материал и обновит его до пары ключей.</string>
+    <string name="import_duplicate_no_change">Этот ключ уже есть в вашей связке ключей. Повторный импорт ничего не изменит.</string>
+    <string name="import_duplicate_will_pair_card">Это соответствует аппаратному ключу в вашей связке ключей. Импорт свяжет этот открытый ключ с картой, чтобы вы могли шифровать для него и проверять его подписи.</string>
+
+    <!-- ── 4.0.0 Phase 1: duplicate-import merge + alert (iOS v7.1.1 F3) ── -->
+    <string name="import_duplicate_will_merge">Этот ключ уже есть в вашей связке ключей. Импорт объединит все более новые данные ключа с существующей записью.</string>
+    <string name="import_duplicate_alert_title">Уже в связке</string>
+    <string name="import_duplicate_alert_body_format">Ключ для %1$s уже есть в вашей связке ключей, и импортируемая копия не содержит ничего нового.</string>
+    <string name="import_duplicate_view_key">Показать ключ</string>
+    <string name="import_result_merged">Этот ключ уже был в вашей связке ключей. Он обновлён более новым материалом ключа.</string>
+    <string name="import_result_already_in_keyring">Этот ключ уже в вашей связке ключей.</string>
+
+    <!-- ── Confirm/cancel buttons (preview card) ────────────────────── -->
+    <string name="import_button_upgrade_key">Обновить ключ</string>
+    <string name="import_button_import_key">Импортировать ключ</string>
+    <string name="import_button_pair_card">Связать с аппаратным ключом</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Key Detail screen + sections
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="key_detail_title">Сведения о ключе</string>
+    <string name="key_detail_back_cd">Назад</string>
+    <string name="key_detail_error_key_not_found">Ключ не найден</string>
+
+    <!-- ── Type + DEFAULT badge ─────────────────────────────────────── -->
+    <string name="key_detail_type_key_pair">Пара ключей</string>
+    <string name="key_detail_type_public_key">Открытый ключ</string>
+    <string name="key_detail_badge_default">ПО УМОЛЧАНИЮ</string>
+
+    <!-- ── Fingerprint section ──────────────────────────────────────── -->
+    <string name="key_detail_section_fingerprint">Отпечаток</string>
+    <string name="key_detail_fingerprint_copied">Скопировано!</string>
+    <string name="key_detail_fingerprint_tap_to_copy">Нажмите, чтобы скопировать</string>
+
+    <!-- ── Details section ──────────────────────────────────────────── -->
+    <string name="key_detail_section_details">Подробности</string>
+    <string name="key_detail_detail_algorithm">Алгоритм</string>
+    <string name="key_detail_detail_format">Формат</string>
+    <string name="key_detail_detail_format_v6">OpenPGP v6 · RFC 9580</string>
+    <string name="key_detail_detail_format_v4">OpenPGP v4 · RFC 4880</string>
+    <string name="key_detail_detail_created">Создан</string>
+    <string name="key_detail_detail_drive_backup">Резервная копия на Диске</string>
+    <string name="key_detail_detail_drive_backup_enabled">Включено</string>
+    <string name="key_detail_detail_key_server">Сервер ключей</string>
+    <string name="key_detail_detail_key_server_published">Опубликован</string>
+    <string name="key_detail_detail_expires">Истекает</string>
+    <string name="key_detail_detail_expires_never">Никогда</string>
+
+    <!-- ── Trust ───────────────────────────────────────────────────── -->
+    <string name="key_detail_trust_level_label">Уровень доверия</string>
+
+    <!-- ── Contact section ─────────────────────────────────────────── -->
+    <string name="key_detail_section_contact">Контакт</string>
+    <string name="key_detail_contact_linked">Связано с контактами</string>
+    <string name="key_detail_contact_linked_cd">Связано</string>
+
+    <!-- ── Notes section ───────────────────────────────────────────── -->
+    <string name="key_detail_section_notes">Заметки</string>
+
+    <!-- ── Action menu labels (display text) ───────────────────────── -->
+    <string name="key_detail_action_change_trust">Изменить уровень доверия</string>
+    <string name="key_detail_action_add_notes">Добавить заметки…</string>
+    <string name="key_detail_action_edit_notes">Изменить заметки…</string>
+    <string name="key_detail_action_link_contact">Связать с контактом</string>
+    <string name="key_detail_action_auto_match_email">Автосопоставление по эл. почте</string>
+    <string name="key_detail_action_unlink_contact">Отвязать контакт</string>
+    <string name="key_detail_action_share_public_key">Поделиться открытым ключом</string>
+    <string name="key_detail_action_set_as_default">Сделать ключом по умолчанию</string>
+    <string name="key_detail_action_upload_to_key_server">Загрузить на сервер ключей</string>
+    <string name="key_detail_last_uploaded_label">Последняя загрузка</string>
+    <string name="key_detail_last_checked_label">Последняя проверка</string>
+    <string name="key_detail_timestamp_never">Никогда</string>
+    <string name="key_detail_action_check_key_server">Проверить сервер ключей</string>
+    <string name="kd_vm_check_found">Этот ключ опубликован на сервере ключей.</string>
+    <string name="kd_vm_check_not_found">Этот ключ не найден на сервере ключей.</string>
+    <string name="kd_vm_check_failed_format">Не удалось проверить сервер ключей: %1$s</string>
+
+    <!-- ── 4.0.0 Phase 2: keyserver refresh + User IDs (iOS v7.1.1 F4/F5) ── -->
+    <string name="key_detail_action_refresh_key_server">Обновить с сервера ключей</string>
+    <string name="kd_vm_refresh_up_to_date">Этот ключ синхронизирован с сервером ключей.</string>
+    <string name="kd_vm_refresh_merged">Обновлено. Этот ключ обновлён более новым материалом с сервера ключей.</string>
+    <string name="kd_vm_refresh_revoked">Копия этого ключа на сервере ключей отозвана. Отзыв применён.</string>
+    <string name="kd_vm_refresh_mismatch">Сервер ключей вернул ключ, отпечаток которого не совпадает с этим ключом. Ничего не изменено.</string>
+    <string name="kd_vm_refresh_failed_format">Не удалось обновить с сервера ключей: %1$s</string>
+    <string name="key_detail_userids_title">Идентификаторы пользователя</string>
+    <string name="key_detail_userids_primary">ОСНОВНОЙ</string>
+
+    <!-- ── 4.2.0 RC3 workstream I (#29): add/revoke/promote User IDs ── -->
+    <string name="key_detail_userids_make_primary">Сделать основным</string>
+    <string name="key_detail_userids_revoke">Отозвать</string>
+    <string name="key_detail_userids_add_action">Добавить User ID…</string>
+    <string name="key_detail_add_userid_sheet_title">Добавить идентификатор пользователя</string>
+    <string name="key_detail_add_userid_sheet_subtitle">Новая личность для %1$s</string>
+    <string name="key_detail_add_userid_name_label">Имя</string>
+    <string name="key_detail_add_userid_email_label">Эл. почта</string>
+    <string name="key_detail_add_userid_make_primary_label">Сделать основным User ID</string>
+    <string name="key_detail_add_userid_passphrase_label">Парольная фраза</string>
+    <string name="key_detail_add_userid_apply">Добавить идентификатор пользователя</string>
+    <string name="key_detail_notations_title">Нотации</string>
+    <string name="key_detail_notations_empty">На этом ключе нет нотаций.</string>
+    <string name="key_detail_notations_edit_action">Изменить нотации</string>
+    <string name="key_detail_notations_sheet_title">Изменить нотации</string>
+    <string name="key_detail_notations_sheet_subtitle">Нотации, привязанные к основной личности %1$s.</string>
+    <string name="key_detail_notations_sheet_empty">Пока нет нотаций. Добавьте одну ниже.</string>
+    <string name="key_detail_notations_name_label">Имя</string>
+    <string name="key_detail_notations_value_label">Значение</string>
+    <string name="key_detail_notations_remove_row">Удалить</string>
+    <string name="key_detail_notations_add_row">Добавить нотацию</string>
+    <string name="key_detail_notations_name_hint">Имя каждой нотации должно содержать @ и иметь значение, например use@example.com.</string>
+    <string name="key_detail_notations_apply">Сохранить нотации</string>
+    <string name="key_detail_notations_failed">Не удалось обновить нотации</string>
+    <string name="key_detail_add_userid_failed">Не удалось добавить User ID. Попробуйте ещё раз.</string>
+    <string name="key_detail_userid_action_sheet_title_revoke">Отозвать идентификатор пользователя</string>
+    <string name="key_detail_userid_action_sheet_title_make_primary">Сделать основным User ID</string>
+    <string name="key_detail_userid_action_sheet_subtitle_revoke">%1$s будет помечен как отозванный. Это нельзя отменить.</string>
+    <string name="key_detail_userid_action_sheet_subtitle_make_primary">%1$s станет основной личностью на этом ключе.</string>
+    <string name="key_detail_userid_action_passphrase_label">Парольная фраза</string>
+    <string name="key_detail_userid_action_apply_revoke">Отозвать</string>
+    <string name="key_detail_userid_action_apply_make_primary">Сделать основным</string>
+    <string name="key_detail_userid_action_failed">Не удалось выполнить это действие. Попробуйте ещё раз.</string>
+
+    <!-- ── 4.2.0 RC3 workstream G (§11.2): Subkeys section ──────────── -->
+    <string name="key_detail_subkeys_title">Подключи</string>
+    <string name="key_detail_subkeys_key_id_format">ID ключа: %1$s</string>
+    <string name="key_detail_subkeys_created_expires_format">Создан %1$s, истекает %2$s</string>
+    <string name="key_detail_subkeys_created_no_expiry_format">Создан %1$s, никогда не истекает</string>
+    <string name="key_detail_subkeys_card_backed_badge">На карте</string>
+
+    <!-- ── 4.2.0 RC3 workstream H (§17.2): Add Subkey sheet ──────────── -->
+    <string name="key_detail_subkeys_add_action">Добавить подключ…</string>
+    <string name="key_detail_add_subkey_sheet_title">Добавить подключ</string>
+    <string name="key_detail_add_subkey_sheet_subtitle">Новый подключ для %1$s</string>
+    <string name="key_detail_add_subkey_type_label">Тип ключа</string>
+    <string name="key_detail_add_subkey_expiry_label">Срок действия</string>
+    <string name="key_detail_add_subkey_passphrase_label">Парольная фраза</string>
+    <string name="key_detail_add_subkey_apply">Добавить подключ</string>
+    <string name="key_detail_add_subkey_failed">Не удалось добавить подключ. Попробуйте ещё раз.</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_sign">RSA 2048 (подпись)</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_encrypt">RSA 2048 (шифрование)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_sign">RSA 4096 (подпись)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_encrypt">RSA 4096 (шифрование)</string>
+    <string name="key_detail_add_subkey_type_ed25519_sign">Ed25519 (подпись)</string>
+    <string name="key_detail_add_subkey_type_x25519_encrypt">X25519 (Шифрование)</string>
+    <string name="key_detail_action_delete_key">Удалить ключ</string>
+    <string name="key_detail_action_revoke_key">Отозвать ключ…</string>
+    <string name="key_detail_action_export_revocation_cert">Экспортировать сертификат отзыва</string>
+    <string name="key_detail_action_export_private_key">Экспортировать закрытый ключ</string>
+    <string name="key_detail_action_show_qr_code">Показать QR-код</string>
+
+    <!-- ── Unlink Contact dialog ───────────────────────────────────── -->
+    <string name="key_detail_unlink_dialog_title">Отвязать контакт</string>
+    <string name="key_detail_unlink_dialog_body_format">Убрать связь между этим ключом и %1$s? Сам ключ не будет удалён.</string>
+    <string name="key_detail_unlink_dialog_this_contact_fallback">этот контакт</string>
+    <string name="key_detail_unlink_dialog_confirm">Отвязать</string>
+
+    <!-- ── Delete dialog ───────────────────────────────────────────── -->
+    <string name="key_detail_delete_dialog_title">Удалить ключ</string>
+    <string name="key_detail_delete_dialog_body_key_pair">И ваш открытый, и закрытый ключ будут удалены навсегда.</string>
+    <string name="key_detail_delete_dialog_body_public_only">Этот ключ перемещается в «Недавно удалённые» на %1$d дн., затем удаляется навсегда. До этого момента вы можете его восстановить.</string>
+    <string name="key_detail_delete_dialog_confirm">Удалить</string>
+    <!-- RC3 §L (#21): key-pair delete safeguards sheet. -->
+    <string name="key_delete_sheet_title">Удалить пару ключей?</string>
+    <string name="key_delete_sheet_body">Этот ключ перемещается в «Недавно удалённые» на %1$d дн., затем уничтожается навсегда. До этого момента вы можете его восстановить. После уничтожения ничего зашифрованного для него уже нельзя будет расшифровать — ни вам, ни кому-либо ещё.</string>
+    <string name="key_delete_backup_button">Сначала сохранить резервную копию (.asc)</string>
+    <string name="key_delete_ack_label">Я понимаю, что он будет уничтожен после окончания периода восстановления</string>
+    <string name="key_delete_confirm_button">Удалить пару ключей</string>
+    <string name="key_delete_backed_up_on">В резервной копии от %1$s</string>
+    <string name="key_delete_never_backed_up">Резервных копий не было. Сначала сохраните резервную копию, если она может понадобиться.</string>
+    <string name="settings_section_keys">Ключи</string>
+    <string name="settings_recycle_bin_title">Недавно удалённые</string>
+    <string name="settings_recycle_bin_subtitle">Восстановить или окончательно удалить удалённые ключи</string>
+    <string name="recycle_bin_title">Недавно удалённые</string>
+    <string name="recycle_bin_empty_state">Здесь пусто. Удалённые ключи хранятся %1$d дн. до уничтожения.</string>
+    <string name="recycle_bin_empty_action">Очистить корзину</string>
+    <string name="recycle_bin_restore">Восстановить</string>
+    <string name="recycle_bin_delete_now">Удалить навсегда</string>
+    <string name="recycle_bin_deleted_on">Удалено %1$s</string>
+    <string name="recycle_bin_purge_confirm_body">Уничтожить этот ключ навсегда? Это действие нельзя отменить.</string>
+    <string name="recycle_bin_empty_confirm_body">Уничтожить навсегда все ключи в корзине? Это действие нельзя отменить.</string>
+    <string name="recycle_bin_restored">Ключ восстановлен</string>
+    <string name="key_delete_biometric_title">Подтвердите удаление ключа</string>
+    <string name="key_delete_biometric_subtitle">Пройдите аутентификацию, чтобы удалить эту пару ключей</string>
+    <!-- RC4 O5 (#16, CertainBot): optional passphrase on exported/backed-up private keys. -->
+    <string name="export_passphrase_label">Защитить этот экспорт парольной фразой (необязательно)</string>
+    <string name="export_passphrase_backup_label">Защитить резервную копию парольной фразой (необязательно; игнорируется, если у ключа она уже есть)</string>
+    <string name="export_passphrase_confirm_label">Подтвердите парольную фразу экспорта</string>
+    <string name="export_passphrase_mismatch">Парольные фразы не совпадают.</string>
+    <string name="export_passphrase_already_protected_note">У этого ключа уже есть собственная парольная фраза; экспорт её сохраняет.</string>
+    <!-- RC3 §N (#34): decryption fallbacks + signing defaults. -->
+    <string name="key_detail_section_fallbacks">Запасные ключи для расшифровки</string>
+    <!-- RC4 O3 (#34): honest about the compatibility net, and the strict toggle that removes it. -->
+    <string name="key_detail_fallbacks_explainer">Если сообщение не удаётся расшифровать этим ключом, следующими по порядку пробуются эти ключи. Остальные ваши ключи всё равно пробуются последними, поэтому ничего из того, что расшифровывалось раньше, не перестанет расшифровываться.</string>
+    <string name="key_detail_fallbacks_strict_title">Использовать только включённые запасные ключи</string>
+    <string name="key_detail_fallbacks_strict_subtitle">Пропустить сеть остальных ключей: пробовать только этот ключ и включённые выше запасные, и ничего больше.</string>
+    <string name="key_detail_fallbacks_none">Нет других закрытых ключей для использования в качестве запасных.</string>
+    <string name="key_detail_fallbacks_move_up">Переместить вверх</string>
+    <string name="key_detail_fallbacks_move_down">Переместить вниз</string>
+    <string name="key_detail_section_signing_defaults">Параметры подписи по умолчанию</string>
+    <string name="key_detail_signing_defaults_explainer">Когда этот ключ должен подписывать, в каждой ситуации использовать вместо него эти ключи. «Этот ключ» сохраняет обычное поведение.</string>
+    <string name="key_detail_signing_default_pqc">При шифровании для постквантовых получателей</string>
+    <string name="key_detail_signing_default_classical">При шифровании для классических получателей</string>
+    <string name="key_detail_signing_default_sign_only">При подписи без шифрования</string>
+    <string name="key_detail_signing_default_self">Этот ключ</string>
+
+    <!-- ── Export Private Key dialog ───────────────────────────────── -->
+    <string name="key_detail_export_private_dialog_title">Экспортировать закрытый ключ?</string>
+    <string name="key_detail_export_private_dialog_body_format">Это экспортирует ваш ЗАКРЫТЫЙ ключ для %1$s в виде armored-текста. Любой, кто получит этот файл, сможет расшифровывать отправленные вам сообщения И подписывать сообщения от вашего имени. После передачи PGPony не сможет забрать его обратно.</string>
+
+    <!-- ── Export biometric prompt ─────────────────────────────────── -->
+    <string name="key_detail_export_biometric_title">Подтвердите личность</string>
+    <string name="key_detail_export_biometric_subtitle">Пройдите аутентификацию, чтобы экспортировать закрытый ключ</string>
+
+    <!-- ── Status / snackbar messages ──────────────────────────────── -->
+    <string name="key_detail_status_pub_copied">Открытый ключ скопирован в буфер обмена</string>
+    <string name="key_detail_status_pub_export_failed">Не удалось экспортировать открытый ключ</string>
+    <string name="key_detail_status_pub_file_failed">Не удалось записать файл открытого ключа — отправка недоступна</string>
+    <string name="key_detail_status_priv_copied">Закрытый ключ скопирован в буфер обмена</string>
+    <string name="key_detail_status_priv_file_failed">Не удалось записать файл экспорта — отправка недоступна</string>
+    <string name="key_detail_status_priv_missing">Не удалось экспортировать закрытый ключ — секретные данные отсутствуют или нечитаемы</string>
+    <string name="key_detail_status_rev_copied">Сертификат отзыва скопирован в буфер обмена</string>
+    <string name="key_detail_status_rev_file_failed">Не удалось записать файл отзыва — отправка недоступна</string>
+    <string name="key_detail_status_clip_unavailable">Не удалось получить доступ к буферу обмена</string>
+    <string name="key_detail_status_no_revocation_cert">Для этого ключа нет доступного сертификата отзыва</string>
+
+    <!-- ── Revoked banner (KeyDetailSections) ──────────────────────── -->
+    <string name="key_detail_revoked_badge">ОТОЗВАН</string>
+    <string name="key_detail_revoked_on_format">Отозван %1$s</string>
+    <string name="key_detail_revoked_label">Отозван</string>
+    <string name="key_detail_revoked_no_reason">Причина не указана</string>
+    <string name="key_detail_revoked_explainer">Этот ключ больше нельзя использовать для подписи новых сообщений или выбирать в качестве получателя. Он всё ещё может расшифровывать прошлые сообщения.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         KeyDetailViewModel — status + error messages
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="kd_vm_error_export_for_qr">Не удалось экспортировать открытый ключ для кодирования в QR</string>
+    <string name="kd_vm_error_qr_failed_format">Не удалось создать QR: %1$s</string>
+    <string name="qr_too_large">Этот ключ слишком велик для QR-кода. Используйте «Поделиться» или «Копировать».</string>
+    <string name="qr_part_of_format">Часть %1$d из %2$d</string>
+    <string name="qr_multipart_hint">Отсканируйте каждую часть с помощью PGPony. Другие сканеры QR не могут собрать разделённый ключ.</string>
+    <string name="qr_part_previous">Предыдущая часть</string>
+    <string name="qr_part_next">Следующая часть</string>
+    <string name="qr_autorotate_play_cd">Возобновить автосмену</string>
+    <string name="qr_autorotate_pause_cd">Приостановить автосмену</string>
+    <string name="qr_scan_progress_format">Отсканировано %1$d из %2$d частей. Продолжайте.</string>
+    <string name="qr_scan_restarted">Это другой ключ. Начинаем заново.</string>
+    <string name="kd_vm_status_trust_updated">Уровень доверия обновлён</string>
+    <string name="kd_vm_status_notes_cleared">Заметки очищены</string>
+    <string name="kd_vm_status_notes_saved">Заметки сохранены</string>
+    <string name="kd_vm_error_no_email_to_match">У этого ключа нет email для сопоставления</string>
+    <string name="kd_vm_status_linked_to_format">Связано с %1$s</string>
+    <string name="kd_vm_error_contacts_permission_needed">Для привязки ключа к контакту нужно разрешение на доступ к контактам</string>
+    <string name="kd_vm_status_contact_unlinked">Контакт отвязан</string>
+    <string name="kd_vm_status_set_as_default_format">%1$s теперь ваш ключ по умолчанию</string>
+    <string name="kd_vm_error_export_public_failed">Не удалось экспортировать открытый ключ</string>
+    <string name="kd_vm_error_upload_failed_format">Не удалось загрузить: %1$s</string>
+    <string name="kd_vm_error_delete_failed_format">Не удалось удалить: %1$s</string>
+    <string name="kd_vm_error_revoke_passphrase_required">У этого ключа есть парольная фраза. Введите её, чтобы продолжить.</string>
+    <string name="kd_vm_error_revoke_incorrect_passphrase">Неверная парольная фраза.</string>
+    <string name="kd_vm_error_revocation_failed_default">Не удалось отозвать</string>
+    <string name="kd_vm_error_revocation_failed_format">Не удалось отозвать: %1$s</string>
+
+    <!-- Upload-success messages (computed in uploadSuccessMessage()) -->
+    <string name="kd_vm_upload_success_generic">Загружено на keys.openpgp.org.</string>
+    <string name="kd_vm_upload_success_verify_single_format">Загружено. Письмо для подтверждения отправлено на %1$s — перейдите по ссылке, чтобы ключ можно было искать по email.</string>
+    <string name="kd_vm_upload_success_verify_multi_format">Загружено. Письма для подтверждения отправлены на %1$s — перейдите по каждой ссылке, чтобы ключ можно было искать по email.</string>
+    <string name="kd_vm_upload_already_published">Уже опубликовано — ключ можно искать по email.</string>
+    <string name="kd_vm_upload_verify_skipped">Загружено, но подтверждение не удалось запустить. Ключ можно искать только по отпечатку — попробуйте загрузить снова позже.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         TrustLevel enum (PGPKeyEntity)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="trust_level_unknown_name">Неизвестно</string>
+    <string name="trust_level_unverified_name">Не проверено</string>
+    <string name="trust_level_verified_name">Проверено</string>
+    <string name="trust_level_ultimate_name">Абсолютное</string>
+    <string name="trust_level_unknown_description">Проверка не выполнялась</string>
+    <string name="trust_level_unverified_description">Добавлен, но не проверен — действуйте с осторожностью</string>
+    <string name="trust_level_verified_description">Отпечаток сверен через доверенный канал</string>
+    <string name="trust_level_ultimate_description">Ваш собственный ключ или тот, что вы полностью контролируете</string>
+
+    <!-- ── TrustLevelSheet ──────────────────────────────────────────── -->
+    <string name="trust_sheet_title">Уровень доверия</string>
+    <string name="trust_sheet_subtitle">Отметьте, насколько вы уверены, что этот ключ действительно принадлежит заявленному владельцу. Доверие — это подсказка для вас; оно не меняет то, что PGPony может зашифровать или проверить.</string>
+    <string name="trust_sheet_selected_cd">Выбрано</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         RevocationReason enum (PGPKeyEntity) + RevokeKeySheet
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="revocation_reason_no_reason_name">Причина не указана</string>
+    <string name="revocation_reason_no_reason_description">Не указывать причину — сертификат просто объявляет ключ отозванным</string>
+    <string name="revocation_reason_superseded_name">Заменён новым ключом</string>
+    <string name="revocation_reason_superseded_description">Вы перешли на другой ключ; старый по-прежнему заслуживает доверия</string>
+    <string name="revocation_reason_compromised_name">Ключ скомпрометирован</string>
+    <string name="revocation_reason_compromised_description">Закрытый ключ мог быть раскрыт — НЕ доверяйте ничему, подписанному после этой даты</string>
+    <string name="revocation_reason_retired_name">Ключ выведен из использования</string>
+    <string name="revocation_reason_retired_description">Ключ больше не используется, но закрытый ключ не скомпрометирован</string>
+    <string name="revocation_reason_user_id_invalid_name">Идентификатор пользователя больше не действителен</string>
+    <string name="revocation_reason_user_id_invalid_description">Email или имя, связанные с ключом, изменились</string>
+
+    <!-- ── RevokeKeySheet ───────────────────────────────────────────── -->
+    <string name="revoke_sheet_title">Отозвать ключ</string>
+    <string name="revoke_sheet_explainer_format">Создаёт и применяет сертификат отзыва RFC 4880 для %1$s. Ключ остаётся в вашей связке ключей, но помечается как отозванный — он всё ещё может расшифровывать прошлые сообщения, но его нельзя использовать для подписи новых или выбирать в качестве получателя. После применения это нельзя отменить.</string>
+    <string name="revoke_sheet_reason_label">Причина</string>
+    <string name="revoke_sheet_comment_label">Комментарий (необязательно)</string>
+    <string name="revoke_sheet_comment_placeholder">например, Заменён ключом 0xABCD1234</string>
+    <string name="revoke_sheet_passphrase_label">Парольная фраза</string>
+    <string name="revoke_sheet_passphrase_placeholder">Оставьте пустым, если у ключа нет парольной фразы</string>
+    <string name="revoke_sheet_confirm">Отозвать</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         HelpScreen + FAQ content
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="help_screen_title">Справка и FAQ</string>
+    <string name="help_screen_subtitle">Ответы на частые вопросы о PGPony.</string>
+    <string name="help_screen_footer">Не нашли нужного? Нажмите «Отправить отзыв» в Настройках, чтобы написать разработчику напрямую.</string>
+    <string name="help_row_collapse_cd">Свернуть</string>
+    <string name="help_row_expand_cd">Развернуть</string>
+
+    <!-- ── Section titles ───────────────────────────────────────────── -->
+    <string name="faq_section_getting_started">Начало работы</string>
+    <string name="faq_section_encrypt_decrypt">Шифрование и расшифровка</string>
+    <string name="faq_section_security_privacy">Безопасность и конфиденциальность</string>
+
+    <!-- ── Getting Started Q&amp;A ─────────────────────────────────────── -->
+    <string name="faq_q_what_is_pgp">Что такое шифрование PGP?</string>
+    <string name="faq_a_what_is_pgp">PGP (Pretty Good Privacy) — давно устоявшийся стандарт шифрования сообщений и файлов, при котором прочитать их может только предполагаемый получатель.\n\nОн работает так: каждому пользователю выдаётся пара ключей — открытый ключ (которым вы свободно делитесь) и закрытый ключ (который вы держите в секрете). Любой, у кого есть ваш открытый ключ, может зашифровать для вас сообщение, но расшифровать его может только ваш закрытый ключ.\n\nPGPony реализует современный стандарт OpenPGP (RFC 4880 + RFC 9580), поэтому зашифрованные здесь сообщения сможет прочитать любой, кто использует GnuPG, OpenKeychain или другой инструмент OpenPGP.</string>
+
+    <string name="faq_q_need_key">Нужен ли мне ключ, чтобы пользоваться приложением?</string>
+    <string name="faq_a_need_key">Да — вам нужна хотя бы одна пара ключей, прежде чем что-либо шифровать или расшифровывать.\n\nОткройте вкладку «Связка ключей» и нажмите кнопку +. Вы можете либо сгенерировать новую пару ключей (рекомендуется для новых пользователей), либо импортировать существующий ключ, если вы уже используете PGP в настольном инструменте вроде GnuPG.\n\nПри генерации ключа укажите имя и email, чтобы другие могли вас опознать, и при желании защитите его парольной фразой для дополнительной безопасности.</string>
+
+    <string name="faq_q_my_keys_vs_contacts">В чём разница между «Мои ключи» и «Контакты»?</string>
+    <string name="faq_a_my_keys_vs_contacts">«Мои ключи» — это ваши собственные пары ключей: и открытый ключ (для получения зашифрованных сообщений), и закрытый ключ (для их расшифровки). Они представляют ваши личности.\n\n«Контакты» — это открытые ключи других людей, только открытая половина. Вы импортируете их, чтобы отправить кому-то зашифрованное сообщение. Вы никогда не сможете расшифровать ключом контакта, потому что у вас нет его закрытого ключа.\n\nПредставьте это как почтовую систему: ключ от своего почтового ящика вы храните в «Моих ключах», а адреса всех остальных собираете в «Контактах».</string>
+
+    <string name="faq_q_share_public_key">Как поделиться своим открытым ключом с кем-либо?</string>
+    <string name="faq_a_share_public_key">Откройте вкладку «Обмен» и выберите ключ, которым хотите поделиться. У вас есть три варианта:\n\n• QR-код — дайте другому человеку отсканировать его через PGPony или любой сканер QR.\n\n• Поделиться как файл — отправляет файл .asc через любое приложение обмена, например email, Signal или Сообщения.\n\n• Копировать в буфер обмена — вставьте текст ключа в броне в своё сообщение.\n\nДелиться открытым ключом всегда безопасно. Делиться закрытым ключом — НЕТ: никогда не экспортируйте и не отправляйте закрытый ключ, если только вы не переносите его на другое устройство под вашим контролем.</string>
+
+    <!-- ── Encrypt & Decrypt Q&amp;A ────────────────────────────────────── -->
+    <string name="faq_q_how_to_encrypt">Как зашифровать сообщение?</string>
+    <string name="faq_a_how_to_encrypt">Откройте вкладку «Зашифровать». Введите или вставьте сообщение в поле ввода, затем выберите одного или нескольких получателей из «Контактов» (и при желании включите себя, чтобы прочитать сообщение позже).\n\nНажмите «Зашифровать». PGPony создаст зашифрованный блок текста, который можно скопировать и отправить по любому каналу — email, SMS, Slack, где угодно.\n\nРасшифровать его смогут только выбранные вами получатели.</string>
+
+    <string name="faq_q_how_to_decrypt">Как расшифровать сообщение, которое мне отправили?</string>
+    <string name="faq_a_how_to_decrypt">Откройте вкладку «Расшифровать» и вставьте зашифрованное сообщение. Оно должно начинаться с `-----BEGIN PGP MESSAGE-----` и заканчиваться `-----END PGP MESSAGE-----`.\n\nНажмите «Расшифровать». Если сообщение было зашифровано на один из ваших ключей, PGPony покажет открытый текст. Если ваш закрытый ключ защищён парольной фразой, сначала у вас её запросят.\n\nВы также можете поделиться файлом .asc/.pgp/.gpg напрямую в PGPony из другого приложения — Android предложит PGPony как цель для отправки.</string>
+
+    <string name="faq_q_armored_toggle">Что делает переключатель ASCII-брони?</string>
+    <string name="faq_a_armored_toggle">Вывод в ASCII-броне создаёт текст, который можно вставить в email или чат. Он выглядит как блок букв и цифр между маркерами `-----BEGIN PGP MESSAGE-----` и `-----END PGP MESSAGE-----`.\n\nВывод без брони — двоичный: он меньше, но отправить его можно только как вложение-файл.\n\nДля сообщений оставьте включённым. Отключайте только если шифруете большой файл и хотите минимизировать размер.</string>
+
+    <string name="faq_q_encrypt_files">Могу ли я шифровать файлы, а не только текст?</string>
+    <string name="faq_a_encrypt_files">Да. PGPony принимает файлы, которыми делятся из любого другого приложения — приложения «Файлы», галереи, папки загрузок, откуда угодно.\n\nВ исходном приложении нажмите «Поделиться» и выберите PGPony. Файл попадёт на вкладку «Расшифровать» (если это зашифрованный файл) или «Связка ключей» (если это файл ключа, например .asc).\n\nШифрование файла в обратную сторону — выбор файла изнутри PGPony — запланировано, но пока не выпущено. Пока что вставляйте большое содержимое как текст на вкладке «Зашифровать».</string>
+
+    <!-- ── Security & Privacy Q&amp;A ───────────────────────────────────── -->
+    <string name="faq_q_where_keys_stored">Где хранятся мои закрытые ключи?</string>
+    <string name="faq_a_where_keys_stored">Только на вашем устройстве. PGPony хранит закрытые ключи в зашифрованной базе данных Room, защищённой мастер-ключом, который находится в Android Keystore.\n\nНа современных устройствах Keystore подкреплён аппаратной защитой (чип Titan M на Pixel, аналог на Samsung и у других производителей), а значит извлечение ваших закрытых ключей потребовало бы физической атаки на сам чип.\n\nВаши ключи никогда не покидают устройство, если вы явно не экспортируете их через вкладку «Обмен».</string>
+
+    <string name="faq_q_lost_passphrase">Что произойдёт, если я потеряю парольную фразу?</string>
+    <string name="faq_a_lost_passphrase">Восстановления нет. PGPony не хранит вашу парольную фразу, и здесь нет процедуры «забыли пароль» — в этом весь смысл стойкого шифрования.\n\nЕсли вы забудете парольную фразу к закрытому ключу, этот ключ станет навсегда недоступным, а любые зашифрованные на него сообщения уже никогда не расшифровать.\n\nЗапишите парольную фразу в надёжном месте. Идеально — менеджер паролей. Лист бумаги в запертом ящике тоже подойдёт.</string>
+
+    <string name="faq_q_server_data">Отправляет ли PGPony какие-либо данные на сервер?</string>
+    <string name="faq_a_server_data">Нет. Основное шифрование и управление ключами происходят целиком на вашем устройстве. У PGPony нет системы учётных записей, аналитики, телеметрии и рекламных SDK.\n\nПриложение объявляет разрешение INTERNET, чтобы при желании обращаться к серверам ключей OpenPGP, если вы решите опубликовать или найти ключ, — но это по вашему выбору и не требуется для работы приложения.\n\nВы можете проверить это, посмотрев сетевую активность приложения в Настройки &gt; Конфиденциальность &gt; Использование данных Android.</string>
+
+    <string name="faq_q_biometric_lock">Что на самом деле защищает биометрическая блокировка?</string>
+    <string name="faq_a_biometric_lock">Биометрическая блокировка не даёт никому, кто возьмёт ваш разблокированный телефон, открыть PGPony без аутентификации по отпечатку или лицу.\n\nОна НЕ добавляет криптографической защиты вашим ключам — ваши закрытые ключи и так зашифрованы в покое. Биометрическая блокировка — это заслон на уровне интерфейса.\n\nВы также можете включить «Требовать для расшифровки», при которой биометрическая аутентификация запрашивается каждый раз при расшифровке сообщения. Используйте это, если беспокоитесь о том, что разблокированный телефон окажется в чужих руках.</string>
+
+    <string name="faq_q_algorithms">Какие алгоритмы шифрования использует PGPony?</string>
+    <string name="faq_a_algorithms">Новые ключи по умолчанию используют Ed25519 для подписей и Curve25519 для шифрования — те же эллиптические кривые, что и в Signal, SSH и TLS 1.3.\n\nСообщения симметрично шифруются с помощью AES-256 в режиме AEAD OCB (RFC 9580), а сеансовый ключ шифруется на открытый ключ каждого получателя.\n\nPGPony также может читать и импортировать устаревшие ключи RSA и DSA для совместимости с более старыми установками OpenPGP, но для новых личностей генерирует только современные ключи на основе кривых.\n\nВся криптография выполняется библиотекой Bouncy Castle 1.85 — отраслевым стандартом, проверенным и используемым в корпоративных и государственных системах по всему миру.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         MainActivity tabs — adds Contacts (was missing earlier)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="main_tab_contacts">Контакты</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         SecurityInfoScreen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="security_info_title">Безопасность и шифрование</string>
+    <string name="security_info_subtitle">Как PGPony защищает ваши сообщения и ключи.</string>
+
+    <string name="security_info_block_openpgp_title">Стандарты OpenPGP</string>
+    <string name="security_info_block_openpgp_body">PGPony реализует RFC 4880 (OpenPGP) и RFC 9580 (crypto-refresh). Сообщения полностью совместимы с GnuPG, OpenKeychain и любым другим инструментом, соответствующим OpenPGP.</string>
+
+    <string name="security_info_block_algorithms_title">Современные алгоритмы</string>
+    <string name="security_info_block_algorithms_body">Новые ключи используют Ed25519 для подписи и Curve25519 для шифрования — те же эллиптические кривые, что и в Signal, SSH и TLS 1.3. Симметричное шифрование использует AES-256 в режиме AEAD OCB (RFC 9580).</string>
+
+    <string name="security_info_block_library_title">Построено на Bouncy Castle</string>
+    <string name="security_info_block_library_body">Вся криптография проходит через Bouncy Castle 1.85 — отраслевую стандартную Java-библиотеку криптографии, используемую в корпоративных и государственных системах по всему миру. PGPony не пишет собственную криптографию.</string>
+
+    <string name="security_info_block_on_device_title">Всё остаётся на вашем устройстве</string>
+    <string name="security_info_block_on_device_body">Ваши ключи никогда не покидают телефон, если вы явно ими не поделитесь. У PGPony нет сервера, системы учётных записей и аналитики. Приложению не требуется разрешение на Интернет для базовых функций шифрования.</string>
+
+    <string name="security_info_block_at_rest_title">Закрытые ключи зашифрованы при хранении</string>
+    <string name="security_info_block_at_rest_body">Закрытые ключи хранятся с помощью androidx.security.crypto с мастер-ключом, сгенерированным и защищённым Android Keystore. На современных устройствах Keystore подкреплён аппаратной защитой (Titan M, Secure Enclave или аналог).</string>
+
+    <string name="security_info_block_biometric_title">Необязательная биометрическая блокировка</string>
+    <string name="security_info_block_biometric_body">Включите биометрическую блокировку в Настройки &gt; Безопасность, чтобы требовать разблокировку по отпечатку или лицу при каждом открытии PGPony. Вы также можете требовать повторную аутентификацию для каждой операции расшифровки.</string>
+
+    <string name="security_info_block_clipboard_title">Автоочистка буфера обмена</string>
+    <string name="security_info_block_clipboard_body">Конфиденциальное содержимое, скопированное в буфер обмена, автоматически стирается по истечении настраиваемого времени (по умолчанию 60 секунд), чтобы оно не оставалось там, где его могли бы прочитать другие приложения.</string>
+
+    <string name="security_info_not_doing_title">Чего PGPony НЕ делает</string>
+    <string name="security_info_not_doing_bullet_1">Отправляйте ключи или сообщения на любой сервер</string>
+    <string name="security_info_not_doing_bullet_2">Требовать учётную запись, электронную почту или номер телефона</string>
+    <string name="security_info_not_doing_bullet_3">Включать аналитику, телеметрию или рекламные SDK</string>
+    <string name="security_info_not_doing_bullet_4">Использовать сторонние криптобиблиотеки помимо Bouncy Castle</string>
+    <string name="security_info_not_doing_bullet_5">Хранить парольные фразы — они используются только в памяти</string>
+
+    <string name="security_info_footer">Полная политика конфиденциальности и технические детали: pgpony.app/privacy</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Onboarding — slide carousel (OnboardingSlide.kt)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_slide_welcome_title">Добро пожаловать в PGPony</string>
+    <string name="onboarding_slide_welcome_body">Настоящее PGP-шифрование в вашем кармане.\n\nОтправляйте сообщения, которые может прочитать только предполагаемый получатель — без серверов, учётных записей и слежки.</string>
+
+    <string name="onboarding_slide_key_title">Начните с ключа</string>
+    <string name="onboarding_slide_key_body">PGP работает с двумя ключами: открытым ключом, которым вы свободно делитесь, и закрытым ключом, который держите в секрете.\n\nЛюбой, у кого есть ваш открытый ключ, может отправлять вам зашифрованные сообщения, но расшифровать их может только ваш закрытый ключ.</string>
+
+    <string name="onboarding_slide_encrypt_title">Шифруйте что угодно</string>
+    <string name="onboarding_slide_encrypt_body">Как только открытый ключ человека сохранён в «Контактах», перейдите на вкладку «Зашифровать», чтобы зашифровать сообщение только для него.\n\nРезультат безопасно отправлять по любому каналу — email, SMS, даже в публичной записи.</string>
+
+    <string name="onboarding_slide_exchange_title">Мгновенный обмен ключами</string>
+    <string name="onboarding_slide_exchange_body">Вкладка «Обмен» превращает ваш открытый ключ в QR-код. Покажите его другу с PGPony, и он сможет отсканировать его напрямую — без ввода и копирования.\n\nВы также можете делиться ключами как файлами через любое другое приложение.</string>
+
+    <string name="onboarding_slide_privacy_title">Вы управляете</string>
+    <string name="onboarding_slide_privacy_body">Ваши ключи никогда не покидают это устройство, если вы не решите ими поделиться. У PGPony нет сервера, аналитики и рекламы.\n\nПри желании заблокируйте приложение по отпечатку или лицу для дополнительного спокойствия.</string>
+
+    <!-- ── OnboardingPage inline CTAs ───────────────────────────────── -->
+    <string name="onboarding_page_generate_cta">Создать мой первый ключ сейчас</string>
+    <string name="onboarding_page_generate_hint">Или нажмите «Далее», чтобы сделать это позже на вкладке «Связка ключей».</string>
+    <string name="onboarding_page_already_have_keys_one">У вас уже есть 1 ключ</string>
+    <string name="onboarding_page_already_have_keys_other_format">У вас уже есть %1$d ключей</string>
+    <string name="onboarding_page_keyring_hint">Управляйте ими на вкладке «Связка ключей» в любое время.</string>
+    <string name="onboarding_page_biometric_toggle_title">Включить биометрическую блокировку</string>
+    <string name="onboarding_page_biometric_toggle_subtitle">Требовать отпечаток или лицо для открытия PGPony</string>
+    <string name="onboarding_slide_updates_title">Оставайтесь в курсе</string>
+    <string name="onboarding_slide_updates_body">Вы установили PGPony вне магазина приложений, поэтому оно не будет обновляться само. PGPony может проверять GitHub на наличие новых версий и уведомлять вас. Оно ничего не скачивает и не устанавливает самостоятельно.</string>
+    <string name="onboarding_page_updates_toggle_title">Проверять обновления</string>
+    <string name="onboarding_page_updates_toggle_subtitle">Уведомлять меня, когда доступна более новая версия.</string>
+
+    <!-- ── OnboardingScreen — Skip / Next / Get Started ─────────────── -->
+    <string name="onboarding_screen_skip">Пропустить</string>
+    <string name="onboarding_screen_get_started">Начать</string>
+    <string name="onboarding_screen_next">Далее</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         OnboardingGenerateSheet
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_generate_title">Создайте свой ключ</string>
+    <string name="onboarding_generate_subtitle">По умолчанию мы используем современные Ed25519 + Curve25519. Вы всегда можете сгенерировать больше ключей позже на вкладке «Связка ключей».</string>
+    <string name="onboarding_generate_name_placeholder">Иван Иванов</string>
+    <string name="onboarding_generate_email_placeholder">ivan@example.com</string>
+    <string name="onboarding_generate_passphrase_section_label">Парольная фраза (необязательно)</string>
+    <string name="onboarding_generate_passphrase_explainer">Защитите свой закрытый ключ парольной фразой. Если вы её забудете, ключ станет навсегда недоступным — восстановление невозможно.</string>
+    <string name="onboarding_generate_button">Создать</string>
+    <string name="onboarding_generate_in_progress_title">Создание вашей пары ключей…</string>
+    <string name="onboarding_generate_in_progress_subtitle">Обычно это занимает пару секунд.</string>
+    <string name="onboarding_generate_done_title">Ключ создан!</string>
+    <string name="onboarding_generate_done_subtitle">Ваша новая пара ключей готова на вкладке «Связка ключей». Продолжим.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         ContactsScreen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="contacts_screen_title">Контакты</string>
+    <string name="contacts_options_cd">Параметры</string>
+    <string name="contacts_menu_discover_keys">Найти ключи</string>
+    <string name="contacts_menu_auto_match">Автосопоставление ключей</string>
+    <string name="contacts_menu_refresh">Обновить</string>
+    <string name="contacts_menu_reset_cache">Сбросить кэш сервера ключей</string>
+
+    <!-- ── Permission view ──────────────────────────────────────────── -->
+    <string name="contacts_permission_title">Доступ к контактам</string>
+    <string name="contacts_permission_explainer">PGPony может связывать ключи шифрования с вашими контактами для более удобной идентификации и автообнаружения открытых ключей.</string>
+    <string name="contacts_permission_button">Разрешить доступ к контактам</string>
+
+    <!-- ── Empty state ──────────────────────────────────────────────── -->
+    <string name="contacts_empty_title">Контакты не найдены</string>
+    <string name="contacts_empty_body">Контактов с адресами email не найдено.</string>
+    <string name="contacts_empty_refresh_button">Обновить</string>
+
+    <!-- ── Search + list ────────────────────────────────────────────── -->
+    <string name="contacts_search_placeholder">Поиск контактов…</string>
+    <string name="contacts_search_clear_cd">Очистить поиск</string>
+    <string name="contacts_section_encrypted">Зашифрованные контакты</string>
+    <string name="contacts_section_other">Другие контакты</string>
+    <string name="contacts_search_no_match_format">Нет контактов по запросу \"%1$s\"</string>
+
+    <!-- ── Tooltip + scan banner ────────────────────────────────────── -->
+    <string name="contacts_tooltip_import">Здесь показываются контакты вашего устройства. Когда вы импортируете чей-то открытый ключ на вкладке «Связка ключей» и его email совпадает с контактом, он автоматически появится связанным. Нажмите лупу рядом с контактом, чтобы найти его ключ на сервере ключей.</string>
+    <string name="contacts_scan_in_progress_format">Сканирование %1$d/%2$d…</string>
+    <string name="contacts_scan_complete_one_format">Сканирование завершено — найден %1$d ключ</string>
+    <string name="contacts_scan_complete_many_format">Сканирование завершено — найдено ключей: %1$d</string>
+
+    <!-- ── Trust badges (rendered in contact rows) ──────────────────── -->
+    <string name="contacts_trust_unknown_cd">Неизвестное доверие</string>
+    <string name="contacts_trust_unverified_cd">Не проверено</string>
+    <string name="contacts_trust_verified_cd">Проверено</string>
+    <string name="contacts_trust_ultimate_cd">Абсолютное доверие</string>
+
+    <!-- ── Row icons ────────────────────────────────────────────────── -->
+    <string name="contacts_linked_cd">Связано</string>
+    <string name="contacts_already_checked_cd">Уже проверено, ключ не найден</string>
+    <string name="contacts_search_keyserver_cd">Искать на сервере ключей</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         ContactsViewModel — status/error messages
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="contacts_vm_error_load_failed_format">Не удалось загрузить контакты: %1$s</string>
+    <string name="contacts_vm_status_linked_one_format">Связан %1$d ключ с контактами</string>
+    <string name="contacts_vm_status_linked_many_format">Связано ключей с контактами: %1$d</string>
+    <string name="contacts_vm_status_no_new_matches">Новых совпадений не найдено</string>
+    <string name="contacts_vm_error_auto_match_failed_format">Автосопоставление не удалось: %1$s</string>
+    <string name="contacts_vm_error_no_key_for_email_format">PGP-ключ для %1$s не найден</string>
+    <string name="contacts_vm_error_search_failed_format">Поиск не удался: %1$s</string>
+    <string name="contacts_vm_error_bulk_scan_failed_format">Массовое сканирование не удалось: %1$s</string>
+    <string name="contacts_vm_status_cache_cleared">Кэш сервера ключей очищен</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         KeyCard — used as a row across Keyring, Encrypt, etc.
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="key_card_key_pair_cd">Пара ключей</string>
+    <string name="key_card_expired_badge">Истёк</string>
+    <string name="key_card_revoked_badge">ОТОЗВАН</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         ExchangeScreen + ExchangeViewModel
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="exchange_screen_title">Обмен</string>
+    <string name="exchange_section_show_key">Показать ключ</string>
+    <string name="exchange_section_scan_key">Сканировать ключ</string>
+    <string name="exchange_section_key_server">Сервер ключей</string>
+
+    <!-- ── Import-after-scan dialog ─────────────────────────────────── -->
+    <string name="exchange_import_dialog_title">Импортировать отсканированный ключ?</string>
+    <string name="exchange_import_dialog_body">Импортировать PGP-ключ из отсканированного QR-кода?</string>
+
+    <!-- ── Empty state (no keys to show) ────────────────────────────── -->
+    <string name="exchange_no_keys">Сначала создайте пару ключей, чтобы поделиться открытым ключом</string>
+
+    <!-- ── QR code + buttons ────────────────────────────────────────── -->
+    <string name="exchange_qr_cd">QR-код открытого ключа</string>
+    <string name="exchange_copy_key_button">Копировать ключ</string>
+    <string name="exchange_upload_button">Загрузить</string>
+    <string name="exchange_upload_button_in_progress">Загрузка…</string>
+
+    <!-- ── Scan section ─────────────────────────────────────────────── -->
+    <string name="exchange_scan_button">Открыть сканер</string>
+
+    <!-- ── Key server lookup ────────────────────────────────────────── -->
+    <string name="exchange_keyserver_query_label">Эл. почта или отпечаток</string>
+    <string name="exchange_keyserver_search_cd">Поиск</string>
+    <string name="exchange_keyserver_search_button">Искать на серверах ключей</string>
+    <string name="exchange_keyserver_searching">Поиск…</string>
+    <string name="exchange_keyserver_import_button">Импортировать ключ</string>
+    <string name="exchange_keyserver_imported">Ключ импортирован в вашу связку ключей.</string>
+
+    <!-- ── Tooltip ──────────────────────────────────────────────────── -->
+    <string name="exchange_tooltip_qr">Выберите здесь ключ, чтобы получить QR-код или файл для отправки. Собеседник отсканирует или импортирует его, чтобы присылать вам зашифрованные сообщения.</string>
+
+    <!-- ── ExchangeViewModel error / status messages ────────────────── -->
+    <string name="exchange_vm_error_qr_failed_format">Не удалось создать QR-код: %1$s</string>
+    <string name="exchange_vm_error_not_pgp_key">Отсканированные данные не являются PGP-ключом</string>
+    <string name="exchange_vm_error_import_failed_format">Импорт не удался: %1$s</string>
+    <string name="exchange_vm_error_no_key_found_format">Ключ для \"%1$s\" не найден</string>
+    <string name="exchange_vm_error_search_failed_format">Поиск не удался: %1$s</string>
+    <string name="exchange_vm_status_uploaded">Ключ загружен на keys.openpgp.org</string>
+    <string name="exchange_vm_error_upload_failed_format">Загрузка не удалась: %1$s</string>
+
+
+    <!-- ════════════════════════════════════════════════════════════════
+         SignerLookupSheet (decrypt-side signer lookup on unknown signer)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="signer_lookup_searching_title">Найти подписавшего</string>
+    <string name="signer_lookup_searching_label">Поиск на серверах ключей…</string>
+    <string name="signer_lookup_found_title">Ключ найден</string>
+    <string name="signer_lookup_found_body">Импорт этого ключа добавит его в вашу связку ключей и повторно проверит подпись. Личность владельца ключа ещё не проверена — проверяется только математика. Убедитесь в подлинности отправителя самостоятельно, прежде чем полагаться на статус проверки.</string>
+    <string name="signer_lookup_import_button">Импортировать</string>
+    <string name="signer_lookup_not_found_title">Подписавший не найден</string>
+    <string name="signer_lookup_not_found_body_format">Ключ для %1$s не найден ни на одном из настроенных вами серверов ключей. Возможно, подписавший не опубликовал свой ключ. Попросите его напрямую поделиться открытым ключом.</string>
+    <string name="signer_lookup_failed_title">Поиск не удался</string>
+    <string name="signer_lookup_imported_title">Импортировано</string>
+    <string name="signer_lookup_imported_body">Подпись будет проверена повторно автоматически.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         VerificationBanner (decrypt-side signature outcome banner)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="verify_banner_verified_title">Проверено</string>
+    <string name="verify_banner_invalid_title">Подпись недействительна</string>
+    <string name="verify_banner_unknown_signer_title">Неизвестный подписавший</string>
+    <string name="verify_banner_unknown_signer_lookup_cd">Найти подписавшего</string>
+    <string name="verify_banner_no_signature_title">Нет подписи</string>
+    <string name="verify_banner_no_signature_subtitle">Содержимое расшифровано, но не подписано — происхождение не подтверждено</string>
+    <string name="verify_banner_signed_by_full_format">Подписано %1$s &lt;%2$s&gt;</string>
+    <string name="verify_banner_signed_by_name_format">Подписано %1$s</string>
+    <string name="verify_banner_signed_by_email_format">Подписано %1$s</string>
+    <string name="verify_banner_signed_by_keyid_format">Подписано 0x%1$s</string>
+    <string name="verify_banner_unknown_signer_subtitle_format">%1$s · Нажмите, чтобы найти на keys.openpgp.org</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PromoCodeService — billing
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="promo_error_invalid_code">Недействительный промокод</string>
+    <string name="promo_error_already_redeemed">Этот код уже был использован</string>
+    <string name="promo_error_server_format">Ошибка сервера: %1$s</string>
+    <string name="promo_error_network_format">Ошибка сети: %1$s</string>
+    <string name="promo_error_unknown">Неизвестная ошибка</string>
+    <string name="promo_status_unlocked_default">PGPony Pro разблокирован!</string>
+    <string name="promo_status_unlocked_offline">PGPony Pro разблокирован! (автономный режим: синхронизируется при подключении к сети)</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         KeyExpirationReceiver — system notification text
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="key_expiration_notif_display_name_fallback">PGP-ключ</string>
+    <string name="key_expiration_notif_title_format">Срок действия вашего PGP-ключа истекает %1$s</string>
+    <string name="key_expiration_notif_body_format">Нажмите, чтобы продлить \"%1$s\", пока он не перестал работать.</string>
+    <string name="key_expiration_label_in_30_days">через 30 дней</string>
+    <string name="key_expiration_label_in_7_days">через 7 дней</string>
+    <string name="key_expiration_label_tomorrow">завтра</string>
+    <string name="key_expiration_label_today">сегодня</string>
+    <string name="key_expiration_label_in_n_days_format">через %1$d дн.</string>
+
+    <!-- ── KeyExpirationService — notification channel (system Settings) -->
+    <string name="key_expiration_channel_name">Напоминания об истечении срока ключей</string>
+    <string name="key_expiration_channel_description">Напоминания, когда срок действия одного из ваших PGP-ключей приближается к концу.</string>
+    <string name="key_expiration_fallback_display_name_format">Ключ %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Result sheets — shared
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="result_sheet_fingerprint_format">Отпечаток: %1$s</string>
+    <string name="result_sheet_armored_block_format">Armored-блок OpenPGP, %1$d симв.</string>
+    <string name="result_sheet_revocation_block_format">Сертификат отзыва, %1$d симв.</string>
+    <string name="result_sheet_copy_button">Копировать в буфер обмена</string>
+    <string name="result_sheet_save_button">Сохранить как файл .asc</string>
+    <!-- RC3 §J: the key-export sheets' Save button is a real ACTION_CREATE_DOCUMENT save now; the system-share chooser moved to its own button. -->
+    <string name="result_sheet_share_button">Поделиться…</string>
+    <string name="result_sheet_clipboard_warning">Содержимое буфера обмена доступно всем установленным приложениям, пока не будет очищено.</string>
+
+    <!-- ── ExportPrivateKeyResultSheet ───────────────────────────────── -->
+    <string name="export_private_sheet_title">Закрытый ключ готов</string>
+    <string name="export_private_sheet_warning">Этот ключ позволяет расшифровывать отправленные вам сообщения И подписывать от вашего имени. Относитесь к нему как к паролю — храните там, где доступ есть только у вас.</string>
+    <string name="export_public_sheet_title">Поделиться открытым ключом</string>
+    <string name="export_public_sheet_explainer">Любой, у кого есть этот ключ, может проверять ваши подписи и шифровать сообщения для вас.</string>
+
+    <!-- ── RevocationResultSheet ─────────────────────────────────────── -->
+    <string name="revocation_result_sheet_title">Ключ отозван</string>
+    <string name="revocation_result_sheet_explainer">Ваш ключ теперь помечен как отозванный в вашей связке ключей. Поделитесь сертификатом отзыва со всеми, у кого есть ваш открытый ключ, чтобы они прекратили шифровать для него новые сообщения, и загрузите его на сервер ключей для широкого распространения отзыва.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         FileEncryptionResultScreen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="file_enc_result_title">Файл зашифрован</string>
+    <string name="file_enc_result_badge_signed">Подписано</string>
+    <string name="file_enc_result_badge_can_decrypt">Может расшифровывать</string>
+    <string name="file_enc_result_save_button">Сохранить в «Файлы»</string>
+    <string name="file_enc_result_share_button">Поделиться зашифрованным файлом</string>
+    <string name="file_enc_result_share_chooser_title">Поделиться зашифрованным файлом</string>
+    <string name="file_enc_result_save_failed_default">Не удалось сохранить</string>
+    <string name="file_enc_result_share_failed_default">Не удалось поделиться</string>
+    <string name="file_enc_result_save_success">Успешно сохранено</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         ContactLinkSheet
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="contact_link_sheet_title_link">Связать с контактом</string>
+    <string name="contact_link_sheet_title_auto_match">Результаты автосопоставления</string>
+    <string name="contact_link_sheet_filter_format">Показаны контакты, чей email совпадает с %1$s</string>
+    <string name="contact_link_sheet_empty_generic">На этом устройстве не найдено контактов с адресами email.</string>
+    <string name="contact_link_sheet_empty_filtered_format">Ни у одного контакта нет %1$s в списке email.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         NotesEditorSheet
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="notes_editor_title_add">Добавить заметки</string>
+    <string name="notes_editor_title_edit">Изменить заметки</string>
+    <string name="notes_editor_explainer">Заметки хранятся локально только на этом устройстве и никогда не включаются в экспорт или передачу этого ключа.</string>
+    <string name="notes_editor_placeholder">Заметки об этом ключе…</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         SignAsSheet (encrypt-time signer picker)
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="sign_as_sheet_title">Подписать как</string>
+    <string name="sign_as_sheet_explainer">Получатели могут убедиться, что сообщение пришло от этого ключа. Любой, у кого есть ваш открытый ключ для этой личности, увидит ваше имя в качестве подписавшего.</string>
+    <string name="sign_as_sheet_selected_cd">Выбрано</string>
+    <string name="sign_as_subkey_title">Ключ подписи</string>
+    <string name="sign_as_subkey_explainer">У этого ключа несколько ключей для подписи. Выберите, каким подписывать.</string>
+    <string name="sign_as_subkey_automatic">Автоматически</string>
+    <string name="sign_as_subkey_automatic_detail">%1$s · %2$s</string>
+    <string name="sign_as_subkey_primary_label">Основной ключ (%1$s)</string>
+    <string name="sign_as_subkey_subkey_label">Подключ (%1$s)</string>
+    <string name="sign_as_sheet_default_badge">ПО УМОЛЧАНИЮ</string>
+    <string name="sign_as_sheet_empty">Нет доступных пар ключей.</string>
+    <string name="sign_as_sheet_set_default">Назначить подписывающим по умолчанию</string>
+    <string name="sign_as_sheet_is_default">Подписывающий по умолчанию</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         QRScannerScreen
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="qr_scanner_title">Сканировать QR-код</string>
+    <string name="qr_scanner_permission_title">Требуется разрешение на камеру</string>
+    <string name="qr_scanner_grant_button">Предоставить разрешение</string>
+    <string name="qr_scanner_hint">Наведите камеру на QR-код открытого ключа PGP</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         MigrationProgressOverlay
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="migration_overlay_title">Обновление связки ключей</string>
+    <string name="migration_overlay_body">Чтение данных о подключах из сохранённых ключей. Это происходит только один раз после обновления.</string>
+    <string name="migration_overlay_starting">Запуск…</string>
+    <string name="migration_overlay_progress_format">Обновление ключа %1$d из %2$d</string>
+    <string name="migration_overlay_done">Готово.</string>
+    <string name="migration_overlay_error">Не удалось завершить обновление. Приложение продолжит работу — некоторые данные о подключах могут отсутствовать, пока вы не импортируете или не создадите новый ключ.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         KeyShareIntents — Android share-sheet chooser titles + clip labels
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="share_intent_chooser_public_key">Поделиться открытым ключом (.asc)</string>
+    <string name="share_intent_chooser_revocation_cert">Поделиться сертификатом отзыва (.asc)</string>
+    <string name="share_intent_chooser_private_key">Сохранить ЗАКРЫТЫЙ ключ (.asc, конфиденциально)</string>
+    <string name="share_intent_clip_label_private_key">Закрытый ключ PGPony</string>
+    <string name="share_intent_clip_label_public_key">Открытый ключ PGPony</string>
+    <string name="share_intent_clip_label_revocation_cert">Сертификат отзыва PGPony</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Phase A15 — Rich share-target activity (ShareTargetActivity)
+         ════════════════════════════════════════════════════════════════
+
+         Strings shown inside the standalone ShareTargetActivity that
+         opens when text or a PGP file is shared into PGPony from
+         another app. Mirrors the iOS PGPonyAction extension.
+    -->
+    <string name="share_target_activity_label">PGPony — Быстрое действие</string>
+    <string name="share_target_dismiss_cd">Закрыть</string>
+
+    <!-- Root / classification screen -->
+    <string name="share_target_root_title">Что вы хотите сделать?</string>
+    <string name="share_target_root_subtitle_text">Выберите, как обработать переданный текст:</string>
+    <string name="share_target_root_subtitle_file_format">Выберите, как обработать %1$s:</string>
+    <string name="share_target_action_encrypt">Зашифровать</string>
+    <string name="share_target_action_encrypt_subtitle">Выберите получателей и создайте шифртекст</string>
+    <string name="share_target_action_decrypt">Расшифровать</string>
+    <string name="share_target_action_decrypt_subtitle">Прочитать это сообщение PGP одним из ваших ключей</string>
+    <string name="share_target_open_full_app">Открыть в PGPony</string>
+    <string name="share_target_open_full_app_subtitle_import">Похоже на ключ PGP — импортируйте его на вкладке «Связка ключей»</string>
+    <string name="share_target_open_full_app_subtitle_setup">Настройте первый ключ в основном приложении, чтобы использовать Быстрое действие</string>
+
+    <!-- Input preview card -->
+    <string name="share_target_input_label_text">Полученный текст</string>
+    <string name="share_target_input_label_file_format">Общий файл: %1$s</string>
+    <string name="share_target_input_truncated_format">… всего символов: %1$d</string>
+    <string name="share_target_input_binary_format">Двоичное содержимое — %1$d байт</string>
+
+    <!-- Encrypt screen -->
+    <string name="share_target_encrypt_title">Зашифровать для…</string>
+    <string name="share_target_encrypt_recipient_unusable_format">Ничего не зашифровано: PGPony не смог загрузить ключ шифрования для %1$s.</string>
+    <string name="share_target_encrypt_recipients_empty">В связке ключей нет ключей получателей. Сначала добавьте открытый ключ в основном приложении.</string>
+    <string name="share_target_encrypt_no_recipients_selected">Выберите хотя бы одного получателя</string>
+    <string name="share_target_encrypt_button">Зашифровать</string>
+    <string name="share_target_encrypt_result_title">Зашифровано</string>
+    <string name="share_target_encrypt_file_result_title">Зашифрованный файл</string>
+    <string name="share_target_encrypt_file_result_subtitle">Ваш файл зашифрован. Поделитесь зашифрованной копией или сохраните её.</string>
+    <string name="share_target_encrypt_file_result_size_format">%1$d байт</string>
+    <string name="share_target_encrypt_file_result_share_button">Поделиться зашифрованным файлом</string>
+    <string name="share_target_encrypt_result_subtitle_format">Шифртекст, символов: %1$d</string>
+
+    <!-- Decrypt screen -->
+    <string name="share_target_decrypt_title">Расшифровать с помощью…</string>
+    <string name="share_target_decrypt_no_key_pairs">Нет доступных закрытых ключей. Сначала создайте или импортируйте пару ключей в основном приложении.</string>
+    <string name="share_target_decrypt_auto_select_label">Наиболее подходящий ключ</string>
+    <string name="share_target_decrypt_passphrase_label">Парольная фраза</string>
+    <string name="share_target_decrypt_passphrase_optional">Парольная фраза (если ключ защищён)</string>
+    <string name="share_target_decrypt_button">Расшифровать</string>
+    <string name="share_target_decrypt_result_title">Расшифровано</string>
+    <string name="share_target_decrypt_file_result_title">Расшифрованный файл</string>
+    <string name="share_target_decrypt_file_result_share_button">Поделиться расшифрованным файлом</string>
+    <string name="share_target_decrypt_result_signed_format">Подписано: %1$s</string>
+    <string name="share_target_decrypt_result_unverified">Расшифровано, но подпись не проверена</string>
+    <string name="share_target_decrypt_result_unsigned">Расшифровано (без подписи)</string>
+
+    <!-- Result actions -->
+    <string name="share_target_result_copy">Копировать</string>
+    <string name="share_target_result_share">Поделиться</string>
+    <string name="share_target_result_done">Готово</string>
+    <string name="share_target_result_open_in_pgpony">Открыть в PGPony</string>
+    <string name="share_target_clip_label_encrypted">Зашифрованное сообщение PGPony</string>
+    <string name="share_target_clip_label_decrypted">Расшифрованное сообщение PGPony</string>
+    <string name="share_target_share_chooser_encrypted">Поделиться зашифрованным сообщением</string>
+    <string name="share_target_share_chooser_decrypted">Поделиться расшифрованным сообщением</string>
+
+    <!-- Status / processing -->
+    <string name="share_target_processing">Обработка…</string>
+    <string name="share_target_status_copied">Скопировано в буфер обмена</string>
+    <string name="share_target_clip_unavailable">Буфер обмена недоступен</string>
+
+    <!-- Errors -->
+    <string name="share_target_error_no_input">Ничего не передано — нет данных для обработки.</string>
+    <!-- 4.0.4 — streamed Quick Action decrypt hit a protected key. -->
+    <string name="share_target_decrypt_passphrase_required">Этот ключ защищён парольной фразой. Введите её и повторите попытку.</string>
+    <string name="share_target_error_locked">Разблокируйте PGPony, чтобы использовать Быстрое действие.</string>
+    <string name="share_target_error_not_pgp_for_decrypt">Это не похоже на сообщение PGP — вставьте содержимое, начинающееся с -----BEGIN PGP MESSAGE-----.</string>
+    <string name="share_target_error_generic_format">Что-то пошло не так: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         A14 Picker — Language selector UI strings.
+         Native language names are NOT translated — they live verbatim in
+         the SupportedLanguage enum (Deutsch, Español, etc.) so the picker
+         can render them in their own language regardless of current locale.
+         These strings are just the surrounding chrome.
+         ════════════════════════════════════════════════════════════════ -->
+    <string name="settings_language_row_title">Язык</string>
+    <string name="language_picker_title">Язык</string>
+    <string name="language_picker_footer">Большинство экранов обновляются сразу. Перезапустите PGPony, если часть текста осталась на прежнем языке.</string>
+    <string name="onboarding_slide_language_title">Язык</string>
+    <string name="onboarding_slide_language_body">Выберите язык, который хотите использовать.\n\nЕго можно изменить в любой момент в Настройках.</string>
+
+    <!-- HW Phase 1 — Hardware key (OpenPGP card) NFC scan. English-only
+         for now; localized in a later phase per the v6.0 plan. -->
+    <string name="keyring_fab_hardware_key">Аппаратный ключ</string>
+    <string name="card_scan_title">Аппаратный ключ</string>
+    <string name="card_scan_prompt_title">Поднесите ключ безопасности к телефону</string>
+    <string name="card_scan_prompt_body">Приложите YubiKey, Token2 или другую карту OpenPGP к задней панели телефона и удерживайте.</string>
+    <string name="card_scan_reading">Чтение карты…</string>
+    <string name="card_scan_usb_permission">Ожидание разрешения на использование подключённого ключа безопасности.</string>
+    <string name="card_usb_working">Работа с ключом безопасности…</string>
+    <string name="card_usb_no_reader">Ключ безопасности не подключён.</string>
+    <string name="card_scan_usb_reading">Чтение ключа безопасности по USB…</string>
+    <string name="card_scan_nfc_unavailable">На этом устройстве нет NFC, поэтому аппаратные ключи здесь использовать нельзя.</string>
+    <string name="card_scan_nfc_disabled">NFC отключён. Включите NFC в системных настройках и повторите попытку.</string>
+    <string name="card_scan_found_title">Карта обнаружена</string>
+    <string name="card_scan_section_card">Карта</string>
+    <string name="card_scan_section_keys">Ключи на карте</string>
+    <string name="card_scan_label_manufacturer">Производитель</string>
+    <string name="card_scan_label_serial">Серийный номер</string>
+    <string name="card_scan_label_aid">AID</string>
+    <string name="card_scan_label_pin_tries">Осталось попыток ввода PIN пользователя</string>
+    <string name="card_scan_label_admin_tries">Осталось попыток админ-PIN</string>
+    <string name="card_scan_slot_signature">Подпись</string>
+    <string name="card_scan_slot_decryption">Расшифровка</string>
+    <string name="card_scan_slot_authentication">Аутентификация</string>
+    <string name="card_scan_slot_empty">Пусто</string>
+    <string name="card_scan_slot_generated">Создан %1$s</string>
+    <string name="card_scan_slot_generated_unknown">Не записано</string>
+    <string name="card_scan_import_button">Импортировать в связку ключей</string>
+    <string name="card_scan_importing">Импорт…</string>
+    <string name="card_scan_imported">Аппаратный ключ импортирован</string>
+    <string name="card_scan_scan_again">Сканировать снова</string>
+    <string name="card_scan_back">Назад</string>
+
+    <!-- HW Phase 2a — Change user PIN. English-only for now. -->
+    <string name="card_pin_change_open">Изменить пользовательский PIN</string>
+    <string name="card_mgmt_title">Управление картой</string>
+    <string name="card_mgmt_back">Назад</string>
+    <string name="card_mgmt_subtitle">Управляйте админ-PIN, разблокируйте пользовательский PIN или выполните сброс карты к заводским настройкам.</string>
+    <string name="card_mgmt_open">Управление картой (админ)</string>
+    <string name="card_mgmt_action_change_admin">Изменить PIN администратора</string>
+    <string name="card_mgmt_action_unblock">Разблокировать PIN пользователя</string>
+    <string name="card_mgmt_action_factory_reset">Сбросить карту к заводским настройкам</string>
+    <string name="card_mgmt_admin_hint">Админ-PIN (PW3) авторизует операции управления. По умолчанию 12345678. Минимум 8 цифр.</string>
+    <string name="card_mgmt_unblock_hint">Если пользовательский PIN заблокирован, задайте новый с помощью админ-PIN. Минимум 6 цифр.</string>
+    <string name="card_mgmt_field_current_admin">Текущий админ-PIN</string>
+    <string name="card_mgmt_field_new_admin">Новый PIN администратора</string>
+    <string name="card_mgmt_field_admin">Админ-PIN</string>
+    <string name="card_mgmt_field_new_user">Новый пользовательский PIN</string>
+    <string name="card_mgmt_field_confirm">Подтвердите новый PIN</string>
+    <string name="card_mgmt_error_mismatch">PIN-коды не совпадают.</string>
+    <string name="card_mgmt_error_admin_short">Админ-PIN должен содержать не менее 8 цифр.</string>
+    <string name="card_mgmt_error_user_short">Пользовательский PIN должен содержать не менее 6 цифр.</string>
+    <string name="card_mgmt_submit_then_tap">Продолжить, затем поднести карту</string>
+    <string name="card_mgmt_reset_warning">Это безвозвратно стирает ВСЕ ключи и данные на карте и восстанавливает PIN-коды по умолчанию. Отменить нельзя. Делайте это только с картой, которую намерены очистить.</string>
+    <string name="card_mgmt_reset_confirm1">Сбросить карту к заводским настройкам</string>
+    <string name="card_mgmt_reset_confirm2_prompt">Вы абсолютно уверены? Это очистит карту.</string>
+    <string name="card_mgmt_reset_confirm2">Да, очистить карту</string>
+    <string name="card_mgmt_tap_prompt">Поднесите карту к задней части телефона.</string>
+    <string name="card_mgmt_done_admin">PIN администратора изменён.</string>
+    <string name="card_mgmt_done_unblock">Пользовательский PIN разблокирован.</string>
+    <string name="card_mgmt_done_reset">Карта сброшена к заводским настройкам. Восстановлены PIN-коды по умолчанию (пользовательский 123456, админ 12345678).</string>
+    <string name="card_mgmt_done_button">Готово</string>
+    <string name="card_mgmt_failed_generic">Операция с картой не удалась.</string>
+    <string name="card_mgmt_retry">Повторить</string>
+    <string name="card_keygen_open">Создать новый ключ на карте</string>
+    <string name="card_keygen_title">Создание ключа на карте</string>
+    <string name="card_keygen_back">Назад</string>
+    <string name="card_keygen_subtitle">Создайте ключ подписи Ed25519 и ключ шифрования Cv25519 прямо на карте. Закрытые ключи никогда не покидают карту.</string>
+    <string name="card_keygen_no_backup_warning">Это создаёт ключи НА карте. Их нельзя скопировать в резервную копию или экспортировать. Если карта потеряна или повреждена, ключи утрачены навсегда. Это также перезаписывает любые существующие ключи в слотах подписи и шифрования карты.</string>
+    <string name="card_keygen_field_name">Имя</string>
+    <string name="card_keygen_field_email">Эл. почта</string>
+    <string name="card_keygen_field_admin_pin">PIN администратора (PW3)</string>
+    <string name="card_keygen_field_user_pin">PIN пользователя (PW1)</string>
+    <string name="card_keygen_ack">Я понимаю, что для этих ключей нельзя создать резервную копию.</string>
+    <string name="card_keygen_generate">Создать на карте</string>
+    <string name="card_keygen_tap_prompt">Поднесите карту к задней части телефона и держите её неподвижно. Создание ключей занимает несколько секунд.</string>
+    <string name="card_keygen_saving">Сохранение нового ключа в связку ключей…</string>
+    <string name="card_keygen_done">Ключ создан на карте.</string>
+    <string name="card_keygen_done_primary_fp">Ключ подписи: %1$s</string>
+    <string name="card_keygen_done_subkey_fp">Ключ шифрования: %1$s</string>
+    <string name="card_keygen_done_button">Готово</string>
+    <string name="card_keygen_failed_generate">Не удалось создать ключ.</string>
+    <string name="card_keygen_failed_save">Ключ создан, но не удалось сохранить его в связку ключей.</string>
+    <string name="card_keygen_retry">Повторить</string>
+    <string name="settings_section_pass_store">Хранилище паролей</string>
+    <string name="settings_pass_store_enable_title">Хранилище паролей</string>
+    <string name="settings_pass_store_enable_subtitle">Откройте и расшифруйте существующее хранилище паролей. PGPony читает его на месте и никогда не изменяет.</string>
+    <string name="settings_pass_store_biometric_title">Требовать биометрию</string>
+    <string name="settings_pass_store_biometric_subtitle">Запрашивать биометрическую разблокировку перед открытием хранилища паролей.</string>
+    <string name="settings_pass_store_open_title">Открыть хранилище паролей</string>
+    <string name="settings_pass_store_open_subtitle">Просматривайте импортированные хранилища.</string>
+    <string name="pass_store_title">Хранилище паролей</string>
+    <string name="pass_back">Назад</string>
+    <string name="pass_cancel">Отмена</string>
+    <string name="pass_store_import">Импортировать хранилище</string>
+    <string name="pass_store_remove_title">Удалить хранилище</string>
+    <string name="pass_store_remove_message">Удалить %1$s из PGPony? Это удаляет только ссылку. Ваши файлы не затрагиваются.</string>
+    <string name="pass_store_remove_confirm">Удалить</string>
+    <string name="pass_store_no_gpg_id">Файл .gpg-id не найден</string>
+    <string name="pass_store_empty_title">Пока нет хранилищ</string>
+    <string name="pass_store_empty_body">Импортируйте существующую папку pass (password-store), чтобы просматривать и расшифровывать её записи, в том числе с помощью аппаратного ключа. PGPony читает ваше хранилище на месте и никогда не изменяет его.</string>
+    <string name="pass_browser_unavailable">Это хранилище недоступно. Возможно, папка была перемещена или разрешение на неё отозвано. Импортируйте её заново из списка хранилищ паролей.</string>
+    <string name="pass_browser_empty_folder">В этой папке нет записей.</string>
+    <string name="pass_copied">Скопировано</string>
+    <string name="pass_entry_not_found">Хранилище не найдено.</string>
+    <string name="pass_entry_unreadable">Не удалось прочитать эту запись. Если она находится в облачном хранилище, возможно, она ещё не загружена.</string>
+    <string name="pass_entry_no_key">Ни один ключ в вашей связке ключей не подходит для этой записи. Импортируйте ключ, для которого она была зашифрована, и повторите попытку.</string>
+    <string name="pass_entry_needs_hardware">Эта запись зашифрована для аппаратного ключа. Расшифровка аппаратным ключом появится в следующем обновлении.</string>
+    <string name="pass_entry_biometric_title">Разблокировать запись</string>
+    <string name="pass_entry_biometric_subtitle">Пройдите аутентификацию, чтобы расшифровать эту запись.</string>
+    <string name="pass_entry_locked_hint">Эта запись зашифрована. Расшифруйте её, чтобы просмотреть пароль и данные.</string>
+    <string name="pass_entry_decrypt">Расшифровать запись</string>
+    <string name="pass_entry_passphrase_hint">Этот ключ защищён парольной фразой. Введите её для расшифровки.</string>
+    <string name="pass_entry_passphrase_wrong">Не удалось расшифровать. Проверьте парольную фразу и повторите попытку.</string>
+    <string name="pass_entry_passphrase_label">Парольная фраза ключа</string>
+    <string name="pass_entry_unlock">Разблокировать</string>
+    <string name="pass_entry_password_label">Пароль</string>
+    <string name="pass_entry_empty_password">(пусто)</string>
+    <string name="pass_entry_reveal">Показать или скрыть</string>
+    <string name="pass_entry_copy">Копировать</string>
+    <string name="pass_entry_otp_label">Одноразовый код (OTP)</string>
+    <string name="pass_entry_otp_note">Обнаружен URI одноразового кода. Генерация кодов не поддерживается.</string>
+    <string name="pass_entry_notes_label">Заметки</string>
+    <string name="pass_entry_try_again">Повторить</string>
+    <string name="pass_entry_card_hint">Эта запись зашифрована для аппаратного ключа. Введите PIN карты, затем поднесите карту к задней части телефона.</string>
+    <string name="pass_entry_card_pin_label">PIN карты (PW1)</string>
+    <string name="pass_entry_card_decrypt">Расшифровать аппаратным ключом</string>
+    <string name="pass_entry_card_tap">Приложите карту к задней части телефона.</string>
+    <string name="pass_entry_card_nfc_off">Для этой записи нужен аппаратный ключ, но NFC выключен или недоступен на этом устройстве. Включите NFC и попробуйте снова.</string>
+    <string name="pass_entry_card_failed">Не удалось расшифровать аппаратным ключом.</string>
+    <plurals name="pass_store_recipients">
+        <item quantity="one">%1$d получатель</item>
+        <item quantity="few">%1$d получателя</item>
+        <item quantity="many">%1$d получателей</item>
+        <item quantity="other">%1$d получателя</item>
+    </plurals>
+    <string name="card_pin_change_title">Сменить пользовательский PIN</string>
+    <string name="card_pin_change_intro">Смените пользовательский PIN (PW1) на аппаратном ключе. Это PIN, который вы вводите для подписи и расшифровки, — не PIN администратора.</string>
+    <string name="card_pin_change_current_label">Текущий PIN</string>
+    <string name="card_pin_change_new_label">Новый PIN</string>
+    <string name="card_pin_change_confirm_label">Подтвердите новый PIN</string>
+    <string name="card_pin_change_too_short">PIN должен содержать не менее 6 символов.</string>
+    <string name="card_pin_change_mismatch">PIN-коды не совпадают.</string>
+    <string name="card_pin_change_button">Изменить PIN</string>
+    <string name="card_pin_change_hold_card">Приложите ключ безопасности к телефону…</string>
+    <string name="card_pin_change_success">Пользовательский PIN изменён</string>
+    <string name="card_pin_change_done">Готово</string>
+    <string name="card_pin_change_try_again">Повторить</string>
+
+    <!-- HW Phase 2b — Sign with card (test/verify harness). English-only. -->
+    <string name="card_sign_open">Подписать тестовое сообщение</string>
+    <string name="card_sign_title">Подписать аппаратным ключом</string>
+    <string name="card_sign_intro">Создайте прозрачную подпись сообщения ключом подписи карты. Скопируйте результат и проверьте его командой \"gpg --verify\". Открытый ключ карты уже должен быть добавлен в вашу связку ключей.</string>
+    <string name="card_sign_message_label">Сообщение для подписи</string>
+    <string name="card_sign_pin_label">PIN пользователя (PW1)</string>
+    <string name="card_sign_button">Подписать</string>
+    <string name="card_sign_hold_card">Приложите ключ безопасности к телефону…</string>
+    <string name="card_sign_result_title">Подписано</string>
+    <string name="card_sign_copy">Копировать подписанное сообщение</string>
+    <string name="card_sign_again">Подписать ещё</string>
+
+    <!-- HW Phase 2b-step2 — card signing on the main Sign tab. -->
+    <string name="card_sign_dialog_title">Подписать аппаратным ключом</string>
+    <string name="card_sign_dialog_message">Введите пользовательский PIN карты, затем приложите карту к телефону, чтобы подписать.</string>
+    <string name="card_sign_no_sig_key">На этой карте нет ключа подписи.</string>
+    <string name="card_sign_pair_first">Сначала добавьте открытый ключ этой карты в связку ключей, затем попробуйте снова.</string>
+    <string name="card_sign_failed_generic">Не удалось подписать.</string>
+    <string name="encrypt_error_card_sign_in_encrypt">Подпись при шифровании аппаратным ключом пока не поддерживается — используйте вкладку «Подписать» для прозрачной подписи или выберите программный ключ.</string>
+
+    <!-- HW Phase 3b — Decrypt with card (test/verify harness). English-only. -->
+    <string name="card_decrypt_open">Расшифровать тестовое сообщение</string>
+    <string name="card_decrypt_title">Расшифровать аппаратным ключом</string>
+    <string name="card_decrypt_intro">Вставьте PGP-сообщение, зашифрованное для ключа этой карты, введите пользовательский PIN и приложите карту к телефону, чтобы расшифровать. Открытый ключ карты уже должен быть добавлен в вашу связку ключей.</string>
+    <string name="card_decrypt_message_label">Зашифрованное сообщение</string>
+    <string name="card_decrypt_pin_label">PIN пользователя (PW1)</string>
+    <string name="card_decrypt_button">Расшифровать</string>
+    <string name="card_decrypt_hold_card">Приложите ключ безопасности к телефону…</string>
+    <string name="card_decrypt_result_title">Расшифровано</string>
+    <string name="card_decrypt_copy">Копировать открытый текст</string>
+    <string name="card_decrypt_again">Расшифровать ещё</string>
+
+    <!-- HW Phase 3 — Decrypt tab card-message detection -->
+    <string name="decrypt_card_message_note">Зашифровано для вашего аппаратного ключа \"%1$s\". Введите PIN и коснитесь карты, чтобы расшифровать.</string>
+    <string name="decrypt_card_message_fallback_name">ключ безопасности</string>
+    <!-- 4.1.0: hidden recipient (gpg -R). The message names nobody, so the
+         card is offered only after every software key has failed. -->
+    <string name="decrypt_card_message_note_hidden">Это сообщение скрывает получателя. Введите PIN и коснитесь \"%1$s\", чтобы попробовать аппаратный ключ.</string>
+    <string name="decrypt_hidden_recipient_no_software_key">Ни один из ваших программных ключей не открыл это сообщение. Оно скрывает получателя, поэтому не было ID ключа для сопоставления.</string>
+
+    <!-- HW Phase 3 — share-target card decrypt -->
+    <string name="share_target_card_label">АППАРАТНЫЙ КЛЮЧ</string>
+    <string name="share_target_card_fallback_name">Ваш ключ безопасности</string>
+    <string name="share_target_card_note">Это сообщение зашифровано для вашего аппаратного ключа. Введите PIN и коснитесь карты, чтобы расшифровать.</string>
+
+    <!-- Key expiration editing -->
+    <string name="key_detail_expiry_edit">Изменить срок действия</string>
+    <string name="key_detail_expiry_sheet_title">Изменить срок действия</string>
+    <string name="key_detail_expiry_sheet_subtitle">Задайте новый срок действия для %1$s. Это заново подписывает ключ и его подключи; отпечаток остаётся прежним.</string>
+    <string name="key_detail_expiry_custom">Своя дата</string>
+    <string name="key_detail_expiry_pick_date">Выберите дату</string>
+    <string name="key_detail_expiry_passphrase_label">Парольная фраза ключа (если задана)</string>
+    <string name="key_detail_expiry_card_hint">Введите PIN, затем приложите ключ безопасности к телефону по запросу.</string>
+    <string name="key_detail_expiry_apply">Обновить срок действия</string>
+    <string name="key_detail_expiry_failed">Не удалось обновить срок действия. Пожалуйста, попробуйте снова.</string>
+
+    <!-- Fingerprint to sign -->
+    <string name="settings_biometric_sign_title">Требовать отпечаток для подписи</string>
+    <string name="settings_biometric_sign_subtitle">Подтверждайте отпечатком перед подписью программным ключом. Аппаратные ключи по-прежнему используют PIN + касание.</string>
+    <string name="sign_biometric_prompt_title">Подтвердите подпись</string>
+    <string name="sign_biometric_prompt_subtitle">Пройдите аутентификацию, чтобы подписать вашим ключом</string>
+
+    <!-- Keyring sorting -->
+    <string name="keyring_sort_cd">Сортировать ключи</string>
+    <string name="keyring_sort_alpha_asc">Имя (А–Я)</string>
+    <string name="keyring_sort_alpha_desc">Имя (Я–А)</string>
+    <string name="keyring_sort_manual">Пользовательский порядок</string>
+    <string name="keyring_drag_handle_cd">Перетащите для изменения порядка</string>
+
+    <string name="common_clear">Очистить</string>
+    <string name="key_detail_action_change_card_pin">Изменить PIN карты</string>
+    <!-- 3.1.0 Phase 2 (C4) — file password encryption + import read error -->
+    <string name="encrypt_file_method_label">Зашифровать с помощью</string>
+    <string name="encrypt_file_method_recipients">Получатели</string>
+    <string name="encrypt_file_method_password">Пароль</string>
+    <string name="encrypt_password_unrecoverable">Если вы забудете парольную фразу, файл нельзя будет восстановить. Резервной копии и сброса нет.</string>
+    <string name="file_enc_result_badge_password">Защищено паролем</string>
+    <string name="keyring_error_file_read_failed">Не удалось прочитать файл. Убедитесь, что он загружен и доступен, затем попробуйте снова.</string>
+    <!-- 3.1.0 Phase 4 (J1) — structured PGP/MIME decrypt result -->
+    <string name="structured_result_title">Расшифрованное сообщение</string>
+    <string name="structured_result_attachments_format">Вложения (%1$d)</string>
+    <string name="structured_result_share_all">Поделиться всем</string>
+    <!-- 3.1.0 Phase 5 (J3/J4) — Bundle compose + outputs -->
+    <string name="encrypt_mode_bundle">Комплект</string>
+    <string name="encrypt_bundle_body_label">Сообщение</string>
+    <!-- 4.0.0 Phase 9 (F6) — Bundle body character count -->
+    <string name="encrypt_bundle_char_count_format">%1$d символов</string>
+    <string name="encrypt_bundle_add_photos">Добавить фото</string>
+    <string name="encrypt_bundle_add_files">Добавить файлы</string>
+    <string name="encrypt_bundle_attachments_format">Вложения (%1$d)</string>
+    <string name="encrypt_bundle_remove">Удалить вложение</string>
+    <string name="encrypt_bundle_show_all_format">Показать все файлы (%1$d)</string>
+    <string name="encrypt_bundle_show_fewer">Показать меньше</string>
+    <string name="encdec_error_bundle_empty">Добавьте сообщение или хотя бы одно вложение</string>
+    <!-- 4.1.0 Phase 14c, reworded in Phase 15 once card signing arrived.
+         The backstop for "Also sign" on with a signing key the software
+         path could not unlock: refuse rather than silently produce an
+         unsigned bundle. Card keys no longer reach it, they route to the
+         PIN dialog instead. -->
+    <string name="encdec_error_bundle_signing_key">Этот набор не удалось подписать: выбранный ключ подписи не удалось разблокировать. Выберите другой ключ подписи или отключите подпись.</string>
+    <string name="bundle_result_title">Комплект зашифрован</string>
+    <string name="bundle_result_subtitle_format">%1$d вложений · %2$d получателей</string>
+    <string name="bundle_result_section_email">Отправить по эл. почте</string>
+    <string name="bundle_result_section_file">Отправить как файл</string>
+    <string name="bundle_result_share_eml">Поделиться как email (.eml)</string>
+    <string name="bundle_result_share_asc">Поделиться зашифрованным .asc</string>
+    <string name="bundle_result_copy_inline">Копировать встроенный блок</string>
+    <string name="bundle_result_copy_too_large">Слишком велико для копирования. Поделитесь или сохраните как файл.</string>
+    <string name="bundle_result_export_writing">Запись файла… для большого набора это может занять время.</string>
+    <!-- 3.1.0 Phase 5 Fix1 — Bundle result Save-to-Files -->
+    <string name="bundle_result_save_eml">Сохранить .eml в «Файлы»</string>
+    <string name="bundle_result_save_asc">Сохранить .asc в Файлы</string>
+    <!-- 3.1.0 Phase 6 (J6) — Quick Action PGP/MIME note -->
+    <string name="share_target_mime_attachments_note_format">Содержит %1$d вложений — откройте сообщение в PGPony, чтобы просмотреть и сохранить их.</string>
+    <!-- 3.1.0 Phase 7 (B1/B2/B3) — Remember Card PIN -->
+    <string name="settings_card_pin_cache_title">Запомнить PIN карты</string>
+    <string name="settings_card_pin_cache_subtitle">Хранить пользовательский PIN в памяти в течение выбранного времени. Никогда не сохраняется на диск; сбрасывается при вводе неверного PIN или закрытии приложения.</string>
+    <string name="settings_card_pin_cache_duration_label">Запоминать на</string>
+    <string name="settings_card_pin_cache_1min">1 мин</string>
+    <string name="settings_card_pin_cache_5min">5 мин</string>
+    <string name="settings_card_pin_cache_15min">15 мин</string>
+    <string name="settings_card_pin_cache_1hr">1 час</string>
+    <string name="settings_card_pin_cache_countdown_format">PIN запомнен — сбросится через %1$s</string>
+    <string name="settings_card_pin_cache_none_held">Сейчас PIN не запомнен.</string>
+    <string name="settings_card_pin_cache_clear">Очистить сейчас</string>
+    <!-- 4.0.0 Phase 9 (G9) — "Until I clear it" PIN cache mode -->
+    <string name="settings_card_pin_cache_until_cleared">Пока я не очищу</string>
+    <string name="settings_session_until_locked">До блокировки телефона</string>
+    <string name="settings_card_pin_cache_held_until_cleared">PIN запомнен до тех пор, пока вы его не очистите.</string>
+    <!-- RC3 §J (#15): provider passphrase-cache duration picker. Duration chips,
+         "Remember for", and "Clear now" reuse the card-PIN strings above. -->
+    <string name="settings_passphrase_cache_title">Запоминать парольные фразы ключей</string>
+    <string name="settings_passphrase_cache_subtitle">Хранить введённые для подключённых приложений парольные фразы в памяти в течение выбранного времени. Никогда не сохраняются на диск; очищаются при неверной парольной фразе или закрытии приложения.</string>
+    <string name="settings_passphrase_cache_countdown_format">Парольная фраза запомнена — очистится через %1$s</string>
+    <string name="settings_passphrase_cache_none_held">Сейчас парольная фраза не запомнена.</string>
+    <string name="settings_passphrase_cache_held_until_cleared">Парольная фраза запомнена до тех пор, пока вы её не очистите.</string>
+    <!-- 4.0.0 Phase 9b: settings parity (clear inputs, pubkey comment, licenses) -->
+    <string name="settings_clear_inputs_title">Очищать ввод после шифрования</string>
+    <string name="settings_clear_inputs_subtitle">Стирать сообщение, файлы и пароли при закрытии результата шифрования</string>
+    <string name="settings_armor_comment_pubkey_title">Включать комментарий в экспортируемые открытые ключи</string>
+    <string name="settings_armor_comment_pubkey_subtitle">Добавлять заголовок Comment при копировании, отправке или сохранении открытого ключа. Загрузки на серверы ключей и QR-коды остаются без комментария.</string>
+    <string name="settings_about_licenses_title">Лицензии</string>
+    <string name="settings_about_licenses_subtitle">Указания об открытом ПО</string>
+    <string name="licenses_title">Лицензии</string>
+    <string name="licenses_subtitle">Стороннее ПО, используемое PGPony.</string>
+    <!-- 3.1.0 Phase 8 (E4/E5) — email send + sign by default -->
+    <string name="result_send_email_button">Отправить как e-mail</string>
+    <string name="settings_sign_by_default_title">Подписывать по умолчанию</string>
+    <string name="settings_sign_by_default_subtitle">Начинать новые сообщения с включённой опцией \"Также подписать\", используя ключ подписи по умолчанию.</string>
+    <string name="settings_section_email">Эл. почта</string>
+    <string name="settings_email_format_label">Формат отправки</string>
+    <string name="settings_email_format_inline">Встроенно</string>
+    <string name="settings_email_format_attachment">Вложение</string>
+    <string name="settings_email_format_both">Оба</string>
+    <string name="settings_email_format_subtitle">Встроенно помещает зашифрованный блок в тело письма, чтобы PGP-совместимые клиенты расшифровывали его автоматически; Вложение отправляет файл .asc.</string>
+    <string name="settings_section_sharing">Отправка</string>
+    <string name="settings_share_format_label">Способ отправки по умолчанию</string>
+    <string name="settings_share_format_inline">Встроенный текст</string>
+    <string name="settings_share_format_file">Файл .asc</string>
+    <string name="settings_share_format_subtitle">Как кнопка \"Поделиться\" упаковывает зашифрованный или подписанный результат.</string>
+    <!-- 3.1.0 Phase 8 Fix1 — file import read error -->
+    <string name="keyring_error_file_read">Не удалось прочитать этот файл. Попробуйте сохранить его в локальное хранилище (приложение \"Файлы\") и импортировать снова.</string>
+    <!-- 3.1.0 Phase 8 Fix2 — file import diagnostic -->
+    <string name="keyring_error_parse_diag">Не удалось прочитать ключ из файла — получено %1$d байт, начинающихся с \"%2$s\"</string>
+    <!-- 3.1.0 Phase 8 Fix3 — richer file import diagnostic -->
+    <string name="keyring_error_parse_diag2">Не удалось прочитать ключ из \"%1$s\" — получено %2$d байт (файл сообщает %3$s), начинающихся с \"%4$s\"</string>
+    <!-- 4.0.0 Succession Phase 1 — OpenPGP API provider -->
+    <string name="settings_section_provider">Поставщик OpenPGP</string>
+    <string name="settings_provider_clients_title">Подключённые приложения</string>
+    <string name="settings_provider_clients_subtitle">Приложения, которым разрешено использовать PGPony для шифрования OpenPGP, например Thunderbird или K-9 Mail</string>
+    <string name="provider_clients_title">Подключённые приложения</string>
+    <string name="provider_clients_subtitle">Эти приложения могут использовать вашу связку ключей PGPony через API OpenPGP. Удаление приложения здесь немедленно отзывает его доступ — при следующем запросе оно снова попросит разрешение.</string>
+    <string name="provider_clients_empty_title">Пока нет подключённых приложений</string>
+    <string name="provider_clients_empty_body">В приложении с поддержкой OpenPGP, например Thunderbird для Android, выберите PGPony в качестве поставщика OpenPGP. Приложение появится здесь после того, как вы одобрите его первое подключение.</string>
+    <string name="provider_clients_granted_format">Подключено %1$s</string>
+    <string name="provider_clients_revoke">Отозвать доступ</string>
+    <string name="provider_consent_title">Разрешить %1$s?</string>
+    <string name="provider_consent_body">%1$s (%2$s) хочет использовать PGPony для операций OpenPGP, таких как шифрование, расшифровка и подписание.\n\nPGPony запомнит это приложение по имени его пакета и сертификату подписи. Вы можете отозвать доступ в любое время в Настройки → Подключённые приложения.</string>
+    <string name="provider_consent_allow">Разрешить</string>
+    <string name="provider_consent_deny">Не разрешать</string>
+    <!-- 4.0.0 Succession Phase P2a-1 — signing-key picker -->
+    <string name="provider_keypicker_title">Выберите ключ подписи</string>
+    <string name="provider_keypicker_for_format">Для %1$s</string>
+    <string name="provider_keypicker_none">Без ключа — не подписывать</string>
+    <string name="provider_keypicker_empty">В вашей связке ключей пока нет пригодных ключей. Сначала создайте или импортируйте пару ключей в PGPony.</string>
+    <!-- 4.0.0 Succession Phase P2a-2 — provider passphrase prompt -->
+    <string name="provider_passphrase_title">Разблокировать ключ подписи</string>
+    <string name="provider_passphrase_body_format">Введите парольную фразу для %1$s, чтобы подписать это сообщение. PGPony запомнит её на 5 минут только на этом устройстве.</string>
+    <string name="provider_passphrase_wrong">Неверная парольная фраза — попробуйте снова.</string>
+    <string name="provider_passphrase_hint">Парольная фраза</string>
+    <string name="provider_passphrase_unlock">Разблокировать</string>
+    <!-- 4.0.0 Succession Phase P2c — provider hardware-card operations -->
+    <string name="provider_cardop_title">Подтвердите ключом %1$s</string>
+    <string name="provider_cardop_generic_card">Безопасность</string>
+    <string name="provider_cardop_body_sign">Это сообщение будет подписано вашим аппаратным ключом. Введите PIN карты, затем поднесите ключ к задней панели телефона.</string>
+    <string name="provider_cardop_body_decrypt">Это сообщение зашифровано для вашего аппаратного ключа. Введите PIN карты, затем поднесите ключ к задней панели телефона.</string>
+    <string name="provider_cardop_pin_hint">PIN карты</string>
+    <string name="provider_cardop_pin_needed">Сначала введите PIN карты, затем снова коснитесь картой.</string>
+    <string name="provider_cardop_waiting">Ожидание карты…</string>
+    <string name="provider_cardop_wrong_pin">Неверный PIN — осталось попыток: %1$d. Проверьте PIN и снова коснитесь картой.</string>
+    <string name="provider_cardop_tag_lost">Карта отдалилась — держите её неподвижно у телефона и попробуйте снова.</string>
+    <string name="provider_cardop_nfc_unavailable">NFC недоступен или выключен. Включите NFC и попробуйте снова.</string>
+    <string name="provider_cardop_generic_error">Операция с картой не удалась. Держите карту неподвижно и попробуйте снова.</string>
+    <!-- P2c Fix1 -->
+    <string name="provider_cardop_no_slot_key">На этой карте нет ключа в нужном слоте.</string>
+    <string name="provider_cardop_pair_first">Сначала добавьте открытый ключ этой карты в вашу связку ключей PGPony, затем попробуйте снова.</string>
+    <string name="provider_cardop_wrong_card">Это другая карта, а не выбранный ключ. Коснитесь подходящей картой.</string>
+    <!-- 4.0.0 Phase 5a — multi-keyserver directory + publish -->
+    <string name="settings_section_keyservers">Серверы ключей</string>
+    <string name="settings_keyservers_title">Серверы ключей</string>
+    <string name="settings_keyservers_subtitle">Где PGPony ищет и публикует ключи</string>
+    <string name="keyservers_title">Серверы ключей</string>
+    <string name="keyservers_subtitle">PGPony ищет ключи на этих серверах по порядку и публикует на те, которые вы включите. keys.pgpony.app — это собственный сервер PGPony, принимающий все типы ключей.</string>
+    <string name="keyservers_first_party_badge">СОБСТВЕННЫЙ</string>
+    <string name="keyservers_lookup">Использовать для поиска</string>
+    <string name="keyservers_publish">Использовать для публикации</string>
+    <string name="keyservers_move_up">Переместить вверх</string>
+    <string name="keyservers_move_down">Переместить вниз</string>
+    <string name="keyservers_reset">Сбросить к значениям по умолчанию</string>
+    <string name="publish_title">Опубликовать ключ</string>
+    <string name="publish_subtitle">Загрузите этот открытый ключ, чтобы другие могли его найти. Выберите, на какие серверы публиковать.</string>
+    <string name="publish_action">Опубликовать</string>
+    <string name="publish_may_not_accept_format">Может не принимать ключи %1$s — ваши другие серверы всё равно примут.</string>
+    <string name="publish_rejected_key_type_format">Не принято — этот сервер, вероятно, ещё не поддерживает ключи %1$s. Всё равно опубликовано на ваши другие серверы.</string>
+    <string name="publish_failed_format">Не удалось опубликовать: %1$s</string>
+    <string name="publish_ok">Опубликовано.</string>
+    <string name="publish_ok_pending">Опубликовано — проверьте %1$s на письмо для подтверждения.</string>
+    <string name="publish_status_verified">✓ Личность подтверждена</string>
+    <string name="publish_status_awaiting">Опубликовано, ожидается подтверждение по email</string>
+    <string name="publish_status_published">Опубликован</string>
+    <string name="publish_status_not_published">Ещё не на этом сервере</string>
+    <!-- 4.0.0 Phase 5 — background keyserver refresh -->
+    <string name="settings_section_key_refresh">Обновление ключей</string>
+    <string name="settings_key_refresh_title">Фоновое обновление</string>
+    <string name="settings_key_refresh_subtitle">Автоматически перепроверять ваши ключи на серверах ключей, чтобы вы замечали отзывы и истечения срока</string>
+    <string name="settings_key_refresh_wifi_title">Только по Wi-Fi</string>
+    <string name="settings_key_refresh_wifi_subtitle">Обновлять только в безлимитных сетях</string>
+    <string name="settings_key_refresh_disclosure">Когда включено, PGPony периодически отправляет отпечатки хранящихся у вас ключей на включённые серверы ключей (включая keys.pgpony.app) для получения обновлений. Используйте вариант onion в разделе Прокси, чтобы делать это через Tor.</string>
+    <string name="settings_key_refresh_foss_enable">В сборках F-Droid это по умолчанию выключено. Включите, чтобы PGPony автоматически проверял отзывы.</string>
+    <string name="key_refresh_notif_revoked_title">Ключ отозван</string>
+    <string name="key_refresh_notif_revoked_body">Ключ %1$s теперь отозван на сервере ключей. Возможно, стоит перестать его использовать.</string>
+    <string name="key_refresh_notif_expired_title">Ключ истёк</string>
+    <string name="key_refresh_notif_expired_body">Ключ %1$s истёк по данным сервера ключей.</string>
+    <!-- 4.0.0 Phase 6 — SOCKS/Tor proxy -->
+    <string name="settings_section_proxy">Прокси (Tor)</string>
+    <string name="settings_proxy_title">Направлять трафик через прокси</string>
+    <string name="settings_proxy_subtitle">Направлять весь трафик серверов ключей и WKD через Tor или SOCKS5-прокси</string>
+    <string name="settings_proxy_mode_off">Выкл.</string>
+    <string name="settings_proxy_mode_orbot">Orbot (Tor)</string>
+    <string name="settings_proxy_mode_custom">Пользовательский</string>
+    <string name="settings_proxy_orbot_missing">Orbot не установлен. Установите его из F-Droid или Google Play, чтобы направлять трафик через Tor.</string>
+    <string name="settings_proxy_custom_host">Хост SOCKS5</string>
+    <string name="settings_proxy_custom_port">Порт</string>
+    <string name="settings_proxy_onion_title">Использовать onion-зеркало PGPony</string>
+    <string name="settings_proxy_onion_subtitle">Обращаться к keys.pgpony.app через его .onion, чтобы трафик серверов ключей не покидал Tor</string>
+    <string name="settings_proxy_failclosed_note">Когда прокси недоступен, запросы завершаются с ошибкой, а не переходят на прямое соединение.</string>
+
+    <!-- 4.0.0 Phase 3 — encrypted keyring backup / restore -->
+    <string name="settings_section_backup">Резервная копия</string>
+    <string name="settings_backup_title">Резервная копия &amp; восстановление</string>
+    <string name="settings_backup_subtitle">Сохраните всю связку ключей в зашифрованный файл или восстановите её</string>
+    <string name="backup_screen_title">Резервная копия &amp; восстановление</string>
+    <string name="backup_menu_backup_title">Создать резервную копию связки ключей</string>
+    <string name="backup_menu_backup_subtitle">Сохранить все ключи в один зашифрованный файл</string>
+    <string name="backup_menu_restore_title">Восстановить из резервной копии</string>
+    <string name="backup_menu_restore_subtitle">Импортировать ключи из файла резервной копии .pgpony</string>
+    <string name="backup_code_heading">Ваш код восстановления</string>
+    <string name="backup_code_explain">Этот код — единственный способ открыть вашу резервную копию. Запишите его и храните в надёжном месте — PGPony не сможет восстановить его за вас.</string>
+    <string name="backup_code_copy">Копировать код</string>
+    <string name="backup_code_copied">Скопировано</string>
+    <string name="backup_confirm_label">Введите код восстановления повторно</string>
+    <string name="backup_confirm_hint">Подтвердите, что сохранили его, прежде чем файл будет записан.</string>
+    <string name="backup_confirm_mismatch">Не совпадает с кодом выше</string>
+    <string name="backup_continue">Сохранить резервную копию</string>
+    <string name="backup_working">Выполняется…</string>
+    <string name="backup_saved_title">Резервная копия сохранена</string>
+    <string name="backup_saved_body">Храните код восстановления в надёжном месте — он понадобится для восстановления этой резервной копии.</string>
+    <string name="restore_code_heading">Введите код восстановления</string>
+    <string name="restore_code_explain">Введите код восстановления, полученный при создании этой резервной копии.</string>
+    <string name="restore_code_heading_okc">Введите код резервной копии OpenKeychain</string>
+    <string name="restore_code_explain_okc">36-значный код, который OpenKeychain показал при создании этой резервной копии. Он импортирует все ключи внутри.</string>
+    <string name="restore_code_label">Код восстановления</string>
+    <string name="restore_run">Восстановить</string>
+    <string name="restore_done_title">Восстановление завершено</string>
+    <string name="restore_added">Добавлено</string>
+    <string name="restore_upgraded">Преобразовано в пару ключей</string>
+    <string name="restore_updated">Обновлено</string>
+    <string name="restore_unchanged">Уже актуально</string>
+    <string name="restore_failed">Не удалось восстановить</string>
+    <string name="restore_settings_applied">Настройки восстановлены</string>
+    <string name="restore_nothing">В этой резервной копии ключи не найдены.</string>
+    <string name="backup_done">Готово</string>
+    <!-- 4.0.0 Phase 3 — onboarding: three paths (create / import / restore) -->
+    <string name="onboarding_page_import_existing">У меня уже есть ключ</string>
+    <string name="onboarding_page_restore_backup">Восстановить из резервной копии</string>
+    <!-- 4.0.0 Phase 3 — multi-key import summary (OpenKeychain export-all) -->
+    <string name="import_multi_result_format">Импортировано ключей: %1$d — новых: %2$d, обновлено: %3$d, уже было: %4$d</string>
+    <!-- 4.0.0 Phase 3 — OpenKeychain migration card -->
+    <string name="okc_migration_title">Переходите с OpenKeychain?</string>
+    <string name="okc_migration_body">Экспортируйте ключи в OpenKeychain, затем выберите этот файл ниже — они импортируются все сразу. Для зашифрованной резервной копии OpenKeychain (файл .sec.pgp) используйте Настройки → Резервная копия → Восстановление.</string>
+    <string name="okc_migration_onboarding_body">Выберите \"Восстановить из резервной копии\" для зашифрованной резервной копии OpenKeychain или \"У меня уже есть ключ\", чтобы импортировать экспортированный файл ключа.</string>
+    <!-- 4.3.0 (#26): change key passphrase -->
+    <string name="key_detail_action_change_passphrase">Изменить парольную фразу</string>
+    <string name="change_passphrase_sheet_title">Изменить парольную фразу</string>
+    <string name="change_passphrase_sheet_subtitle">Задайте, измените или удалите парольную фразу, защищающую этот ключ на этом устройстве.</string>
+    <string name="change_passphrase_current_label">Текущая парольная фраза</string>
+    <string name="change_passphrase_new_label">Новая парольная фраза</string>
+    <string name="change_passphrase_remove_warning">Оставьте поле новой парольной фразы пустым, чтобы убрать защиту. Тогда ключ будет храниться на этом устройстве без парольной фразы, и любой, кто может пользоваться устройством, сможет использовать его.</string>
+    <string name="change_passphrase_remove_ack">Хранить этот ключ без парольной фразы</string>
+    <string name="change_passphrase_backup_note">Существующие резервные копии сохранят прежнюю парольную фразу, пока вы снова не экспортируете ключ.</string>
+    <string name="change_passphrase_apply">Изменить</string>
+    <string name="change_passphrase_failed">Не удалось изменить парольную фразу.</string>
+    <!-- 4.3.0 (#31): zip output packaging -->
+    <string name="enc_result_wrap_zip_label">Упаковать в .zip</string>
+    <string name="enc_result_wrap_zip_note">Упаковка для передачи, не шифрование. Полезно, когда канал портит файлы .gpg или .asc.</string>
+    <!-- 4.3.0 (#31): zip decrypt -->
+    <string name="decrypt_zip_no_pgp">В этом .zip не найдено зашифрованного сообщения.</string>
+    <string name="decrypt_zip_multiple">Этот .zip содержит несколько зашифрованных файлов. Извлеките их и расшифровывайте по одному.</string>
+    <string name="decrypt_zip_failed">Не удалось прочитать .zip.</string>
+    <!-- 4.3.0 (#36): Key Detail top-bar content descriptions -->
+    <string name="key_detail_show_qr_cd">Показать QR-код</string>
+    <string name="key_detail_actions_menu_cd">Ещё действия</string>
+    <!-- 4.3.0 (#36/§5.5.2): storage-level row -->
+    <string name="key_detail_detail_storage">Хранилище</string>
+    <string name="key_detail_detail_storage_software">Программное хранилище ключей</string>
+    <string name="key_detail_detail_storage_card">Аппаратная карта безопасности</string>
+    <string name="export_private_gpg_compat_label">Формат, совместимый с GnuPG</string>
+    <string name="export_private_gpg_compat_caption">Выводит составной ключ в том виде, который ожидает GnuPG (GPG4WIN), чтобы его можно было импортировать там. Для других приложений оставьте выключенным.</string>
+    <string name="keyring_more_cd">Ещё</string>
+    <string name="settings_key_default_choose">Выбрать ключ по умолчанию</string>
+    <string name="kd_avatar_hint_encrypt">Совет: нажмите на аватар, чтобы зашифровать для этого ключа</string>
+    <string name="kd_avatar_hint_decrypt">Совет: нажмите на аватар, чтобы расшифровать этим ключом</string>
+    <string name="settings_security_confirm_lock_title">Подтвердите изменение биометрической блокировки</string>
+    <string name="settings_security_confirm_sign_title">Подтвердите изменение требования подписи</string>
+    <string name="settings_security_confirm_enable_subtitle">Пройдите аутентификацию, чтобы включить эту настройку безопасности</string>
+    <string name="settings_security_confirm_disable_subtitle">Пройдите аутентификацию, чтобы отключить эту настройку безопасности</string>
+    <string name="settings_protect_destructive_title">Защитить разрушительные действия</string>
+    <string name="settings_protect_destructive_subtitle">Требует аутентификацию устройства перед удалением ключа, удалением подключа или очисткой всех данных. Диалоги подтверждения по-прежнему появляются, когда это выключено.</string>
+    <string name="settings_disable_destructive_title">Скрыть разрушительные действия</string>
+    <string name="settings_disable_destructive_subtitle">Скрывает удаление ключа, удаление подключа, удаление User ID и очистку всех данных для тех, кто ими никогда не пользуется. Отзыв остаётся доступным. По умолчанию выключено.</string>
+    <string name="settings_security_confirm_destructive_title">Подтвердите изменение блокировки разрушительных действий</string>
+    <string name="encrypt_pq_mixed_warning">Слабое звено постквантовой защиты: %1$s получит это сообщение с классическим шифрованием, поэтому всё сообщение не является постквантово защищённым. Для полной защиты каждому получателю нужен постквантовый ключ.</string>
+    <string name="encrypt_subkey_label">%1$s: подключ шифрования</string>
+    <string name="encrypt_subkey_pq">постквантовый</string>
+    <string name="encrypt_subkey_classical">классический</string>
+    <string name="encrypt_subkey_auto">автоматически</string>
+    <string name="encrypt_sign_none_option">Нет (не подписывать)</string>
+    <string name="result_encrypt_password_note">Расшифровать это сообщение может только тот, у кого есть пароль.</string>
+    <string name="encdec_error_incorrect_passphrase_for_format">Неверная парольная фраза для %1$s.</string>
+    <string name="encdec_error_selected_key_not_recipient_format">Выбранный ключ (%1$s) не является получателем этого сообщения. Выберите ключ, для которого оно было зашифровано.</string>
+    <string name="encdec_decrypted_with_format">Расшифровано ключом %1$s</string>
+    <string name="keyring_search_placeholder">Поиск по имени, заметке, ID ключа или отпечатку</string>
+    <string name="keyring_search_clear_cd">Очистить поиск</string>
+    <string name="key_card_default_badge">ПО УМОЛЧАНИЮ</string>
+    <string name="settings_offer_publish_title">Предлагать публикацию новых ключей</string>
+    <string name="settings_offer_publish_subtitle">После создания ключа предлагает опубликовать его на серверах ключей. Отключите, чтобы создание ключей оставалось полностью локальным.</string>
+    <string name="keyring_generate_algorithm_group_classical">Классические</string>
+    <string name="keyring_generate_algorithm_group_pqc">Постквантовые</string>
+    <string name="keyring_generate_algorithm_group_interop">Совместимость / interop</string>
+    <string name="keyring_generate_algorithm_group_advanced">Расширенные / совместимость</string>
+    <string name="keyring_generate_algorithm_caption_pqc_v4">Постквантовое шифрование с самым широким охватом. Стандартный ключ v4 Ed25519, который уже понимает любой инструмент OpenPGP, несёт постквантовый подключ шифрования ML-KEM-768 рядом с классическим, так что старое ПО по-прежнему может шифровать для вас, а современные инструменты используют ML-KEM. Рекомендуемый выбор для постквантового шифрования, работающего с реальными корреспондентами. Резервное копирование закрытого ключа для этой формы пока недоступно.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign">Полностью постквантовый без классического запасного варианта: подписывающая личность ML-DSA плюс подключ шифрования ML-KEM на современном ключе v6 (RFC 9980). И подпись, и шифрование устойчивы к квантовым атакам, а поскольку ключ не несёт более слабого классического подключа, понижать не к чему. Использовать его может только актуальное ПО OpenPGP.</string>
+    <string name="keyring_generate_granular_toggle">Расширенно: составить подключи</string>
+    <string name="keyring_generate_granular_include_default">Включить подключ шифрования по умолчанию</string>
+    <string name="keyring_generate_granular_add_subkey">Добавить подключ</string>
+    <string name="keyring_error_email_invalid">Этот адрес эл. почты выглядит неправильно</string>
+    <string name="import_button_encrypt_to_key">Зашифровать для этого ключа</string>
+    <string name="key_detail_copy_email_cd">Скопировать адрес эл. почты</string>
+    <string name="key_detail_email_copied">Эл. почта скопирована</string>
+    <string name="key_detail_userids_remove">Удалить</string>
+    <string name="key_detail_userid_action_sheet_title_remove">Удалить User ID</string>
+    <string name="key_detail_userid_action_sheet_subtitle_remove">Удаляет %1$s из вашей копии этого ключа и оставляет удалённым здесь. Серверы ключей его сохраняют, поэтому отзовите его, чтобы вывести из обращения для других.</string>
+    <string name="key_detail_userid_action_apply_remove">Удалить</string>
+    <string name="key_detail_subkey_revoke_action">Отозвать подключ…</string>
+    <string name="key_detail_subkey_remove_action">Удалить подключ…</string>
+    <string name="key_detail_subkey_more_actions">Действия с подключом</string>
+    <string name="key_detail_subkey_remove_confirm_title">Удалить этот подключ?</string>
+    <string name="key_detail_subkey_remove_confirm_body">Это удалит подключ только из вашей копии ключа. У всех, у кого уже есть ваш открытый ключ, он останется, и они по-прежнему смогут шифровать для него. Чтобы сообщить корреспондентам, отзовите его.</string>
+    <string name="key_detail_subkey_remove_confirm_action">Удалить</string>
+    <string name="key_detail_subkey_revoke_instead_button">Вместо этого отозвать этот подключ</string>
+    <string name="key_detail_subkey_last_enc_title">Последний подключ шифрования</string>
+    <string name="key_detail_subkey_last_enc_body">Это единственный подключ шифрования на этом ключе. Его удаление или отзыв лишит ключ возможности получать зашифрованные сообщения. Всё равно продолжить?</string>
+    <string name="key_detail_subkey_last_enc_action">Продолжить</string>
+    <string name="key_detail_subkey_action_failed">Не удалось выполнить действие с подключом. Повторите попытку.</string>
+    <string name="key_detail_add_subkey_group_classical">Классические</string>
+    <string name="key_detail_add_subkey_group_pq">Постквантовые</string>
+    <string name="key_detail_add_subkey_type_mlkem768">ML-KEM-768 (Шифрование)</string>
+    <string name="key_detail_add_subkey_type_mlkem1024">ML-KEM-1024 (Шифрование)</string>
+    <string name="key_detail_add_subkey_type_mldsa65">ML-DSA-65 (Подпись)</string>
+    <string name="key_detail_add_subkey_type_mldsa87">ML-DSA-87 (Подпись)</string>
+    <string name="key_detail_add_subkey_type_rsa_2048_auth">RSA 2048 (Аутентификация)</string>
+    <string name="key_detail_add_subkey_type_rsa_4096_auth">RSA 4096 (Аутентификация)</string>
+    <string name="key_detail_add_subkey_type_ed25519_auth">Ed25519 (Аутентификация)</string>
+    <string name="key_delete_revoke_instead_note">После удаления ключа создать сертификат отзыва уже нельзя. Если этот ключ может быть у других, вместо удаления отзовите его, чтобы ему перестали доверять.</string>
+    <string name="key_delete_revoke_instead_button">Вместо этого отозвать этот ключ</string>
+    <string name="key_detail_subkey_remove_biometric_title">Подтвердите удаление подключа</string>
+    <string name="key_detail_subkey_remove_biometric_subtitle">Пройдите аутентификацию, чтобы удалить этот подключ</string>
+    <string name="kd_vm_status_subkey_removed">Подключ удалён</string>
+    <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
+    <string name="share_encrypt_text_label">Зашифровать в PGPony</string>
+    <string name="settings_argon2_title">Усиленная защита парольной фразы (Argon2)</string>
+    <string name="settings_argon2_subtitle">Использует Argon2id для файлов и сообщений, зашифрованных паролем. Труднее взломать перебором, но получателю нужен GnuPG 2.4 или новее, чтобы их открыть. По умолчанию выключено для наибольшей совместимости.</string>
+    <string name="provider_sign_per_address_title">Ключ подписи по адресу</string>
+    <string name="provider_sign_per_address_subtitle">Когда у адреса несколько ваших ключей подписи, выберите, каким из них подписывает PGPony. Применяется сразу, без запроса при отправке.</string>
+    <string name="provider_ask_sign_key_title">Спрашивать, каким ключом подписывать</string>
+    <string name="provider_ask_sign_key_subtitle">Когда у адреса несколько ключей подписи, PGPony спрашивает один раз и запоминает ваш выбор. Включите это, чтобы вас спрашивали при каждой отправке для адресов, не заданных в разделе Ключ подписи по адресу ниже.</string>
+    <string name="provider_keypicker_in_use">Используется</string>
+    <string name="provider_passphrase_change_key">Подписать другим ключом</string>
+    <string name="keyservers_wkd_label">Web Key Directory</string>
+    <string name="keyservers_wkd_desc">Пробуется первым при поиске по эл. почте, из собственного домена получателя. Без публикации.</string>
+    <string name="keyservers_add">Добавить сервер ключей</string>
+    <string name="keyservers_add_title">Добавить сервер ключей</string>
+    <string name="keyservers_add_label_hint">Имя (необязательно)</string>
+    <string name="keyservers_add_url_hint">URL сервера (напр. keys.example.org)</string>
+    <string name="keyservers_add_confirm">Добавить</string>
+    <string name="keyservers_add_invalid_url">Введите действительный URL HKPS-сервера</string>
+    <string name="keyservers_remove">Удалить сервер</string>
+    <string name="publish_not_now">Не сейчас</string>
+    <string name="settings_proxy_socks_user">Имя пользователя SOCKS (необязательно)</string>
+    <string name="settings_proxy_socks_pass">Пароль SOCKS (необязательно)</string>
+    <string name="settings_proxy_socks_note">Необязательно. Имя пользователя и пароль помещают PGPony в собственную цепочку Tor, отдельную от других приложений, использующих прокси.</string>
+    <string name="change_passphrase_changed">Парольная фраза изменена</string>
+    <string name="change_passphrase_set">Парольная фраза задана</string>
+    <string name="change_passphrase_removed">Парольная фраза удалена</string>
+    <string name="settings_offline_toggle_title">Автономный режим</string>
+    <string name="settings_offline_toggle_subtitle">Отключает все сетевые функции: поиск на серверах ключей, поиск и публикацию, фоновое обновление ключей и проверку обновлений. Ничто не покидает ваше устройство.</string>
+    <string name="onboarding_page_offline_toggle_title">Автономный режим</string>
+    <string name="onboarding_page_offline_toggle_subtitle">Держите PGPony полностью автономным: без обращений к серверам ключей, без обновления ключей, без проверок обновлений. Это можно изменить позже в Настройках.</string>
+    <string name="onboarding_page_comment_toggle_title">Комментарий PGPony</string>
+    <string name="onboarding_page_comment_toggle_subtitle">Добавляет комментарий PGPony - PGPony.app к вашему зашифрованному и подписанному выводу. Это можно изменить позже в Настройках.</string>
+    <string name="onboarding_page_destructive_toggle_title">Скрыть разрушительные действия</string>
+    <string name="onboarding_page_destructive_toggle_subtitle">Скрывает удаление ключа, удаление подключа, удаление User ID и очистку всех данных. Отзыв остаётся доступным. Это можно изменить позже в Настройках.</string>
+    <string name="onboarding_scroll_more">Больше параметров ниже</string>
+    <string name="publish_title_update">Обновить на серверах ключей</string>
+    <string name="publish_action_update">Обновить</string>
+    <string name="publish_last_uploaded_format">Последняя загрузка: %1$s</string>
+    <string name="publish_address_confirmed_format">%1$s: подтверждён</string>
+    <string name="publish_address_pending_format">%1$s: на этом сервере ещё не подтверждён</string>
+    <string name="publish_primary_repair_format">Основной идентификатор этого ключа неоднозначен (отмечен основным: %1$s; показан здесь: %2$s). В разделе «Идентификаторы пользователя» нажмите «Сделать основным» у нужного, затем опубликуйте.</string>
+    <string name="key_detail_action_update_key_servers">Обновить на серверах ключей</string>
+    <string name="key_detail_detail_key_server_behind">Опубликован (локальные изменения не загружены)</string>
+    <string name="key_detail_unpublished_changes_body">Ключ изменился после последней загрузки. На серверах ключей всё ещё старая копия.</string>
+    <string name="key_detail_unpublished_changes_action">Обновить</string>
+    <string name="revocation_result_publish_button">Опубликовать отзыв на серверах ключей</string>
+    <string name="keyring_generate_algorithm_experimental">Поддержка в приложениях ограничена</string>
+    <string name="keyring_generate_algorithm_experimental_note">В PGPony эти ключи работают полностью. Многие другие приложения пока не читают постквантовые ключи, и используются два несовместимых между собой постквантовых формата.</string>
+    <string name="keyring_generate_algorithm_caption_pqc_sign_87">Уровень максимальной защиты: подпись ML-DSA-87 и подключ шифрования ML-KEM-1024 на ключе v6 (RFC 9980). Ключи больше и медленнее, чем ML-DSA-65 с ML-KEM-768, который остаётся рекомендуемым выбором. Использовать его может только актуальное ПО OpenPGP.</string>
+    <string name="key_detail_label_add">Добавить метку</string>
+    <string name="keyring_same_identity_body">Сравните отпечатки, прежде чем шифровать для одного из них или доверять ему.</string>
+    <string name="keyring_same_identity_created_format">создан %1$s</string>
+    <plurals name="key_card_same_identity_count">
+        <item quantity="one">%1$d ключ</item>
+        <item quantity="few">%1$d ключа</item>
+        <item quantity="many">%1$d ключей</item>
+        <item quantity="other">%1$d ключа</item>
+    </plurals>
+    <plurals name="keyring_same_identity_title">
+        <item quantity="one">%1$d ключ для %2$s</item>
+        <item quantity="few">%1$d ключа для %2$s</item>
+        <item quantity="many">%1$d ключей для %2$s</item>
+        <item quantity="other">%1$d ключа для %2$s</item>
+    </plurals>
+    <plurals name="exchange_keyserver_found_count">
+        <item quantity="one">Найден %1$d ключ для этого адреса.</item>
+        <item quantity="few">Найдено %1$d ключа для этого адреса. Сравните отпечатки после импорта.</item>
+        <item quantity="many">Найдено %1$d ключей для этого адреса. Сравните отпечатки после импорта.</item>
+        <item quantity="other">Найдено %1$d ключа для этого адреса. Сравните отпечатки после импорта.</item>
+    </plurals>
+    <string name="import_method_url">Ссылка</string>
+    <string name="import_url_label">Ссылка на открытый ключ</string>
+    <string name="import_url_fetch_button">Получить ключ</string>
+    <string name="import_url_help">Подойдёт файл .asc или страница с ключом. Ключ загружается через ваш прокси, и ничего не добавляется, пока вы не проверите отпечаток и не нажмёте «Импорт».</string>
+    <string name="import_url_error_https">Можно загружать только ссылки https (или http для адреса .onion).</string>
+    <string name="import_url_error_offline">Включён автономный режим, поэтому ссылка не загружена.</string>
+    <string name="import_url_error_no_key">По этой ссылке открытый ключ не найден.</string>
+    <string name="import_url_error_redirects">Слишком много перенаправлений по этой ссылке.</string>
+    <string name="import_url_error_http_format">Сервер ответил HTTP %1$d.</string>
+    <string name="import_url_error_failed_format">Не удалось загрузить ссылку: %1$s</string>
+    <string name="import_preview_source_url_format">По ссылке: %1$s</string>
+    <string name="key_detail_add_subkey_v6_note">Thunderbird и GnuPG пока не читают ключи v6, поэтому добавленный здесь подключ там работать не будет.</string>
+    <string name="share_target_action_import">Импортировать ключ</string>
+    <string name="share_target_action_import_subtitle">Проверьте отпечаток и добавьте в связку ключей</string>
+    <string name="share_target_action_import_encrypt">Импортировать и зашифровать для этого ключа</string>
+    <string name="share_target_action_import_encrypt_subtitle">Проверьте отпечаток и нажмите «Зашифровать для этого ключа»</string>
+    <string name="share_target_action_verify">Проверить подпись</string>
+    <string name="share_target_action_verify_subtitle">Узнайте, кто подписал. Сообщение подписано, но не зашифровано</string>
+    <string name="share_target_action_sign">Подписать или зашифровать и подписать</string>
+    <string name="share_target_action_sign_subtitle">Открыть текст на экране шифрования PGPony</string>
+    <string name="share_target_action_encrypt_other">Зашифровать остальной текст</string>
+    <string name="share_target_action_encrypt_other_subtitle">Зашифровать текст, отправленный вместе с блоком PGP</string>
+    <string name="share_target_decrypt_result_unknown_signer">Подписано ключом, которого нет в вашей связке</string>
+    <!-- 4.6.0 (item 16): SSH authentication -->
+    <string name="ssh_cardop_body">PGPony подпишет вход по SSH слотом аутентификации вашего аппаратного ключа. Введите PIN-код карты и приложите ключ к задней стороне телефона.</string>
+    <string name="ssh_cardop_slot_mismatch">В слоте аутентификации этой карты нет выбранного SSH-ключа.</string>
+    <string name="ssh_error_unsupported_algorithm">Алгоритм этого ключа аутентификации нельзя использовать для SSH.</string>
+    <string name="ssh_error_storage_recoverable">Защищённое хранилище ключей PGPony на этом устройстве было сброшено системой. Откройте PGPony, один раз разблокируйте этот ключ парольной фразой и повторите попытку.</string>
+    <string name="ssh_error_storage_unreadable">Защищённое хранилище ключей PGPony на этом устройстве было сброшено системой, а у этого ключа нет парольной фразы для восстановления. Импортируйте ключ в PGPony заново.</string>
+    <string name="ssh_keypicker_title">Выберите ключ для SSH</string>
+    <string name="ssh_keypicker_empty">Ни у одного из ваших ключей нет подключа аутентификации SSH. Откройте пару ключей в PGPony, добавьте подключ аутентификации и повторите попытку.</string>
+    <string name="key_detail_action_copy_ssh_key">Копировать открытый SSH-ключ</string>
+    <string name="key_detail_ssh_key_copied">Открытый SSH-ключ скопирован</string>
+    <string name="keyring_generate_ssh_auth_toggle">Добавить подключ аутентификации SSH</string>
+    <string name="keyring_generate_ssh_auth_caption">Подключ для входа на серверы по SSH через мост ssh-agent: RSA для ключа RSA, Ed25519 для любого другого ключа.</string>
+    <string name="keyring_generate_ssh_auth_failed">Ключ создан, но подключ SSH добавить не удалось: %1$s. Его можно добавить в сведениях о ключе.</string>
+    <!-- 4.6.0 (item 16): SSH from Termux via the OkcAgent fork -->
+    <string name="ssh_help_title">SSH из Termux</string>
+    <string name="ssh_help_row_subtitle">Используйте ключи PGPony с ssh и git в Termux</string>
+    <string name="ssh_help_body">PGPony может подписывать ваши входы по SSH в Termux. OkcAgent передаёт запросы ssh в PGPony, а закрытые ключи никогда не покидают PGPony.</string>
+    <string name="ssh_help_get">Скачать OkcAgent для PGPony</string>
+    <string name="ssh_help_steps">1. Добавьте ключу подключ аутентификации (сведения о ключе, Добавить подключ). «Копировать открытый SSH-ключ» в сведениях о ключе даёт строку для authorized_keys на сервере.
+2. Установите OkcAgent по ссылке выше. Сначала удалите любой другой OkcAgent.
+3. В OkcAgent откройте Settings, Crypto provider, выберите PGPony и разрешите уведомления OkcAgent.
+4. В OkcAgent нажмите Add SSH key и выберите ключ.
+5. В Termux выполните pkg install okc-agents, затем eval $(okc-ssh-agent). Теперь ssh и git через ssh используют ваш ключ.</string>
+    <string name="ssh_help_note">Запросы парольной фразы и ключа безопасности приходят как уведомления OkcAgent. Если ssh словно завис, проверьте уведомления. В GrapheneOS также включите для OkcAgent разрешение «Сеть»: Termux связывается с ним через локальное соединение, и без него ssh зависает.</string>
+    <string name="key_detail_action_ssh_setup">Настроить SSH в Termux</string>
+    <!-- 4.6.0: API consent and SSH scope -->
+    <string name="ssh_error_dual_use_auth">Подключ аутентификации этого ключа может и подписывать. Добавьте отдельный подключ аутентификации в сведениях о ключе.</string>
+    <string name="provider_consent_ssh_title">Разрешить %1$s использовать SSH?</string>
+    <string name="provider_consent_ssh_body">%1$s (%2$s) хочет использовать ваш ключ аутентификации PGPony для входа на SSH-серверы. Он не может шифровать, расшифровывать или подписывать сообщения.\n\nДалее вы выберете ключ, и приложение сможет использовать только его. Это можно убрать в любой момент в Настройки → Подключённые приложения.</string>
+    <string name="ssh_keypicker_confirm">%1$s хочет войти с этим ключом. Нажмите на него, чтобы разрешить.</string>
+    <string name="provider_clients_scope_openpgp">OpenPGP: шифрование, расшифровка и подпись</string>
+    <string name="provider_clients_scope_ssh">Вход по SSH с %1$s</string>
+    <string name="provider_clients_scope_ssh_nokey">Вход по SSH (ключ ещё не выбран)</string>
+    <string name="provider_clients_scope_remove">Убрать</string>
+</resources>

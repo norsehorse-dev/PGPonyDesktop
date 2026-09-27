@@ -81,12 +81,41 @@ object ClassicalSubkeyGen {
     class SubkeyAddError(message: String, cause: Throwable? = null) : Exception(message, cause)
 
     /**
+     * 4.6.0 (item 16): the SSH authentication subkey keygen adds to a new key
+     * of [algorithm]. An RSA key gets an RSA subkey (2048 for RSA 2048, 4096
+     * for larger sizes) so it stays all-RSA for servers and policies that
+     * expect it; every other key gets Ed25519.
+     */
+    fun sshAuthTypeFor(algorithm: KeyAlgorithm): ClassicalSubkeyType = when (algorithm) {
+        KeyAlgorithm.RSA_2048 -> ClassicalSubkeyType.RSA_2048_AUTH
+        KeyAlgorithm.RSA_3072, KeyAlgorithm.RSA_4096, KeyAlgorithm.RSA_8192 -> ClassicalSubkeyType.RSA_4096_AUTH
+        else -> ClassicalSubkeyType.ED25519_AUTH
+    }
+
+    /**
      * Add [type] as a new subkey of [secretRing], bound and protected the
      * same way the primary's own subkeys are. [passphrase] must match the
      * ring's existing protection (empty string if the ring is
      * unprotected) — it both unlocks the primary to sign the binding and
      * protects the new subkey's secret material identically.
      */
+    /**
+     * item 16 (#54): remove a subkey (local delete, no revocation) from a v4 or
+     * v6 secret ring. Strips the secret subkey and its binding; the caller
+     * derives the public ring from the result. BC's removeSecretKey handles
+     * both v4 and v6 rings, so no version split is needed. Throws SubkeyAddError
+     * if [subkeyId] is the primary or is not present on the ring.
+     */
+    fun removeSubkey(secretRing: PGPSecretKeyRing, subkeyId: Long): PGPSecretKeyRing {
+        if (subkeyId == secretRing.secretKey.keyID) {
+            throw SubkeyAddError("Cannot remove the primary key; only subkeys can be removed")
+        }
+        val target = secretRing.getSecretKey(subkeyId)
+            ?: throw SubkeyAddError("Subkey not found on this key")
+        return PGPSecretKeyRing.removeSecretKey(secretRing, target)
+            ?: throw SubkeyAddError("Removing the subkey would leave no keys on the ring")
+    }
+
     fun addSubkey(
         secretRing: PGPSecretKeyRing,
         type: ClassicalSubkeyType,
@@ -102,7 +131,7 @@ object ClassicalSubkeyGen {
         val checksumCalc = BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA1)
         val certSigGen = BcPGPContentSignerBuilder(primarySec.publicKey.algorithm, HashAlgorithmTags.SHA256)
         val encryptor = passphrase?.takeIf { it.isNotEmpty() }?.let {
-            BcPBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
+            S2kPolicy.v4EncryptorBuilder() // 4.6.0 (item 17.6)
                 .setSecureRandom(random)
                 .build(it.toCharArray())
         }

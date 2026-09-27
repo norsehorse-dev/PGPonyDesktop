@@ -127,12 +127,18 @@ sealed class PGPCryptoError(message: String) : Exception(message) {
     class KeyGenerationFailed(msg: String) : PGPCryptoError("Key generation failed: $msg")
     class EncryptionFailed(msg: String) : PGPCryptoError("Encryption failed: $msg")
     class DecryptionFailed(msg: String) : PGPCryptoError("Decryption failed: $msg")
+    /** item 23 (#55): a truncated or corrupted message (e.g. an incomplete paste). */
+    class MessageIncomplete : PGPCryptoError("The message looks incomplete. Make sure you copied the whole block, from BEGIN to END.")
     class SigningFailed(msg: String) : PGPCryptoError("Signing failed: $msg")
     class VerificationFailed(msg: String) : PGPCryptoError("Verification failed: $msg")
     class KeyNotFound : PGPCryptoError("Key not found in keyring")
     class InvalidKeyData : PGPCryptoError("Invalid key data")
     class ImportFailed(msg: String) : PGPCryptoError("Key import failed: $msg")
     class ExportFailed(msg: String) : PGPCryptoError("Key export failed: $msg")
+    // Finding A/B (11A/11B): a message bounded out by a resource ceiling
+    // (Argon2 memory, decompression size/depth) surfaces as this typed error
+    // rather than a crash or an OOM kill.
+    class ResourceLimitExceeded(msg: String) : PGPCryptoError("Message exceeds a safety limit: $msg")
     class PassphraseRequired : PGPCryptoError("Passphrase is required for this key")
     class InvalidPassphrase : PGPCryptoError("Incorrect passphrase")
     // Raised when a decrypted message's integrity protection is absent or fails
@@ -197,7 +203,18 @@ data class DecryptResult(
     /** #46: raw 64-bit key id of the secret (sub)key that actually
      *  unwrapped the session key. Null on the symmetric path and on the
      *  composite ML-KEM path, which do not report a recipient key id. */
-    val decryptingKeyIdRaw: Long? = null
+    val decryptingKeyIdRaw: Long? = null,
+    /** #30/#31: set when the decrypted inner payload is an inline one-pass
+     *  COMPOSITE (ML-DSA + EdDSA) signed message. BouncyCastle cannot parse
+     *  those, so [data] holds the extracted literal and the caller verifies the
+     *  signature over [compositeInlineBytes] via CompositeDocumentVerifier. */
+    val compositeInline: Boolean = false,
+    val compositeInlineBytes: ByteArray? = null,
+    val compositeClaimedSignerFp: String? = null,
+    /** item 11 (#54 Finding C): signer trust grade. VERIFIED only when the
+     *  crypto check passed AND the signer key is unrevoked, unexpired, and
+     *  sign-flagged. [signatureVerified] is now (signerStatus == VERIFIED). */
+    val signerStatus: SignerStatus = SignerStatus.NONE
 )
 
 /**
@@ -212,14 +229,18 @@ data class DecryptStreamResult(
     val signatureVerified: Boolean,
     val signerKeyID: String?,
     val hasSignature: Boolean,
-    val signatureKeyIDRaw: Long?
+    val signatureKeyIDRaw: Long?,
+    val signerStatus: SignerStatus = SignerStatus.NONE,
+    /** #30/#31: set when the decrypted inner payload is an inline one-pass
+     *  COMPOSITE (ML-DSA + EdDSA) signed message. BouncyCastle cannot parse
+     *  those, so the streaming path (like [DecryptResult]) hands the extracted
+     *  literal to [output] and the caller verifies the signature over
+     *  [compositeInlineBytes] via CompositeDocumentVerifier. */
+    val compositeInline: Boolean = false,
+    val compositeInlineBytes: ByteArray? = null,
+    val compositeClaimedSignerFp: String? = null
 )
 
-data class VerifyResult(
-    val isValid: Boolean,
-    val signerKeyID: String?,
-    val signatureDate: Date?
-)
 
 data class ImportResult(
     val fingerprint: String,
@@ -238,6 +259,16 @@ data class SigningKeyOption(
     val keyId: Long,
     val keyIdHex: String,
     val isPrimary: Boolean,
+    val algorithmLabel: String
+)
+
+/** item 13 (#36): one encryption-key choice for a recipient's subkey picker;
+ *  the first option is the automatic pick [findEncryptionKey] uses. */
+data class EncryptionKeyOption(
+    val keyId: Long,
+    val keyIdHex: String,
+    val isPrimary: Boolean,
+    val isPostQuantum: Boolean,
     val algorithmLabel: String
 )
 
@@ -281,7 +312,7 @@ class PGPCryptoService private constructor() {
         passphrase: String?,
         expirationSeconds: Long? = null
     ): GeneratedKeyResult {
-        val userID = "$name <$email>"
+        val userID = com.pgpony.android.data.PGPKeyEntity.composeUserID(name, email)
         val creationDate = Date()
 
         // Each branch yields the (secret, public) key rings. RSA/Ed25519 (v4)
@@ -333,6 +364,16 @@ class PGPCryptoService private constructor() {
                 val ring = com.pgpony.android.crypto.pqc.CompositeKeyGen.addCompositeSubkey(
                     base.first, com.pgpony.android.crypto.pqc.CompositeSuite.IETF_1024,
                     passphrase, creationTime = creationDate, expirationSeconds = expirationSeconds
+                )
+                ring to com.pgpony.android.crypto.pqc.CompositeKeyGen.publicRingOf(ring)
+            }
+            KeyAlgorithm.MLKEM768_BP256_LIBREPGP -> {
+                // 4.6.0 (item 13): LibrePGP ML-KEM-768 + brainpoolP256r1.
+                val baseSec = buildEd25519KeyRingGenerator(userID, passphrase, creationDate, expirationSeconds)
+                    .generateSecretKeyRing()
+                val ring = com.pgpony.android.crypto.pqc.CompositeKeyGen.addCompositeSubkey(
+                    baseSec, com.pgpony.android.crypto.pqc.CompositeSuite.LIBREPGP_768_BP256,
+                    passphrase, creationTime = creationDate
                 )
                 ring to com.pgpony.android.crypto.pqc.CompositeKeyGen.publicRingOf(ring)
             }
@@ -407,7 +448,7 @@ class PGPCryptoService private constructor() {
             PGPKeyFlags.CAN_ENCRYPT_COMMS or PGPKeyFlags.CAN_ENCRYPT_STORAGE)
 
         val encryptor = passphrase?.let {
-            org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder(SymmetricKeyAlgorithmTags.AES_256)
+            S2kPolicy.v4EncryptorBuilder() // 4.6.0 (item 17.6)
                 .build(it.toCharArray())
         }
 
@@ -436,7 +477,13 @@ class PGPCryptoService private constructor() {
         userID: String,
         passphrase: String?,
         creationDate: Date,
-        expirationSeconds: Long?
+        expirationSeconds: Long?,
+        // item 14 (#56): optional Features octet on the primary self-sig. Only
+        // the v4 interop key sets it (SEIPDv2), so senders will use a v6 PKESK +
+        // SEIPDv2 and can reach the algo-35 subkey instead of downgrading to the
+        // classical one. Left null for classical and LibrePGP keys, which must
+        // NOT advertise SEIPDv2 (their subkeys pair with v3 PKESK + SEIPDv1).
+        features: Byte? = null
     ): PGPKeyRingGenerator {
         // Ed25519 signing key (primary) — BC lightweight + EDDSA_LEGACY (algo 22)
         val edGen = org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator()
@@ -473,6 +520,9 @@ class PGPCryptoService private constructor() {
         if (expirationSeconds != null) {
             sigHashGen.setKeyExpirationTime(false, expirationSeconds)
         }
+        if (features != null) {
+            sigHashGen.setFeature(false, features)
+        }
 
         val encHashGen = PGPSignatureSubpacketGenerator()
         encHashGen.setKeyFlags(false,
@@ -486,9 +536,7 @@ class PGPCryptoService private constructor() {
             HashAlgorithmTags.SHA256
         )
         val encryptor = passphrase?.let {
-            org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder(
-                SymmetricKeyAlgorithmTags.AES_256
-            ).build(it.toCharArray())
+            S2kPolicy.v4EncryptorBuilder().build(it.toCharArray()) // 4.6.0 (item 17.6)
         }
 
         val gen = PGPKeyRingGenerator(
@@ -537,6 +585,79 @@ class PGPCryptoService private constructor() {
      * the callback's hashed-subpackets function runs AFTER the default 5-year
      * set, so setKeyExpirationTime / removePacketsOfType here is authoritative.
      */
+    /**
+     * item 14 (#56): a v4 Ed25519 + Cv25519 base secret ring for the interop
+     * keygen, with a Features subpacket advertising SEIPDv1 (MDC) and SEIPDv2
+     * (AEAD). The SEIPDv2 flag is what lets a sender use a v6 PKESK to reach the
+     * grafted algo-35 subkey; without it senders would downgrade to the
+     * classical Cv25519 subkey. CompositeKeyGen.addV4Algo35SubkeyRings then
+     * grafts the algo-35 subkey onto this ring.
+     */
+    fun buildV4InteropBaseSecretRing(
+        userID: String,
+        passphrase: String?,
+        creationDate: Date = Date(),
+        expirationSeconds: Long? = null
+    ): PGPSecretKeyRing =
+        buildEd25519KeyRingGenerator(
+            userID, passphrase, creationDate, expirationSeconds,
+            features = (0x01 or 0x08).toByte()
+        ).generateSecretKeyRing()
+
+    /**
+     * item 7 (#55): assemble an advanced granular v6 key. The primary is a v6
+     * Ed25519 (sign + certify); its default X25519 encryption subkey is kept or
+     * stripped per [includeDefaultEncryptionSubkey], then each spec in [subkeys]
+     * is grafted on with its own expiry. Every shape here stays a BouncyCastle
+     * ring (classical, v6 composite ML-KEM encryption, v6 composite ML-DSA
+     * signing), so the result persists through the ordinary storage path. Returns
+     * the finished secret ring; the caller stores it and builds the entity.
+     */
+    fun assembleGranularV6Ring(
+        userID: String,
+        includeDefaultEncryptionSubkey: Boolean,
+        subkeys: List<GranularSubkeySpec>,
+        passphrase: String?,
+        creationDate: Date = Date(),
+        expirationSeconds: Long? = null
+    ): PGPSecretKeyRing {
+        var ring = buildV6Ed25519X25519KeyRings(userID, passphrase, creationDate, expirationSeconds).first
+
+        if (!includeDefaultEncryptionSubkey) {
+            val defaultEnc = ring.secretKeys.asSequence().firstOrNull {
+                !it.publicKey.isMasterKey && it.publicKey.isEncryptionKey
+            }
+            if (defaultEnc != null) {
+                ring = ClassicalSubkeyGen.removeSubkey(ring, defaultEnc.keyID)
+            }
+        }
+
+        for (spec in subkeys) {
+            ring = when (val choice = spec.choice) {
+                is AddSubkeyChoice.Classical -> {
+                    val v6Type = when (choice.type) {
+                        ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_SIGN -> V6SubkeyGen.V6SubkeyType.ED25519_SIGN
+                        ClassicalSubkeyGen.ClassicalSubkeyType.X25519_ENCRYPT -> V6SubkeyGen.V6SubkeyType.X25519_ENCRYPT
+                        ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_AUTH -> V6SubkeyGen.V6SubkeyType.ED25519_AUTH
+                        else -> throw ClassicalSubkeyGen.SubkeyAddError(
+                            "A v6 granular key takes Ed25519/X25519 classical subkeys only"
+                        )
+                    }
+                    V6SubkeyGen.addSubkey(ring, v6Type, passphrase, spec.expirationSeconds)
+                }
+                is AddSubkeyChoice.PqEncryption ->
+                    com.pgpony.android.crypto.pqc.CompositeKeyGen.addCompositeSubkey(
+                        ring, choice.suite, passphrase, expirationSeconds = spec.expirationSeconds
+                    )
+                is AddSubkeyChoice.PqSigning ->
+                    com.pgpony.android.crypto.pqc.CompositeSignSubkeyGen.addCompositeSigningSubkey(
+                        ring, choice.suite, passphrase, expirationSeconds = spec.expirationSeconds
+                    )
+            }
+        }
+        return ring
+    }
+
     private fun buildV6Ed25519X25519KeyRings(
         userID: String,
         passphrase: String?,
@@ -647,10 +768,11 @@ class PGPCryptoService private constructor() {
         }
 
         // Public key attempt — public material never needs normalization, so
-        // parse the de-armored bytes directly.
+        // parse the de-armored bytes directly. 4.6.0 (item 17.1): only the
+        // components whose binding self-signatures verify are kept.
         try {
             val publicRing = PGPPublicKeyRing(
-                ByteArrayInputStream(rawBytes), JcaKeyFingerprintCalculator()
+                ByteArrayInputStream(CertificateBindings.sanitized(rawBytes)), JcaKeyFingerprintCalculator()
             )
             val masterKey = publicRing.publicKey
             val fingerprint = fingerprintHex(masterKey)
@@ -698,9 +820,9 @@ class PGPCryptoService private constructor() {
             )
         } catch (_: Exception) { }
 
-        // Try binary public key ring
+        // Try binary public key ring (4.6.0 item 17.1: verified components only)
         try {
-            val publicRing = PGPPublicKeyRing(data, JcaKeyFingerprintCalculator())
+            val publicRing = PGPPublicKeyRing(CertificateBindings.sanitized(data), JcaKeyFingerprintCalculator())
             val masterKey = publicRing.publicKey
             return ImportResult(
                 fingerprint = fingerprintHex(masterKey),
@@ -760,9 +882,8 @@ class PGPCryptoService private constructor() {
     ): String {
         val digest = org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
             .get(org.bouncycastle.bcpg.HashAlgorithmTags.SHA1)
-        val encryptor = org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder(
-            org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags.AES_256, digest
-        ).build(exportPassphrase.toCharArray())
+        // 4.6.0 (item 17.6): calibrated SHA-256 S2K, not SHA-1 at 65,536 octets.
+        val encryptor = S2kPolicy.v4EncryptorBuilder().build(exportPassphrase.toCharArray())
         val protectedRing = PGPSecretKeyRing.copyWithNewPassword(secretKeyRing, null, encryptor)
         return exportArmoredPrivateKey(protectedRing)
     }
@@ -821,6 +942,7 @@ class PGPCryptoService private constructor() {
         val keys = secretKeyRing.secretKeys.asSequence().toList()
         var ring = secretKeyRing
         for (key in keys) {
+            enforceArgon2Policy(key.s2K)
             val reprotected = when {
                 // Strip: null encryptor removes protection (BC handles v4, v6,
                 // and composite alike; the round trip proves it).
@@ -840,9 +962,8 @@ class PGPCryptoService private constructor() {
                     )
                 }
                 else -> {
-                    val encryptor = org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder(
-                        org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags.AES_256
-                    ).setSecureRandom(random)
+                    val encryptor = S2kPolicy.v4EncryptorBuilder() // 4.6.0 (item 17.6)
+                        .setSecureRandom(random)
                         .build(newChars)
                     org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(
                         key, oldDecryptor, encryptor, sha1
@@ -920,6 +1041,49 @@ class PGPCryptoService private constructor() {
     // ── Encrypt ────────────────────────────────────────────────────────
 
     /**
+     * 4.6.0 (item 14): the container [encrypt] picks for these recipients.
+     * True means SEIPDv2 (every recipient is v6, composite, or a v4 algo-35
+     * interop key); false means SEIPDv1, because some recipient is v4.
+     */
+    fun usesSeipdV2(
+        recipientPublicKeys: List<PGPPublicKeyRing>,
+        recipientSubkeyChoices: Map<String, Long> = emptyMap(),
+        v4Algo35Recipients: List<com.pgpony.android.crypto.pqc.V4Algo35Recipient> = emptyList()
+    ): Boolean {
+        // Capability is keyed off the primary key version (v6 => SEIPDv2-capable).
+        // This is deliberately conservative: a v4 key that advertises SEIPDv2
+        // support via its Features subpacket still gets SEIPDv1 here, which it
+        // can read fine. 4.6.0 (item 17.1): decided by the key that will
+        // actually be used, so a composite subkey that fails its binding
+        // check cannot force the container choice.
+        val anyCompositeRecipient = recipientPublicKeys.any { r ->
+            findEncryptionKey(r, recipientSubkeyChoices[fingerprintHex(r.publicKey)])?.let {
+                com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(it.algorithm) != null
+            } == true
+        }
+        // item 14 (#56): a v4 algo-35 recipient uses a v6 PKESK, which MUST
+        // pair with SEIPDv2 (RFC 9580 5.1), so it forces AEAD as well.
+        // Composite (ML-KEM+X25519) recipients mandate v6 framing (SEIPDv2).
+        return anyCompositeRecipient || v4Algo35Recipients.isNotEmpty() ||
+            (recipientPublicKeys.isNotEmpty() &&
+                recipientPublicKeys.all {
+                    it.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6
+                })
+    }
+
+    /**
+     * 4.6.0 (item 14): true when a composite ML-DSA signature on a message to
+     * these recipients would sit inside a SEIPDv1 container (some recipient is
+     * v4). PGPony reads that shape, but GnuPG shows the message with an error
+     * and RNP (Thunderbird) refuses it, so the Encrypt screen asks first.
+     */
+    fun compositeSignatureInSeipdV1(
+        recipientPublicKeys: List<PGPPublicKeyRing>,
+        recipientSubkeyChoices: Map<String, Long> = emptyMap(),
+        v4Algo35Recipients: List<com.pgpony.android.crypto.pqc.V4Algo35Recipient> = emptyList()
+    ): Boolean = !usesSeipdV2(recipientPublicKeys, recipientSubkeyChoices, v4Algo35Recipients)
+
+    /**
      * Encrypt data to one or more recipients.
      *
      * Bouncy Castle handles RSA, Ed25519+Cv25519 (v4 ECDH), and v6 X25519
@@ -941,7 +1105,26 @@ class PGPCryptoService private constructor() {
         filename: String? = null,
         armor: Boolean = true,
         // §4.5 (#22): user-chosen signing subkey; null = automatic pick.
-        signingKeyId: Long? = null
+        signingKeyId: Long? = null,
+        // item 13 (#36): per-recipient chosen encryption subkey, keyed by the
+        // recipient's primary fingerprint (hex, uppercase); absent = automatic.
+        recipientSubkeyChoices: Map<String, Long> = emptyMap(),
+        // item 14 (#56): v4 Ed25519 + algo-35 recipients, carried separately
+        // because their algo-35 subkey is not a BouncyCastle public key.
+        v4Algo35Recipients: List<com.pgpony.android.crypto.pqc.V4Algo35Recipient> = emptyList(),
+        // #30/#31: composite ML-DSA + EdDSA inline signing. When set, the message
+        // is signed through the raw-bytes composite path (CompositeDocumentSigner)
+        // instead of BouncyCastle, which cannot build an algo-30/31 signature.
+        // signingSecretKey is ignored in that case.
+        compositeSignSuite: com.pgpony.android.crypto.pqc.CompositeSignSuite? = null,
+        compositeSignSecret: ByteArray? = null,
+        compositeSignerFingerprint: ByteArray? = null,
+        // 4.6.0 (item 14): false leaves a composite signature out when the
+        // container is SEIPDv1 (a v4 recipient), the "Send unsigned" answer
+        // to the Encrypt screen's prompt. True (the default, and the OpenPGP
+        // provider's behavior, since the calling app asked for a signature)
+        // keeps it.
+        compositeSignInSeipdV1: Boolean = true
     ): ByteArray {
         val outputStream = ByteArrayOutputStream()
         val armoredOut = if (armor) ArmoredOutputStream(outputStream).stripVersion() else null
@@ -964,15 +1147,22 @@ class PGPCryptoService private constructor() {
             // This is deliberately conservative: a v4 key that advertises SEIPDv2
             // support via its Features subpacket still gets SEIPDv1 here, which it
             // can read fine. A Features-based predicate is a possible later refinement.
-            val anyCompositeRecipient = recipientPublicKeys.any {
-                com.pgpony.android.crypto.pqc.CompositeKeyMaterial.isComposite(it)
-            }
-            // Composite (ML-KEM+X25519) recipients mandate v6 framing (SEIPDv2),
-            // so a composite recipient forces AEAD regardless of the version scan.
-            val allRecipientsV6 = anyCompositeRecipient || (recipientPublicKeys.isNotEmpty() &&
-                recipientPublicKeys.all {
-                    it.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6
-                })
+            // 4.6.0 (item 17.1): decided by the key that will actually be used,
+            // so a composite subkey that fails its binding check cannot force
+            // the container choice.
+            val allRecipientsV6 = usesSeipdV2(recipientPublicKeys, recipientSubkeyChoices, v4Algo35Recipients)
+            // 4.6.0 (item 14): a composite ML-DSA signature is v6 framed (v6
+            // one-pass signature and v6 signature packets). Inside a SEIPDv1
+            // container, which only happens when some recipient is v4, PGPony
+            // still reads it, but GnuPG prints the text and fails with
+            // "unknown version 6", and RNP (Thunderbird) refuses the whole
+            // message. The Encrypt screen asks first
+            // ([compositeSignatureInSeipdV1]); on "Send unsigned" the caller
+            // passes compositeSignInSeipdV1 = false and the signature is left
+            // out, the message still encrypted to every recipient.
+            val compositeRequested = compositeSignSecret != null && compositeSignSuite != null &&
+                compositeSignerFingerprint != null
+            val signComposite = compositeRequested && (allRecipientsV6 || compositeSignInSeipdV1)
             val encBuilder = org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder(
                 SymmetricKeyAlgorithmTags.AES_256
             )
@@ -991,7 +1181,7 @@ class PGPCryptoService private constructor() {
 
             // Add each recipient's encryption subkey
             for (ring in recipientPublicKeys) {
-                val encKey = findEncryptionKey(ring)
+                val encKey = findEncryptionKey(ring, recipientSubkeyChoices[fingerprintHex(ring.publicKey)])
                     ?: throw PGPCryptoError.EncryptionFailed("No encryption subkey found for ${fingerprintHex(ring.publicKey)}")
                 if (com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(encKey.algorithm) != null) {
                     encryptedGen.addMethod(
@@ -1008,12 +1198,35 @@ class PGPCryptoService private constructor() {
                 }
             }
 
+            // item 14 (#56): add a method generator per v4 algo-35 recipient. The
+            // KEM is the version-agnostic composite core; only the PKESK target
+            // framing (v6 PKESK, key-version 4, 20-octet fingerprint) is v4.
+            for (v4 in v4Algo35Recipients) {
+                encryptedGen.addMethod(
+                    com.pgpony.android.crypto.pqc.V4Algo35EncryptionMethodGenerator(
+                        v4.publicMaterial, v4.subkeyFingerprint
+                    )
+                )
+            }
+
             val encryptedOut = encryptedGen.open(targetOut, ByteArray(4096))
 
             // Compressed data generator
             val compGen = PGPCompressedDataGenerator(PGPCompressedData.ZLIB)
             val compOut = compGen.open(encryptedOut)
 
+            // #30/#31: composite ML-DSA + EdDSA cannot be signed by BouncyCastle.
+            // When a composite signer is supplied, write the whole inline one-pass
+            // signed payload (OPS + Literal + Signature) through the raw-bytes
+            // composite path and skip the BC signing block entirely.
+            if (signComposite) {
+                compOut.write(
+                    com.pgpony.android.crypto.pqc.CompositeDocumentSigner.signInline(
+                        compositeSignSuite!!, compositeSignSecret!!, compositeSignerFingerprint!!,
+                        data, fileName = filename ?: ""
+                    )
+                )
+            } else {
             // Optional signature
             var sigGen: PGPSignatureGenerator? = null
             // Phase A3 fix: the prior guard was `signingSecretKey != null
@@ -1040,7 +1253,10 @@ class PGPCryptoService private constructor() {
             // The outer `catch (e: SigningError)` clause below the
             // body lets these typed errors bubble past the generic
             // EncryptionFailed wrap.
-            if (cardSession != null && cardSigningPublicKey != null && cardPin != null) {
+            if (compositeRequested) {
+                // item 14: composite signature left out by request (see
+                // above); no other signer stands in for it.
+            } else if (cardSession != null && cardSigningPublicKey != null && cardPin != null) {
                 // Card-backed signature. The content signer taps the card to
                 // sign the SHA-256 digest; BC assembles the one-pass-sig +
                 // signature packets around the literal data exactly as for a
@@ -1068,6 +1284,7 @@ class PGPCryptoService private constructor() {
             } else if (signingSecretKey != null) {
                 val signingKey = pickSigningSecretKey(signingSecretKey, signingKeyId)
                     ?: throw SigningError.NoSigningKey()
+                enforceArgon2Policy(signingKey.s2K)
                 val privateKey = try {
                     signingKey.extractPrivateKey(
                         org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
@@ -1116,6 +1333,7 @@ class PGPCryptoService private constructor() {
             if (sigGen != null) {
                 sigGen.update(data)
                 sigGen.generate().encode(compOut)
+            }
             }
 
             compOut.close()
@@ -1196,7 +1414,14 @@ class PGPCryptoService private constructor() {
         messagePassword: String? = null,
         useArgon2: Boolean = false,
         // §4.5 (#22): user-chosen signing subkey; null = automatic pick.
-        signingKeyId: Long? = null
+        signingKeyId: Long? = null,
+        // item 13 (#36): per-recipient chosen encryption subkey, keyed by the
+        // recipient's primary fingerprint (hex, uppercase); absent = automatic.
+        recipientSubkeyChoices: Map<String, Long> = emptyMap(),
+        // item 14 (#56): v4 Ed25519 + algo-35 interop recipients. Not BC rings, so
+        // they travel their own channel (raw public material + v4 fingerprint) and
+        // force SEIPDv2, exactly as in encrypt().
+        v4Algo35Recipients: List<com.pgpony.android.crypto.pqc.V4Algo35Recipient> = emptyList()
     ) {
         // 1) Build the signer FIRST. Software: unlock up front (clean
         //    output guarantee). Card: the content-signer defers the tap
@@ -1217,6 +1442,7 @@ class PGPCryptoService private constructor() {
         } else if (signingSecretKey != null) {
             val signingKey = pickSigningSecretKey(signingSecretKey, signingKeyId)
                 ?: throw SigningError.NoSigningKey()
+            enforceArgon2Policy(signingKey.s2K)
             val privateKey = try {
                 signingKey.extractPrivateKey(
                     org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
@@ -1246,15 +1472,24 @@ class PGPCryptoService private constructor() {
         val targetOut = armoredOut ?: output
         try {
             // Same SEIPD negotiation as encrypt().
-            val anyCompositeRecipient = recipientPublicKeys.any {
-                com.pgpony.android.crypto.pqc.CompositeKeyMaterial.isComposite(it)
+            // 4.6.0 (item 17.1): decided by the key that will actually be used,
+            // so a composite subkey that fails its binding check cannot force
+            // the container choice.
+            val anyCompositeRecipient = recipientPublicKeys.any { r ->
+                findEncryptionKey(r, recipientSubkeyChoices[fingerprintHex(r.publicKey)])?.let {
+                    com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(it.algorithm) != null
+                } == true
             }
             // Composite (ML-KEM+X25519) recipients mandate v6 framing (SEIPDv2),
             // so a composite recipient forces AEAD regardless of the version scan.
-            val allRecipientsV6 = anyCompositeRecipient || (recipientPublicKeys.isNotEmpty() &&
-                recipientPublicKeys.all {
-                    it.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6
-                })
+            // item 14 (#56): a v4 algo-35 recipient uses a v6 PKESK, which MUST
+            // pair with SEIPDv2 (RFC 9580 5.1), so it forces AEAD too.
+            val hasV4Algo35Recipient = v4Algo35Recipients.isNotEmpty()
+            val allRecipientsV6 = anyCompositeRecipient || hasV4Algo35Recipient ||
+                (recipientPublicKeys.isNotEmpty() &&
+                    recipientPublicKeys.all {
+                        it.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6
+                    })
             val encBuilder = org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder(
                 SymmetricKeyAlgorithmTags.AES_256
             )
@@ -1270,7 +1505,7 @@ class PGPCryptoService private constructor() {
             }
             val encryptedGen = PGPEncryptedDataGenerator(encGen)
             for (ring in recipientPublicKeys) {
-                val encKey = findEncryptionKey(ring)
+                val encKey = findEncryptionKey(ring, recipientSubkeyChoices[fingerprintHex(ring.publicKey)])
                     ?: throw PGPCryptoError.EncryptionFailed(
                         "No encryption subkey found for ${fingerprintHex(ring.publicKey)}"
                     )
@@ -1287,6 +1522,16 @@ class PGPCryptoService private constructor() {
                         org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator(encKey)
                     )
                 }
+            }
+
+            // item 14 (#56): a method generator per v4 algo-35 recipient (v6 PKESK,
+            // key-version 4, 20-octet fingerprint; the KEM core is version-agnostic).
+            for (v4 in v4Algo35Recipients) {
+                encryptedGen.addMethod(
+                    com.pgpony.android.crypto.pqc.V4Algo35EncryptionMethodGenerator(
+                        v4.publicMaterial, v4.subkeyFingerprint
+                    )
+                )
             }
 
             // 4.0.4 — password (SKESK) recipient, if one was supplied. Added
@@ -1309,7 +1554,7 @@ class PGPCryptoService private constructor() {
                 )
             }
 
-            if (recipientPublicKeys.isEmpty() && messagePassword == null) {
+            if (recipientPublicKeys.isEmpty() && v4Algo35Recipients.isEmpty() && messagePassword == null) {
                 throw PGPCryptoError.EncryptionFailed("None of the selected recipients has an encryption key, and no password was set")
             }
 
@@ -1577,15 +1822,30 @@ class PGPCryptoService private constructor() {
             // algorithm), so try the hand-rolled composite path first. It
             // returns null when the message carries no composite PKESK, in
             // which case we fall back to BC's normal PKESK/SKESK discovery.
-            val composite = com.pgpony.android.crypto.pqc.CompositeDecryptor.tryDecrypt(
-                encryptedData, secretKeyRings, passphrase, compositePrimaryRings
-            )
+            // Tester report (RC7): catch a composite "no held key" miss instead of
+            // failing outright. A miss means a composite recipient slot was
+            // present but none of our held keys opened it; the message may
+            // still carry a classical PKESK we can open, so we fall through to
+            // the stripped-BC path below rather than throwing here.
+            var compositeMiss: Exception? = null
+            val composite = try {
+                com.pgpony.android.crypto.pqc.CompositeDecryptor.tryDecrypt(
+                    encryptedData, secretKeyRings, passphrase, compositePrimaryRings
+                )
+            } catch (e: com.pgpony.android.crypto.pqc.CompositeDecryptor.NoMatchingKey) {
+                compositeMiss = e; null
+            }
             // LibrePGP composite (algo 8) is a separate framing; try it when
-            // the IETF (algo 35) path declined.
+            // the IETF (algo 35) path declined or missed.
             val librePgp = if (composite == null)
-                com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.tryDecrypt(
-                    encryptedData, secretKeyRings, passphrase
-                ) else null
+                try {
+                    com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.tryDecrypt(
+                        encryptedData, secretKeyRings, passphrase
+                    )
+                } catch (e: com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor.NoMatchingKey) {
+                    if (compositeMiss == null) compositeMiss = e
+                    null
+                } else null
             var decryptedStream: java.io.InputStream? = composite?.stream ?: librePgp?.stream
             var pbeData: PGPPBEEncryptedData? = null
             if (composite != null) {
@@ -1593,15 +1853,33 @@ class PGPCryptoService private constructor() {
             } else if (librePgp != null) {
                 integrityObj = librePgp.integrity
             } else {
-                val inputStream = if (isArmored(encryptedData)) {
-                    ArmoredInputStream(ByteArrayInputStream(encryptedData))
+                // Tester report (RC7): a mixed multi-recipient message (composite +
+                // classical) that we hold only a classical key for. BC can't
+                // parse a message that still has a composite PKESK in it, so
+                // when a composite slot missed, strip the composite PKESKs and
+                // let BC open the classical slot on the remainder. If nothing
+                // classical remains, surface the original composite miss.
+                val miss = compositeMiss
+                val bcBytes = if (miss != null) {
+                    val stripped = com.pgpony.android.crypto.pqc.CompositePkeskStripper.strip(encryptedData)
+                    if (stripped != null && stripped.removedComposite && stripped.hasOtherEsk) {
+                        stripped.message
+                    } else {
+                        throw miss
+                    }
                 } else {
-                    ByteArrayInputStream(encryptedData)
+                    encryptedData
+                }
+                val inputStream = if (isArmored(bcBytes)) {
+                    ArmoredInputStream(ByteArrayInputStream(bcBytes))
+                } else {
+                    ByteArrayInputStream(bcBytes)
                 }
 
                 val pgpFactory = JcaPGPObjectFactory(inputStream)
                 val encData = findEncryptedData(pgpFactory)
-                    ?: throw PGPCryptoError.DecryptionFailed("No encrypted data found in message")
+                    ?: return signedOnly(bcBytes, verificationKeys)
+                        ?: throw PGPCryptoError.DecryptionFailed("No encrypted data found in message")
 
                 // Find matching secret key and decrypt session key. A message
                 // may carry public-key (PKESK) and/or password (SKESK) session
@@ -1641,13 +1919,18 @@ class PGPCryptoService private constructor() {
             // automatically.
             if (decryptedStream == null && pbeData != null) {
                 if (passphrase.isNullOrEmpty()) throw PGPCryptoError.PassphraseRequired()
+                // Finding A (11A): bound the Argon2 work factor read from the
+                // SKESK before BC's getDataStream runs the KDF opaquely; a
+                // crafted memory exponent would otherwise OOM-kill the app
+                // pre-authentication.
+                enforceSkeskArgon2Policy(encryptedData)
                 // Commit to the symmetric path BEFORE the BC call: SEIPDv1's
                 // quick-check (and SEIPDv2's AEAD tag) reject a wrong passphrase
                 // inside getDataStream itself, so the flag must already be set
                 // for the catch blocks to map that to InvalidPassphrase.
                 usedSymmetric = true
                 decryptedStream = pbeData.getDataStream(
-                    org.bouncycastle.openpgp.operator.bc.BcPBEDataDecryptorFactory(
+                    GuardedPBEDataDecryptorFactory(
                         passphrase.toCharArray(),
                         org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
                     )
@@ -1659,9 +1942,66 @@ class PGPCryptoService private constructor() {
                 throw PGPCryptoError.NoMatchingKey(hiddenRecipient = sawWildcardPkesk)
             }
 
-            // Parse the decrypted content
-            val plainFactory = JcaPGPObjectFactory(decryptedStream)
-            val result = processDecryptedContent(plainFactory, verificationKeys)
+            // Parse the decrypted content. #30/#31: buffer the SEIPD plaintext
+            // first. An inline COMPOSITE (ML-DSA + EdDSA) signed payload carries an
+            // algo-30/31 one-pass packet that BouncyCastle throws on, so it must be
+            // detected and routed to CompositeDocumentVerifier instead of the BC
+            // object factory. The buffer is the (usually ZLIB-compressed) inner
+            // packet stream, bounded by the same plaintext size cap.
+            fun readDecrypted(): ByteArray {
+                val cap = SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES
+                val bufOut = ByteArrayOutputStream()
+                val chunk = ByteArray(8192)
+                var total = 0L
+                var n = decryptedStream!!.read(chunk)
+                while (n >= 0) {
+                    total += n
+                    if (total > cap)
+                        throw PGPCryptoError.ResourceLimitExceeded("decrypted message exceeds size cap")
+                    bufOut.write(chunk, 0, n)
+                    n = decryptedStream!!.read(chunk)
+                }
+                return bufOut.toByteArray()
+            }
+            fun parsePlain(plainBytes: ByteArray): DecryptResult {
+                if (com.pgpony.android.crypto.pqc.CompositeDocumentVerifier.isCompositeInline(plainBytes)) {
+                    val content = com.pgpony.android.crypto.pqc.CompositeDocumentVerifier.inlineContent(plainBytes)
+                        ?: throw PGPCryptoError.DecryptionFailed("No literal data in composite inline message")
+                    val claimedFp = com.pgpony.android.crypto.pqc.CompositeDocumentVerifier.claimedSignerOfInline(plainBytes)
+                    return DecryptResult(
+                        plaintext = try { String(content, Charsets.UTF_8) } catch (_: Exception) { "" },
+                        data = content,
+                        hasSignature = true,
+                        compositeInline = true,
+                        compositeInlineBytes = plainBytes,
+                        compositeClaimedSignerFp = claimedFp
+                    )
+                }
+                return processDecryptedContent(
+                    JcaPGPObjectFactory(ByteArrayInputStream(plainBytes)), verificationKeys
+                )
+            }
+            // item 11 (#54 Finding D): a corrupted, integrity-protected SEIPD can
+            // fail either during content parsing (garbage packets, an earlier CFB
+            // block) OR at the MDC gate below. On the public-key path those must
+            // not be a distinguishable pair, so collapse a parse failure into the
+            // SAME IntegrityCheckFailed the gate throws. The symmetric path keeps
+            // its own wrong-passphrase remapping (usedSymmetric), and the DoS
+            // size cap stays a distinct, size-only signal.
+            val integrityProtected = integrityObj?.let { it.isIntegrityProtected() || it.isAEAD() } ?: false
+            val result = if (integrityProtected && !usedSymmetric) {
+                try {
+                    parsePlain(readDecrypted())
+                } catch (rle: PGPCryptoError.ResourceLimitExceeded) {
+                    throw rle
+                } catch (any: Exception) {
+                    throw PGPCryptoError.IntegrityCheckFailed(
+                        "Integrity check failed - the message may have been tampered with"
+                    )
+                }
+            } else {
+                parsePlain(readDecrypted())
+            }
 
             // INTEGRITY GATE. processDecryptedContent has now fully consumed the
             // plaintext stream, so the SEIPD integrity protection can be checked:
@@ -1720,6 +2060,7 @@ class PGPCryptoService private constructor() {
             // error — the exact wording varies by BC version and container, so
             // we don't gate on the message text. Map it straight to the clean
             // InvalidPassphrase path.
+            argon2PolicyCause(e)?.let { throw it } // 4.6.0 (item 17.5)
             if (usedSymmetric) throw PGPCryptoError.InvalidPassphrase()
             // Public-key path: a key-unlock passphrase problem shows up as a
             // checksum/secret-key error.
@@ -1730,11 +2071,14 @@ class PGPCryptoService private constructor() {
             ) {
                 throw PGPCryptoError.InvalidPassphrase()
             }
+            if (looksIncomplete(e)) throw PGPCryptoError.MessageIncomplete()
             throw PGPCryptoError.DecryptionFailed(msg)
         } catch (e: Exception) {
             // A wrong symmetric passphrase can also throw a plain (non-PGP)
             // exception while reading the corrupted stream.
+            argon2PolicyCause(e)?.let { throw it } // 4.6.0 (item 17.5)
             if (usedSymmetric) throw PGPCryptoError.InvalidPassphrase()
+            if (looksIncomplete(e)) throw PGPCryptoError.MessageIncomplete()
             throw PGPCryptoError.DecryptionFailed(e.message ?: "Unknown error")
         }
     }
@@ -1754,7 +2098,17 @@ class PGPCryptoService private constructor() {
         output: java.io.OutputStream,
         secretKeyRings: List<PGPSecretKeyRing>,
         passphrase: String?,
-        verificationKeys: List<PGPPublicKeyRing>? = null
+        verificationKeys: List<PGPPublicKeyRing>? = null,
+        // Umotas (RC8): raw composite-PRIMARY rings for the streaming path, so a
+        // file encrypted to an imported composite key opens like the in-memory
+        // decrypt already does.
+        compositePrimaryRings: List<ByteArray> = emptyList(),
+        // 4.6.0 (item 17.2): when [output] is read by something outside the
+        // app (the OpenPGP API caller's pipe), hold a non-AEAD message's
+        // plaintext until the MDC check has passed; see VerifiedReleaseSink.
+        // [holdDir] is where a large held plaintext spills (app-private).
+        releaseOnlyWhenVerified: Boolean = false,
+        holdDir: java.io.File? = null
     ): DecryptStreamResult {
         var usedSymmetric = false
         var integrityObj: org.bouncycastle.openpgp.PGPEncryptedData? = null
@@ -1790,6 +2144,9 @@ class PGPCryptoService private constructor() {
             buffered.mark(sniffLimit)
             val head = readHead(buffered, sniffLimit)
             buffered.reset()
+            // Finding A (11A): bound any SKESK's Argon2 work factor from the
+            // bounded message head before the streaming path runs the KDF.
+            enforceSkeskArgon2Policy(head)
             var effectiveInput: java.io.InputStream = buffered
             val sniff = compositeSniffBytes(head)
             if (com.pgpony.android.crypto.pqc.CompositeDecryptor.sniffHead(sniff) ||
@@ -1807,7 +2164,7 @@ class PGPCryptoService private constructor() {
                 val eskRegion = readLeadingEskPackets(binaryIn)
                 val session =
                     com.pgpony.android.crypto.pqc.CompositeDecryptor
-                        .recoverSessionKey(eskRegion, secretKeyRings, passphrase)
+                        .recoverSessionKey(eskRegion, secretKeyRings, compositePrimaryRings, passphrase)
                         ?: com.pgpony.android.crypto.pqc.CompositeLibrePGPDecryptor
                             .recoverSessionKey(eskRegion, secretKeyRings, passphrase)
                 if (session != null) {
@@ -1864,7 +2221,7 @@ class PGPCryptoService private constructor() {
                     if (passphrase.isNullOrEmpty()) throw PGPCryptoError.PassphraseRequired()
                     usedSymmetric = true
                     decryptedStream = pbeData.getDataStream(
-                        org.bouncycastle.openpgp.operator.bc.BcPBEDataDecryptorFactory(
+                        GuardedPBEDataDecryptorFactory(
                             passphrase.toCharArray(),
                             org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
                         )
@@ -1876,9 +2233,35 @@ class PGPCryptoService private constructor() {
                 throw PGPCryptoError.NoMatchingKey(hiddenRecipient = sawWildcardPkesk)
             }
 
-            val result = streamDecryptedContent(
-                JcaPGPObjectFactory(decryptedStream), verificationKeys, output
-            )
+            // item 11 (#54 Finding D): collapse a parse failure on a corrupted
+            // integrity-protected SEIPD into the same IntegrityCheckFailed the
+            // gate throws (public-key path only), so it is indistinguishable
+            // from an MDC failure.
+            val integrityProtected = integrityObj?.let { it.isIntegrityProtected() || it.isAEAD() } ?: false
+            // 4.6.0 (item 17.2): AEAD releases only authenticated chunks, so it
+            // streams straight through; everything else is held until the gate.
+            val hold = if (releaseOnlyWhenVerified && integrityObj?.isAEAD() != true) {
+                VerifiedReleaseSink(holdDir)
+            } else null
+            val target: java.io.OutputStream = hold ?: output
+            try {
+            val result = if (integrityProtected && !usedSymmetric) {
+                try {
+                    streamOrCompositeContent(
+                    decryptedStream!!, verificationKeys, target
+                )
+                } catch (rle: PGPCryptoError.ResourceLimitExceeded) {
+                    throw rle
+                } catch (any: Exception) {
+                    throw PGPCryptoError.IntegrityCheckFailed(
+                        "Integrity check failed - the message may have been tampered with"
+                    )
+                }
+            } else {
+                streamOrCompositeContent(
+                    decryptedStream!!, verificationKeys, target
+                )
+            }
 
             // Integrity gate — same rules as decrypt() (tag-20 AEAD note
             // included via isAEAD()).
@@ -1895,13 +2278,19 @@ class PGPCryptoService private constructor() {
                     )
                 }
             }
+            // Only now may held plaintext reach the consumer.
+            hold?.releaseTo(output)
             return result
+            } finally {
+                hold?.discard()
+            }
         } catch (e: PGPCryptoError) {
             if (usedSymmetric && e is PGPCryptoError.DecryptionFailed) {
                 throw PGPCryptoError.InvalidPassphrase()
             }
             throw e
         } catch (e: PGPException) {
+            argon2PolicyCause(e)?.let { throw it } // 4.6.0 (item 17.5)
             if (usedSymmetric) throw PGPCryptoError.InvalidPassphrase()
             val msg = e.message ?: ""
             if (msg.contains("checksum", ignoreCase = true) ||
@@ -1910,9 +2299,12 @@ class PGPCryptoService private constructor() {
             ) {
                 throw PGPCryptoError.InvalidPassphrase()
             }
+            if (looksIncomplete(e)) throw PGPCryptoError.MessageIncomplete()
             throw PGPCryptoError.DecryptionFailed(msg)
         } catch (e: Exception) {
+            argon2PolicyCause(e)?.let { throw it } // 4.6.0 (item 17.5)
             if (usedSymmetric) throw PGPCryptoError.InvalidPassphrase()
+            if (looksIncomplete(e)) throw PGPCryptoError.MessageIncomplete()
             throw PGPCryptoError.DecryptionFailed(e.message ?: "Unknown error")
         }
     }
@@ -2029,12 +2421,13 @@ class PGPCryptoService private constructor() {
     private fun streamDecryptedContent(
         factory: JcaPGPObjectFactory,
         verificationKeys: List<PGPPublicKeyRing>?,
-        output: java.io.OutputStream
+        output: java.io.OutputStream,
+        depth: Int = 0
     ): DecryptStreamResult {
         var bytesWritten = 0L
         var wroteLiteral = false
         var filename: String? = null
-        var signatureVerified = false
+        var signerStatus = SignerStatus.NONE
         var signerKeyID: String? = null
         var onePassSig: PGPOnePassSignature? = null
         var hasSignature = false
@@ -2044,8 +2437,10 @@ class PGPCryptoService private constructor() {
         while (obj != null) {
             when (obj) {
                 is PGPCompressedData -> {
+                    if (depth >= SecurityLimits.MAX_DECOMPRESSION_DEPTH)
+                        throw PGPCryptoError.ResourceLimitExceeded("compression nesting exceeds depth cap")
                     return streamDecryptedContent(
-                        JcaPGPObjectFactory(obj.dataStream), verificationKeys, output
+                        JcaPGPObjectFactory(obj.dataStream), verificationKeys, output, depth + 1
                     )
                 }
                 is PGPOnePassSignatureList -> {
@@ -2068,7 +2463,7 @@ class PGPCryptoService private constructor() {
                 }
                 is PGPLiteralData -> {
                     wroteLiteral = true
-                    filename = obj.fileName.takeIf { it.isNotEmpty() }
+                    filename = LiteralFilename.sanitize(obj.fileName) // 4.6.0 (item 17.3)
                     val litStream = obj.inputStream
                     val buf = ByteArray(1 shl 16)
                     var len: Int
@@ -2076,6 +2471,8 @@ class PGPCryptoService private constructor() {
                         output.write(buf, 0, len)
                         onePassSig?.update(buf, 0, len)
                         bytesWritten += len
+                        if (bytesWritten > SecurityLimits.MAX_STREAM_PLAINTEXT_BYTES)
+                            throw PGPCryptoError.ResourceLimitExceeded("decrypted stream exceeds size cap")
                     }
                 }
                 is PGPSignatureList -> {
@@ -2084,7 +2481,20 @@ class PGPCryptoService private constructor() {
                         if (signatureKeyIDRaw == null) signatureKeyIDRaw = obj[0].keyID
                     }
                     if (onePassSig != null && obj.size() > 0) {
-                        signatureVerified = onePassSig.verify(obj[0])
+                        // item 11 (Finding C): a passing crypto check is graded
+                        // against the signer key's revocation / expiry / flags.
+                        // 4.6.0 (item 17.1): the one-pass header and the
+                        // trailing signature must name the same key, and the
+                        // grade covers the signature itself (document type,
+                        // digest policy) as well as the signer's binding.
+                        val sameKey = obj[0].keyID == onePassSig!!.keyID
+                        signerStatus = if (sameKey && onePassSig!!.verify(obj[0])) {
+                            SignerEvaluator.evaluate(obj[0], verificationKeys ?: emptyList())
+                        } else {
+                            SignerStatus.INVALID
+                        }
+                    } else if (obj.size() > 0) {
+                        signerStatus = SignerStatus.UNKNOWN_SIGNER
                     }
                 }
             }
@@ -2096,16 +2506,94 @@ class PGPCryptoService private constructor() {
         return DecryptStreamResult(
             bytesWritten = bytesWritten,
             filename = filename,
-            signatureVerified = signatureVerified,
+            signatureVerified = signerStatus == SignerStatus.VERIFIED,
             signerKeyID = signerKeyID,
             hasSignature = hasSignature,
-            signatureKeyIDRaw = signatureKeyIDRaw
+            signatureKeyIDRaw = signatureKeyIDRaw,
+            signerStatus = signerStatus
         )
     }
 
     /**
      * Decrypt an armored message.
      */
+    /**
+     * #30/#31: the streaming counterpart of [decrypt]'s composite handling.
+     * The classical streaming parse ([streamDecryptedContent]) hands packets
+     * to BouncyCastle, which THROWS on an algo-30/31 one-pass/signature packet,
+     * so a composite inline signed message would fail to verify (or fail to
+     * open) on the file-decrypt and OpenPGP-API paths even though [decrypt]
+     * (text) handles it. This sniffs a bounded head: if the inner content is a
+     * composite inline message it is buffered (composite payloads are produced
+     * buffered and bounded by [SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES]), the
+     * literal is written to [output], and the composite fields are surfaced for
+     * the caller to verify against the stored composite public key. A classical
+     * message keeps the true streaming path untouched: the head is read from a
+     * mark/reset buffer and, on a miss, streaming continues from the same bytes
+     * with no full-message buffering.
+     */
+    private fun streamOrCompositeContent(
+        decryptedStream: java.io.InputStream,
+        verificationKeys: List<PGPPublicKeyRing>?,
+        output: java.io.OutputStream
+    ): DecryptStreamResult {
+        val V = com.pgpony.android.crypto.pqc.CompositeDocumentVerifier
+        val headLimit = 1 shl 16
+        val bin = java.io.BufferedInputStream(decryptedStream, headLimit)
+        bin.mark(headLimit)
+        val head = readHead(bin, headLimit)
+        bin.reset()
+        val looksComposite = try {
+            head.isNotEmpty() && V.isCompositeSignature(V.decompress(head))
+        } catch (_: Exception) {
+            false
+        }
+        if (!looksComposite) {
+            return streamDecryptedContent(JcaPGPObjectFactory(bin), verificationKeys, output)
+        }
+        // Composite inline: buffer the whole inner content (bounded), then route
+        // to the composite verifier, mirroring [decrypt]'s parsePlain.
+        val cap = SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES
+        val bufOut = java.io.ByteArrayOutputStream()
+        val chunk = ByteArray(1 shl 16)
+        var total = 0L
+        var n = bin.read(chunk)
+        while (n >= 0) {
+            total += n
+            if (total > cap)
+                throw PGPCryptoError.ResourceLimitExceeded("decrypted message exceeds size cap")
+            bufOut.write(chunk, 0, n)
+            n = bin.read(chunk)
+        }
+        val plainBytes = bufOut.toByteArray()
+        if (!V.isCompositeInline(plainBytes)) {
+            // Head matched a composite one-pass packet but the full message is
+            // not a valid composite inline (e.g. truncated): fall back to the
+            // classical parse over the buffered bytes so content is never
+            // silently dropped.
+            return streamDecryptedContent(
+                JcaPGPObjectFactory(java.io.ByteArrayInputStream(plainBytes)),
+                verificationKeys, output
+            )
+        }
+        val content = V.inlineContent(plainBytes)
+            ?: throw PGPCryptoError.DecryptionFailed("No literal data in composite inline message")
+        output.write(content)
+        val claimedFp = V.claimedSignerOfInline(plainBytes)
+        return DecryptStreamResult(
+            bytesWritten = content.size.toLong(),
+            filename = null,
+            signatureVerified = false,
+            signerKeyID = null,
+            hasSignature = true,
+            signatureKeyIDRaw = null,
+            signerStatus = SignerStatus.NONE,
+            compositeInline = true,
+            compositeInlineBytes = plainBytes,
+            compositeClaimedSignerFp = claimedFp
+        )
+    }
+
     fun decryptArmored(
         armoredMessage: String,
         secretKeyRings: List<PGPSecretKeyRing>,
@@ -2282,11 +2770,12 @@ class PGPCryptoService private constructor() {
 
     private fun processDecryptedContent(
         factory: JcaPGPObjectFactory,
-        verificationKeys: List<PGPPublicKeyRing>?
+        verificationKeys: List<PGPPublicKeyRing>?,
+        depth: Int = 0
     ): DecryptResult {
         var literalData: ByteArray? = null
         var filename: String? = null
-        var signatureVerified = false
+        var signerStatus = SignerStatus.NONE
         var signerKeyID: String? = null
         var onePassSig: PGPOnePassSignature? = null
         // P2b-1: track signature PRESENCE and the raw signing key id
@@ -2300,8 +2789,10 @@ class PGPCryptoService private constructor() {
         while (obj != null) {
             when (obj) {
                 is PGPCompressedData -> {
+                    if (depth >= SecurityLimits.MAX_DECOMPRESSION_DEPTH)
+                        throw PGPCryptoError.ResourceLimitExceeded("compression nesting exceeds depth cap")
                     val compFactory = JcaPGPObjectFactory(obj.dataStream)
-                    return processDecryptedContent(compFactory, verificationKeys)
+                    return processDecryptedContent(compFactory, verificationKeys, depth + 1)
                 }
                 is PGPOnePassSignatureList -> {
                     if (obj.size() > 0) {
@@ -2322,12 +2813,16 @@ class PGPCryptoService private constructor() {
                     }
                 }
                 is PGPLiteralData -> {
-                    filename = obj.fileName.takeIf { it.isNotEmpty() }
+                    filename = LiteralFilename.sanitize(obj.fileName) // 4.6.0 (item 17.3)
                     val litStream = obj.inputStream
                     val buffer = ByteArrayOutputStream()
                     val buf = ByteArray(4096)
                     var len: Int
+                    var total = 0L
                     while (litStream.read(buf).also { len = it } >= 0) {
+                        total += len
+                        if (total > SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES)
+                            throw PGPCryptoError.ResourceLimitExceeded("decrypted message exceeds size cap")
                         buffer.write(buf, 0, len)
                         onePassSig?.update(buf, 0, len)
                     }
@@ -2342,7 +2837,20 @@ class PGPCryptoService private constructor() {
                         if (signatureKeyIDRaw == null) signatureKeyIDRaw = obj[0].keyID
                     }
                     if (onePassSig != null && obj.size() > 0) {
-                        signatureVerified = onePassSig.verify(obj[0])
+                        // item 11 (Finding C): a passing crypto check is graded
+                        // against the signer key's revocation / expiry / flags.
+                        // 4.6.0 (item 17.1): the one-pass header and the
+                        // trailing signature must name the same key, and the
+                        // grade covers the signature itself (document type,
+                        // digest policy) as well as the signer's binding.
+                        val sameKey = obj[0].keyID == onePassSig!!.keyID
+                        signerStatus = if (sameKey && onePassSig!!.verify(obj[0])) {
+                            SignerEvaluator.evaluate(obj[0], verificationKeys ?: emptyList())
+                        } else {
+                            SignerStatus.INVALID
+                        }
+                    } else if (obj.size() > 0) {
+                        signerStatus = SignerStatus.UNKNOWN_SIGNER
                     }
                 }
             }
@@ -2361,11 +2869,12 @@ class PGPCryptoService private constructor() {
         return DecryptResult(
             plaintext = plaintext,
             data = data,
-            signatureVerified = signatureVerified,
+            signatureVerified = signerStatus == SignerStatus.VERIFIED,
             signerKeyID = signerKeyID,
             filename = filename,
             hasSignature = hasSignature,
-            signatureKeyIDRaw = signatureKeyIDRaw
+            signatureKeyIDRaw = signatureKeyIDRaw,
+            signerStatus = signerStatus
         )
     }
 
@@ -2388,6 +2897,7 @@ class PGPCryptoService private constructor() {
         try {
             val signingKey = pickSigningSecretKey(secretKeyRing)
                 ?: throw SigningError.NoSigningKey()
+            enforceArgon2Policy(signingKey.s2K)
             val privateKey = signingKey.extractPrivateKey(
                 org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
                     org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
@@ -2441,89 +2951,27 @@ class PGPCryptoService private constructor() {
     }
 
     // ── Verify ─────────────────────────────────────────────────────────
+    //
+    // 4.6.0: there is no separate inline-signed verifier here. A signed (not
+    // encrypted) PGP MESSAGE goes through decrypt(), which hands it to
+    // [signedOnly]: the same content walk every decrypted message takes, with
+    // the same decompression depth and size caps, and the signature graded by
+    // SignerEvaluator. Clear-signed and detached signatures go through
+    // VerifyService.
 
     /**
-     * Verify an inline-signed message.
+     * [message] (armored or binary) read as a signed, unencrypted message, or
+     * null when it carries no signature, so plain unsigned literal data is
+     * never presented as a decrypted result.
      */
-    fun verify(
-        signedData: ByteArray,
-        verificationKeys: List<PGPPublicKeyRing>
-    ): VerifyResult {
-        try {
-            val inputStream = if (isArmored(signedData)) {
-                ArmoredInputStream(ByteArrayInputStream(signedData))
-            } else {
-                ByteArrayInputStream(signedData)
-            }
-
-            val factory = JcaPGPObjectFactory(inputStream)
-            var obj = factory.nextObject()
-
-            while (obj != null) {
-                when (obj) {
-                    is PGPCompressedData -> {
-                        val compFactory = JcaPGPObjectFactory(obj.dataStream)
-                        return verifyFromFactory(compFactory, verificationKeys)
-                    }
-                    is PGPOnePassSignatureList -> {
-                        return verifyFromFactory(factory, verificationKeys, obj)
-                    }
-                }
-                obj = factory.nextObject()
-            }
-
-            throw PGPCryptoError.VerificationFailed("No signature found in message")
-        } catch (e: PGPCryptoError) {
-            throw e
-        } catch (e: Exception) {
-            throw PGPCryptoError.VerificationFailed(e.message ?: "Unknown error")
+    private fun signedOnly(message: ByteArray, verificationKeys: List<PGPPublicKeyRing>?): DecryptResult? {
+        val input = if (isArmored(message)) {
+            ArmoredInputStream(ByteArrayInputStream(message))
+        } else {
+            ByteArrayInputStream(message)
         }
-    }
-
-    private fun verifyFromFactory(
-        factory: JcaPGPObjectFactory,
-        verificationKeys: List<PGPPublicKeyRing>,
-        opsList: PGPOnePassSignatureList? = null
-    ): VerifyResult {
-        var onePassSig: PGPOnePassSignature? = null
-        var signerKeyID: String? = null
-
-        val ops = opsList ?: (factory.nextObject() as? PGPOnePassSignatureList)
-        if (ops != null && ops.size() > 0) {
-            val opsEntry = ops[0]
-            val signerPubKey = findPublicKey(opsEntry.keyID, verificationKeys)
-            if (signerPubKey != null) {
-                opsEntry.init(
-                    org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider(),
-                    signerPubKey
-                )
-                onePassSig = opsEntry
-                signerKeyID = String.format("%016X", opsEntry.keyID)
-            }
-        }
-
-        // Read literal data
-        val litData = factory.nextObject() as? PGPLiteralData
-            ?: throw PGPCryptoError.VerificationFailed("No literal data in signed message")
-
-        val litStream = litData.inputStream
-        val buf = ByteArray(4096)
-        var len: Int
-        while (litStream.read(buf).also { len = it } >= 0) {
-            onePassSig?.update(buf, 0, len)
-        }
-
-        // Read signature
-        val sigList = factory.nextObject() as? PGPSignatureList
-            ?: throw PGPCryptoError.VerificationFailed("No signature packet found")
-
-        val verified = onePassSig?.verify(sigList[0]) ?: false
-
-        return VerifyResult(
-            isValid = verified,
-            signerKeyID = signerKeyID,
-            signatureDate = sigList[0].creationTime
-        )
+        val result = processDecryptedContent(JcaPGPObjectFactory(input), verificationKeys)
+        return result.takeIf { it.hasSignature }
     }
 
     // ── Algorithm Detection ────────────────────────────────────────────
@@ -2559,6 +3007,8 @@ class PGPCryptoService private constructor() {
                     return KeyAlgorithm.MLKEM1024_X448_LIBREPGP
                 com.pgpony.android.crypto.pqc.EccCurve.BRAINPOOL_P384R1 ->
                     return KeyAlgorithm.MLKEM1024_BP384_LIBREPGP
+                com.pgpony.android.crypto.pqc.EccCurve.BRAINPOOL_P256R1 ->
+                    return KeyAlgorithm.MLKEM768_BP256_LIBREPGP
                 com.pgpony.android.crypto.pqc.EccCurve.X25519 ->
                     return KeyAlgorithm.MLKEM768_X25519_LIBREPGP
                 else -> {}
@@ -2584,6 +3034,29 @@ class PGPCryptoService private constructor() {
                 publicKey.bitStrength >= 3072 -> KeyAlgorithm.RSA_3072
                 else -> KeyAlgorithm.RSA_2048
             }
+            // item 17 (Play review): an ECDSA primary (algo 19) carries its curve
+            // in the key material; label the real curve rather than a bare "ECDSA".
+            19 -> {
+                return when (EcCurveOid.label(publicKey)) {
+                    "NIST P-256" -> KeyAlgorithm.ECDSA_NIST_P256
+                    "NIST P-384" -> KeyAlgorithm.ECDSA_NIST_P384
+                    "NIST P-521" -> KeyAlgorithm.ECDSA_NIST_P521
+                    "brainpoolP256r1" -> KeyAlgorithm.ECDSA_BRAINPOOL_P256
+                    "brainpoolP384r1" -> KeyAlgorithm.ECDSA_BRAINPOOL_P384
+                    "brainpoolP512r1" -> KeyAlgorithm.ECDSA_BRAINPOOL_P512
+                    "secp256k1" -> KeyAlgorithm.ECDSA_SECP256K1
+                    else -> KeyAlgorithm.ECDSA
+                }
+            }
+            // item 17: an ECDH subkey (algo 18) on a non-25519 curve must not be
+            // mislabeled Ed25519. When the curve is a known non-25519 one, defer
+            // to the from() mapping only for the 25519 family; otherwise Unknown.
+            18 -> {
+                val label = EcCurveOid.label(publicKey)
+                if (label != null && label != "Curve25519" && label != "X25519") {
+                    return KeyAlgorithm.UNKNOWN
+                }
+            }
             8 -> if (version == 5) {
                 // LibrePGP composite: 768 vs 1024 is the curve, not the algo id.
                 val curve = try {
@@ -2597,6 +3070,8 @@ class PGPCryptoService private constructor() {
                         return KeyAlgorithm.MLKEM1024_X448_LIBREPGP
                     com.pgpony.android.crypto.pqc.EccCurve.BRAINPOOL_P384R1 ->
                         return KeyAlgorithm.MLKEM1024_BP384_LIBREPGP
+                    com.pgpony.android.crypto.pqc.EccCurve.BRAINPOOL_P256R1 ->
+                        return KeyAlgorithm.MLKEM768_BP256_LIBREPGP
                     com.pgpony.android.crypto.pqc.EccCurve.X25519 ->
                         return KeyAlgorithm.MLKEM768_X25519_LIBREPGP
                     else -> {}
@@ -2604,7 +3079,7 @@ class PGPCryptoService private constructor() {
             }
         }
 
-        return KeyAlgorithm.from(algoId, version) ?: KeyAlgorithm.RSA_4096
+        return KeyAlgorithm.from(algoId, version) ?: KeyAlgorithm.UNKNOWN
     }
 
     // ── Helper Functions ───────────────────────────────────────────────
@@ -2613,6 +3088,78 @@ class PGPCryptoService private constructor() {
     fun fingerprintHex(publicKey: PGPPublicKey): String {
         return publicKey.fingerprint.joinToString("") { String.format("%02X", it) }
     }
+
+    /**
+     * item 13 (#36): every encryption-capable key in [ring], in the same
+     * preference order [findEncryptionKey] uses, so the first entry is the
+     * automatic pick. Composite ML-KEM (IETF algo 35/36) leads, then the
+     * LibrePGP composite (algo 8), then classical encryption subkeys, then an
+     * encryption-capable primary. Deduped by key id.
+     */
+    /**
+     * item 23 (#55): does this decrypt failure look like a truncated or corrupted
+     * message (a partial copy-paste) rather than a genuine crypto error? A cut-off
+     * armored block leaves a packet length pointing past the end of the buffer,
+     * which surfaces as a range / end-of-stream error deep in the parser.
+     */
+    internal fun looksIncomplete(e: Throwable): Boolean {
+        var cur: Throwable? = e
+        while (cur != null) {
+            if (cur is IndexOutOfBoundsException || cur is java.io.EOFException) return true
+            val m = cur.message?.lowercase() ?: ""
+            if (m.contains("greater than size") || m.contains("toindex") ||
+                m.contains("premature end") || m.contains("unexpected end") ||
+                m.contains("end of stream") || m.contains("out of bounds") ||
+                m.contains("truncat")
+            ) return true
+            cur = cur.cause
+        }
+        return false
+    }
+
+    internal fun encryptionKeys(ring: PGPPublicKeyRing): List<PGPPublicKey> {
+        // 4.6.0 (item 17.1): choose only from the certificate's verified view,
+        // and only keys that are bound, unrevoked and unexpired.
+        val view = CertificateBindings.verified(ring)
+        return encryptionKeysUnfiltered(view.ring).filter { SignerEvaluator.isUsableEncryptionKey(view, it) }
+    }
+
+    private fun encryptionKeysUnfiltered(ring: PGPPublicKeyRing): List<PGPPublicKey> {
+        val out = LinkedHashMap<Long, PGPPublicKey>()
+        com.pgpony.android.crypto.pqc.CompositeKeyMaterial.encryptionSubkey(ring)?.let { out[it.keyID] = it }
+        ring.publicKeys.asSequence().firstOrNull {
+            it.algorithm == com.pgpony.android.crypto.pqc.CompositeLibrePGPKeyMaterial.ALGORITHM_ID
+        }?.let { out[it.keyID] = it }
+        ring.publicKeys.forEach { key ->
+            if (key.isMasterKey || !key.isEncryptionKey) return@forEach
+            val caps = SubkeyCapability.fromPgpPublicKey(key, detectAlgorithm(key), false)
+            if (SubkeyCapability.hasCapability(caps, SubkeyCapability.Encrypt)) out[key.keyID] = key
+        }
+        ring.publicKeys.forEach { key ->
+            if (!key.isMasterKey || !key.isEncryptionKey) return@forEach
+            val caps = SubkeyCapability.fromPgpPublicKey(key, detectAlgorithm(key), true)
+            if (SubkeyCapability.hasCapability(caps, SubkeyCapability.Encrypt)) out[key.keyID] = key
+        }
+        if (out.isEmpty()) {
+            ring.publicKeys.asSequence().firstOrNull { it.isEncryptionKey }?.let { out[it.keyID] = it }
+        }
+        return out.values.toList()
+    }
+
+    /** item 13 (#36): display-ready encryption-key choices for [ring]; the first
+     *  entry is the automatic pick. Size < 2 means one encryption target, where
+     *  the UI shows no picker. */
+    fun encryptionKeyOptions(ring: PGPPublicKeyRing): List<EncryptionKeyOption> =
+        encryptionKeys(ring).map { pub ->
+            EncryptionKeyOption(
+                keyId = pub.keyID,
+                keyIdHex = String.format("%016X", pub.keyID),
+                isPrimary = pub.isMasterKey,
+                isPostQuantum = com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(pub.algorithm) != null ||
+                    pub.algorithm == com.pgpony.android.crypto.pqc.CompositeKemLibrePGP.ALGORITHM_ID,
+                algorithmLabel = detectAlgorithm(pub).displayName
+            )
+        }
 
     /**
      * Find the encryption key to address a message to in [ring].
@@ -2633,18 +3180,31 @@ class PGPCryptoService private constructor() {
      * to the prior algorithm-only match so keys with no usable key-flags do
      * not regress.
      */
-    private fun findEncryptionKey(ring: PGPPublicKeyRing): PGPPublicKey? {
+    private fun findEncryptionKey(ring: PGPPublicKeyRing, preferredKeyId: Long? = null): PGPPublicKey? {
+        // item 13 (#36): honor a user-chosen encryption subkey when it is an
+        // encryption-capable key on this ring; otherwise the automatic pick.
+        if (preferredKeyId != null) {
+            encryptionKeys(ring).firstOrNull { it.keyID == preferredKeyId }?.let { return it }
+        }
+        // 4.6.0 (item 17.1): every candidate below comes from the verified view
+        // and must be bound, unrevoked and unexpired.
+        val view = CertificateBindings.verified(ring)
+        val vring = view.ring
+        fun usable(k: PGPPublicKey) = SignerEvaluator.isUsableEncryptionKey(view, k)
         // Composite ML-KEM+X25519 (algo 35) subkeys are invisible to BC's
         // isEncryptionKey (unknown algorithm), so surface one explicitly.
-        com.pgpony.android.crypto.pqc.CompositeKeyMaterial.encryptionSubkey(ring)?.let { return it }
+        vring.publicKeys.asSequence().firstOrNull {
+            com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(it.algorithm) != null && usable(it)
+        }?.let { return it }
         // LibrePGP composite (algo 8) subkeys are likewise invisible to BC.
-        ring.publicKeys.asSequence().firstOrNull {
-            it.algorithm == com.pgpony.android.crypto.pqc.CompositeLibrePGPKeyMaterial.ALGORITHM_ID
+        vring.publicKeys.asSequence().firstOrNull {
+            it.algorithm == com.pgpony.android.crypto.pqc.CompositeLibrePGPKeyMaterial.ALGORITHM_ID && usable(it)
         }?.let { return it }
         var primaryCandidate: PGPPublicKey? = null
         var algorithmFallback: PGPPublicKey? = null
-        ring.publicKeys.forEach { key ->
+        vring.publicKeys.forEach { key ->
             if (!key.isEncryptionKey) return@forEach
+            if (!usable(key)) return@forEach
             if (algorithmFallback == null) algorithmFallback = key
             val caps = SubkeyCapability.fromPgpPublicKey(key, detectAlgorithm(key), key.isMasterKey)
             if (SubkeyCapability.hasCapability(caps, SubkeyCapability.Encrypt)) {
@@ -2653,6 +3213,20 @@ class PGPCryptoService private constructor() {
             }
         }
         return primaryCandidate ?: algorithmFallback
+    }
+
+    /**
+     * item 2 (#36): would this recipient receive a post-quantum-wrapped session
+     * key? True when the encryption key PGPony would pick for [ring]
+     * ([findEncryptionKey]) is a composite ML-KEM method — IETF algo 35/36 or
+     * the LibrePGP composite (algo 8) — matching exactly the branch encrypt()
+     * takes per recipient. A classical-only recipient (ECDH/X25519/RSA) is a
+     * post-quantum weak link in a multi-recipient message.
+     */
+    fun isPostQuantumRecipient(ring: PGPPublicKeyRing): Boolean {
+        val encKey = findEncryptionKey(ring) ?: return false
+        return com.pgpony.android.crypto.pqc.CompositeSuite.ietfFor(encKey.algorithm) != null ||
+            encKey.algorithm == com.pgpony.android.crypto.pqc.CompositeKemLibrePGP.ALGORITHM_ID
     }
 
     /**
@@ -2806,6 +3380,7 @@ class PGPCryptoService private constructor() {
                 sawLockedKey = true
                 return null
             }
+            enforceArgon2Policy(secretKey.s2K)
             val privateKey = try {
                 secretKey.extractPrivateKey(
                     org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
@@ -2879,6 +3454,12 @@ class PGPCryptoService private constructor() {
         var obj = factory.nextObject()
         while (obj != null) {
             if (obj is PGPEncryptedDataList) return obj
+            // 4.6.0: a message that opens with signed or literal content is not
+            // encrypted. Stop there: reading past an unconsumed (possibly
+            // indefinite-length) compressed packet only yields a parse error.
+            if (obj is PGPCompressedData || obj is PGPLiteralData ||
+                obj is PGPOnePassSignatureList || obj is PGPSignatureList
+            ) return null
             obj = factory.nextObject()
         }
         return null
@@ -2934,5 +3515,93 @@ class PGPCryptoService private constructor() {
         armorIn.copyTo(out)
         armorIn.close()
         return out.toByteArray()
+    }
+}
+
+// ── Finding A (11A): Argon2 work-factor guard ──────────────────────────────
+// File-private helpers (internal for unit tests). BC runs an SKESK's Argon2
+// KDF opaquely inside getDataStream, so the only place to bound it is BEFORE
+// that call. enforceArgon2Policy reads the S2K parameters (BC 1.85 exposes
+// getMemorySizeExponent / getPasses / getParallelism) and fails closed with a
+// typed error. Ceilings live in SecurityLimits so they can be tuned in one
+// place; every legitimate PGPony / GnuPG / Sequoia value sits below them.
+internal fun enforceArgon2Policy(s2k: org.bouncycastle.bcpg.S2K?) {
+    if (s2k == null) return
+    if (s2k.type != org.bouncycastle.bcpg.S2K.ARGON_2) return
+    val m = s2k.memorySizeExponent
+    val passes = s2k.passes
+    val parallelism = s2k.parallelism
+    if (m > SecurityLimits.ARGON2_MAX_MEM_EXP)
+        throw PGPCryptoError.ResourceLimitExceeded("Argon2 memory 2^$m KiB exceeds policy")
+    if (passes > SecurityLimits.ARGON2_MAX_PASSES)
+        throw PGPCryptoError.ResourceLimitExceeded("Argon2 passes $passes exceeds policy")
+    if (parallelism > SecurityLimits.ARGON2_MAX_PARALLELISM)
+        throw PGPCryptoError.ResourceLimitExceeded("Argon2 parallelism $parallelism exceeds policy")
+    // Device-relative guard: a value under the hard ceiling can still OOM a
+    // small-heap phone. Never reject at or below our own encrypt parameters
+    // (ARGON2_SELF_MEM_EXP), so no legitimate message is turned away.
+    val requestedKiB = 1L shl m
+    val budgetKiB = (Runtime.getRuntime().maxMemory() / 1024.0 * SecurityLimits.KDF_HEAP_FRACTION).toLong()
+    if (m > SecurityLimits.ARGON2_SELF_MEM_EXP && requestedKiB > budgetKiB)
+        throw PGPCryptoError.ResourceLimitExceeded("Argon2 memory 2^$m KiB will not fit this device")
+}
+
+/**
+ * 4.6.0 (item 17.5): the Argon2 guard at the KDF itself. Bouncy Castle calls
+ * makeKeyFromPassPhrase with the SKESK's S2K right before it runs the KDF, so
+ * enforcing the policy here covers an SKESK wherever it sits in the message,
+ * however far behind other ESK packets. The head scans below remain as an
+ * early exit; this is the check that cannot be walked around.
+ */
+internal class GuardedPBEDataDecryptorFactory(
+    passphrase: CharArray,
+    digestProvider: org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider
+) : org.bouncycastle.openpgp.operator.bc.BcPBEDataDecryptorFactory(passphrase, digestProvider) {
+    override fun makeKeyFromPassPhrase(keyAlgorithm: Int, s2k: org.bouncycastle.bcpg.S2K?): ByteArray {
+        enforceArgon2Policy(s2k)
+        return super.makeKeyFromPassPhrase(keyAlgorithm, s2k)
+    }
+}
+
+/** The Argon2 policy error behind [e], when Bouncy Castle wrapped it. */
+internal fun argon2PolicyCause(e: Throwable): PGPCryptoError.ResourceLimitExceeded? {
+    var cur: Throwable? = e
+    while (cur != null) {
+        if (cur is PGPCryptoError.ResourceLimitExceeded) return cur
+        cur = cur.cause
+    }
+    return null
+}
+
+// Scan a message's leading ESK packets for an SKESK and enforce the Argon2
+// policy on its S2K before any getDataStream runs the KDF. Parsing a packet
+// does not run the KDF; only getSessionKey / getDataStream does. Fails open on
+// a parse hiccup (a message BC can actually run, BC parses the same way).
+internal fun enforceSkeskArgon2Policy(message: ByteArray) {
+    // #66: [message] is a bounded head (the leading sniffLimit bytes of the real
+    // ciphertext), so on a message larger than that limit it is truncated. For an
+    // armored message that means the de-armor and the packet scan can both hit a
+    // truncated tail. That is not a decrypt failure, so ALL of it, the de-armor
+    // included, must be best-effort. Before this fix the de-armor sat outside the
+    // try, so a >64 KiB armored message (e.g. mail with attachments) threw
+    // "unexpected end" here and surfaced as "message incomplete". An SKESK, when
+    // present, sits at the very front and is always within the head, so a
+    // truncated tail never hides one.
+    try {
+        val binary = if (message.isNotEmpty() && message[0].toInt() == '-'.code)
+            org.bouncycastle.bcpg.ArmoredInputStream(java.io.ByteArrayInputStream(message)).use { it.readBytes() }
+        else message
+        val bcpgIn = org.bouncycastle.bcpg.BCPGInputStream(java.io.ByteArrayInputStream(binary))
+        scan@ while (true) {
+            val pkt = bcpgIn.readPacket() ?: break@scan
+            when (pkt) {
+                is org.bouncycastle.bcpg.SymmetricKeyEncSessionPacket -> enforceArgon2Policy(pkt.s2K)
+                is org.bouncycastle.bcpg.InputStreamPacket -> break@scan
+                else -> {}
+            }
+        }
+    } catch (e: PGPCryptoError.ResourceLimitExceeded) {
+        throw e
+    } catch (e: Exception) {
     }
 }

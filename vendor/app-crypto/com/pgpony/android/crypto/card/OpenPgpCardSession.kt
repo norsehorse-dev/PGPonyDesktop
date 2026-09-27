@@ -23,6 +23,9 @@ package com.pgpony.android.crypto.card
  * the spec), so 15 covers every real card while preventing an unbounded loop.
  */
 private const val MAX_BLOCK_ATTEMPTS = 15
+// 4.6.0 (item 17.10): caps for transmit()'s 61xx / 6Cxx handling (64 x 256 B = 16 KiB, far above any DO or RSA-4096 result).
+private const val MAX_GET_RESPONSE = 64
+private const val MAX_RESPONSE_BYTES = 64 * 1024
 
 class OpenPgpCardSession(private val transport: CardTransport) {
 
@@ -375,6 +378,28 @@ class OpenPgpCardSession(private val transport: CardTransport) {
     }
 
     /**
+     * 4.6.0 (item 16): INTERNAL AUTHENTICATE (INS 0x88, P1P2 0x00 0x00), the
+     * authentication slot's private-key operation, used for SSH. [input] is
+     * what the card signs: a PKCS#1 DigestInfo for RSA (the card pads it), the
+     * message itself for EdDSA, the hash for ECDSA (see SshAuth.cardInput).
+     * Returns the raw signature. Requires PW1/0x82 (PW1_OTHER) to have been
+     * verified beforehand.
+     */
+    fun internalAuthenticate(input: ByteArray): ByteArray {
+        val resp = transmit(
+            CommandApdu(
+                cla = 0x00,
+                ins = OpenPgpCard.INS_INTERNAL_AUTHENTICATE,
+                p1 = 0x00,
+                p2 = 0x00,
+                data = input,
+                le = 256
+            )
+        )
+        return resp.data
+    }
+
+    /**
      * CHANGE REFERENCE DATA (INS 0x24). The card splits the concatenated
      * [oldPin]||[newPin] using its stored length of the current PIN, so
      * the caller just supplies both. [pinReference] is CRD_PW1 (0x81) for
@@ -612,9 +637,18 @@ class OpenPgpCardSession(private val transport: CardTransport) {
         val buffer = ArrayList<Byte>()
         buffer.addAll(resp.data.toList())
 
+        // 4.6.0 (item 17.10): bound both continuation paths. A misbehaving or hostile
+        // card (or an NFC relay) answering 61xx forever used to spin here and
+        // grow the buffer until OOM; one answering 6Cxx forever re-sent the
+        // original command, a VERIFY carrying the PIN included, without limit.
+        var getResponses = 0
+        var leRetries = 0
         while (true) {
             when {
                 resp.hasMoreData -> {
+                    if (++getResponses > MAX_GET_RESPONSE || buffer.size > MAX_RESPONSE_BYTES) {
+                        throw OpenPgpCardException.Communication("Card kept announcing more response data")
+                    }
                     val le = if (resp.sw2 == 0) 256 else resp.sw2
                     resp = sendRaw(
                         CommandApdu(
@@ -628,6 +662,9 @@ class OpenPgpCardSession(private val transport: CardTransport) {
                     buffer.addAll(resp.data.toList())
                 }
                 resp.wrongLe -> {
+                    if (++leRetries > 1) {
+                        throw OpenPgpCardException.Communication("Card rejected the corrected Le")
+                    }
                     // Resend the original command with the corrected Le.
                     buffer.clear()
                     resp = sendCommand(command.copy(le = if (resp.sw2 == 0) 256 else resp.sw2))

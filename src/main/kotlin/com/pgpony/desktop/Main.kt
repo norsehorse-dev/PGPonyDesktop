@@ -21,6 +21,10 @@ private val PGPONY_VERBS = setOf(
 private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open", "help", "--help", "-h") + PGPONY_VERBS
 
 fun main(args: Array<String>) {
+    // 3.0.0: the settings seam (vendored data/settings/KeyValueSettings.kt). First, before any
+    // face of the binary can reach a vendored store.
+    DesktopPrefsSettings.install()
+
     val first = args.firstOrNull()
 
     // D15 (2.0.0 §1b) — the git signing shim. Reached as `pgpony-gpg` (git invokes gpg.program

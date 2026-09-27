@@ -2,9 +2,9 @@
 // PGPony Desktop — Room database bootstrap (D2a).
 //
 // Opens the SAME PGPDatabase the Android app ships (vendored data/PGPKeyEntity.kt: entities,
-// DAOs, schema v9) on the JVM via Room KMP + the bundled SQLite driver. Fresh desktop databases
-// create directly at v9. Existing v7 databases (desktop 2.0.0) upgrade through the KMP-form
-// migrations in DbMigrations.kt: the Android chain in data/RoomMigrations.kt uses the Android-only
+// DAOs, schema v12 since 3.0.0) on the JVM via Room KMP + the bundled SQLite driver. Fresh
+// desktop databases create directly at the current version. Existing v7 (2.0.0) and v9 (2.1.x)
+// databases upgrade through the KMP-form migrations in DbMigrations.kt: the Android chain in data/RoomMigrations.kt uses the Android-only
 // SupportSQLiteDatabase API and cannot run here, so DESKTOP_MIGRATION_7_8 / _8_9 run the identical
 // SQL (issue #3: "A migration from 7 to 9 was required but not found").
 
@@ -21,6 +21,10 @@ object Db {
         Room.databaseBuilder<PGPDatabase>(name = dbFile.toAbsolutePath().toString())
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(DESKTOP_MIGRATION_7_8, DESKTOP_MIGRATION_8_9)
+            .addMigrations(
+                DESKTOP_MIGRATION_7_8, DESKTOP_MIGRATION_8_9,
+                // 3.0.0: Android 4.6.0's 9 -> 12.
+                DESKTOP_MIGRATION_9_10, DESKTOP_MIGRATION_10_11, DESKTOP_MIGRATION_11_12
+            )
             .build()
 }

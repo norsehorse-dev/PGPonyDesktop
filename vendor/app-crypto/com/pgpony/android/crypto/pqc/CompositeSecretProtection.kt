@@ -139,8 +139,9 @@ object CompositeSecretProtection {
 
         return when (usage) {
             USAGE_NONE -> {
-                require(body.size - i >= expectedLen) { "composite secret material truncated" }
-                body.copyOfRange(i, i + expectedLen)
+                val len = if (expectedLen < 0) mpiRunLength(body, i, -expectedLen) else expectedLen
+                require(body.size - i >= len) { "composite secret material truncated" }
+                body.copyOfRange(i, i + len)
             }
 
             USAGE_AEAD, USAGE_SHA1, USAGE_CHECKSUM -> {
@@ -178,17 +179,36 @@ object CompositeSecretProtection {
 
         val decryptor = BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider()).build(passphrase)
         val s2k = buildS2K(s2kBytes)
+        // 4.6.0 (item 17.5): bound an Argon2 S2K before running the KDF, as the classical unlock sites do.
+        com.pgpony.android.crypto.enforceArgon2Policy(s2k)
         val s2kKey = decryptor.makeKeyFromPassPhrase(symAlg, s2k)
 
-        return if (s2kUsage == USAGE_AEAD) {
-            decryptor.recoverKeyData(
-                symAlg, aeadAlg, s2kKey, iv, AAD_PACKET_TAG, 6, encData, pubkeyContents
-            )
-        } else {
-            val plain = decryptor.recoverKeyData(symAlg, s2kKey, iv, encData, 0, encData.size)
-            require(plain.size >= expectedLen) { "recovered composite secret material too short" }
-            plain.copyOfRange(0, expectedLen)
+        if (s2kUsage == USAGE_AEAD) {
+            // item 12 (#36): BouncyCastle binds the OpenPGP packet tag into the
+            // OCB associated data. PGPony historically protected even the
+            // composite PRIMARY as a subkey (AAD tag 7), so its own keys unlock
+            // with tag 7; an externally generated key (sequoia) protects the
+            // primary with the real tag 5 and a subkey with tag 7. Try tag 7
+            // first (our own convention, and always correct for a subkey), then
+            // tag 5 (an imported primary). A wrong tag fails OCB's authenticated
+            // tag, never yields wrong plaintext, so the fallback is safe. This is
+            // what lets an imported sq protected composite key decrypt.
+            var lastError: Exception? = null
+            for (aadTag in intArrayOf(AAD_PACKET_TAG, 5)) {
+                try {
+                    return decryptor.recoverKeyData(
+                        symAlg, aeadAlg, s2kKey, iv, aadTag, 6, encData, pubkeyContents
+                    )
+                } catch (e: Exception) {
+                    lastError = e
+                }
+            }
+            throw lastError ?: ProtectedKeyException("composite AEAD unlock failed")
         }
+        val plain = decryptor.recoverKeyData(symAlg, s2kKey, iv, encData, 0, encData.size)
+        val len = if (expectedLen < 0) mpiRunLength(plain, 0, -expectedLen) else expectedLen
+        require(plain.size >= len) { "recovered composite secret material too short" }
+        return plain.copyOfRange(0, len)
     }
 
     private fun buildS2K(b: ByteArray): S2K = when (val type = b[0].toInt() and 0xFF) {
@@ -209,6 +229,24 @@ object CompositeSecretProtection {
     }
 
     // -- packet / int helpers --
+
+    /**
+     * 4.6.0 (item 21): [expectedLen] for secret material that is [count]
+     * OpenPGP MPIs rather than a fixed size (an RSA subkey's d, p, q, u).
+     */
+    fun mpis(count: Int): Int = -count
+
+    /** Octets taken by [count] consecutive MPIs starting at [offset]. */
+    private fun mpiRunLength(b: ByteArray, offset: Int, count: Int): Int {
+        var i = offset
+        repeat(count) {
+            require(i + 2 <= b.size) { "secret MPI truncated" }
+            val bits = ((b[i].toInt() and 0xFF) shl 8) or (b[i + 1].toInt() and 0xFF)
+            i += 2 + (bits + 7) / 8
+        }
+        require(i <= b.size) { "secret MPI truncated" }
+        return i - offset
+    }
 
     /** Length of the public-key body prefix (version .. public material). */
     private fun publicBodyLen(keyPacketBody: ByteArray): Int {

@@ -191,7 +191,7 @@ data class PGPKeyEntity(
     // card — via KeyRepository.incrementDecryptUseCount. Starts at 0, so
     // until there's history the default falls back to isDefault then name.
     val decryptUseCount: Int = 0,
-    // ── Phase 3.0.0-KS1: Keyserver activity timestamps (Lukas request) ──
+    // ── Phase 3.0.0-KS1: Keyserver activity timestamps (lukascomer request) ──
     //
     // Two epoch-millis stamps surfaced on the key detail screen under the
     // key-server section. Nullable so existing rows migrate cleanly with no
@@ -210,8 +210,37 @@ data class PGPKeyEntity(
     /** §4.3 delete-safeguard: when this key was last backed up / exported
      *  (epoch ms), so the delete sheet can say "in a backup from ..." versus
      *  "never backed up". Null = never. */
-    val lastBackedUpAt: Long? = null
+    val lastBackedUpAt: Long? = null,
+    /** 4.6.0 (item 17.4): when non-null, this row was created by an Autocrypt
+     *  header or gossip (OpenPGP API or PGPony's own mail ingest), not by the
+     *  user. Such a key never joins a user-managed key for the same address as
+     *  an extra provider recipient. Cleared when the user imports the key
+     *  themselves. */
+    val autocryptImportedAt: Long? = null,
+    /** 4.6.0 (item 11): when this key was last changed here (User IDs,
+     *  subkeys, expiry, notations, revocation). Newer than [lastUploadedAt] on
+     *  a published key means the server copy is behind. */
+    val lastLocalEditAt: Long? = null
 ) {
+    /** 4.6.0 (item 1): the note's first non-blank line, shown as the key's
+     *  label on the keyring list and under the Key Detail header. */
+    val noteLabel: String?
+        get() = notes?.lineSequence()?.map { it.trim() }?.firstOrNull { it.isNotEmpty() }
+
+    /** 4.6.0 (item 20): what "the same identity" means when counting keys that
+     *  share one: the email, else the whole User ID, case-insensitive. */
+    val identityKey: String
+        get() = (userEmail.ifBlank { userID }).trim().lowercase()
+
+    /** 4.6.0 (item 11): published before, edited here since the last upload. */
+    val hasUnpublishedChanges: Boolean
+        get() {
+            val edited = lastLocalEditAt ?: return false
+            if (!keyServerUploaded) return false
+            val uploaded = lastUploadedAt ?: return true
+            return edited > uploaded
+        }
+
     // ── Computed Properties ─────────────────────────────────────────
 
     /**
@@ -270,8 +299,29 @@ data class PGPKeyEntity(
                     match.groupValues[2].trim()
                 )
             }
+            val bracketOnly = Regex("""^<(.+?)>$""").find(uid)
+            if (bracketOnly != null) return Pair("", bracketOnly.groupValues[1].trim())
             if (uid.contains("@")) return Pair("", uid.trim())
             return Pair(uid.trim(), "")
+        }
+
+        /**
+         * item 3 (#request): assemble a User ID from an optional name and
+         * email. The inverse of parseUserID: "Name <email>" when both are
+         * present, just the name when the email is blank, "<email>" when only
+         * an email is given, and "" when neither is supplied (a UID-less v6
+         * certificate). Callers that hardcoded "$name <$email>" route here so
+         * a blank email no longer emits empty angle brackets.
+         */
+        fun composeUserID(name: String, email: String): String {
+            val n = name.trim()
+            val e = email.trim()
+            return when {
+                n.isNotEmpty() && e.isNotEmpty() -> "$n <$e>"
+                n.isNotEmpty() -> n
+                e.isNotEmpty() -> "<$e>"
+                else -> ""
+            }
         }
     }
 }
@@ -359,7 +409,7 @@ interface PGPKeyDao {
         PGPKeyEntity::class, ApiClientEntity::class, AutocryptPeerEntity::class,
         FallbackKeyEntity::class, SigningDefaultsEntity::class
     ],
-    version = 9,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(

@@ -18,6 +18,8 @@ import org.bouncycastle.openpgp.PGPCompressedData
 import org.bouncycastle.openpgp.PGPEncryptedDataList
 import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPLiteralData
+import com.pgpony.android.crypto.PGPCryptoError
+import com.pgpony.android.crypto.SecurityLimits
 import org.bouncycastle.openpgp.PGPOnePassSignature
 import org.bouncycastle.openpgp.PGPOnePassSignatureList
 import org.bouncycastle.openpgp.PGPPublicKey
@@ -262,7 +264,8 @@ class CardDecryptService private constructor() {
      */
     private fun readLiteralAndVerify(
         factory: JcaPGPObjectFactory,
-        verificationKeys: List<PGPPublicKeyRing>?
+        verificationKeys: List<PGPPublicKeyRing>?,
+        depth: Int = 0
     ): CardDecryptResult {
         var data: ByteArray? = null
         var filename: String? = null
@@ -278,8 +281,11 @@ class CardDecryptService private constructor() {
                 // GnuPG/BC wrap the whole signed structure (one-pass sig +
                 // literal + signature) inside the compressed packet, so
                 // recursing re-reads them together — same as the software path.
-                is PGPCompressedData ->
-                    return readLiteralAndVerify(JcaPGPObjectFactory(obj.dataStream), verificationKeys)
+                is PGPCompressedData -> {
+                    if (depth >= SecurityLimits.MAX_DECOMPRESSION_DEPTH)
+                        throw PGPCryptoError.ResourceLimitExceeded("compression nesting exceeds depth cap")
+                    return readLiteralAndVerify(JcaPGPObjectFactory(obj.dataStream), verificationKeys, depth + 1)
+                }
                 is PGPOnePassSignatureList -> {
                     if (obj.size() > 0) {
                         hadSignature = true
@@ -294,12 +300,16 @@ class CardDecryptService private constructor() {
                     }
                 }
                 is PGPLiteralData -> {
-                    filename = obj.fileName.takeIf { it.isNotEmpty() }
+                    filename = com.pgpony.android.crypto.LiteralFilename.sanitize(obj.fileName) // 4.6.0 (item 17.3)
                     val out = ByteArrayOutputStream()
                     val buf = ByteArray(4096)
                     var len: Int
+                    var total = 0L
                     val ins = obj.inputStream
                     while (ins.read(buf).also { len = it } >= 0) {
+                        total += len
+                        if (total > SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES)
+                            throw PGPCryptoError.ResourceLimitExceeded("decrypted message exceeds size cap")
                         out.write(buf, 0, len)
                         onePassSig?.update(buf, 0, len)
                     }
@@ -307,7 +317,15 @@ class CardDecryptService private constructor() {
                 }
                 is PGPSignatureList -> {
                     if (onePassSig != null && obj.size() > 0) {
-                        signatureVerified = onePassSig.verify(obj[0])
+                        // 4.6.0 (item 17.1): graded like the software path, so a
+                        // valid signature from an unbound, revoked or expired
+                        // signer (or a weak digest) is not reported as verified.
+                        val sig = obj[0]
+                        signatureVerified = sig.keyID == onePassSig.keyID &&
+                            onePassSig.verify(sig) &&
+                            com.pgpony.android.crypto.SignerEvaluator.evaluate(
+                                sig, verificationKeys ?: emptyList()
+                            ) == com.pgpony.android.crypto.SignerStatus.VERIFIED
                     }
                 }
             }
