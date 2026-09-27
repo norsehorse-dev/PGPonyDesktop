@@ -761,4 +761,11 @@
     <string name="d_crypto_signing_default_note">Firma como %1$s, la firma predeterminada de esta clave. Introduce la frase de contraseña de esa clave.</string>
     <!-- 3.0.0 stage 3b: SSH agent -->
     <string name="d_settings_ssh_agent_keys_note">Cada clave ofrece su subclave de autenticación más reciente que no pueda también firmar ni certificar: Ed25519, RSA o ECDSA en NIST P-256, P-384 o P-521, incluida una subclave clásica en una clave poscuántica. Añádela en el detalle de la clave o al generar una clave. Las claves RSA siguen respondiendo a la antigua petición SHA-1 ssh-rsa de los servidores que la piden.</string>
+    <!-- 3.0.0 stage 3d: import preview and link import -->
+    <string name="d_import_preview_title">Importar clave</string>
+    <string name="d_import_preview_none">No se encontró ninguna clave en ese texto.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">Ya está en tu llavero. Al importar se añade lo que sea nuevo.</string>
+    <string name="d_import_link_title">Importar desde un enlace</string>
+    <string name="d_keyring_import_link">Importar desde un enlace…</string>
 </resources>

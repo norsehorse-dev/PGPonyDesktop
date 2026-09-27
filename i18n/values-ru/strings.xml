@@ -835,4 +835,11 @@
     <string name="d_crypto_signing_default_note">Подписывает ключом %1$s, ключом подписи по умолчанию для этого ключа. Введите парольную фразу этого ключа.</string>
     <!-- 3.0.0 stage 3b: SSH agent -->
     <string name="d_settings_ssh_agent_keys_note">Каждый ключ предоставляет свой самый новый подключ аутентификации, который не может также подписывать или сертифицировать: Ed25519, RSA или ECDSA на NIST P-256, P-384 или P-521, включая классический подключ на постквантовом ключе. Добавьте его в сведениях о ключе или при создании ключа. Ключи RSA по-прежнему отвечают на старый запрос SHA-1 ssh-rsa от серверов, которые его используют.</string>
+    <!-- 3.0.0 stage 3d: import preview and link import -->
+    <string name="d_import_preview_title">Импорт ключа</string>
+    <string name="d_import_preview_none">В этом тексте ключ не найден.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">Уже есть в вашей связке ключей. При импорте добавится только новое.</string>
+    <string name="d_import_link_title">Импорт по ссылке</string>
+    <string name="d_keyring_import_link">Импорт по ссылке…</string>
 </resources>

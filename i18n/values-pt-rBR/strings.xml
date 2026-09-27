@@ -761,4 +761,11 @@
     <string name="d_crypto_signing_default_note">Assina como %1$s, a assinatura padrão desta chave. Digite a frase-senha dessa chave.</string>
     <!-- 3.0.0 stage 3b: SSH agent -->
     <string name="d_settings_ssh_agent_keys_note">Cada chave oferece sua subchave de autenticação mais recente que não possa também assinar nem certificar: Ed25519, RSA ou ECDSA em NIST P-256, P-384 ou P-521, incluindo uma subchave clássica em uma chave pós-quântica. Adicione-a nos detalhes da chave ou ao gerar uma chave. Chaves RSA continuam respondendo ao antigo pedido SHA-1 ssh-rsa de servidores que o solicitam.</string>
+    <!-- 3.0.0 stage 3d: import preview and link import -->
+    <string name="d_import_preview_title">Importar chave</string>
+    <string name="d_import_preview_none">Nenhuma chave encontrada nesse texto.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">Já está no seu chaveiro. Importar adiciona apenas o que for novo.</string>
+    <string name="d_import_link_title">Importar de um link</string>
+    <string name="d_keyring_import_link">Importar de um link…</string>
 </resources>

@@ -761,4 +761,11 @@
     <string name="d_crypto_signing_default_note">Signe en tant que %1$s, la clé de signature par défaut de cette clé. Saisissez la phrase secrète de cette clé-là.</string>
     <!-- 3.0.0 stage 3b: SSH agent -->
     <string name="d_settings_ssh_agent_keys_note">Chaque clé fournit sa sous-clé d\'authentification la plus récente qui ne peut pas aussi signer ni certifier : Ed25519, RSA ou ECDSA sur NIST P-256, P-384 ou P-521, y compris une sous-clé classique sur une clé post-quantique. Ajoutez-la dans le détail de la clé ou à la génération. Les clés RSA répondent toujours à l\'ancienne requête SHA-1 ssh-rsa des serveurs qui la demandent.</string>
+    <!-- 3.0.0 stage 3d: import preview and link import -->
+    <string name="d_import_preview_title">Importer une clé</string>
+    <string name="d_import_preview_none">Aucune clé trouvée dans ce texte.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">Déjà dans votre trousseau. L\'import ajoute seulement ce qui est nouveau.</string>
+    <string name="d_import_link_title">Importer depuis un lien</string>
+    <string name="d_keyring_import_link">Importer depuis un lien…</string>
 </resources>

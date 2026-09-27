@@ -358,8 +358,8 @@ a real, populated keyring, never only a fresh one.
 
 Progress: stage 1 (2.1 to 2.11) is green on the Mac; see `docs/phases/PHASE_D22_NOTES.md`.
 Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3: checkpoints 3a
-(key generation) and 3b (SSH) are green; 3c (key servers, 6.1 to 6.4) awaits its build; 3d
-(import from a link, paste tolerance, use-once keys) follows. See
+(key generation), 3b (SSH) and 3c (key servers) are green; 3d (import preview, link import,
+Encrypt to this key) awaits its build, and closes stage 3. See
 `docs/phases/PHASE_D24_NOTES.md`.
 
 ## 12. Features (decided: all three, inside 3.0.0)

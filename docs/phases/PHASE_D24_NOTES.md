@@ -82,4 +82,19 @@ rsa-sha2-256 and rsa-sha2-512 by flag; the authorized_keys line).
 Tests: `PublishStatusTest` (per-server record, out-of-date after an edit, addresses, ambiguous
 primary refused).
 
-Next, checkpoint 3d: import from a link (6.5) and paste tolerance with use-once keys (6.6).
+### Checkpoint 3d: import (plan 6.5, 6.6)
+
+- **Import preview** (`ImportPreview.kt`, `previewArmoredText`): a paste, a QR code or a link now
+  shows every key's User IDs, fingerprint, algorithm, public or key pair, and whether it is
+  already in the keyring, before anything is written. A file still imports directly (it may be a
+  many-key export), as before.
+- **Paste tolerance** (Android 4.5.0 item 19): verified; desktop's block splitter already took only
+  the key blocks out of surrounding text and skipped signature blocks. The preview makes it visible.
+- **Encrypt to this key** (item 29): for a single public key, the preview imports it and opens
+  Crypto with it as the recipient.
+- **Import from a link** (Android 4.6.0 item 2): the vendored UrlKeyFetcher on the desktop HTTP
+  client, so proxy, Tor isolation and offline mode apply; https only (http for .onion), redirects
+  checked hop by hop, public keys only; the preview shows the final link.
+
+Tests: `ImportPreviewTest` (noise ignored and nothing stored, several keys and a signature, link
+rules).

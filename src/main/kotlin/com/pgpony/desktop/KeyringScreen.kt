@@ -76,6 +76,9 @@ fun KeyringScreen(state: DesktopState) {
     var showGenerate by remember { mutableStateOf(false) }
     var showServerSearch by remember { mutableStateOf(false) }
     var showQrImport by remember { mutableStateOf(false) }
+    var showLinkImport by remember { mutableStateOf(false) }
+    // 3.0.0 (plan 6.5, 6.6): pasted, QR and linked keys are previewed before anything is stored.
+    var preview by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var detailKey by remember { mutableStateOf<PGPKeyEntity?>(null) }
     var confirmDelete by remember { mutableStateOf<PGPKeyEntity?>(null) }
     var showRecentlyDeleted by remember { mutableStateOf(false) }
@@ -125,6 +128,7 @@ fun KeyringScreen(state: DesktopState) {
         ) {
             OutlinedButton(onClick = { showServerSearch = true }) { Text(tr("d_keyring_search_servers")) }
             OutlinedButton(onClick = { showPasteDialog = true }) { Text(tr("d_keyring_paste_armor")) }
+            OutlinedButton(onClick = { showLinkImport = true }) { Text(tr("d_keyring_import_link")) }
             OutlinedButton(onClick = { showFilePicker = true }) { Text(tr("d_keyring_import_file")) }
             OutlinedButton(onClick = { showQrImport = true }) { Text(tr("d_keyring_import_qr")) }
             if (state.deletedKeys.isNotEmpty()) {
@@ -247,9 +251,20 @@ fun KeyringScreen(state: DesktopState) {
             onDismiss = { showPasteDialog = false },
             onImport = { text ->
                 showPasteDialog = false
-                state.importArmoredText(text)
+                preview = text to null
             }
         )
+    }
+
+    if (showLinkImport) {
+        ImportLinkDialog(onDismiss = { showLinkImport = false }) { armored, finalUrl ->
+            showLinkImport = false
+            preview = armored to finalUrl
+        }
+    }
+
+    preview?.let { (text, link) ->
+        ImportPreviewDialog(state, text, link) { preview = null }
     }
 
     if (showServerSearch) {
@@ -267,7 +282,7 @@ fun KeyringScreen(state: DesktopState) {
                     decoded == null ->
                         state.status = tr("d_keyring_qr_none_found", file.name)
                     decoded.contains("-----BEGIN PGP") ->
-                        state.importArmoredText(decoded)
+                        preview = decoded to null
                     else ->
                         state.status = tr("d_keyring_qr_not_a_key")
                 }

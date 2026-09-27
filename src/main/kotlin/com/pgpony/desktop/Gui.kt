@@ -257,6 +257,12 @@ class DesktopState(private val scope: CoroutineScope) {
         refresh()
     }
 
+    /** 3.0.0 (plan 6.5, 6.6): the import preview's Import, awaited so Encrypt to can follow it. */
+    suspend fun importArmoredTextNow(text: String) {
+        status = tr("d_status_import", repository.importArmoredText(text).summary())
+        refresh()
+    }
+
     fun importBytes(data: ByteArray) = scope.launch {
         status = tr("d_status_import", repository.importBytes(data).summary())
         refresh()

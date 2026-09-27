@@ -425,6 +425,44 @@ class DesktopKeyRepository(
         }
     }
 
+    /** One key in an import preview (Android ImportPreview): nothing is stored to show it. */
+    data class ImportPreviewItem(
+        val fingerprint: String,
+        val userIds: List<String>,
+        val algorithmName: String,
+        val hasPrivateKey: Boolean,
+        val inKeyring: Boolean
+    )
+
+    /**
+     * 3.0.0 (plan 6.5, 6.6): what [text] would import, read without writing anything. Surrounding
+     * page text is ignored (ArmorExtractor-style: only the key blocks count). Unreadable blocks
+     * are left out; an empty list means there is no key to import.
+     */
+    suspend fun previewArmoredText(text: String): List<ImportPreviewItem> =
+        splitArmoredBlocks(text).mapNotNull { runCatching { previewBlock(it) }.getOrNull() }
+
+    private suspend fun previewBlock(block: String): ImportPreviewItem? {
+        compositeFromArmored(block)?.let { (bytes, info) ->
+            val fp = info.fingerprintHex.uppercase()
+            val algo = if (info.primaryAlgId == 31) KeyAlgorithm.MLDSA87_ED448_V6 else KeyAlgorithm.MLDSA65_ED25519_V6
+            return ImportPreviewItem(fp, info.userIds, algo.displayName, CompositeKeyFacade.hasSecret(bytes), byFingerprint(fp) != null)
+        }
+        v4Algo35FromArmored(block)?.let { bytes ->
+            val meta = v4Algo35Meta(bytes) ?: return null
+            return ImportPreviewItem(
+                meta.fingerprintHex, listOf(meta.userId), KeyAlgorithm.MLKEM768_X25519_V4.displayName,
+                CompositeKeyFacade.hasSecret(bytes), byFingerprint(meta.fingerprintHex) != null
+            )
+        }
+        val result = crypto.importArmoredKey(block)
+        val uids = result.publicKeyRing?.publicKey?.userIDs?.asSequence()?.toList()?.takeIf { it.isNotEmpty() }
+            ?: listOf(result.userID)
+        return ImportPreviewItem(
+            result.fingerprint, uids, result.algorithm.displayName, result.hasPrivateKey, byFingerprint(result.fingerprint) != null
+        )
+    }
+
     // ── Raw-octet key types (composite ML-DSA, v4 algo-35), Android KeyRepository ported ──
 
     private fun compositeFromArmored(armoredText: String): Pair<ByteArray, CompositeKeyFacade.Info>? =

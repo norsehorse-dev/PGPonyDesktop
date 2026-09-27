@@ -761,4 +761,11 @@
     <string name="d_crypto_signing_default_note">Signiert als %1$s, die Signaturvorgabe dieses Schlüssels. Geben Sie die Passphrase dieses Schlüssels ein.</string>
     <!-- 3.0.0 stage 3b: SSH agent -->
     <string name="d_settings_ssh_agent_keys_note">Jeder Schlüssel stellt seinen neuesten Authentifizierungs-Unterschlüssel bereit, der nicht auch signieren oder zertifizieren kann: Ed25519, RSA oder ECDSA auf NIST P-256, P-384 oder P-521, auch ein klassischer Unterschlüssel auf einem Post-Quanten-Schlüssel. Fügen Sie ihn in den Schlüsseldetails oder beim Erzeugen eines Schlüssels hinzu. RSA-Schlüssel beantworten weiterhin die ältere SHA-1-Anfrage ssh-rsa von Servern, die danach fragen.</string>
+    <!-- 3.0.0 stage 3d: import preview and link import -->
+    <string name="d_import_preview_title">Schlüssel importieren</string>
+    <string name="d_import_preview_none">In diesem Text wurde kein Schlüssel gefunden.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">Bereits in Ihrem Schlüsselbund. Beim Import kommt nur Neues hinzu.</string>
+    <string name="d_import_link_title">Aus Link importieren</string>
+    <string name="d_keyring_import_link">Aus Link importieren…</string>
 </resources>
