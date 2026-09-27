@@ -12,7 +12,17 @@
 // SshWire answers FAILURE to all of those. The socket is 0600 in a 0700 directory, which on
 // a single-user machine is the same trust boundary ssh-agent itself lives behind.
 //
-// IDENTITY SOURCE. Authentication-capable subkeys with LOCAL secret material only, for now.
+// IDENTITY SOURCE (3.0.0, plan section 5, Android 4.6.0 item 16). Each key pair's newest
+// DEDICATED authentication subkey, chosen by the vendored SshAuth: bound with the Authenticate
+// flag, not able to sign or certify (a dual-use subkey would let ssh ask for a signature
+// OpenPGP accepts), unrevoked and unexpired under a live primary. Ed25519, RSA and ECDSA on
+// NIST P-256/384/521, including a classical subkey on a composite ML-DSA key (its carrier ring
+// comes from CompositeKeyFacade.classicalAuthRing). Before 3.0.0 the agent served any
+// Authenticate-capable key, the primary and dual-use subkeys included, Ed25519 and RSA only.
+// SHA-1 ssh-rsa stays for a request with no SHA-2 flag (plan Q10), for old servers; Android
+// answers the same way through SshAuth.HASH_SHA1.
+//
+// Card identities: LOCAL secret material only, for now.
 // Card AUT slots are the plan's other half, but PSO:INTERNAL AUTHENTICATE is unimplemented in
 // the vendored card session (OpenPgpCard.INS_INTERNAL_AUTHENTICATE — "deferred (auth slot)"),
 // and vendored files are fixed upstream in PGPonyAndroid then re-synced, never edited here.
@@ -44,24 +54,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import com.pgpony.android.crypto.PGPCryptoService
-import com.pgpony.android.crypto.SubkeyCapability
+import com.pgpony.android.crypto.ssh.SshAuth
+import com.pgpony.android.crypto.ssh.SshSigningKey
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter
+import org.bouncycastle.openpgp.PGPSecretKeyRing
 import com.pgpony.android.data.PGPKeyEntity
 import kotlinx.coroutines.runBlocking
-import org.bouncycastle.crypto.digests.SHA1Digest
-import org.bouncycastle.crypto.digests.SHA256Digest
-import org.bouncycastle.crypto.digests.SHA512Digest
-import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import org.bouncycastle.crypto.params.RSAKeyParameters
-import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters
-import org.bouncycastle.crypto.signers.Ed25519Signer
-import org.bouncycastle.crypto.signers.RSADigestSigner
-import org.bouncycastle.openpgp.PGPPrivateKey
 import org.bouncycastle.openpgp.PGPPublicKey
-import org.bouncycastle.openpgp.PGPSecretKey
-import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder
-import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider
 import org.bouncycastle.openpgp.operator.bc.BcPGPKeyConverter
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
@@ -99,7 +100,8 @@ object SshAgentPrefs {
 class AgentKey(
     val identity: SshIdentity,
     val primaryFingerprint: String,
-    val keyId: Long
+    val keyId: Long,
+    val material: SshAuth.Material
 )
 
 object SshAgentKeys {
@@ -113,8 +115,6 @@ object SshAgentKeys {
     private const val ALGO_EDDSA_LEGACY = 22   // v4 Ed25519
     private const val ALGO_ED25519_V6 = 27     // RFC 9580
 
-    private val crypto get() = PGPCryptoService.shared
-
     /**
      * The authentication-capable identities the keyring holds right now. Re-enumerated per
      * REQUEST_IDENTITIES — key imports and deletions show up without touching the toggle.
@@ -122,24 +122,22 @@ object SshAgentKeys {
      */
     fun identities(repo: DesktopKeyRepository): List<AgentKey> = try {
         val out = ArrayList<AgentKey>()
-        val entities = runBlocking { repo.allKeys() }.filter { it.isKeyPair && !it.isRevoked }
+        val entities = runBlocking { repo.allKeys() }.filter { it.isKeyPair && !it.isRevoked && !it.isCardBacked }
         for (entity in entities) {
-            val ring = repo.loadSecretKeyRing(entity.fingerprint) ?: continue
-            val iterator = ring.secretKeys
-            while (iterator.hasNext()) {
-                val secretKey = iterator.next()
-                val pub = secretKey.publicKey
-                val caps = SubkeyCapability.fromPgpPublicKey(
-                    pub, crypto.detectAlgorithm(pub), pub.isMasterKey
-                )
-                if (!SubkeyCapability.hasCapability(caps, SubkeyCapability.Authenticate)) continue
-                val blob = publicBlob(pub) ?: continue
-                out += AgentKey(SshIdentity(blob, commentFor(entity)), entity.fingerprint, pub.keyID)
-            }
+            val identity = runCatching { identityFor(repo, entity) }.getOrNull() ?: continue
+            out += identity
         }
         out
     } catch (_: Exception) {
         emptyList()
+    }
+
+    /** The one identity [entity] serves: its newest dedicated authentication subkey (SshAuth). */
+    internal fun identityFor(repo: DesktopKeyRepository, entity: PGPKeyEntity): AgentKey? {
+        val cert = runBlocking { repo.rawPublicBytes(entity.fingerprint) } ?: return null
+        val sub = SshAuth.authSubkey(cert) ?: return null
+        val m = SshAuth.material(sub.publicBody) ?: return null
+        return AgentKey(SshIdentity(SshAuth.publicBlob(m), commentFor(entity)), entity.fingerprint, sub.keyId, m)
     }
 
     /** SSH public blob for a PGP key, or null when SSH has no name for it (Ed448, PQC, EC). */
@@ -174,61 +172,39 @@ object SshAgentKeys {
      */
     fun sign(repo: DesktopKeyRepository, keyBlob: ByteArray, data: ByteArray, flags: Int): ByteArray? {
         val match = identities(repo).firstOrNull { it.identity.blob.contentEquals(keyBlob) } ?: return null
-        val ring = repo.loadSecretKeyRing(match.primaryFingerprint) ?: return null
-        val secretKey = ring.getSecretKey(match.keyId) ?: return null
-        val priv = unlock(secretKey, match.identity.comment) ?: return null
-        val params = try {
-            BcPGPKeyConverter().getPrivateKey(priv)
-        } catch (_: Exception) {
-            return null
+        val ring = repo.loadSshAuthSecretRing(match.primaryFingerprint) ?: return null
+        val key = unlock(ring, match.keyId, match.identity.comment) ?: return null
+        // The flags choose the RSA signature algorithm; with none, SHA-1 "ssh-rsa" (plan Q10).
+        val hash = when {
+            flags and SshWire.SSH_AGENT_RSA_SHA2_512 != 0 -> SshAuth.HASH_SHA512
+            flags and SshWire.SSH_AGENT_RSA_SHA2_256 != 0 -> SshAuth.HASH_SHA256
+            else -> SshAuth.HASH_SHA1
         }
         return try {
-            when (params) {
-                is Ed25519PrivateKeyParameters -> {
-                    val signer = Ed25519Signer()
-                    signer.init(true, params)
-                    signer.update(data, 0, data.size)
-                    SshWire.signatureBlob("ssh-ed25519", signer.generateSignature())
-                }
-                is RSAPrivateCrtKeyParameters -> {
-                    // The flags choose the RSA signature algorithm; SHA-1 "ssh-rsa" survives
-                    // only as the spec's flagless default, which modern OpenSSH never sends.
-                    val (name, digest) = when {
-                        flags and SshWire.SSH_AGENT_RSA_SHA2_512 != 0 -> "rsa-sha2-512" to SHA512Digest()
-                        flags and SshWire.SSH_AGENT_RSA_SHA2_256 != 0 -> "rsa-sha2-256" to SHA256Digest()
-                        else -> "ssh-rsa" to SHA1Digest()
-                    }
-                    val signer = RSADigestSigner(digest)
-                    signer.init(true, params)
-                    signer.update(data, 0, data.size)
-                    SshWire.signatureBlob(name, signer.generateSignature())
-                }
-                else -> null
-            }
+            SshAuth.sign(match.material, key, data, hash)
         } catch (_: Exception) {
             null
         }
     }
 
     /**
-     * Unlock with the empty passphrase first (PGPony's generated keys are passphrase-less by
-     * default — see PGPCryptoService's guard note), then prompt through [AgentPrompt] for a
-     * protected key. The s2KUsage==0 test is the house rule for telling "no passphrase set"
-     * from "wrong passphrase" (SigningService.buildSignatureGenerator).
+     * Try without a passphrase first (PGPony's generated keys may have none), then prompt
+     * through [AgentPrompt] up to three times for a protected subkey. A missing or stub secret
+     * subkey is a refusal, not a prompt.
      */
-    private fun unlock(secretKey: PGPSecretKey, label: String): PGPPrivateKey? {
-        fun attempt(pass: String): PGPPrivateKey? = try {
-            val decryptor = BcPBESecretKeyDecryptorBuilder(BcPGPDigestCalculatorProvider())
-                .build(pass.toCharArray())
-            secretKey.extractPrivateKey(decryptor)
-        } catch (_: Exception) {
-            null
+    private fun unlock(ring: PGPSecretKeyRing, keyId: Long, label: String): AsymmetricKeyParameter? {
+        when (val first = SshSigningKey.unlock(ring, keyId, null)) {
+            is SshSigningKey.Unlock.Ok -> return first.key
+            is SshSigningKey.Unlock.Missing -> return null
+            else -> Unit
         }
-        attempt("")?.let { return it }
-        if (secretKey.s2KUsage.toInt() == 0) return null // unprotected and still failed: structural
         repeat(3) {
             val pass = AgentPrompt.ask(label) ?: return null // cancelled or timed out
-            attempt(pass)?.let { return it }
+            when (val u = SshSigningKey.unlock(ring, keyId, pass)) {
+                is SshSigningKey.Unlock.Ok -> return u.key
+                is SshSigningKey.Unlock.Missing -> return null
+                else -> Unit
+            }
         }
         return null
     }
@@ -404,6 +380,13 @@ fun SshAgentSection(state: DesktopState) {
         Spacer(Modifier.width(Spacing.Small))
         Text(tr("d_settings_ssh_agent_enable"), style = MaterialTheme.typography.bodyMedium)
     }
+
+    Spacer(Modifier.height(Spacing.Small))
+    Text(
+        tr("d_settings_ssh_agent_keys_note"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 
     SshAgentService.lastError?.let { error ->
         Spacer(Modifier.height(Spacing.Small))

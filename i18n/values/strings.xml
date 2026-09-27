@@ -890,4 +890,6 @@
     <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
     <string name="d_crypto_decrypt_with_any">Any of my keys</string>
     <string name="d_crypto_signing_default_note">Signs as %1$s, this key’s signing default. Enter that key’s passphrase.</string>
+    <!-- 3.0.0 stage 3b: SSH agent -->
+    <string name="d_settings_ssh_agent_keys_note">Each key serves its newest authentication subkey that cannot also sign or certify: Ed25519, RSA, or ECDSA on NIST P-256, P-384 or P-521, a classical subkey on a post-quantum key included. Add one in Key Detail or when generating a key. RSA keys still answer the older SHA-1 ssh-rsa request from servers that ask for it.</string>
 </resources>

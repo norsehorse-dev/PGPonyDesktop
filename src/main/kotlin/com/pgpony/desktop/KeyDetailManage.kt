@@ -130,7 +130,9 @@ private data class ManageData(
     val notations: List<UserIdService.Notation>,
     val fallbacks: List<FallbackChoice>,
     val strict: Boolean,
-    val defaults: SigningDefaultsEntity
+    val defaults: SigningDefaultsEntity,
+    val ssh: DesktopKeyRepository.SshPublicKey?,
+    val sshDualUseOnly: Boolean
 )
 
 private suspend fun loadManageData(state: DesktopState, key: PGPKeyEntity): ManageData {
@@ -147,7 +149,9 @@ private suspend fun loadManageData(state: DesktopState, key: PGPKeyEntity): Mana
         notations = runCatching { edits.readNotations(key.fingerprint) }.getOrDefault(emptyList()),
         fallbacks = if (key.isKeyPair) fallbackRows(pool, edits.fallbacksFor(key.fingerprint)) else emptyList(),
         strict = FallbackPrefs.isStrict(key.fingerprint),
-        defaults = edits.signingDefaultsFor(key.fingerprint) ?: SigningDefaultsEntity(key.fingerprint)
+        defaults = edits.signingDefaultsFor(key.fingerprint) ?: SigningDefaultsEntity(key.fingerprint),
+        ssh = state.repository.sshPublicKey(key),
+        sshDualUseOnly = state.repository.sshOnlyDualUse(key)
     )
 }
 
@@ -273,6 +277,20 @@ internal fun KeyManageSections(state: DesktopState, key: PGPKeyEntity, primaryIn
     }
     if (editable) {
         TextButton(onClick = { dialog = ManageDialog.AddSubkey }) { Text(tr("key_detail_subkeys_add_action")) }
+    }
+
+    // ── SSH (plan section 5, Android 4.6.0 item 16) ────────────────────
+    val ssh = d.ssh
+    if (ssh != null) {
+        Spacer(Modifier.height(6.dp))
+        OutlinedButton(onClick = {
+            DesktopClipboard.copy(ssh.line, secret = false)
+            state.status = tr("key_detail_ssh_key_copied")
+        }) { Text(tr("key_detail_action_copy_ssh_key")) }
+        Text(ssh.fingerprint, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else if (d.sshDualUseOnly) {
+        Text(tr("ssh_error_dual_use_auth"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     // ── Notations (plan 3.6) ───────────────────────────────────────────

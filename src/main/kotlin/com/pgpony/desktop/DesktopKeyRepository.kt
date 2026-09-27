@@ -851,6 +851,39 @@ class DesktopKeyRepository(
         loadSecretKeyRing(e.fingerprint)
             ?: if (e.algorithm.isCompositeSign) loadCompositeClassicalDecryptionRing(e.fingerprint) else null
 
+    /**
+     * 3.0.0 (plan section 5, Android 4.6.0 item 16): the secret ring holding an SSH
+     * authentication subkey: the ordinary ring, or for a composite ML-DSA primary the carrier
+     * ring of its classical subkeys.
+     */
+    fun loadSshAuthSecretRing(fingerprint: String): PGPSecretKeyRing? =
+        loadSecretKeyRing(fingerprint) ?: rawSecretBytes(fingerprint)
+            ?.takeIf { CompositeKeyFacade.isCompositePrimary(it) && CompositeKeyFacade.hasSecret(it) }
+            ?.let { runCatching { CompositeKeyFacade.classicalAuthRing(it) }.getOrNull() }
+
+    /** What Key Detail shows for SSH: the authorized_keys line and its SHA256 fingerprint. */
+    data class SshPublicKey(val line: String, val fingerprint: String)
+
+    /**
+     * The key's SSH public key (Android KeyDetailViewModel.deriveSshPublicKey): its newest
+     * dedicated authentication subkey as an authorized_keys line, the email (else the name) as
+     * the comment. Null when it has none.
+     */
+    suspend fun sshPublicKey(entity: PGPKeyEntity): SshPublicKey? = runCatching {
+        val cert = rawPublicBytes(entity.fingerprint) ?: return@runCatching null
+        val sub = com.pgpony.android.crypto.ssh.SshAuth.authSubkey(cert) ?: return@runCatching null
+        val m = com.pgpony.android.crypto.ssh.SshAuth.material(sub.publicBody) ?: return@runCatching null
+        SshPublicKey(
+            com.pgpony.android.crypto.ssh.SshAuth.authorizedKeysLine(m, entity.userEmail.ifBlank { entity.userName }),
+            com.pgpony.android.crypto.ssh.SshAuth.sshFingerprint(m)
+        )
+    }.getOrNull()
+
+    /** True when the key has Authenticate subkeys but every one can also sign or certify. */
+    suspend fun sshOnlyDualUse(entity: PGPKeyEntity): Boolean = runCatching {
+        rawPublicBytes(entity.fingerprint)?.let { com.pgpony.android.crypto.ssh.SshAuth.onlyDualUseAuthSubkeys(it) } ?: false
+    }.getOrDefault(false)
+
     /** Android KeyRepository.loadCompositeClassicalDecryptionRing. */
     fun loadCompositeClassicalDecryptionRing(fingerprint: String): PGPSecretKeyRing? =
         rawSecretBytes(fingerprint)

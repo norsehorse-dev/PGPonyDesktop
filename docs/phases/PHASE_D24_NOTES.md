@@ -36,3 +36,25 @@ from the stage 1 sync. `KeyEditsTest` no longer waits a second before revoking a
 
 Tests: `KeygenTest` (name-only, expiry and revocation certificate, v4 interop, brainpool,
 granular, SSH subkey at generation, CLI names).
+
+### Checkpoint 3b: SSH (plan section 5)
+
+- **Agent identities** now come from the vendored `SshAuth.authSubkey`: each key pair's newest
+  authentication subkey that is bound, live, and cannot also sign or certify. Before 3.0.0 the
+  agent served any Authenticate-capable key, the primary and GnuPG-style [SA] subkeys included.
+  That is a behavior change for such keys (a signing-capable key answering ssh's chosen bytes is
+  the signing oracle Android 4.6.0 closed); Key Detail says so for a key that has only dual-use
+  auth subkeys (`ssh_error_dual_use_auth`), and the fix is Add Subkey, Authenticate. Release
+  notes must call this out.
+- **Algorithms**: Ed25519, RSA, and now ECDSA on NIST P-256, P-384 and P-521 (`SshAuth.sign`).
+- **Composite ML-DSA keys**: a classical auth subkey on one is served
+  (`loadSshAuthSecretRing`, CompositeKeyFacade's carrier ring).
+- **SHA-1 ssh-rsa** stays for a request with no SHA-2 flag (plan Q10); the Settings section says
+  so along with which keys are served.
+- **Key Detail**: Copy SSH Public Key (the authorized_keys line, email or name as the comment)
+  and the OpenSSH SHA256 fingerprint.
+- Card AUT slot behavior unchanged.
+
+Tests: `SshAgentServeTest` (a signing primary is not served, an added auth subkey is and its
+Ed25519 signature verifies; a composite key's classical auth subkey; RSA answers ssh-rsa,
+rsa-sha2-256 and rsa-sha2-512 by flag; the authorized_keys line).

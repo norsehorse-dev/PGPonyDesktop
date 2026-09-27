@@ -734,4 +734,6 @@
     <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
     <string name="d_crypto_decrypt_with_any">自分のいずれかの鍵</string>
     <string name="d_crypto_signing_default_note">この鍵の既定の署名鍵 %1$s で署名します。その鍵のパスフレーズを入力してください。</string>
+    <!-- 3.0.0 stage 3b: SSH agent -->
+    <string name="d_settings_ssh_agent_keys_note">各鍵は、署名や証明を兼ねない最新の認証サブキーを提供します。Ed25519、RSA、または NIST P-256、P-384、P-521 の ECDSA で、耐量子鍵上のクラシカルなサブキーも含みます。鍵の詳細または鍵の生成時に追加してください。RSA 鍵は、要求するサーバーに対して従来の SHA-1 ssh-rsa にも引き続き応答します。</string>
 </resources>

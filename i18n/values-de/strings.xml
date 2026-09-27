@@ -759,4 +759,6 @@
     <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
     <string name="d_crypto_decrypt_with_any">Beliebiger meiner Schlüssel</string>
     <string name="d_crypto_signing_default_note">Signiert als %1$s, die Signaturvorgabe dieses Schlüssels. Geben Sie die Passphrase dieses Schlüssels ein.</string>
+    <!-- 3.0.0 stage 3b: SSH agent -->
+    <string name="d_settings_ssh_agent_keys_note">Jeder Schlüssel stellt seinen neuesten Authentifizierungs-Unterschlüssel bereit, der nicht auch signieren oder zertifizieren kann: Ed25519, RSA oder ECDSA auf NIST P-256, P-384 oder P-521, auch ein klassischer Unterschlüssel auf einem Post-Quanten-Schlüssel. Fügen Sie ihn in den Schlüsseldetails oder beim Erzeugen eines Schlüssels hinzu. RSA-Schlüssel beantworten weiterhin die ältere SHA-1-Anfrage ssh-rsa von Servern, die danach fragen.</string>
 </resources>

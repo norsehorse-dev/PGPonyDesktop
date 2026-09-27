@@ -759,4 +759,6 @@
     <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
     <string name="d_crypto_decrypt_with_any">Cualquiera de mis claves</string>
     <string name="d_crypto_signing_default_note">Firma como %1$s, la firma predeterminada de esta clave. Introduce la frase de contraseña de esa clave.</string>
+    <!-- 3.0.0 stage 3b: SSH agent -->
+    <string name="d_settings_ssh_agent_keys_note">Cada clave ofrece su subclave de autenticación más reciente que no pueda también firmar ni certificar: Ed25519, RSA o ECDSA en NIST P-256, P-384 o P-521, incluida una subclave clásica en una clave poscuántica. Añádela en el detalle de la clave o al generar una clave. Las claves RSA siguen respondiendo a la antigua petición SHA-1 ssh-rsa de los servidores que la piden.</string>
 </resources>
