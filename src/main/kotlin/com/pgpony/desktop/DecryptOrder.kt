@@ -9,6 +9,11 @@
 // is exactly the pre-#34 error; a stream cannot be re-read, so the streaming paths take the
 // order only.
 //
+// Stage 4b (session policy): each single-key attempt uses the typed passphrase, or when none was
+// typed, that key's remembered one (PassphraseCache), so a blank field opens mail for any key
+// unlocked this session. cascadeKeys reports which key opened the message, and the caller
+// remembers a typed passphrase for it.
+//
 // SigningDefaults is Android's resolveEffectiveSigner: the signing_defaults row of the key that
 // would otherwise sign can hand the signature to another software key pair, one choice for
 // all-post-quantum recipients, one when any recipient is classical, one for signing without
@@ -30,8 +35,15 @@ class DecryptKeys(
     /** Raw composite and v4 algo-35 secret rings, in the same order. */
     val compositeRings: List<ByteArray>,
     /** Every public ring, for verifying a signature inside the message. */
-    val verificationRings: List<PGPPublicKeyRing>
-)
+    val verificationRings: List<PGPPublicKeyRing>,
+    /** Per key, in order: what one single-key attempt passes. */
+    val entries: List<Entry> = emptyList()
+) {
+    class Entry(val fingerprint: String, val secretRing: PGPSecretKeyRing?, val compositeRing: ByteArray?)
+}
+
+/** A cascade result and the key that opened it (null when only the whole-list attempt did). */
+class Opened<T>(val value: T, val fingerprint: String?)
 
 object DecryptOrder {
 
@@ -78,6 +90,35 @@ object DecryptOrder {
             }
         }
         return attempt(rings)
+    }
+
+    /**
+     * [cascade] over [keys] one key at a time, each with [typed] or, when nothing was typed,
+     * [remembered] for that key; the last attempt is the whole list. With a single key the
+     * whole-list attempt is that key, and it uses the key's remembered passphrase too.
+     */
+    inline fun <T> cascadeKeys(
+        keys: DecryptKeys,
+        typed: String?,
+        remembered: (String) -> String?,
+        attempt: (secret: List<PGPSecretKeyRing>, composite: List<ByteArray>, passphrase: String?) -> T
+    ): Opened<T> {
+        val entries = keys.entries.filter { it.secretRing != null || it.compositeRing != null }
+        if (entries.size > 1) {
+            for (e in entries) {
+                try {
+                    val value = attempt(listOfNotNull(e.secretRing), listOfNotNull(e.compositeRing), typed ?: remembered(e.fingerprint))
+                    return Opened(value, e.fingerprint)
+                } catch (c: CancellationException) {
+                    throw c
+                } catch (_: Throwable) {
+                    // Any failure moves to the next key.
+                }
+            }
+        }
+        val only = entries.singleOrNull()
+        val passphrase = typed ?: only?.let { remembered(it.fingerprint) }
+        return Opened(attempt(keys.secretRings, keys.compositeRings, passphrase), only?.fingerprint)
     }
 }
 

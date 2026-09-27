@@ -749,4 +749,14 @@
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">アーマーのコメント</string>
     <string name="d_settings_armor_comment_note">ASCII アーマー出力の Comment 行です。アプリ、pgpony コマンド、git 署名シム、監視フォルダーに適用されます。</string>
+    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_section_session">セッション</string>
+    <string name="d_settings_session_note">入力した鍵のパスフレーズやカード PIN を PGPony がメモリに保持する時間です。この 1 つの設定が、アプリ、SSH エージェント、pgpony-gpg による git 署名に適用されます。ディスクには何も書き込まず、PGPony を終了するとすべて破棄されます。</string>
+    <string name="d_session_until_screen_locks">画面がロックされるまで</string>
+    <string name="d_session_held_until_locked">画面がロックされるか消去するまでパスフレーズを記憶します。</string>
+    <string name="d_session_lock_unsupported">このコンピューターでは画面ロックを検知できません。記憶した秘密情報は、消去するかアプリを終了するまで保持されます。</string>
+    <string name="d_session_pin_held">カード PIN を記憶しています。</string>
+    <string name="d_cards_pin_cache_follows">設定のセッション時間だけ保持します: %1$s</string>
+    <string name="d_crypto_pass_remembered">このセッションで記憶済みです。空欄のままにすると使用します。</string>
+    <string name="d_shim_unlock_message">git が %1$s での署名を PGPony に要求しました。この鍵はパスフレーズで保護されています。</string>
 </resources>

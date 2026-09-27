@@ -774,4 +774,14 @@
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">Armor-Kommentar</string>
     <string name="d_settings_armor_comment_note">Die Comment-Zeile in ASCII-geschützter Ausgabe. Sie gilt für die App, den Befehl pgpony, den Git-Signatur-Shim und überwachte Ordner.</string>
+    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_section_session">Sitzung</string>
+    <string name="d_settings_session_note">Wie lange PGPony eine Schlüssel-Passphrase oder die Karten-PIN nach der Eingabe im Arbeitsspeicher behält. Eine Einstellung gilt für die App, den SSH-Agenten und das Git-Signieren über pgpony-gpg. Nichts wird auf die Festplatte geschrieben, und beim Beenden vergisst PGPony alles.</string>
+    <string name="d_session_until_screen_locks">Bis der Bildschirm gesperrt wird</string>
+    <string name="d_session_held_until_locked">Passphrase gemerkt, bis der Bildschirm gesperrt wird oder Sie sie löschen.</string>
+    <string name="d_session_lock_unsupported">PGPony erkennt die Bildschirmsperre auf diesem Computer nicht. Gemerkte Geheimnisse bleiben, bis Sie sie löschen oder die App beenden.</string>
+    <string name="d_session_pin_held">Karten-PIN gemerkt.</string>
+    <string name="d_cards_pin_cache_follows">Gemerkt für die Sitzungsdauer aus den Einstellungen: %1$s.</string>
+    <string name="d_crypto_pass_remembered">Für diese Sitzung gemerkt. Leer lassen, um sie zu verwenden.</string>
+    <string name="d_shim_unlock_message">git hat PGPony gebeten, mit %1$s zu signieren; dieser Schlüssel ist passwortgeschützt.</string>
 </resources>

@@ -23,7 +23,8 @@
 //     literals sit right there in the argument list.
 //   - CACHE_CHOICES used to be a top-level `private val` holding resolved English. A top-level
 //     val initializes once per process, which would freeze those five labels in whatever
-//     language was active at class-load time. It now lives inside PinCacheSection().
+//     language was active at class-load time. Since 3.0.0 the duration is the Settings
+//     session length, and its labels come from SessionPolicy.label at render time.
 
 package com.pgpony.desktop
 
@@ -544,20 +545,12 @@ private fun CardPanel(card: CardInfo) {
 
 @Composable
 private fun PinCacheSection() {
-    // Built here rather than as a top-level val: a top-level val initializes once per process,
-    // which would freeze these five labels in whatever language was active at class-load time.
-    val cacheChoices = listOf(
-        60 to tr("settings_card_pin_cache_1min"),
-        300 to tr("settings_card_pin_cache_5min"),
-        900 to tr("settings_card_pin_cache_15min"),
-        3600 to tr("settings_card_pin_cache_1hr"),
-        CardPinCache.DURATION_UNTIL_CLEARED to tr("settings_card_pin_cache_until_cleared")
-    )
     var version by remember { mutableStateOf(0) }
     val enabled = remember(version) { CardPinCache.isEnabled() }
-    val durationSec = remember(version) { CardPinCache.durationSec() }
+    // 3.0.0 (stage 4b): how long the PIN is kept is the Settings session length, shared with
+    // key passphrases, the SSH agent and git signing.
+    val durationLabel = remember(version) { SessionPolicy.label(SessionPolicy.durationSec()) }
     var remaining by remember { mutableStateOf(CardPinCache.remainingMs()) }
-    var menuOpen by remember { mutableStateOf(false) }
 
     // Live countdown while a PIN is held.
     LaunchedEffect(version) {
@@ -578,25 +571,11 @@ private fun PinCacheSection() {
     if (enabled) {
         Spacer(Modifier.height(Spacing.Small))
         WrapRow(verticalSpacing = Spacing.Medium) {
-            Text(tr("d_cards_pin_cache_keep_for"), style = MaterialTheme.typography.bodyMedium)
-            Box {
-                OutlinedButton(onClick = { menuOpen = true }, shape = RoundedCornerShape(Radius.Small)) {
-                    Text(cacheChoices.firstOrNull { it.first == durationSec }?.second
-                        ?: tr("d_cards_pin_cache_custom_seconds", durationSec))
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    cacheChoices.forEach { (sec, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = { CardPinCache.setDurationSec(sec); menuOpen = false; version++ }
-                        )
-                    }
-                }
-            }
-            if (CardPinCache.isHolding()) {
+            Text(tr("d_cards_pin_cache_follows", durationLabel), style = MaterialTheme.typography.bodyMedium)
+            if (remaining > 0L) {
                 BrandBadge(
-                    if (CardPinCache.isUntilCleared()) tr("d_cards_pin_held_no_timer")
-                    else tr("settings_card_pin_cache_countdown_format", formatCountdown(remaining)),
+                    if (SessionPolicy.isLifecycleHeld()) tr("d_cards_pin_held_no_timer")
+                    else tr("settings_card_pin_cache_countdown_format", formatSessionCountdown(remaining)),
                     BadgeTone.Brand
                 )
                 TextButton(onClick = { CardPinCache.clear(); version++ }) { Text(tr("d_common_clear_now")) }
@@ -609,11 +588,6 @@ private fun PinCacheSection() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-}
-
-private fun formatCountdown(ms: Long): String {
-    val totalSec = ms / 1000
-    return "%d:%02d".format(totalSec / 60, totalSec % 60)
 }
 
 // ── Dialogs ────────────────────────────────────────────────────────────

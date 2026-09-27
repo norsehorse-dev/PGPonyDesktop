@@ -8,6 +8,12 @@
 // non-zero, the deliberate bounded version of "replace GnuPG" (2.0.0 §1c: no Assuan, no agent
 // emulation).
 //
+// PASSPHRASES (3.0.0 stage 4b). The shim is its own short-lived process and keeps nothing: no
+// passphrase, no copy of the session setting. A protected key is signed by the running app over
+// ShimBridge (ShimBridge.kt), which prompts in its window or uses the passphrase it remembers
+// for the session length in Settings. Without the app running, a protected key is refused with
+// a message saying to open PGPony.
+//
 // DISPATCH. Not a third binary — a face of the one artifact (RelayPony pattern, like
 // pgpony-cli). Reached two ways: argv[0] basename `pgpony-gpg` (how git invokes it, via a
 // packaging launcher / jpackage.app-path), or the explicit `gpg-shim` verb (the spelling a
@@ -25,7 +31,6 @@
 
 package com.pgpony.desktop
 
-import com.pgpony.android.crypto.SigningService
 import com.pgpony.android.crypto.VerificationResult
 import com.pgpony.android.crypto.VerifyService
 import kotlinx.coroutines.runBlocking
@@ -103,37 +108,32 @@ object GpgShim {
                     "(turn on Allow expired keys in PGPony's Settings to sign with it)")
             }
 
+            // 3.0.0 stage 4b (plan section 7): the shim holds no passphrase and reads no session
+            // setting. A key that signs without a passphrase signs here; a protected key is signed
+            // by the running app through ShimBridge, which uses the passphrase it remembers under
+            // the session policy or asks for it in its window. A composite ML-DSA key signs
+            // through the composite signer; hosted forges show their own verdict for these, and
+            // `git verify-commit` through this shim verifies them.
+            val signed = when (val local = ShimSigner.sign(repo, match, payload, passphrase = null)) {
+                is ShimSigner.Result.Signed -> local
+                is ShimSigner.Result.Failed -> return@withRepo fail(stderr, "sign: ${local.message}")
+                ShimSigner.Result.Locked, ShimSigner.Result.WrongPassphrase ->
+                    when (val remote = ShimBridge.requestSignature(Config.dataDir, match.fingerprint, payload)) {
+                        is ShimBridge.Reply.Signed -> ShimSigner.Result.Signed(remote.armored, remote.pkAlgo, remote.hashAlgo)
+                        is ShimBridge.Reply.Refused -> return@withRepo fail(stderr, "sign: ${remote.message}")
+                        ShimBridge.Reply.Unreachable -> return@withRepo fail(
+                            stderr,
+                            "sign: key ${match.fingerprint} is passphrase-protected; open PGPony and sign " +
+                                "again, and the app will ask for the passphrase"
+                        )
+                    }
+            }
+
             // gpg DETAILS SIG_CREATED fields: type(D) pk_algo hash_algo sig_class(00)
             // timestamp(0, informational) fpr. git only needs to see the line.
-            val (armored, pkAlgo, hashAlgo) = if (match.algorithm.isCompositeSign) {
-                // 3.0.0: a composite ML-DSA key signs commits through the composite signer.
-                // Hosted forges show their own verdict for these; `git verify-commit` through
-                // this shim verifies them.
-                val info = runCatching { repo.loadCompositeKeyInfo(match.fingerprint, null) }.getOrNull()
-                    ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded")
-                val secret = info.compositeSecret
-                    ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded " +
-                        "(protected keys are not available to the git shim)")
-                Triple(
-                    com.pgpony.android.crypto.pqc.CompositeDocumentSigner
-                        .signDetachedArmored(info.suite, secret, info.fingerprint, payload)
-                        .toByteArray(Charsets.UTF_8),
-                    info.primaryAlgId,
-                    if (info.primaryAlgId == 31) 14 else 12
-                )
-            } else {
-                val ring = repo.loadSecretKeyRing(match.fingerprint)
-                    ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded")
-                val sig = try {
-                    SigningService.shared.signDetached(payload, ring, passphrase = null, armor = true)
-                } catch (e: Exception) {
-                    // A passphrase-protected key can't be served non-interactively: git has no
-                    // way to prompt through us. The GUI agent is the interactive path; say so.
-                    return@withRepo fail(stderr, "sign: ${e.message ?: "signing failed"} " +
-                        "(protected keys are not available to the git shim)")
-                }
-                Triple(sig, 22, 8)
-            }
+            val armored = signed.armored
+            val pkAlgo = signed.pkAlgo
+            val hashAlgo = signed.hashAlgo
             stdout.write(armored)
             stdout.flush()
 

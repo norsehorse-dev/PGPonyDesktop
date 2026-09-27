@@ -107,6 +107,7 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
      *  the DAO clears the default flag. */
     suspend fun softDelete(fingerprint: String) {
         repo.byFingerprint(fingerprint)?.let { dao.softDelete(it.id, System.currentTimeMillis()) }
+        PassphraseCache.clear(fingerprint)
     }
 
     suspend fun deletedKeys(): List<PGPKeyEntity> = dao.getDeletedKeys()
@@ -179,8 +180,8 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
     /**
      * Set, change or remove a key's passphrase ([oldPassphrase] / [newPassphrase] empty = none).
      * A wrong old passphrase throws from the engine and nothing is written. Card-backed keys use
-     * the card PIN instead and are refused. The desktop card-PIN and agent caches are cleared by
-     * the caller (SessionPolicy, stage 4).
+     * the card PIN instead and are refused. The key's remembered passphrase (PassphraseCache)
+     * is dropped, so nothing keeps unlocking with the old one.
      */
     suspend fun changePassphrase(fingerprint: String, oldPassphrase: String, newPassphrase: String) {
         requireOwnSoftwareKey(fingerprint)
@@ -198,6 +199,7 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
                 V4Algo35Carry.reprotectBody(body, oldChars, newChars)
             }
         }
+        PassphraseCache.clear(fingerprint)
         stampLocalEdit(fingerprint)
     }
 

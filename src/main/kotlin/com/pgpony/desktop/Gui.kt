@@ -195,6 +195,12 @@ class DesktopState(private val scope: CoroutineScope) {
         // D18 — watch folders resume at launch if the master toggle was left on.
         if (watchEnabled) WatchFolderService.start(repository)
 
+        // 3.0.0 stage 4b (session policy): git signing through pgpony-gpg asks this process for
+        // a protected key's signature, and the screen-lock watch clears held secrets on a lock
+        // when "Until the screen locks" is chosen.
+        ShimBridge.start(Config.dataDir) { fp, payload -> ShimSigner.signForShim(repository, fp, payload) }
+        ScreenLockWatch.start()
+
         // D9 — register with the open-file bus; drains any request passed on first launch.
         AppOpen.setHandler { request -> onOpenFiles(request) }
         scope.launch {

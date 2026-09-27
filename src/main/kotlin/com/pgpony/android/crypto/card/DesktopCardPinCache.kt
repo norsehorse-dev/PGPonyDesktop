@@ -16,11 +16,17 @@
 //     the vendored session calls CardPinCache.clear()/remember() exactly as on Android).
 //   • Enable flag default OFF.
 //
+// 3.0.0 (stage 4b, Android 4.3.0 #15): the duration is the one SessionPolicy duration, shared
+// with the key passphrase cache, the SSH agent and git signing. The enable flag stays here and
+// stays default OFF. The old card-only duration is read once, by SessionPolicy, to carry a
+// user's choice over.
+//
 // UPSTREAM SEAM CANDIDATE: a KeyValueSettings interface injected in the Android file would let
 // one source file serve both platforms; first in line for the core-extraction pass (D0-1).
 
 package com.pgpony.android.crypto.card
 
+import com.pgpony.desktop.SessionPolicy
 import java.util.prefs.Preferences
 
 object CardPinCache {
@@ -44,10 +50,14 @@ object CardPinCache {
 
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
 
-    fun durationSec(): Int = prefs.getInt(KEY_DURATION_SEC, DEFAULT_DURATION_SEC)
+    /** The session duration (SessionPolicy). */
+    fun durationSec(): Int = SessionPolicy.durationSec()
 
-    /** True when the duration preference is the "Until I clear it" sentinel. */
-    fun isUntilCleared(): Boolean = durationSec() == DURATION_UNTIL_CLEARED
+    /** True when the session duration is the "Until I clear it" sentinel. */
+    fun isUntilCleared(): Boolean = SessionPolicy.isUntilCleared()
+
+    /** The pre-3.0.0 card-only duration, when the user ever set one (SessionPolicy migration). */
+    fun legacyDurationSec(): Int? = prefs.get(KEY_DURATION_SEC, null)?.trim()?.toIntOrNull()
 
     /** Remember a successfully-verified PW1. No-op when disabled. */
     fun remember(pinValue: String) {
@@ -70,7 +80,7 @@ object CardPinCache {
     /** Milliseconds until expiry; 0 when none held; Long.MAX_VALUE under the sentinel. */
     fun remainingMs(): Long {
         if (pin == null) return 0L
-        if (isUntilCleared()) return Long.MAX_VALUE
+        if (SessionPolicy.isLifecycleHeld()) return Long.MAX_VALUE
         val expiresAt = capturedAt + durationSec() * 1000L
         return (expiresAt - System.currentTimeMillis()).coerceAtLeast(0L)
     }
@@ -88,9 +98,10 @@ object CardPinCache {
         if (!enabled) clear()
     }
 
+    /** Sets the session duration, which every cache shares. */
     fun setDurationSec(seconds: Int) {
         // Live-read semantics: retrieve()/remainingMs() consult the preference on every call,
         // so the new duration (or the sentinel) takes effect on a held PIN instantly.
-        prefs.putInt(KEY_DURATION_SEC, seconds)
+        SessionPolicy.setDurationSec(seconds)
     }
 }

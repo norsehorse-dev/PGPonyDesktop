@@ -905,4 +905,14 @@
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">Armor comment</string>
     <string name="d_settings_armor_comment_note">The Comment line in ASCII-armored output. It applies to the app, the pgpony command, the git signing shim and watch folders.</string>
+    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_section_session">Session</string>
+    <string name="d_settings_session_note">How long PGPony keeps a key passphrase or the card PIN in memory after you enter it. One setting covers the app, the SSH agent and git signing through pgpony-gpg. Nothing is written to disk, and quitting PGPony forgets everything.</string>
+    <string name="d_session_until_screen_locks">Until the screen locks</string>
+    <string name="d_session_held_until_locked">Passphrase remembered until the screen locks or you clear it.</string>
+    <string name="d_session_lock_unsupported">PGPony cannot see the screen lock on this computer, so held secrets stay until you clear them or quit.</string>
+    <string name="d_session_pin_held">Card PIN remembered.</string>
+    <string name="d_cards_pin_cache_follows">Kept for the session length in Settings: %1$s.</string>
+    <string name="d_crypto_pass_remembered">Remembered for this session. Leave blank to use it.</string>
+    <string name="d_shim_unlock_message">git asked PGPony to sign with %1$s, which is passphrase-protected.</string>
 </resources>

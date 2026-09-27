@@ -29,3 +29,37 @@ transport and the animated QR), 4d (the desktop hardening pass, plan section 8).
 
 Tests: `EncryptSurfacesTest` (the chosen subkey is the PKESK recipient, weak-link rule, armor
 comment validator and cache).
+
+### Checkpoint 4b: session policy
+
+- **One duration** (Android 4.3.0 #15, plan 7): Settings, Session: 1 minute, 5, 15, 1 hour,
+  until cleared, or until the screen locks, with what is held now and Clear now.
+  `SessionPolicy` reads it through the settings seam on every call, so a change applies to
+  secrets already held. The card PIN cache keeps its own on/off switch on the Cards screen and
+  takes its duration from here; a card-only duration set before 3.0.0 carries over once.
+- **Passphrase cache** (`PassphraseCache`, new on desktop): memory only, per key. Filled after a
+  typed passphrase works: a decrypt (text, MIME, files), a signature in the app, the SSH agent
+  prompt, git signing. A blank passphrase field then uses the key's remembered one: signing
+  uses the signer's; decrypting tries each key alone with its own (the #34 cascade), and a
+  streamed file uses the remembered passphrase of a key the message names. A remembered
+  passphrase that stops working is dropped. Changing a key's passphrase, deleting the key and
+  Clear All Data forget it. Before 3.0.0 desktop remembered nothing; this is the Android
+  behavior, default 5 minutes. Release notes should say so.
+- **SSH agent**: a protected key prompts once and is then served for the session length.
+- **git shim** (the #15 shape: pgpony-gpg is its own process): the shim holds no passphrase and
+  reads no session setting. A key without a passphrase signs in the shim as before; a protected
+  key is signed by the running app through `ShimBridge`, which uses the remembered passphrase or
+  prompts in the app window ("git asked PGPony to sign with ..."). Before 3.0.0 the shim refused
+  every protected key. With the app closed it still refuses, and says to open PGPony. The
+  channel is a loopback port plus a 32-byte token in `dataDir/.shim-bridge` (0600, rewritten each
+  launch, removed on exit); it serves signing only, two requests at a time, bounded sizes. It is
+  new surface, so it is on the 4d hardening list.
+- **Until the screen locks**: the JVM has no lock event. `ScreenLock` asks the system (ioreg on
+  macOS, loginctl LockedHint on Linux, LogonUI.exe on Windows) every 4 seconds while that choice
+  is selected. Where nothing answers, Settings does not offer it. Needs a manual check on each OS:
+  pick it, unlock a key, lock the screen, unlock, and confirm Settings shows nothing held.
+
+Tests: `SessionPolicyTest` (one duration, carry-over, expiry, Clear now, the lock probes, the
+decrypt cascade with remembered passphrases, a streamed file), `ShimBridgeTest` (wire format and
+token, endpoint file permissions, reachable only while running, the app side's remembered
+passphrase and prompt, composite keys).

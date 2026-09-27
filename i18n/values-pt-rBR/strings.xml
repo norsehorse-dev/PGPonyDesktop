@@ -774,4 +774,14 @@
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">Comentário da armadura</string>
     <string name="d_settings_armor_comment_note">A linha Comment na saída com armadura ASCII. Vale para o app, o comando pgpony, o shim de assinatura do git e as pastas monitoradas.</string>
+    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_section_session">Sessão</string>
+    <string name="d_settings_session_note">Por quanto tempo o PGPony mantém na memória a frase-senha de uma chave ou o PIN do cartão depois que você os digita. Uma única configuração vale para o app, o agente SSH e a assinatura do git pelo pgpony-gpg. Nada é gravado em disco, e fechar o PGPony apaga tudo.</string>
+    <string name="d_session_until_screen_locks">Até a tela ser bloqueada</string>
+    <string name="d_session_held_until_locked">Frase-senha lembrada até a tela ser bloqueada ou você limpá-la.</string>
+    <string name="d_session_lock_unsupported">O PGPony não consegue detectar o bloqueio de tela neste computador, então os segredos guardados ficam até você limpá-los ou fechar o app.</string>
+    <string name="d_session_pin_held">PIN do cartão lembrado.</string>
+    <string name="d_cards_pin_cache_follows">Mantido pela duração da sessão definida nas Configurações: %1$s.</string>
+    <string name="d_crypto_pass_remembered">Lembrada nesta sessão. Deixe em branco para usá-la.</string>
+    <string name="d_shim_unlock_message">O git pediu ao PGPony para assinar com %1$s, que está protegida por senha.</string>
 </resources>

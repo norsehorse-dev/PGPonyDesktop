@@ -7,9 +7,9 @@
 // Reset to first run: every key (Recently Deleted included) with its material, the Autocrypt and
 // API client tables, every desktop setting (the whole app/pgpony/desktop preferences node, which
 // holds the key server list, network, SSH agent, watch folder and password store settings), the
-// watch rules file, the agent socket directory and the cached card PIN. The password store itself
-// and anything the user saved elsewhere are theirs and stay. The app then closes, because every
-// screen holds settings it read at launch.
+// watch rules file, the agent socket directory, and the held card PIN and passphrases. The
+// password store itself and anything the user saved elsewhere are theirs and stay. The app then
+// closes, because every screen holds settings it read at launch.
 
 package com.pgpony.desktop
 
@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.pgpony.android.crypto.card.CardPinCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -64,7 +63,10 @@ object ClearAllData {
             WatchFolderService.stop()
         }
         edits.purgeEverything()
-        if (dataDirOverride == null) CardPinCache.clear()
+        if (dataDirOverride == null) {
+            SessionPolicy.clearAll()
+            ShimBridge.stop()
+        }
         val dir = dataDirOverride ?: Config.dataDir
         Files.deleteIfExists(dir.resolve("watch-rules.json"))
         Files.deleteIfExists(dir.resolve("keyring.json"))

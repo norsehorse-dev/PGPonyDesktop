@@ -357,10 +357,10 @@ the schema upgrade (2.3) and anything that deletes (3.1, 3.2). Both are tested a
 a real, populated keyring, never only a fresh one.
 
 Progress: stage 1 (2.1 to 2.11) is green on the Mac; see `docs/phases/PHASE_D22_NOTES.md`.
-Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3 (3a to 3d) is green. Stage 4: checkpoint 4a (subkey selector, post-quantum weak
-link, armor comment) awaits its build; 4b (session policy), 4c (zip, animated QR) and 4d
-(hardening) follow. See `docs/phases/PHASE_D25_NOTES.md`. See
-`docs/phases/PHASE_D24_NOTES.md`.
+Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3 (3a to 3d) is
+green; see `docs/phases/PHASE_D24_NOTES.md`. Stage 4: 4a (subkey selector, post-quantum weak
+link, armor comment) is green; 4b (session policy) awaits its build; 4c (zip, animated QR) and
+4d (hardening) follow. See `docs/phases/PHASE_D25_NOTES.md`.
 
 ## 12. Features (decided: all three, inside 3.0.0)
 

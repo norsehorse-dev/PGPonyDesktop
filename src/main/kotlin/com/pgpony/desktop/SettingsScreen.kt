@@ -113,9 +113,17 @@ fun SettingsScreen(state: DesktopState) {
 
         // ── Keys (3.0.0) ────────────────────────────────────────────────
         // Android 4.5.3: expired keys are refused for signing and encrypting unless this is on.
-        // Stage 2 of 3.0.0 adds the destructive-action and passphrase-cache controls here.
+        // Stage 2 of 3.0.0 adds the destructive-action controls here; the passphrase cache has
+        // its own Session section below (stage 4b).
         SectionCard(tr("settings_section_keys")) {
             KeysSection(state)
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
+        // ── Session (3.0.0 stage 4b, plan section 7) ────────────────────
+        // One duration for key passphrases, the card PIN, SSH agent signing and git signing.
+        SectionCard(tr("d_settings_section_session"), tr("d_settings_session_note")) {
+            SessionPolicySection()
         }
         Spacer(Modifier.height(Spacing.Large))
 

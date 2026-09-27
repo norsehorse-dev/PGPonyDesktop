@@ -180,6 +180,13 @@ fun CryptoScreen(state: DesktopState) {
     // Its enabled fallbacks follow it, then every other key unless it is in strict mode.
     var decryptWith by remember { mutableStateOf<String?>(null) }
 
+    // 3.0.0 stage 4b (session policy): a blank passphrase field uses the signing key's
+    // remembered passphrase, and a typed passphrase that signed is remembered for the session.
+    fun signPass(fp: String?): String? = signerPass.ifBlank { null } ?: fp?.let { PassphraseCache.get(it) }
+    fun rememberSignPass(fp: String?) {
+        if (fp != null && signerPass.isNotBlank()) PassphraseCache.put(fp, signerPass)
+    }
+
     // Sign options
     var detachedMode by remember { mutableStateOf(false) }
 
@@ -429,6 +436,7 @@ fun CryptoScreen(state: DesktopState) {
                             OutlinedTextField(
                                 value = signerPass, onValueChange = { signerPass = it },
                                 label = { Text(tr("d_crypto_signer_pass_label")) },
+                                supportingText = rememberedPassNote(signerPass, encryptSigner?.fingerprint),
                                 singleLine = true,
                                 visualTransformation = PasswordVisualTransformation(),
                                 modifier = Modifier.fillMaxWidth()
@@ -463,6 +471,7 @@ fun CryptoScreen(state: DesktopState) {
                         OutlinedTextField(
                             value = signerPass, onValueChange = { signerPass = it },
                             label = { Text(tr("d_crypto_signer_pass_label")) },
+                            supportingText = rememberedPassNote(signerPass, signOnlySigner?.fingerprint),
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -513,7 +522,7 @@ fun CryptoScreen(state: DesktopState) {
                                 val signerForPlan = if (signEnabled) encryptSigner else null
                                 try {
                                     EncryptOps(crypto).plan(
-                                        selectedRecipients, signerForPlan, signerPass.ifBlank { null }, fileV4Decision, subkeyChoices
+                                        selectedRecipients, signerForPlan, signPass(signerForPlan?.fingerprint), fileV4Decision, subkeyChoices
                                     )
                                 } catch (_: CompositeV4SignDecisionNeeded) {
                                     pqcV4Retry = { keep -> fileV4Decision = keep; doFileOp() }
@@ -542,11 +551,11 @@ fun CryptoScreen(state: DesktopState) {
                                         // files only, so a folder always lands on this path.
                                         for (f in fileList) acc +=
                                             if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
-                                                f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
+                                                f, selectedRecipients, signFp, signPass(signFp), fileArmor,
                                                 tick(f), cancelled, compositeInV1Decision = fileV4Decision,
                                                 subkeyChoices = subkeyChoices
                                             ) else fileOps.encryptFile(
-                                                f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
+                                                f, selectedRecipients, signFp, signPass(signFp), fileArmor,
                                                 tick(f), cancelled, compositeInV1Decision = fileV4Decision,
                                                 subkeyChoices = subkeyChoices
                                             )
@@ -556,7 +565,7 @@ fun CryptoScreen(state: DesktopState) {
                                     FileOp.SIGN -> {
                                         val s = signOnlySigner ?: error(tr("d_crypto_err_no_signer"))
                                         for (f in fileList) acc += fileOps.signFileDetached(
-                                            f, s.fingerprint, signerPass.ifBlank { null }, fileArmor
+                                            f, s.fingerprint, signPass(s.fingerprint), fileArmor
                                         )
                                     }
                                     FileOp.VERIFY -> {
@@ -569,6 +578,12 @@ fun CryptoScreen(state: DesktopState) {
                                 acc
                             }
                             fileResults = outcomes
+                            // Stage 4b: a passphrase that signed at least one file is remembered.
+                            if (outcomes.any { it.ok }) when (fileOp) {
+                                FileOp.ENCRYPT -> if (signEnabled) rememberSignPass(encryptSigner?.fingerprint)
+                                FileOp.SIGN -> rememberSignPass(signOnlySigner?.fingerprint)
+                                else -> Unit
+                            }
                             fileV4Decision = null
                             fileProgress.clear()
                             val ok = outcomes.count { it.ok }
@@ -763,6 +778,7 @@ fun CryptoScreen(state: DesktopState) {
                                 OutlinedTextField(
                                     value = signerPass, onValueChange = { signerPass = it },
                                     label = { Text(tr("d_crypto_signer_pass_label")) },
+                                    supportingText = rememberedPassNote(signerPass, encryptSigner?.fingerprint),
                                     singleLine = true,
                                     visualTransformation = PasswordVisualTransformation(),
                                     modifier = Modifier.fillMaxWidth()
@@ -878,18 +894,18 @@ fun CryptoScreen(state: DesktopState) {
                                             if (attachments.isEmpty()) {
                                                 val ops = EncryptOps(crypto)
                                                 val plan = ops.plan(
-                                                    selectedRecipients, signWith, signerPass.ifBlank { null }, v4Decision, subkeyChoices
+                                                    selectedRecipients, signWith, signPass(signWith?.fingerprint), v4Decision, subkeyChoices
                                                 )
                                                 String(
                                                     ops.encryptBytes(
                                                         plan, input.toByteArray(Charsets.UTF_8),
-                                                        signerPass.ifBlank { null }, armor = true
+                                                        signPass(signWith?.fingerprint), armor = true
                                                     ),
                                                     Charsets.UTF_8
                                                 )
                                             } else mimeOps.encryptBundle(
                                                 input, attachments, selectedRecipients,
-                                                signWith?.fingerprint, signerPass.ifBlank { null }, v4Decision, subkeyChoices
+                                                signWith?.fingerprint, signPass(signWith?.fingerprint), v4Decision, subkeyChoices
                                             )
                                         } catch (_: CompositeV4SignDecisionNeeded) {
                                             pqcV4Retry = { keep -> textV4Decision = keep; doTextEncrypt() }
@@ -899,6 +915,7 @@ fun CryptoScreen(state: DesktopState) {
                                             if (attachments.isEmpty()) crypto.encryptTextSymmetric(input, symPass)
                                             else mimeOps.encryptBundleSymmetric(input, attachments, symPass)
                                     }
+                                    if (encryptWith == EncryptWith.PUBLIC_KEYS) rememberSignPass(signWith?.takeIf { v4Decision != false }?.fingerprint)
                                     val bundleNote = if (attachments.isEmpty()) ""
                                     else tr("d_crypto_banner_bundle_suffix", attachments.size)
                                     banner = Banner.Good(
@@ -1043,6 +1060,7 @@ fun CryptoScreen(state: DesktopState) {
                         OutlinedTextField(
                             value = signerPass, onValueChange = { signerPass = it },
                             label = { Text(tr("d_crypto_signer_pass_label")) },
+                            supportingText = rememberedPassNote(signerPass, signOnlySigner?.fingerprint),
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth()
@@ -1095,7 +1113,7 @@ fun CryptoScreen(state: DesktopState) {
                                     // RFC 9980 composite ML-DSA signing (P2b): BouncyCastle cannot
                                     // sign with the composite key, so route through CompositeDocumentSigner.
                                     val info = crypto.loadCompositeKeyInfo(
-                                        signer.fingerprint, signerPass.ifBlank { null }?.toCharArray()
+                                        signer.fingerprint, signPass(signer.fingerprint)?.toCharArray()
                                     ) ?: error(tr("d_crypto_err_signer_ring"))
                                     val secret = info.compositeSecret
                                         ?: error(tr("d_crypto_err_composite_pass"))
@@ -1108,6 +1126,7 @@ fun CryptoScreen(state: DesktopState) {
                                         CompositeDocumentSigner.signCleartext(
                                             info.suite, secret, info.fingerprint, input
                                         )
+                                    rememberSignPass(signer.fingerprint)
                                     banner = Banner.Good(
                                         tr(
                                             "d_crypto_banner_signed",
@@ -1119,10 +1138,11 @@ fun CryptoScreen(state: DesktopState) {
                                         ?: error(tr("d_crypto_err_signer_ring"))
                                     output = if (detachedMode)
                                         SigningService.shared.signDetached(
-                                            input.toByteArray(Charsets.UTF_8), ring, signerPass.ifBlank { null }
+                                            input.toByteArray(Charsets.UTF_8), ring, signPass(signer.fingerprint)
                                         ).toString(Charsets.UTF_8)
                                     else
-                                        SigningService.shared.signClear(input, ring, signerPass.ifBlank { null })
+                                        SigningService.shared.signClear(input, ring, signPass(signer.fingerprint))
+                                    rememberSignPass(signer.fingerprint)
                                     banner = Banner.Good(
                                         tr(
                                             "d_crypto_banner_signed",
@@ -1744,4 +1764,10 @@ private fun resolveSigner(keys: List<PGPKeyEntity>, signerKeyID: String?): Strin
         ?: keys.firstOrNull { it.fingerprint.endsWith(signerKeyID, ignoreCase = true) }
         ?: keys.firstOrNull { it.fingerprint.startsWith(signerKeyID, ignoreCase = true) }
     return match?.userID?.ifBlank { null } ?: signerKeyID
+}
+
+/** Stage 4b: under an empty signer passphrase field, say that key's passphrase is remembered. */
+private fun rememberedPassNote(typed: String, fingerprint: String?): (@Composable () -> Unit)? {
+    if (typed.isNotEmpty() || fingerprint == null || PassphraseCache.get(fingerprint) == null) return null
+    return { Text(tr("d_crypto_pass_remembered")) }
 }

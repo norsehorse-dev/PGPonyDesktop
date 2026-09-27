@@ -848,4 +848,14 @@
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">Комментарий брони</string>
     <string name="d_settings_armor_comment_note">Строка Comment в выводе с ASCII-бронёй. Действует для приложения, команды pgpony, шима подписи git и отслеживаемых папок.</string>
+    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_section_session">Сеанс</string>
+    <string name="d_settings_session_note">Сколько времени PGPony хранит в памяти парольную фразу ключа или PIN карты после ввода. Одна настройка действует для приложения, SSH-агента и подписи git через pgpony-gpg. На диск ничего не пишется, а при выходе из PGPony всё забывается.</string>
+    <string name="d_session_until_screen_locks">До блокировки экрана</string>
+    <string name="d_session_held_until_locked">Парольная фраза запомнена до блокировки экрана или до очистки.</string>
+    <string name="d_session_lock_unsupported">PGPony не может определить блокировку экрана на этом компьютере, поэтому запомненные секреты хранятся до очистки или выхода из приложения.</string>
+    <string name="d_session_pin_held">PIN карты запомнен.</string>
+    <string name="d_cards_pin_cache_follows">Хранится в течение сеанса, заданного в настройках: %1$s.</string>
+    <string name="d_crypto_pass_remembered">Запомнена на этот сеанс. Оставьте поле пустым, чтобы использовать её.</string>
+    <string name="d_shim_unlock_message">git запросил у PGPony подпись ключом %1$s, который защищён парольной фразой.</string>
 </resources>

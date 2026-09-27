@@ -6,11 +6,12 @@
 // listener, the passphrase prompt bus, and the Settings section (kept here with its logic,
 // the UpdateCheck.kt pattern, so SettingsScreen's edit stays one SectionCard call).
 //
-// WHAT THE AGENT IS NOT. It does not hold decrypted key material between requests, does not
-// cache passphrases (each protected-key signature prompts; PGPony's own keys are typically
-// passphrase-less and sign without one), and does not speak any message that mutates state —
-// SshWire answers FAILURE to all of those. The socket is 0600 in a 0700 directory, which on
-// a single-user machine is the same trust boundary ssh-agent itself lives behind.
+// WHAT THE AGENT IS NOT. It does not hold decrypted key material between requests, and SshWire
+// answers FAILURE to every message that would change state. A protected key's passphrase is
+// asked for once and then remembered for the session length in Settings (3.0.0 stage 4b,
+// SessionPolicy), the same passphrase cache the app and git signing use; a remembered passphrase
+// that no longer unlocks is dropped and the prompt comes back. The socket is 0600 in a 0700
+// directory, which on a single-user machine is the same trust boundary ssh-agent lives behind.
 //
 // IDENTITY SOURCE (3.0.0, plan section 5, Android 4.6.0 item 16). Each key pair's newest
 // DEDICATED authentication subkey, chosen by the vendored SshAuth: bound with the Authenticate
@@ -173,7 +174,7 @@ object SshAgentKeys {
     fun sign(repo: DesktopKeyRepository, keyBlob: ByteArray, data: ByteArray, flags: Int): ByteArray? {
         val match = identities(repo).firstOrNull { it.identity.blob.contentEquals(keyBlob) } ?: return null
         val ring = repo.loadSshAuthSecretRing(match.primaryFingerprint) ?: return null
-        val key = unlock(ring, match.keyId, match.identity.comment) ?: return null
+        val key = unlock(ring, match.keyId, match.identity.comment, match.primaryFingerprint) ?: return null
         // The flags choose the RSA signature algorithm; with none, SHA-1 "ssh-rsa" (plan Q10).
         val hash = when {
             flags and SshWire.SSH_AGENT_RSA_SHA2_512 != 0 -> SshAuth.HASH_SHA512
@@ -188,20 +189,31 @@ object SshAgentKeys {
     }
 
     /**
-     * Try without a passphrase first (PGPony's generated keys may have none), then prompt
-     * through [AgentPrompt] up to three times for a protected subkey. A missing or stub secret
-     * subkey is a refusal, not a prompt.
+     * Try without a passphrase first (PGPony's generated keys may have none), then the key's
+     * remembered passphrase (SessionPolicy), then prompt through [AgentPrompt] up to three times
+     * for a protected subkey, remembering the one that works. A missing or stub secret subkey is
+     * a refusal, not a prompt.
      */
-    private fun unlock(ring: PGPSecretKeyRing, keyId: Long, label: String): AsymmetricKeyParameter? {
+    private fun unlock(ring: PGPSecretKeyRing, keyId: Long, label: String, fingerprint: String): AsymmetricKeyParameter? {
         when (val first = SshSigningKey.unlock(ring, keyId, null)) {
             is SshSigningKey.Unlock.Ok -> return first.key
             is SshSigningKey.Unlock.Missing -> return null
             else -> Unit
         }
+        PassphraseCache.get(fingerprint)?.let { remembered ->
+            when (val u = SshSigningKey.unlock(ring, keyId, remembered)) {
+                is SshSigningKey.Unlock.Ok -> return u.key
+                is SshSigningKey.Unlock.Missing -> return null
+                else -> PassphraseCache.clear(fingerprint)
+            }
+        }
         repeat(3) {
             val pass = AgentPrompt.ask(label) ?: return null // cancelled or timed out
             when (val u = SshSigningKey.unlock(ring, keyId, pass)) {
-                is SshSigningKey.Unlock.Ok -> return u.key
+                is SshSigningKey.Unlock.Ok -> {
+                    PassphraseCache.put(fingerprint, pass)
+                    return u.key
+                }
                 is SshSigningKey.Unlock.Missing -> return null
                 else -> Unit
             }
@@ -217,7 +229,7 @@ object SshAgentKeys {
 // on. One request at a time — a second concurrent sign against a locked key fails rather than
 // queueing prompts the user never asked for.
 
-class AgentUnlockRequest(val keyLabel: String) {
+class AgentUnlockRequest(val keyLabel: String, val messageKey: String = "d_agent_unlock_message") {
     private val latch = CountDownLatch(1)
     @Volatile private var passphrase: String? = null
 
@@ -238,9 +250,12 @@ object AgentPrompt {
 
     private const val TIMEOUT_MS = 60_000L
 
-    /** Agent-thread side: raise the window, wait for an answer or the timeout. */
-    fun ask(keyLabel: String): String? {
-        val req = AgentUnlockRequest(keyLabel)
+    /**
+     * Agent-thread side: raise the window, wait for an answer or the timeout. [messageKey] says
+     * who is asking (the ssh agent, or git through ShimBridge).
+     */
+    fun ask(keyLabel: String, messageKey: String = "d_agent_unlock_message"): String? {
+        val req = AgentUnlockRequest(keyLabel, messageKey)
         synchronized(this) {
             if (request != null) return null // one prompt at a time
             request = req
@@ -423,7 +438,7 @@ fun AgentUnlockDialog(request: AgentUnlockRequest, onDone: () -> Unit) {
         title = { Text(tr("d_agent_unlock_title")) },
         text = {
             androidx.compose.foundation.layout.Column {
-                Text(tr("d_agent_unlock_message", request.keyLabel))
+                Text(tr(request.messageKey, request.keyLabel))
                 Spacer(Modifier.height(Spacing.Medium))
                 OutlinedTextField(
                     value = passphrase,

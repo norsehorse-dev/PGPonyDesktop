@@ -215,6 +215,9 @@ class DesktopCardTest {
     fun pinCacheEnableDurationExpirySentinelClear() {
         val node = MemoryPreferences()
         CardPinCache.prefsOverride = node
+        // 3.0.0 stage 4b: the duration is the session setting, read through the settings seam.
+        val settings = MemoryPreferences()
+        com.pgpony.android.data.settings.SettingsStores.install { _, _ -> DesktopPrefsSettings(settings) }
         try {
             // Default OFF — remember is a no-op, retrieve is null.
             assertFalse(CardPinCache.isEnabled())
@@ -244,6 +247,7 @@ class DesktopCardTest {
             CardPinCache.setEnabled(false)
             CardPinCache.clear()
             CardPinCache.prefsOverride = null
+            com.pgpony.android.data.settings.SettingsStores.uninstall()
         }
     }
 

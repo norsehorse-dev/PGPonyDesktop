@@ -896,9 +896,16 @@ class DesktopKeyRepository(
         selected: String? = null
     ): com.pgpony.android.crypto.DecryptResult {
         val k = decryptKeys(selected)
-        return DecryptOrder.cascade(k.secretRings) { rings ->
-            crypto.decryptArmored(armored, rings, passphrase, k.verificationRings, k.compositeRings)
+        val opened = DecryptOrder.cascadeKeys(k, passphrase, PassphraseCache::get) { secret, composite, pass ->
+            crypto.decryptArmored(armored, secret, pass, k.verificationRings, composite)
         }
+        rememberOpened(opened.fingerprint, passphrase)
+        return opened.value
+    }
+
+    /** Stage 4b: a typed passphrase that opened a message is remembered for its key. */
+    fun rememberOpened(fingerprint: String?, typed: String?) {
+        if (fingerprint != null && !typed.isNullOrEmpty()) PassphraseCache.put(fingerprint, typed)
     }
 
     /**
@@ -911,11 +918,13 @@ class DesktopKeyRepository(
         val fallbacks = selected?.let { fp -> db.fallbackKeyDao().fallbacksFor(fp).map { it.fallbackFingerprint } }.orEmpty()
         val strict = selected != null && com.pgpony.android.crypto.FallbackPrefs.isStrict(selected)
         val ordered = DecryptOrder.ordered(selected, available, fallbacks, strict)
+        val entries = ordered.map { DecryptKeys.Entry(it.fingerprint, secretRingForDecrypt(it), compositeDecryptRing(it)) }
         return DecryptKeys(
             keys = ordered,
-            secretRings = ordered.mapNotNull { secretRingForDecrypt(it) },
-            compositeRings = ordered.mapNotNull { compositeDecryptRing(it) },
-            verificationRings = all.mapNotNull { loadPublicKeyRing(it.fingerprint) }
+            secretRings = entries.mapNotNull { it.secretRing },
+            compositeRings = entries.mapNotNull { it.compositeRing },
+            verificationRings = all.mapNotNull { loadPublicKeyRing(it.fingerprint) },
+            entries = entries
         )
     }
 

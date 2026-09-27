@@ -211,9 +211,12 @@ class FileCryptoOps(
 
         if (armoredFromText != null) {
             // Byte path (armored text is base64-bounded in size).
-            val result = DecryptOrder.cascade(secretRings) { rings ->
-                crypto.decryptArmored(armoredFromText, rings, passphrase, publicRings, keys.compositeRings)
+            // Stage 4b: a blank passphrase uses each key's remembered one.
+            val opened = DecryptOrder.cascadeKeys(keys, passphrase, PassphraseCache::get) { secret, composite, pass ->
+                crypto.decryptArmored(armoredFromText, secret, pass, publicRings, composite)
             }
+            repo.rememberOpened(opened.fingerprint, passphrase)
+            val result = opened.value
             val sigNote = SignatureSummary.fileNote(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
@@ -252,6 +255,11 @@ class FileCryptoOps(
             // Streaming path for binary ciphertext. Progress is bytes read from the CIPHERTEXT
             // (the plaintext size isn't known ahead), a fine proxy for a moving bar.
             val total = runCatching { Files.size(file) }.getOrDefault(-1L)
+            // Stage 4b: one passphrase for the one pass over the stream. Nothing typed means the
+            // remembered passphrase of a key the message names as a recipient.
+            val recipients = recipientEntries(file, keys)
+            val streamPassphrase = passphrase
+                ?: recipients.firstNotNullOfOrNull { PassphraseCache.get(it.fingerprint) }
             val tmp = Files.createTempFile(file.parent, ".pgpony-dec", ".tmp")
             val result = try {
                 ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { input ->
@@ -261,7 +269,7 @@ class FileCryptoOps(
                         // here the same as pasted text does.
                         // A stream cannot be re-read, so no cascade here: the order alone.
                         crypto.decryptStream(
-                            input, output, secretRings, passphrase, publicRings, keys.compositeRings
+                            input, output, secretRings, streamPassphrase, publicRings, keys.compositeRings
                         )
                     }
                 }
@@ -269,6 +277,7 @@ class FileCryptoOps(
                 Files.deleteIfExists(tmp)
                 throw t
             }
+            repo.rememberOpened(recipients.singleOrNull()?.fingerprint, passphrase)
             val sigNote = SignatureSummary.fileNote(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
@@ -333,6 +342,20 @@ class FileCryptoOps(
     }
 
     /** First 16 KB as text if it looks like text (no NUL bytes), else null. */
+    /**
+     * Stage 4b: our keys the message names as recipients, or every key when it names none we
+     * can match (a hidden recipient, or a key BouncyCastle cannot list).
+     */
+    private fun recipientEntries(file: Path, keys: DecryptKeys): List<DecryptKeys.Entry> {
+        val ids = runCatching {
+            Files.newInputStream(file).use { crypto.inspectEncryptedMessage(it).publicKeyIDs }
+        }.getOrDefault(emptyList()).toSet()
+        val named = keys.entries.filter { e ->
+            e.secretRing?.publicKeys?.asSequence()?.any { it.keyID in ids } == true
+        }
+        return named.ifEmpty { keys.entries }
+    }
+
     private fun peekText(file: Path): String? = runCatching {
         Files.newInputStream(file).use { ins ->
             val head = ins.readNBytes(16384)

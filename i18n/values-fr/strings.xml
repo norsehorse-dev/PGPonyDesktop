@@ -774,4 +774,14 @@
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">Commentaire d\'armure</string>
     <string name="d_settings_armor_comment_note">La ligne Comment de la sortie en armure ASCII. Elle s\'applique à l\'app, à la commande pgpony, au shim de signature git et aux dossiers surveillés.</string>
+    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_section_session">Session</string>
+    <string name="d_settings_session_note">Durée pendant laquelle PGPony garde en mémoire la phrase secrète d\'une clé ou le PIN de la carte après leur saisie. Un seul réglage couvre l\'app, l\'agent SSH et la signature git via pgpony-gpg. Rien n\'est écrit sur le disque, et quitter PGPony efface tout.</string>
+    <string name="d_session_until_screen_locks">Jusqu\'au verrouillage de l\'écran</string>
+    <string name="d_session_held_until_locked">Phrase secrète mémorisée jusqu\'au verrouillage de l\'écran ou jusqu\'à ce que vous l\'effaciez.</string>
+    <string name="d_session_lock_unsupported">PGPony ne peut pas détecter le verrouillage de l\'écran sur cet ordinateur : les secrets mémorisés restent jusqu\'à ce que vous les effaciez ou quittiez l\'app.</string>
+    <string name="d_session_pin_held">PIN de la carte mémorisé.</string>
+    <string name="d_cards_pin_cache_follows">Conservé pendant la durée de session définie dans les Réglages : %1$s.</string>
+    <string name="d_crypto_pass_remembered">Mémorisée pour cette session. Laissez vide pour l\'utiliser.</string>
+    <string name="d_shim_unlock_message">git a demandé à PGPony de signer avec %1$s, qui est protégée par une phrase secrète.</string>
 </resources>
