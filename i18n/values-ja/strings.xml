@@ -411,15 +411,6 @@
     <!-- ═══ Batch 1: key generation, cards, key refresh, expiry (D11b) ═══ -->
     <!-- ── Generate-key dialog. The algorithm names themselves (Ed25519, RSA 4096) are
          spec names and stay untranslated — only the one-line hints are keys. ── -->
-    <string name="d_gen_hint_ed25519">推奨 — 現代的でコンパクト、どこでも使えます</string>
-    <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id 保護。最新のツールに最適です</string>
-    <string name="d_gen_hint_pq_v6">ポスト量子（IETF ドラフト、v6）— ML-KEM-768 + X25519</string>
-    <string name="d_gen_hint_pq_librepgp">ポスト量子（LibrePGP）— GnuPG 2.5 と相互運用できます</string>
-    <string name="d_gen_hint_pq_1024_v6">ポスト量子（IETF ドラフト、v6）— ML-KEM-1024 + X448</string>
-    <string name="d_gen_hint_pq_1024_librepgp">ポスト量子（LibrePGP）— ML-KEM-1024 + X448、GnuPG 2.5 と相互運用できます</string>
-    <string name="d_gen_hint_rsa4096">大きく低速。旧来のソフトウェアとの互換性は最大です</string>
-    <string name="d_gen_hint_mldsa">ポスト量子署名鍵。署名と検証を行い、暗号化はしません。</string>
-    <string name="d_gen_hint_rsa2048">旧来のソフトウェアとの互換性のためだけ</string>
     <string name="d_gen_no_passphrase_warning">パスフレーズなし：秘密鍵はこのコンピューターに保護されないまま保存されます。</string>
 
     <!-- ── Card dialog + PC/SC transport errors. The reader name is an argument; the

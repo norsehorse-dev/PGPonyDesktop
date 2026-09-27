@@ -237,6 +237,19 @@ private fun KeysSection(state: DesktopState) {
     var protect by remember { mutableStateOf(DestructiveGuard.protect()) }
     var hide by remember { mutableStateOf(DestructiveGuard.hidden()) }
     var showBin by remember { mutableStateOf(false) }
+    var offerPublish by remember { mutableStateOf(KeygenPrefs.offerPublish()) }
+    // 3.0.0 (Android 4.5.0 item 8): the publish offer after key generation.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = offerPublish, onCheckedChange = { KeygenPrefs.setOfferPublish(it); offerPublish = it })
+        Column {
+            Text(tr("settings_offer_publish_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                tr("settings_offer_publish_subtitle"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
             checked = allowExpired,

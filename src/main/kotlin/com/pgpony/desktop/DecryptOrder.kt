@@ -98,8 +98,8 @@ object SigningDefaults {
         if (row == null || row.fingerprint != base.fingerprint || base.isCardBacked) return base
         val pickedFp = when {
             signOnly -> row.signOnlySignerFingerprint
-            // isPostQuantum, not Android's isComposite: a composite ML-DSA recipient receives on
-            // its ML-KEM subkey and is a post-quantum recipient too (upstream finding, D23 notes).
+            // isPostQuantum: a composite ML-DSA recipient receives on its ML-KEM subkey and is a
+            // post-quantum recipient too (Android 4.7.0 item 18 made the same change).
             recipients.isNotEmpty() && recipients.all { it.algorithm.isPostQuantum } -> row.pqcSignerFingerprint
             else -> row.classicalSignerFingerprint
         } ?: return base

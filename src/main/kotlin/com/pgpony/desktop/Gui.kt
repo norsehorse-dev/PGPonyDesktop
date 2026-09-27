@@ -263,21 +263,39 @@ class DesktopState(private val scope: CoroutineScope) {
 
     /** D2b — full Android generateKey port (incl. pre-cached revocation certificate).
      *  Returns immediately; completion lands in [status]. RSA-4096 can take a while. */
-    fun generate(
-        name: String,
-        email: String,
-        algorithm: com.pgpony.android.crypto.KeyAlgorithm,
-        passphrase: String?,
-        onDone: () -> Unit
-    ) = scope.launch {
+    fun generate(request: KeygenRequest, onDone: (PGPKeyEntity) -> Unit) = scope.launch {
         busy = true
         // displayName is a spec name (Ed25519, RSA 4096) — an argument, not a key.
-        status = tr("d_status_generating", algorithm.displayName)
+        status = tr("d_status_generating", request.algorithm.displayName)
         try {
-            val entity = repository.generateKey(name, email, algorithm, passphrase)
+            val entity = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (request.granular) {
+                    // 3.0.0 (Android 4.5.0 item 7): each composed subkey takes the key's expiry.
+                    repository.generateGranularKey(
+                        request.name, request.email, request.includeDefaultEncryption,
+                        request.granularSubkeys.map { com.pgpony.android.crypto.GranularSubkeySpec(it, request.expirationSeconds) },
+                        request.passphrase, request.expirationSeconds
+                    )
+                } else {
+                    repository.generateKey(request.name, request.email, request.algorithm, request.passphrase, request.expirationSeconds)
+                }
+            }
             status = tr("d_status_generated", entity.userID, entity.shortFingerprint)
+            // 3.0.0 (Android 4.6.0 item 16): the SSH authentication subkey, bound with the key's
+            // own expiry. A failure keeps the new key and says so; Key Detail can add it later.
+            if (request.sshAuth) {
+                try {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        edits.addSshAuthSubkeyAtGeneration(
+                            entity.fingerprint, request.algorithm, request.expirationSeconds, request.passphrase
+                        )
+                    }
+                } catch (t: Throwable) {
+                    status = tr("keyring_generate_ssh_auth_failed", t.message ?: t::class.simpleName.orEmpty())
+                }
+            }
             refresh()
-            onDone()
+            onDone(repository.byFingerprint(entity.fingerprint) ?: entity)
         } catch (t: Throwable) {
             status = tr("d_status_generate_failed", t.message ?: t::class.simpleName.orEmpty())
         } finally {

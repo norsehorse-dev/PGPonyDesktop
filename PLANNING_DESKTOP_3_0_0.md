@@ -357,9 +357,9 @@ the schema upgrade (2.3) and anything that deletes (3.1, 3.2). Both are tested a
 a real, populated keyring, never only a fresh one.
 
 Progress: stage 1 (2.1 to 2.11) is green on the Mac; see `docs/phases/PHASE_D22_NOTES.md`.
-Stage 2: checkpoints 2a (edit layer, Recently Deleted, destructive guards) and 2b (Key Detail,
-add subkey, Clear All Data) are green; 2c (Decrypt with picker, fallback order, signing
-defaults in the signing paths) awaits its build. See `docs/phases/PHASE_D23_NOTES.md`.
+Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3: checkpoint 3a
+(key generation) awaits its build; 3b (SSH) and 3c (key servers and import) follow. See
+`docs/phases/PHASE_D24_NOTES.md`.
 
 ## 12. Features (decided: all three, inside 3.0.0)
 

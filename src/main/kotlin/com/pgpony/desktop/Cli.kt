@@ -299,13 +299,42 @@ object Cli {
     private fun genKey(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
         val o = Options(args)
         val name = o.value("--name") ?: throw CliError(ExitCode.USAGE, "gen-key: --name <name>")
-        val email = o.value("--email") ?: throw CliError(ExitCode.USAGE, "gen-key: --email <email>")
-        val algo = parseAlgorithm(o.value("--algo") ?: "ed25519")
+        // 3.0.0 (Android 4.5.0 item 3): the email is optional, for a name-only User ID.
+        val email = o.value("--email") ?: ""
+        val algoName = o.value("--algo")
+        val algo = parseAlgorithm(algoName ?: "ed25519")
         val expiresDays = o.value("--expires")?.toLongOrNull()
         val expirationSeconds = expiresDays?.let { it * 24 * 60 * 60 }
+        // 3.0.0 (Android 4.5.0 item 7): --subkey composes a v6 Ed25519 key, as the app's granular mode.
+        val subkeys = o.all("--subkey").map { parseSubkey(it) }
+        val noDefaultEncryption = o.flag("--no-default-encryption")
+        val granular = subkeys.isNotEmpty() || noDefaultEncryption
+        val sshAuth = o.flag("--ssh-auth")
+        if (granular && algoName != null) {
+            throw CliError(ExitCode.USAGE, "gen-key: --subkey builds a v6 Ed25519 key; leave out --algo")
+        }
+        if (granular && sshAuth) {
+            throw CliError(ExitCode.USAGE, "gen-key: with --subkey, add the SSH key as --subkey ed25519-auth")
+        }
         val pass = requirePassphrase(o, "Passphrase for the new key (empty for none): ", allowEmpty = true)
             .ifEmpty { null }
-        val entity = repo.generateKey(name, email, algo, pass, expirationSeconds)
+        val entity = if (granular) {
+            repo.generateGranularKey(
+                name, email, !noDefaultEncryption,
+                subkeys.map { com.pgpony.android.crypto.GranularSubkeySpec(it, expirationSeconds) },
+                pass, expirationSeconds
+            )
+        } else {
+            repo.generateKey(name, email, algo, pass, expirationSeconds)
+        }
+        // 3.0.0 (Android 4.6.0 item 16): the SSH authentication subkey. A failure keeps the key.
+        if (sshAuth) {
+            try {
+                DesktopKeyEdits(repo).addSshAuthSubkeyAtGeneration(entity.fingerprint, algo, expirationSeconds, pass)
+            } catch (t: Throwable) {
+                err("warning: key created, but the SSH subkey could not be added: ${t.message ?: t::class.simpleName}")
+            }
+        }
         out("Generated ${entity.userID}")
         out(entity.fingerprint.uppercase())
         ExitCode.OK
@@ -359,6 +388,8 @@ object Cli {
         "v6-x448" -> KeyAlgorithm.V6_X448
         "mlkem", "mlkem-v6", "pqc" -> KeyAlgorithm.MLKEM768_X25519_V6
         "mlkem-librepgp", "mlkem-v5" -> KeyAlgorithm.MLKEM768_X25519_LIBREPGP
+        "mlkem-v4", "mlkem-768-v4", "pqc-v4" -> KeyAlgorithm.MLKEM768_X25519_V4
+        "mlkem-brainpool", "mlkem-bp256", "mlkem-bp256-v5" -> KeyAlgorithm.MLKEM768_BP256_LIBREPGP
         "mlkem-1024", "mlkem-1024-v6", "pqc-1024" -> KeyAlgorithm.MLKEM1024_X448_V6
         "mlkem-1024-librepgp", "mlkem-1024-v5" -> KeyAlgorithm.MLKEM1024_X448_LIBREPGP
         "mldsa", "mldsa-65", "ml-dsa", "pqc-sign" -> KeyAlgorithm.MLDSA65_ED25519_V6
@@ -366,8 +397,26 @@ object Cli {
         else -> throw CliError(
             ExitCode.USAGE,
             "gen-key: unknown --algo \"$name\" (ed25519, rsa2048, rsa4096, v6-ed25519, v6-x25519, " +
-                "v6-ed448, v6-x448, mlkem-v6, mlkem-librepgp)"
+                "v6-ed448, v6-x448, mlkem-v6, mlkem-v4, mlkem-librepgp, mlkem-1024, mlkem-1024-librepgp, " +
+                "mlkem-brainpool, mldsa-65, mldsa-87)"
         )
+    }
+
+    /** 3.0.0: a `--subkey` kind, the Add Subkey list for a v6 key (AddSubkeyChoice). */
+    internal fun parseSubkey(name: String): com.pgpony.android.crypto.AddSubkeyChoice {
+        return when (name.lowercase().replace("_", "-")) {
+            "ed25519-sign", "ed25519" -> com.pgpony.android.crypto.AddSubkeyChoice.Classical(com.pgpony.android.crypto.ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_SIGN)
+            "ed25519-auth", "ssh" -> com.pgpony.android.crypto.AddSubkeyChoice.Classical(com.pgpony.android.crypto.ClassicalSubkeyGen.ClassicalSubkeyType.ED25519_AUTH)
+            "x25519", "x25519-encrypt" -> com.pgpony.android.crypto.AddSubkeyChoice.Classical(com.pgpony.android.crypto.ClassicalSubkeyGen.ClassicalSubkeyType.X25519_ENCRYPT)
+            "mlkem-768", "mlkem" -> com.pgpony.android.crypto.AddSubkeyChoice.PqEncryption(com.pgpony.android.crypto.pqc.CompositeSuite.IETF_768)
+            "mlkem-1024" -> com.pgpony.android.crypto.AddSubkeyChoice.PqEncryption(com.pgpony.android.crypto.pqc.CompositeSuite.IETF_1024)
+            "mldsa-65", "mldsa" -> com.pgpony.android.crypto.AddSubkeyChoice.PqSigning(com.pgpony.android.crypto.pqc.CompositeSignSuite.MLDSA65_ED25519)
+            "mldsa-87" -> com.pgpony.android.crypto.AddSubkeyChoice.PqSigning(com.pgpony.android.crypto.pqc.CompositeSignSuite.MLDSA87_ED448)
+            else -> throw CliError(
+                ExitCode.USAGE,
+                "gen-key: unknown --subkey \"$name\" (ed25519-sign, ed25519-auth, x25519, mlkem-768, mlkem-1024, mldsa-65, mldsa-87)"
+            )
+        }
     }
 
     // ── Signature reporting (decrypt) ───────────────────────────────────
@@ -509,7 +558,8 @@ object Cli {
               import    [file|-]
               export    [--secret] [-a] [-o out] <key>
               list-keys [--secret]
-              gen-key   --name <n> --email <e> [--algo ed25519] [--expires <days>]
+              gen-key   --name <n> [--email <e>] [--algo ed25519] [--expires <days>] [--ssh-auth]
+                        [--subkey <kind> …] [--no-default-encryption]
               card-info                        report the PC/SC readers this build can see
 
             Common options:
@@ -552,7 +602,7 @@ internal class Options(args: List<String>) {
     private val valued = setOf(
         "--output", "-o", "--input", "-i", "--recipient", "-r", "--sign-as", "-u",
         "--signature", "-s", "--passphrase-env", "--passphrase-fd", "--name", "--email",
-        "--algo", "--expires", "--decrypt-with",
+        "--algo", "--expires", "--decrypt-with", "--subkey",
         "--op" // D14 — `pgpony open --op <verb>` (Main.parseOpenArgs)
     )
 

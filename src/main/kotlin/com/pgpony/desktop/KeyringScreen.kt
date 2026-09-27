@@ -79,6 +79,7 @@ fun KeyringScreen(state: DesktopState) {
     var detailKey by remember { mutableStateOf<PGPKeyEntity?>(null) }
     var confirmDelete by remember { mutableStateOf<PGPKeyEntity?>(null) }
     var showRecentlyDeleted by remember { mutableStateOf(false) }
+    var publishNewKey by remember { mutableStateOf<PGPKeyEntity?>(null) }
     var sameIdentityEmail by remember { mutableStateOf<String?>(null) }
     val sameIdentityCounts = remember(state.keys) {
         state.keys.filter { it.userEmail.isNotBlank() }
@@ -278,10 +279,21 @@ fun KeyringScreen(state: DesktopState) {
         GenerateKeyDialog(
             busy = state.busy,
             onDismiss = { showGenerate = false },
-            onGenerate = { name, email, algorithm, passphrase ->
-                state.generate(name, email, algorithm, passphrase) { showGenerate = false }
+            onGenerate = { request ->
+                state.generate(request) { entity ->
+                    showGenerate = false
+                    // Android 4.5.0 item 8: offer to publish, online only, and only a key with an
+                    // address (key servers find keys by email).
+                    if (KeygenPrefs.offerPublish() && !com.pgpony.android.network.OfflineMode.enabled &&
+                        entity.userEmail.isNotBlank()
+                    ) publishNewKey = entity
+                }
             }
         )
+    }
+
+    publishNewKey?.let { key ->
+        PublishKeyDialog(state, key) { publishNewKey = null }
     }
 
     detailKey?.let { key ->

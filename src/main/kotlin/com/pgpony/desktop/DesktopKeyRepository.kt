@@ -100,6 +100,10 @@ class DesktopKeyRepository(
         if (algorithm.isCompositeSign) {
             return generateCompositeSigningKey(name, email, algorithm, passphrase, expirationSeconds)
         }
+        // 3.0.0 (Android item 14, #56): the v4 Ed25519 + algo-35 interop shape takes the raw path.
+        if (algorithm == KeyAlgorithm.MLKEM768_X25519_V4) {
+            return generateV4Algo35Key(name, email, passphrase, expirationSeconds)
+        }
         val result = crypto.generateKeyPair(name, email, algorithm, passphrase, expirationSeconds)
 
         materials.storePublic(result.fingerprint, result.armoredPublicKey)
@@ -112,8 +116,10 @@ class DesktopKeyRepository(
             if (validSec > 0) (key.creationTime.time + validSec * 1000) else null
         }
 
+        // Android 4.1.0 Phase 12a: parse the BINARY secret ring, not the armor, which is not always
+        // the framing BouncyCastle produced (v5 composite rings go through the LibrePGP exporter).
         val preCachedRevocationCert: String? = try {
-            crypto.importArmoredKey(result.armoredPrivateKey).secretKeyRing?.let { secRing ->
+            runCatching { crypto.importKeyData(result.privateKeyData).secretKeyRing }.getOrNull()?.let { secRing ->
                 revocation.generateRevocationCertificate(
                     secretKeyRing = secRing,
                     reason = RevocationReason.NO_REASON,
@@ -125,11 +131,13 @@ class DesktopKeyRepository(
             null
         }
 
-        val parsed = PGPKeyEntity.parseUserID("$name <$email>")
+        // 3.0.0 (Android 4.5.0 item 3): the email is optional, so a name-only User ID.
+        val uid = PGPKeyEntity.composeUserID(name, email)
+        val parsed = PGPKeyEntity.parseUserID(uid)
         val entity = PGPKeyEntity(
             id = UUID.randomUUID().toString(),
             fingerprint = result.fingerprint,
-            userID = "$name <$email>",
+            userID = uid,
             userName = parsed.first,
             userEmail = parsed.second,
             algorithm = algorithm,
@@ -158,7 +166,7 @@ class DesktopKeyRepository(
     ): PGPKeyEntity {
         val suite = if (algorithm == KeyAlgorithm.MLDSA87_ED448_V6)
             CompositeSignSuite.MLDSA87_ED448 else CompositeSignSuite.MLDSA65_ED25519
-        val uid = "$name <$email>"
+        val uid = PGPKeyEntity.composeUserID(name, email)
         var secretRing = CompositePrimaryKeyGen.assemble(uid, suite, expirationSeconds = expirationSeconds)
         if (!passphrase.isNullOrEmpty()) {
             secretRing = CompositeKeyFacade.reprotect(secretRing, null, passphrase.toCharArray())
@@ -190,6 +198,102 @@ class DesktopKeyRepository(
             expiresAt = expiresAtMs,
             armoredPublicKey = armoredPublic,
             revocationCertificate = null
+        )
+        dao.insert(entity)
+        return entity
+    }
+
+    /**
+     * 3.0.0 (Android item 14, #56): a v4 Ed25519 + algo-35 ML-KEM-768+X25519 interop key. The v4
+     * base keeps a classical Cv25519 subkey for older senders and advertises SEIPDv2, then the
+     * algo-35 subkey is grafted on. BouncyCastle cannot parse that subkey, so the key is stored as
+     * raw octets like the composite signing keys.
+     */
+    private suspend fun generateV4Algo35Key(
+        name: String,
+        email: String,
+        passphrase: String?,
+        expirationSeconds: Long?
+    ): PGPKeyEntity {
+        val uid = PGPKeyEntity.composeUserID(name, email)
+        val baseRing = crypto.buildV4InteropBaseSecretRing(uid, passphrase, expirationSeconds = expirationSeconds)
+        val rings = com.pgpony.android.crypto.pqc.CompositeKeyGen.addV4Algo35SubkeyRings(
+            baseRing, passphrase, expirationSeconds = expirationSeconds
+        )
+        val fingerprintHex = rings.primaryFingerprintHex.uppercase()
+        val armoredPublic = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----", "-----END PGP PUBLIC KEY BLOCK-----", rings.publicRaw
+        )
+        materials.storePublic(fingerprintHex, armoredPublic)
+        materials.storeSecret(
+            fingerprintHex,
+            CompositeSigPacket.armor("-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----", rings.secretRaw)
+        )
+        val parsed = PGPKeyEntity.parseUserID(uid)
+        val now = System.currentTimeMillis()
+        val entity = PGPKeyEntity(
+            id = UUID.randomUUID().toString(),
+            fingerprint = fingerprintHex,
+            userID = uid,
+            userName = parsed.first,
+            userEmail = parsed.second,
+            algorithm = KeyAlgorithm.MLKEM768_X25519_V4,
+            isKeyPair = true,
+            createdAt = now,
+            expiresAt = expirationSeconds?.let { now + it * 1000 },
+            armoredPublicKey = armoredPublic,
+            revocationCertificate = null
+        )
+        dao.insert(entity)
+        return entity
+    }
+
+    /**
+     * 3.0.0 (Android 4.5.0 item 7, #55): granular keygen. A v6 Ed25519 primary, its default
+     * X25519 encryption subkey kept or stripped, then each chosen subkey grafted on. Every shape
+     * stays a BouncyCastle ring, so it is stored like any v6 key and labelled V6_ED25519.
+     */
+    suspend fun generateGranularKey(
+        name: String,
+        email: String,
+        includeDefaultEncryptionSubkey: Boolean,
+        subkeys: List<com.pgpony.android.crypto.GranularSubkeySpec>,
+        passphrase: String?,
+        expirationSeconds: Long? = null
+    ): PGPKeyEntity {
+        val uid = PGPKeyEntity.composeUserID(name, email)
+        val ring = crypto.assembleGranularV6Ring(
+            userID = uid,
+            includeDefaultEncryptionSubkey = includeDefaultEncryptionSubkey,
+            subkeys = subkeys,
+            passphrase = passphrase,
+            expirationSeconds = expirationSeconds
+        )
+        val publicRing = PGPPublicKeyRing(ring.publicKeys.asSequence().toList())
+        val primary = publicRing.publicKey
+        val fpHex = primary.fingerprint.joinToString("") { "%02X".format(it) }
+        val armoredPublic = crypto.exportArmoredPublicKey(publicRing)
+        materials.storePublic(fpHex, armoredPublic)
+        materials.storeSecret(
+            fpHex,
+            CompositeSigPacket.armor("-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----", ring.encoded)
+        )
+        val validSec = primary.validSeconds
+        val parsed = PGPKeyEntity.parseUserID(uid)
+        val entity = PGPKeyEntity(
+            id = UUID.randomUUID().toString(),
+            fingerprint = fpHex,
+            userID = uid,
+            userName = parsed.first,
+            userEmail = parsed.second,
+            algorithm = KeyAlgorithm.V6_ED25519,
+            isKeyPair = true,
+            createdAt = System.currentTimeMillis(),
+            expiresAt = if (validSec > 0) primary.creationTime.time + validSec * 1000 else null,
+            armoredPublicKey = armoredPublic,
+            revocationCertificate = runCatching {
+                revocation.generateRevocationCertificate(ring, RevocationReason.NO_REASON, null, passphrase)
+            }.getOrNull()
         )
         dao.insert(entity)
         return entity

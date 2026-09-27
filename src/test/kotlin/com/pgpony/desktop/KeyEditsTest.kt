@@ -112,10 +112,8 @@ class KeyEditsTest {
         assertEquals("Ids Work <work@pgpony.app>", rows.single { it.isPrimary }.raw)
         assertEquals("work@pgpony.app", repo.byFingerprint(k.fingerprint)!!.userEmail)
 
-        // UserIdService.isRevoked needs the revocation strictly newer than the newest
-        // certification, and setPrimaryUserId just re-signed this User ID. Signature times have
-        // one-second resolution, so a revocation in the same second reads as not revoked.
-        Thread.sleep(1100)
+        // setPrimaryUserId just re-signed this User ID, usually in the same second. Since Android
+        // 4.7.0 item 18 a revocation wins that tie (it used to need a one-second wait here).
         edits.revokeUserId(k.fingerprint, k.userID, RevocationReason.NO_REASON, null, pass)
         assertTrue(edits.userIdRows(repo.byFingerprint(k.fingerprint)!!).single { it.raw == k.userID }.isRevoked)
 

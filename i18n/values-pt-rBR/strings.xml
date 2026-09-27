@@ -419,15 +419,6 @@
     <!-- ═══ Batch 1: key generation, cards, key refresh, expiry (D11b) ═══ -->
     <!-- ── Generate-key dialog. The algorithm names themselves (Ed25519, RSA 4096) are
          spec names and stay untranslated — only the one-line hints are keys. ── -->
-    <string name="d_gen_hint_ed25519">Recomendado — moderno, compacto, funciona em todo lugar</string>
-    <string name="d_gen_hint_v6">RFC 9580 v6 — proteção Argon2id; melhor com ferramentas atuais</string>
-    <string name="d_gen_hint_pq_v6">Pós-quântico (rascunho do IETF, v6) — ML-KEM-768 + X25519</string>
-    <string name="d_gen_hint_pq_librepgp">Pós-quântico (LibrePGP) — interopera com o GnuPG 2.5</string>
-    <string name="d_gen_hint_pq_1024_v6">Pós-quântico (rascunho do IETF, v6) — ML-KEM-1024 + X448</string>
-    <string name="d_gen_hint_pq_1024_librepgp">Pós-quântico (LibrePGP) — ML-KEM-1024 + X448, interopera com o GnuPG 2.5</string>
-    <string name="d_gen_hint_rsa4096">Grande, lento, compatibilidade máxima com sistemas antigos</string>
-    <string name="d_gen_hint_mldsa">Chave de assinatura pós-quântica. Assina e verifica; não criptografa.</string>
-    <string name="d_gen_hint_rsa2048">Apenas para compatibilidade com sistemas antigos</string>
     <string name="d_gen_no_passphrase_warning">Sem senha: a chave secreta será armazenada sem proteção neste computador.</string>
 
     <!-- ── Card dialog + PC/SC transport errors. The reader name is an argument; the

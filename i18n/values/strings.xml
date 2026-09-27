@@ -550,15 +550,6 @@
     <!-- ═══ Batch 1: key generation, cards, key refresh, expiry (D11b) ═══ -->
     <!-- ── Generate-key dialog. The algorithm names themselves (Ed25519, RSA 4096) are
          spec names and stay untranslated — only the one-line hints are keys. ── -->
-    <string name="d_gen_hint_ed25519">Recommended — modern, compact, works everywhere</string>
-    <string name="d_gen_hint_v6">RFC 9580 v6 — Argon2id protection; best with current tooling</string>
-    <string name="d_gen_hint_pq_v6">Post-quantum (IETF draft, v6) — ML-KEM-768 + X25519</string>
-    <string name="d_gen_hint_pq_librepgp">Post-quantum (LibrePGP) — interops with GnuPG 2.5</string>
-    <string name="d_gen_hint_pq_1024_v6">Post-quantum (IETF draft, v6) — ML-KEM-1024 + X448</string>
-    <string name="d_gen_hint_pq_1024_librepgp">Post-quantum (LibrePGP) — ML-KEM-1024 + X448, interops with GnuPG 2.5</string>
-    <string name="d_gen_hint_rsa4096">Large, slow, maximum legacy compatibility</string>
-    <string name="d_gen_hint_mldsa">Post-quantum signing key. Signs and verifies; does not encrypt.</string>
-    <string name="d_gen_hint_rsa2048">Legacy compatibility only</string>
     <string name="d_gen_no_passphrase_warning">No passphrase: the secret key will be stored unprotected on this computer.</string>
 
     <!-- ── Card dialog + PC/SC transport errors. The reader name is an argument; the

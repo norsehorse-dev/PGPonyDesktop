@@ -30,15 +30,18 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   interop artifacts). Synced D5/D6; compiled into the desktop `test` source set, gates
   (`-DrunInterop`, `-DiosSecPass`) preserved.
 
-Last sync: 2026-09-26 (desktop 3.0.0, stage 1). All trees, delete-and-recopy, from the
-PGPonyAndroid working tree at the v4.6.1 tag (versionCode 461) plus ONE recorded exception: the
-4.7.0 settings seam. At sync time `git diff v4.6.1` over the synced trees showed only the seam:
-`data/settings/KeyValueSettings.kt` (new) and the four stores moved onto it
-(`crypto/FallbackPrefs.kt`, `data/KeyPublicationStore.kt`, `data/RemovedUserIdStore.kt`,
-`network/WkdLookup.kt`), plus one test-only change: the ScratchFiles.safeChild case moved out
-of `crypto/LiteralFilenameTest.kt` into an Android-only UI test, so the vendored copy compiles
-here. `app-strings/` synced from the same tree (seven locales, Russian
-included); the res tree was identical to v4.6.1.
+Last sync: 2026-09-27 (desktop 3.0.0, stage 3). All trees, delete-and-recopy, from the
+PGPonyAndroid working tree at commit b19b82e on main: the v4.6.1 tag (versionCode 461) plus two
+recorded 4.7.0 changes. `git diff v4.6.1` over the synced trees shows only these:
+1. The settings seam: `data/settings/KeyValueSettings.kt` (new) and the four stores moved onto it
+   (`crypto/FallbackPrefs.kt`, `data/KeyPublicationStore.kt`, `data/RemovedUserIdStore.kt`,
+   `network/WkdLookup.kt`), plus the test-only move of the ScratchFiles.safeChild case out of
+   `crypto/LiteralFilenameTest.kt` into an Android-only UI test.
+2. 4.7.0 item 18, found by the desktop 3.0.0 port: `crypto/UserIdService.kt` (a User ID
+   revocation wins a tie with the newest certification) and its test
+   `crypto/UserIdRevokeTieTest.kt`.
+`app-strings/` synced from the same tree (seven locales, Russian included); the res tree was
+identical to v4.6.1.
 Re-sync: `tools/sync-vendor.sh` (delete-and-recopy), then `./gradlew test`, EXCEPT
 `app-strings/`, which is `tools/sync-strings.sh` (also delete-and-recopy, and it runs
 `tools/i18n-audit.py` at the end).
