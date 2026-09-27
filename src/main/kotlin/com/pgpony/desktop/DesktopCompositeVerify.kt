@@ -36,7 +36,10 @@ object DesktopCompositeVerify {
             signerFingerprint = e.fingerprint,
             signerName = e.userName.ifBlank { null },
             signerEmail = e.userEmail.ifBlank { null },
-            signedContent = content
+            signedContent = content,
+            // 3.0.0 (Android 4.5.3, #57): carry the signer's trust so an unconfirmed key reads
+            // "Signed, key not verified".
+            signerTrust = e.trustLevel
         )
 
     private fun unknown(claimedFp: String?, content: String?) =
@@ -76,5 +79,19 @@ object DesktopCompositeVerify {
                 verified(e, claimedFp, content) else invalid(claimedFp, content)
         }
         return null
+    }
+
+    /**
+     * 3.0.0 (Android 4.5.3): the composite inline signature inside a DECRYPTED message, which
+     * the engine hands back as DecryptResult.compositeInlineBytes because BouncyCastle cannot
+     * parse it. Before 3.0.0 the desktop decrypt paths never looked, so these read as unsigned.
+     */
+    suspend fun verifyInlineBytes(
+        repo: DesktopKeyRepository, inlineBytes: ByteArray, claimedFp: String?
+    ): VerificationResult {
+        val fp = claimedFp ?: CompositeDocumentVerifier.claimedSignerOfInline(inlineBytes)
+        val (e, c) = resolveSigner(repo, fp) ?: return unknown(fp, null)
+        return if (CompositeDocumentVerifier.verifyInline(c.publicMaterial, inlineBytes).valid)
+            verified(e, fp, null) else invalid(fp, null)
     }
 }

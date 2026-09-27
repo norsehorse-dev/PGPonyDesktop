@@ -696,4 +696,10 @@
     <string name="d_cards_move_done">カードに移動しました — %1$s</string>
     <string name="d_cards_move_no_secret">鍵の秘密情報を読み込めませんでした。</string>
 
+    <string name="d_err_recipient_unusable">PGPony が暗号化に使える鍵がないため、何も暗号化されませんでした: %1$s</string>
+    <string name="d_file_sig_unconfirmed">・署名あり、鍵は未確認</string>
+    <string name="d_file_sig_invalid">・署名が無効です</string>
+    <string name="d_file_err_composite_too_large">ML-DSA 署名はファイル全体をメモリに読み込むため、512 MB までに制限されています。より小さいファイルに署名するか、従来の署名鍵を選んでください。</string>
+    <string name="d_file_verify_ok_unconfirmed">署名あり、鍵は未確認: %1$s &lt;%2$s&gt;・%3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">復号しました · 署名あり、鍵は未確認</string>
 </resources>

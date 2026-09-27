@@ -28,6 +28,9 @@ class FileCryptoOps(
     private val repo: DesktopKeyRepository,
     private val crypto: PGPCryptoService = PGPCryptoService.shared
 ) {
+    // 3.0.0: recipients, the expired-key rule and the signer (classical or composite ML-DSA)
+    // are decided in one place for every encrypt path. See EncryptOps.
+    private val encryptOps = EncryptOps(repo)
 
     data class FileOutcome(
         val input: Path,
@@ -46,32 +49,32 @@ class FileCryptoOps(
         armor: Boolean,
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
         isCancelled: () -> Boolean = NOT_CANCELLED,
-        outputDir: Path? = null
+        outputDir: Path? = null,
+        compositeInV1Decision: Boolean? = true
     ): FileOutcome = try {
-        val rings = recipientFingerprints.map {
-            repo.loadEncryptionRecipientRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
+        // The Phase A3 rule: a requested signature must never silently drop, so a signer that
+        // cannot be loaded stops the op (EncryptOps.plan throws).
+        val signer = signerFingerprint?.let {
+            repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
-        // The Phase A3 rule — a requested signature must never silently drop.
-        val signerRing = signerFingerprint?.let {
-            repo.loadSecretKeyRing(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
-        }
+        val plan = encryptOps.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision)
         // Write to a temp sibling and MOVE on success (D17): a cancel or crash leaves the temp,
-        // which the catch deletes — never a half-written .gpg beside the source, never an
+        // which the catch deletes; never a half-written .gpg beside the source, never an
         // overwrite. Output name is resolved at the end, keeping the never-overwrite guarantee.
         val total = runCatching { Files.size(file) }.getOrDefault(-1L)
         val tmp = Files.createTempFile(file.parent, ".pgpony-enc", ".tmp")
         try {
-            ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { input ->
-                Files.newOutputStream(tmp).use { output ->
-                    crypto.encryptStream(
-                        input = input,
-                        output = output,
-                        recipientPublicKeys = rings,
-                        signingSecretKey = signerRing,
-                        passphrase = signerPassphrase,
-                        filename = file.name,
-                        armor = armor
-                    )
+            if (plan.needsBuffering) {
+                // A composite ML-DSA signature has no streaming signer in the engine; the file
+                // is read whole, as Android does (4.5.3), up to a fixed ceiling.
+                if (total > EncryptOps.COMPOSITE_BUFFER_LIMIT) error(tr("d_file_err_composite_too_large"))
+                val data = ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { it.readAllBytes() }
+                Files.write(tmp, encryptOps.encryptBytes(plan, data, signerPassphrase, armor, file.name))
+            } else {
+                ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { input ->
+                    Files.newOutputStream(tmp).use { output ->
+                        encryptOps.encryptStream(plan, input, output, signerPassphrase, armor, file.name)
+                    }
                 }
             }
         } catch (t: Throwable) {
@@ -86,7 +89,7 @@ class FileCryptoOps(
         FileOutcome(
             file, out, true,
             trQuantity("d_file_encrypted_to", recipientFingerprints.size) +
-                (if (signerRing != null) tr("d_file_signed_suffix") else "")
+                (if (plan.signs) tr("d_file_signed_suffix") else "")
         )
     } catch (t: Throwable) {
         cancelledOrError(file, t) { tr("d_file_err_encrypt") }
@@ -106,14 +109,13 @@ class FileCryptoOps(
         signerPassphrase: String?,
         armor: Boolean,
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
-        isCancelled: () -> Boolean = NOT_CANCELLED
+        isCancelled: () -> Boolean = NOT_CANCELLED,
+        compositeInV1Decision: Boolean? = true
     ): FileOutcome = try {
-        val rings = recipientFingerprints.map {
-            repo.loadEncryptionRecipientRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
+        val signer = signerFingerprint?.let {
+            repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
         }
-        val signerRing = signerFingerprint?.let {
-            repo.loadSecretKeyRing(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
-        }
+        val plan = encryptOps.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision)
         val tarName = folder.fileName.toString() + ".tar"
         // A cheap stat walk gives a determinate total; tar headers add a little, but for a
         // progress bar the payload bytes are what the user watches move.
@@ -132,17 +134,17 @@ class FileCryptoOps(
         }, "pgpony-tar-encrypt").apply { isDaemon = true; start() }
 
         try {
-            ProgressInputStream(piped, total, isCancelled, onProgress).use { input ->
-                Files.newOutputStream(tmp).use { output ->
-                    crypto.encryptStream(
-                        input = input,
-                        output = output,
-                        recipientPublicKeys = rings,
-                        signingSecretKey = signerRing,
-                        passphrase = signerPassphrase,
-                        filename = tarName,
-                        armor = armor
-                    )
+            if (plan.needsBuffering) {
+                // Composite ML-DSA signer: the tar is built in memory under the same ceiling as
+                // a single file (the engine has no streaming composite signer).
+                if (total > EncryptOps.COMPOSITE_BUFFER_LIMIT) error(tr("d_file_err_composite_too_large"))
+                val data = ProgressInputStream(piped, total, isCancelled, onProgress).use { it.readAllBytes() }
+                Files.write(tmp, encryptOps.encryptBytes(plan, data, signerPassphrase, armor, tarName))
+            } else {
+                ProgressInputStream(piped, total, isCancelled, onProgress).use { input ->
+                    Files.newOutputStream(tmp).use { output ->
+                        encryptOps.encryptStream(plan, input, output, signerPassphrase, armor, tarName)
+                    }
                 }
             }
         } catch (t: Throwable) {
@@ -159,7 +161,7 @@ class FileCryptoOps(
         FileOutcome(
             folder, out, true,
             trQuantity("d_file_folder_encrypted", recipientFingerprints.size) +
-                (if (signerRing != null) tr("d_file_signed_suffix") else "")
+                (if (plan.signs) tr("d_file_signed_suffix") else "")
         )
     } catch (t: Throwable) {
         cancelledOrError(folder, t) { tr("d_file_err_encrypt") }
@@ -208,7 +210,12 @@ class FileCryptoOps(
             val result = crypto.decryptArmored(
                 armoredFromText, secretRings, passphrase, publicRings, repo.compositePrimarySecretRings()
             )
-            val sigNote = sigNote(result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw)
+            val sigNote = SignatureSummary.fileNote(
+                SignatureSummary.of(
+                    repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
+                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+                )
+            )
             val mime = MimeParser.parse(result.data)
             if (TarStreamer.looksLikeTar(result.data)) {
                 // A folder encrypted with §3a arrives as a ustar tarball — extract it to a
@@ -245,14 +252,24 @@ class FileCryptoOps(
             val result = try {
                 ProgressInputStream(Files.newInputStream(file), total, isCancelled, onProgress).use { input ->
                     Files.newOutputStream(tmp).use { output ->
-                        crypto.decryptStream(input, output, secretRings, passphrase, publicRings)
+                        // 3.0.0 (Android 4.5.0, #36): the streaming path gets the raw composite and
+                        // v4 algo-35 secret rings too, so a file encrypted to such a key opens
+                        // here the same as pasted text does.
+                        crypto.decryptStream(
+                            input, output, secretRings, passphrase, publicRings, repo.compositePrimarySecretRings()
+                        )
                     }
                 }
             } catch (t: Throwable) {
                 Files.deleteIfExists(tmp)
                 throw t
             }
-            val sigNote = sigNote(result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw)
+            val sigNote = SignatureSummary.fileNote(
+                SignatureSummary.of(
+                    repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
+                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+                )
+            )
             // Peek the plaintext head: a §3a folder tarball extracts to a sibling folder,
             // streamed straight off the temp file so a huge archive never re-enters the heap.
             val head = Files.newInputStream(tmp).use { it.readNBytes(512) }
@@ -307,13 +324,6 @@ class FileCryptoOps(
         else -> file.name + ".decrypted"
     }
 
-    private fun sigNote(verified: Boolean, has: Boolean, keyId: String?, raw: Long?): String = when {
-        verified -> tr("d_file_sig_verified") + (keyId?.let { tr("d_file_sig_id_suffix", it) } ?: "")
-        has -> tr("d_file_sig_unheld") +
-            (raw?.let { tr("d_file_sig_id_suffix", String.format("%016X", it)) } ?: "")
-        else -> ""
-    }
-
     /** First 16 KB as text if it looks like text (no NUL bytes), else null. */
     private fun peekText(file: Path): String? = runCatching {
         Files.newInputStream(file).use { ins ->
@@ -331,10 +341,27 @@ class FileCryptoOps(
         signerPassphrase: String?,
         armor: Boolean
     ): FileOutcome = try {
-        val ring = repo.loadSecretKeyRing(signerFingerprint)
+        val signer = repo.byFingerprint(signerFingerprint)
             ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
-        val sig = Files.newInputStream(file).use { input ->
-            SigningService.shared.signDetachedStream(input, ring, signerPassphrase, armor = armor)
+        KeyUsePolicy.requireUsable(emptyList(), signer)
+        val sig = if (signer.algorithm.isCompositeSign) {
+            // 3.0.0 (Android 4.5.3, #65): a composite ML-DSA key signs files through the
+            // composite signer; the classical stream signer cannot see an ML-DSA key.
+            val info = repo.loadCompositeKeyInfo(signer.fingerprint, signerPassphrase?.toCharArray())
+                ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
+            val secret = info.compositeSecret ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
+            if (Files.size(file) > EncryptOps.COMPOSITE_BUFFER_LIMIT) error(tr("d_file_err_composite_too_large"))
+            val data = Files.readAllBytes(file)
+            if (armor) com.pgpony.android.crypto.pqc.CompositeDocumentSigner
+                .signDetachedArmored(info.suite, secret, info.fingerprint, data).toByteArray(Charsets.UTF_8)
+            else com.pgpony.android.crypto.pqc.CompositeDocumentSigner
+                .signDetached(info.suite, secret, info.fingerprint, data)
+        } else {
+            val ring = repo.loadSecretKeyRing(signerFingerprint)
+                ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
+            Files.newInputStream(file).use { input ->
+                SigningService.shared.signDetachedStream(input, ring, signerPassphrase, armor = armor)
+            }
         }
         val out = uniquePath(file.resolveSibling(file.name + if (armor) ".asc" else ".sig"))
         Files.write(out, sig)
@@ -401,9 +428,11 @@ class FileCryptoOps(
         val result = com.pgpony.android.crypto.card.CardDecryptService.shared.decryptBytes(
             session, cardRing, pin, encryptedBytes, verificationKeys = publicRings
         )
-        val sigNote = sigNote(
-            result.signatureVerified, result.hadSignature,
-            result.signerKeyID.takeIf { result.signerKnown }, null
+        val sigNote = SignatureSummary.fileNote(
+            SignatureSummary.of(
+                repo, result.signatureVerified, result.hadSignature,
+                result.signerKeyID.takeIf { result.signerKnown }, null
+            )
         )
         val mime = MimeParser.parse(result.data)
         if (mime != null && (mime.hasAttachments || !mime.body.isNullOrBlank())) {
@@ -444,16 +473,16 @@ class FileCryptoOps(
         cardSigningPublicKey: org.bouncycastle.openpgp.PGPPublicKey,
         armor: Boolean
     ): FileOutcome = try {
-        val rings = recipientFingerprints.map {
-            repo.loadEncryptionRecipientRing(it) ?: error(tr("d_file_err_recipient_ring", it.take(16)))
-        }
+        KeyUsePolicy.requireUsable(recipientFingerprints.mapNotNull { repo.byFingerprint(it) }, null)
+        val recipients = repo.requireRecipients(recipientFingerprints)
         val out = uniquePath(file.resolveSibling(file.name + if (armor) ".asc" else ".gpg"))
         Files.newInputStream(file).use { input ->
             Files.newOutputStream(out).use { output ->
                 crypto.encryptStream(
                     input = input,
                     output = output,
-                    recipientPublicKeys = rings,
+                    recipientPublicKeys = recipients.rings,
+                    v4Algo35Recipients = recipients.v4Algo35,
                     filename = file.name,
                     armor = armor,
                     enableCompression = false,
@@ -484,13 +513,17 @@ class FileCryptoOps(
                 }
             }
         when (result) {
-            is VerificationResult.Verified -> FileOutcome(
-                contentFile, null, true,
-                tr(
-                    "d_file_verify_ok", result.signerName ?: "",
-                    result.signerEmail ?: "?", result.signerKeyID
+            is VerificationResult.Verified -> {
+                // 3.0.0 (Android 4.5.3, #57): valid, but say so when the signer key is unconfirmed.
+                val confirmed = SignatureSummary.fromVerification(repo, result).state == SignatureSummary.State.VERIFIED
+                FileOutcome(
+                    contentFile, null, true,
+                    tr(
+                        if (confirmed) "d_file_verify_ok" else "d_file_verify_ok_unconfirmed",
+                        result.signerName ?: "", result.signerEmail ?: "?", result.signerKeyID
+                    )
                 )
-            )
+            }
             is VerificationResult.Invalid -> FileOutcome(
                 contentFile, null, false, tr("d_file_verify_invalid")
             )

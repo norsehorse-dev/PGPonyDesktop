@@ -92,26 +92,33 @@ object Cli {
             // reasonably recent gpg can `gpg -d` the result — the D6 backup rationale.
             crypto.encryptSymmetric(bytes, pass, armor = armor, useAead = false, useArgon2 = false)
         } else {
-            val rings = recipients.map { sel ->
-                val e = resolveOne(repo, sel, requireSecret = false)
-                repo.loadEncryptionRecipientRing(e.fingerprint)
-                    ?: throw CliError(ExitCode.FAILED, "no public key material for ${e.shortFingerprint}")
+            // 3.0.0: EncryptOps settles recipients (every selected key must be usable, v4 algo-35
+            // keys on their own channel), the expired-key rule and the signer, composite ML-DSA
+            // included. The CLI cannot prompt, so a composite signature to a v4-only recipient is
+            // kept and a warning goes to stderr (the "sign and warn" decision).
+            val fps = recipients.map { sel -> resolveOne(repo, sel, requireSecret = false).fingerprint }
+            val signer = signAs?.let { sel -> resolveOne(repo, sel, requireSecret = true) }
+            val pass = if (signer != null) passphraseOrNull(o) else null
+            val ops = EncryptOps(repo)
+            val plan = try {
+                ops.plan(fps, signer, pass, compositeInV1Decision = true)
+            } catch (e: RecipientLoadException) {
+                throw CliError(ExitCode.FAILED, e.message ?: "a recipient could not be loaded")
+            } catch (e: ExpiredKeyException) {
+                throw CliError(ExitCode.FAILED, e.message ?: "an expired key was selected")
+            } catch (e: IllegalStateException) {
+                throw CliError(ExitCode.FAILED, e.message ?: "the signing key could not be loaded")
             }
-            val signerRing = signAs?.let { sel ->
-                val e = resolveOne(repo, sel, requireSecret = true)
-                if (e.algorithm.isCompositeSign)
-                    throw CliError(ExitCode.USAGE, "composite ML-DSA keys cannot sign while encrypting; sign separately with `pgpony sign` or pick a classical key")
-                repo.loadSecretKeyRing(e.fingerprint)
-                    ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} could not be loaded")
+            if (plan.compositeInSeipdV1) {
+                err("warning: the ML-DSA signature goes to a v4 recipient; PGPony reads it, GnuPG reports an error and Thunderbird cannot open the message")
             }
-            val pass = if (signerRing != null) passphraseOrNull(o) else null
-            val bout = java.io.ByteArrayOutputStream()
-            crypto.encryptStream(
-                input = bytes.inputStream(), output = bout,
-                recipientPublicKeys = rings, signingSecretKey = signerRing,
-                passphrase = pass, filename = fileName(input), armor = armor
-            )
-            bout.toByteArray()
+            if (plan.needsBuffering) {
+                ops.encryptBytes(plan, bytes, pass, armor, fileName(input))
+            } else {
+                val bout = java.io.ByteArrayOutputStream()
+                ops.encryptStream(plan, bytes.inputStream(), bout, pass, armor, fileName(input))
+                bout.toByteArray()
+            }
         }
         writeAll(outPath, out)
         ExitCode.OK
@@ -127,8 +134,15 @@ object Cli {
         val pass = passphraseOrNull(o)
 
         outStream(outPath).use { output ->
-            val result = crypto.decryptStream(readAll(input).inputStream(), output, secretRings, pass, publicRings)
-            reportSignature(result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw, all)
+            val result = crypto.decryptStream(
+                readAll(input).inputStream(), output, secretRings, pass, publicRings, repo.compositePrimarySecretRings()
+            )
+            reportSignature(
+                SignatureSummary.of(
+                    repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
+                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+                )
+            )
         }
         ExitCode.OK
     }
@@ -144,6 +158,9 @@ object Cli {
         val outPath = o.value("--output", "-o")
 
         val e = resolveOne(repo, signAs, requireSecret = true)
+        if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(e)) {
+            throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} has expired (turn on Allow expired keys in Settings to sign with it)")
+        }
         if (e.algorithm.isCompositeSign) {
             val info = repo.loadCompositeKeyInfo(e.fingerprint, passphraseOrNull(o)?.toCharArray())
                 ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} could not be loaded")
@@ -203,7 +220,11 @@ object Cli {
         }
         when (result) {
             is VerificationResult.Verified -> {
-                out("Good signature — ${result.signerName ?: ""} <${result.signerEmail ?: "?"}> · ${result.signerKeyID}")
+                val confirmed = SignatureSummary.fromVerification(repo, result).state == SignatureSummary.State.VERIFIED
+                out(
+                    "Good signature — ${result.signerName ?: ""} <${result.signerEmail ?: "?"}> · ${result.signerKeyID}" +
+                        if (confirmed) "" else " (signer key not verified)"
+                )
                 ExitCode.OK
             }
             is VerificationResult.Invalid -> { err("BAD signature — ${result.reason}"); ExitCode.UNVERIFIED }
@@ -333,16 +354,14 @@ object Cli {
 
     // ── Signature reporting (decrypt) ───────────────────────────────────
 
-    private fun reportSignature(
-        verified: Boolean, has: Boolean, signerKeyID: String?, raw: Long?, keys: List<PGPKeyEntity>
-    ) {
-        when {
-            verified -> {
-                val who = keys.firstOrNull { it.longKeyId.equals(signerKeyID, ignoreCase = true) }?.userID
-                err("Good signature" + (who?.let { " — $it" } ?: (signerKeyID?.let { " — $it" } ?: "")))
-            }
-            has -> err("Signed by an unheld key" + (raw?.let { " (${String.format("%016X", it)})" } ?: "") + " — not verified")
-            else -> err("No signature")
+    private fun reportSignature(s: SignatureSummary.Summary) {
+        val who = s.signerLabel?.let { " — $it" } ?: ""
+        when (s.state) {
+            SignatureSummary.State.VERIFIED -> err("Good signature$who")
+            SignatureSummary.State.UNCONFIRMED -> err("Good signature$who (signer key not verified)")
+            SignatureSummary.State.UNHELD -> err("Signed by an unheld key" + (s.keyIdHex?.let { " ($it)" } ?: "") + " — not verified")
+            SignatureSummary.State.INVALID -> err("BAD signature$who")
+            SignatureSummary.State.NONE -> err("No signature")
         }
     }
 

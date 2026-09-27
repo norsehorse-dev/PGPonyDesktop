@@ -32,6 +32,10 @@ class FileCryptoTest {
     fun binaryFileSignedRoundTrip() = runBlocking {
         val (db, repo, dir) = setup()
         val key = repo.gen("File RT", "filert@pgpony.app")
+        // 3.0.0 (Android 4.5.3, #57): a signature only reads VERIFIED from a key the user has
+        // confirmed; an untouched own key reads "signed, key not verified" (see
+        // signatureFromUnconfirmedKeyReadsNotVerified).
+        repo.updateTrustLevel(key.fingerprint, com.pgpony.android.data.TrustLevel.ULTIMATE)
         val ops = FileCryptoOps(repo)
 
         val payload = Random(42).nextBytes(200_000)   // deterministic 200 KB binary
@@ -83,6 +87,10 @@ class FileCryptoTest {
     fun detachedFileSignatureVerifiesAndTamperFails() = runBlocking {
         val (db, repo, dir) = setup()
         val key = repo.gen("Detached File", "detfile@pgpony.app")
+        // 3.0.0 (Android 4.5.3, #57): a signature only reads VERIFIED from a key the user has
+        // confirmed; an untouched own key reads "signed, key not verified" (see
+        // signatureFromUnconfirmedKeyReadsNotVerified).
+        repo.updateTrustLevel(key.fingerprint, com.pgpony.android.data.TrustLevel.ULTIMATE)
         val ops = FileCryptoOps(repo)
 
         val artifact = dir.resolve("artifact.bin")
@@ -134,6 +142,22 @@ class FileCryptoTest {
         assertEquals(1, fallbackPairs.size)
         assertEquals(renamedSig, fallbackPairs.single().first)
         assertTrue(ops.verifyFileDetached(renamedSig, other).ok)
+        db.close()
+    }
+
+    @Test
+    fun signatureFromUnconfirmedKeyReadsNotVerified() = runBlocking {
+        val (db, repo, dir) = setup()
+        val key = repo.gen("Unconfirmed", "unconfirmed@pgpony.app")
+        val ops = FileCryptoOps(repo)
+        val original = dir.resolve("memo.txt")
+        Files.writeString(original, "signed by a key nobody confirmed")
+        val enc = ops.encryptFile(original, listOf(key.fingerprint), key.fingerprint, "test-passphrase", armor = false)
+        assertTrue(enc.ok, enc.detail)
+        val dec = ops.decryptFile(enc.output!!, "test-passphrase")
+        assertTrue(dec.ok, dec.detail)
+        assertTrue(dec.detail.contains("key not verified"), dec.detail)
+        assertFalse(dec.detail.contains("VERIFIED"), dec.detail)
         db.close()
     }
 }

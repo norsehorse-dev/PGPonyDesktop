@@ -720,4 +720,10 @@
     <string name="d_cards_move_done">Déplacée vers la carte — %1$s</string>
     <string name="d_cards_move_no_secret">Impossible de charger le matériel privé de la clé.</string>
 
+    <string name="d_err_recipient_unusable">Aucune clé vers laquelle PGPony peut chiffrer, donc rien n’a été chiffré : %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · signé, clé non vérifiée</string>
+    <string name="d_file_sig_invalid"> · signature INVALIDE</string>
+    <string name="d_file_err_composite_too_large">La signature ML-DSA charge tout le fichier en mémoire et est limitée à 512 Mo. Signez un fichier plus petit ou choisissez une clé de signature classique.</string>
+    <string name="d_file_verify_ok_unconfirmed">Signé, clé non vérifiée : %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">Déchiffré · signé, clé non vérifiée</string>
 </resources>

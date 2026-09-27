@@ -356,6 +356,9 @@ With no release candidates there is no field time before production, so the self
 the schema upgrade (2.3) and anything that deletes (3.1, 3.2). Both are tested against a copy of
 a real, populated keyring, never only a fresh one.
 
+Progress: stage 1 is written (2.1 to 2.11); see `docs/phases/PHASE_D22_NOTES.md`. Checkpoint 1
+(sync, seam, schema) is green on the Mac; checkpoint 2 awaits its build.
+
 ## 12. Features (decided: all three, inside 3.0.0)
 
 ### F1. Pair with your phone (L)

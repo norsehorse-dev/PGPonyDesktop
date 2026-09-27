@@ -110,6 +110,14 @@ fun SettingsScreen(state: DesktopState) {
         }
         Spacer(Modifier.height(Spacing.Large))
 
+        // ── Keys (3.0.0) ────────────────────────────────────────────────
+        // Android 4.5.3: expired keys are refused for signing and encrypting unless this is on.
+        // Stage 2 of 3.0.0 adds the destructive-action and passphrase-cache controls here.
+        SectionCard(tr("settings_section_keys")) {
+            KeysSection()
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
         // ── SSH agent (D15) ─────────────────────────────────────────────
         SectionCard(tr("d_settings_section_ssh_agent"), tr("d_settings_ssh_agent_note")) {
             SshAgentSection(state)
@@ -206,6 +214,28 @@ fun SettingsScreen(state: DesktopState) {
 
     if (showExportBackup) ExportBackupDialog(state) { showExportBackup = false }
     if (showRestoreBackup) RestoreBackupDialog(state, restoreInitialFile) { showRestoreBackup = false }
+}
+
+@Composable
+private fun KeysSection() {
+    var allowExpired by remember { mutableStateOf(KeyUsePolicy.allowExpiredKeys()) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(
+            checked = allowExpired,
+            onCheckedChange = {
+                KeyUsePolicy.setAllowExpiredKeys(it)
+                allowExpired = it
+            }
+        )
+        Column {
+            Text(tr("settings_allow_expired_title"), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                tr("settings_allow_expired_subtitle"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 // ── About ──────────────────────────────────────────────────────────────

@@ -19,6 +19,8 @@
 
 package com.pgpony.desktop
 
+import com.pgpony.android.crypto.CertificateBindings
+import com.pgpony.android.crypto.CertificateMerge
 import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.KeyExpirationService
 import com.pgpony.android.crypto.PGPCryptoService
@@ -29,20 +31,28 @@ import com.pgpony.android.crypto.pqc.CompositeKeyFacade
 import com.pgpony.android.crypto.pqc.CompositePrimaryKeyGen
 import com.pgpony.android.crypto.pqc.CompositeSigPacket
 import com.pgpony.android.crypto.pqc.CompositeSignSuite
+import com.pgpony.android.crypto.pqc.V4Algo35Recipient
 import com.pgpony.android.data.PGPDatabase
 import com.pgpony.android.data.PGPKeyEntity
+import com.pgpony.android.data.RemovedUserIdStore
 import com.pgpony.android.data.RevocationReason
 import com.pgpony.android.data.TrustLevel
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.bouncycastle.openpgp.PGPPublicKeyRing
 import org.bouncycastle.openpgp.PGPSecretKeyRing
+import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 /** Mirrors the Android ImportResolution vocabulary (card pairing arrives D7). */
+/** 3.0.0: a selected recipient gave no key to encrypt to. The operation stops; nothing is
+ *  encrypted to the others (Android 4.6.1, #67). The message names every such key. */
+class RecipientLoadException(val keys: List<String>) :
+    Exception(tr("d_err_recipient_unusable", keys.joinToString(", ")))
+
 enum class ImportResolution { INSERTED, UPGRADED_TO_KEY_PAIR, MERGED_NEW_MATERIAL, ALREADY_IN_KEYRING, FAILED }
 
 data class ImportReport(
@@ -200,6 +210,22 @@ class DesktopKeyRepository(
         importBlocks(splitArmoredBlocks(text))
 
     suspend fun importBytes(data: ByteArray): ImportReport {
+        // 3.0.0: a BINARY composite ML-DSA or v4 algo-35 key cannot go through BouncyCastle's
+        // explode; armor it as-is and take the raw-octet import path.
+        val looksArmored = data.take(64).toByteArray().toString(Charsets.ISO_8859_1).contains("-----BEGIN PGP")
+        if (!looksArmored && runCatching {
+                CompositeKeyFacade.isCompositePrimary(data) || CompositeKeyFacade.hasV4Algo35Subkey(data)
+            }.getOrDefault(false)
+        ) {
+            val header = if (CompositeKeyFacade.hasSecret(data)) "PRIVATE" else "PUBLIC"
+            return importBlocks(
+                listOf(
+                    CompositeSigPacket.armor(
+                        "-----BEGIN PGP $header KEY BLOCK-----", "-----END PGP $header KEY BLOCK-----", data
+                    )
+                )
+            )
+        }
         val blocks = runCatching { crypto.explodeToArmoredKeys(data) }.getOrDefault(emptyList())
         if (blocks.isNotEmpty()) return importBlocks(blocks)
         val asText = data.toString(Charsets.UTF_8)
@@ -227,6 +253,35 @@ class DesktopKeyRepository(
      * public-only row upgrades in place; a held secret is never overwritten.
      */
     suspend fun importArmoredKeyDetailed(block: String): ImportResolution {
+        // 3.0.0 (Android 4.4.0 RC3 #30/#31 and 4.5.0 item 14 #56): composite ML-DSA keys and v4
+        // Ed25519 + algo-35 interop keys are not BouncyCastle rings. They are recognized first
+        // and stored as raw octets, exactly as Android does; everything else falls through to
+        // the BouncyCastle path below. Before 3.0.0 desktop sent them down that path, which
+        // failed on a composite key and silently dropped the algo-35 subkey of a v4 key.
+        compositeFromArmored(block)?.let { (bytes, info) ->
+            val expiresAt = info.expirationSeconds?.let { info.creationTimeMillis + it * 1000 }
+            return importRawKey(
+                bytes = bytes,
+                publicBytes = CompositeKeyFacade.publicRingOf(bytes),
+                fingerprint = info.fingerprintHex.uppercase(),
+                userId = info.userIds.firstOrNull() ?: "",
+                algorithm = if (info.primaryAlgId == 31) KeyAlgorithm.MLDSA87_ED448_V6 else KeyAlgorithm.MLDSA65_ED25519_V6,
+                createdAt = info.creationTimeMillis,
+                expiresAt = expiresAt
+            )
+        }
+        v4Algo35FromArmored(block)?.let { bytes ->
+            val meta = v4Algo35Meta(bytes) ?: return ImportResolution.FAILED
+            return importRawKey(
+                bytes = bytes,
+                publicBytes = CompositeKeyFacade.v4Algo35PublicRingOf(bytes),
+                fingerprint = meta.fingerprintHex,
+                userId = meta.userId,
+                algorithm = KeyAlgorithm.MLKEM768_X25519_V4,
+                createdAt = meta.createdAtMs,
+                expiresAt = meta.expiresAtMs
+            )
+        }
         val result = crypto.importArmoredKey(block)
         val fingerprint = result.fingerprint
         val publicArmor = result.publicKeyRing?.let { crypto.exportArmoredPublicKey(it) }
@@ -266,68 +321,183 @@ class DesktopKeyRepository(
         }
     }
 
+    // ── Raw-octet key types (composite ML-DSA, v4 algo-35), Android KeyRepository ported ──
+
+    private fun compositeFromArmored(armoredText: String): Pair<ByteArray, CompositeKeyFacade.Info>? =
+        try {
+            // Android 4.6.0 (item 17.1): only components the primary verifiably bound.
+            val bytes = CertificateBindings.sanitized(CompositeSigPacket.dearmor(armoredText))
+            if (CompositeKeyFacade.isCompositePrimary(bytes)) bytes to CompositeKeyFacade.parse(bytes) else null
+        } catch (_: Exception) { null }
+
+    private fun v4Algo35FromArmored(armoredText: String): ByteArray? =
+        try {
+            val bytes = CertificateBindings.sanitized(CompositeSigPacket.dearmor(armoredText))
+            if (CompositeKeyFacade.hasV4Algo35Subkey(bytes) && !CompositeKeyFacade.isCompositePrimary(bytes)) bytes
+            else null
+        } catch (_: Exception) { null }
+
+    private data class V4Algo35Meta(
+        val fingerprintHex: String,
+        val userId: String,
+        val createdAtMs: Long,
+        val expiresAtMs: Long?
+    )
+
+    private fun v4Algo35Meta(bytes: ByteArray): V4Algo35Meta? {
+        return try {
+            // BouncyCastle cannot parse the algo-35 subkey, so read the primary from the
+            // packets before it (public or secret).
+            val base = CompositeKeyFacade.v4Algo35BaseBytes(bytes) ?: return null
+            val pubKey = if (CompositeKeyFacade.hasSecret(bytes)) {
+                PGPSecretKeyRing(base, BcKeyFingerprintCalculator()).publicKey
+            } else {
+                PGPPublicKeyRing(base, BcKeyFingerprintCalculator()).publicKey
+            }
+            val fpHex = pubKey.fingerprint.joinToString("") { "%02X".format(it) }
+            val uid = pubKey.userIDs.asSequence().firstOrNull() ?: ""
+            val createdMs = pubKey.creationTime.time
+            val valid = pubKey.validSeconds
+            V4Algo35Meta(fpHex, uid, createdMs, if (valid > 0) createdMs + valid * 1000 else null)
+        } catch (_: Exception) { null }
+    }
+
+    /** Store a raw-octet key (armored at rest like every desktop key) and resolve it against
+     *  the keyring: insert, upgrade a public-only row to a key pair, or already present. */
+    private suspend fun importRawKey(
+        bytes: ByteArray,
+        publicBytes: ByteArray,
+        fingerprint: String,
+        userId: String,
+        algorithm: KeyAlgorithm,
+        createdAt: Long,
+        expiresAt: Long?
+    ): ImportResolution {
+        val hasPrivate = CompositeKeyFacade.hasSecret(bytes)
+        val armoredPublic = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----", "-----END PGP PUBLIC KEY BLOCK-----", publicBytes
+        )
+        val armoredSecret = if (hasPrivate) CompositeSigPacket.armor(
+            "-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----", bytes
+        ) else null
+        val existing = byFingerprint(fingerprint)
+        if (existing != null) {
+            if (hasPrivate && !existing.isKeyPair) {
+                materials.storePublic(existing.fingerprint, armoredPublic)
+                materials.storeSecret(existing.fingerprint, armoredSecret!!)
+                dao.update(existing.copy(isKeyPair = true, armoredPublicKey = armoredPublic))
+                return ImportResolution.UPGRADED_TO_KEY_PAIR
+            }
+            return ImportResolution.ALREADY_IN_KEYRING
+        }
+        materials.storePublic(fingerprint, armoredPublic)
+        armoredSecret?.let { materials.storeSecret(fingerprint, it) }
+        val parsed = PGPKeyEntity.parseUserID(userId)
+        dao.insert(
+            PGPKeyEntity(
+                id = UUID.randomUUID().toString(),
+                fingerprint = fingerprint,
+                userID = userId,
+                userName = parsed.first,
+                userEmail = parsed.second,
+                algorithm = algorithm,
+                isKeyPair = hasPrivate,
+                createdAt = createdAt,
+                expiresAt = expiresAt,
+                armoredPublicKey = armoredPublic
+            )
+        )
+        return ImportResolution.INSERTED
+    }
+
     /**
-     * D2c — the dedup-service subset for re-imports: byte-identical public material reports
-     * ALREADY_IN_KEYRING; differing material (new sigs, UIDs, subkeys, revocations) joins into
-     * the stored ring via BC's ring merge — trust, notes, secret material, and card backing all
-     * survive because only armoredPublicKey/material change. A held secret is never touched.
+     * The re-import and refresh merge, ported from Android 4.6.0
+     * (KeyDeduplicationService.resolveDuplicate, items 17.1, 12 and 24).
+     *
+     * The stored copy is no longer joined with whatever arrived. The result is
+     * CertificateMerge's verified union of the two sanitized copies, so a server can neither
+     * add a component the owner never bound nor drop one they did:
+     *   * public-only keys keep everything stored and gain new subkeys, new User IDs (unless
+     *     the user removed them, RemovedUserIdStore) and new signatures;
+     *   * the user's own key pairs are authoritative: a fetched copy adds only revocations and
+     *     third-party certifications, never User IDs, subkeys, self-signatures or expiry.
+     * A fetched copy that would remove or shorten a primary expiry the row already has is
+     * refused (the item 24 guard), unless it carries a revocation the row does not have yet:
+     * a revocation always lands. Trust, notes, secret material and card backing survive
+     * because only armoredPublicKey, expiresAt and the revocation flags change.
      */
     private suspend fun mergeIfNewMaterial(
         existing: PGPKeyEntity,
         incomingRing: PGPPublicKeyRing?
     ): ImportResolution {
         if (incomingRing == null) return ImportResolution.ALREADY_IN_KEYRING
-        val storedRing = loadPublicKeyRing(existing.fingerprint)
-        if (storedRing == null) {
-            // D7 Fix — the row exists but holds NO public material yet: a card-backed row from
+        // The merge runs on the stored OCTETS, not a BouncyCastle ring: a v4 key's algo-35
+        // subkey does not survive a BouncyCastle round trip, and must survive a refresh.
+        val stored = rawPublicBytes(existing.fingerprint)
+        if (stored == null) {
+            // D7 Fix: the row exists but holds NO public material yet: a card-backed row from
             // pairing (or the moment after on-card keygen). This IS the arrival of its public
-            // certificate, so store it rather than no-op'ing to ALREADY_IN_KEYRING (which left
-            // the card key unusable as a recipient / verify key).
-            val armor = crypto.exportArmoredPublicKey(incomingRing)
+            // certificate, so store it (in its verified form) rather than no-op'ing to
+            // ALREADY_IN_KEYRING, which left the card key unusable as a recipient / verify key.
+            val clean = runCatching {
+                PGPPublicKeyRing(CertificateBindings.sanitized(incomingRing.encoded), BcKeyFingerprintCalculator())
+            }.getOrNull() ?: incomingRing
+            val armor = crypto.exportArmoredPublicKey(clean)
             materials.storePublic(existing.fingerprint, armor)
-            val nowRevoked = runCatching { incomingRing.publicKey.hasRevocation() }.getOrDefault(false)
-            val expiresAt = incomingRing.publicKey?.let { k ->
-                k.validSeconds.takeIf { it > 0 }?.let { k.creationTime.time + it * 1000L }
-            }
+            val nowRevoked = runCatching { clean.publicKey.hasRevocation() }.getOrDefault(false)
             dao.update(
                 existing.copy(
                     armoredPublicKey = armor,
-                    expiresAt = expiresAt,
+                    expiresAt = primaryExpiry(clean),
                     isRevoked = existing.isRevoked || nowRevoked,
                     revokedAt = if (!existing.isRevoked && nowRevoked) System.currentTimeMillis() else existing.revokedAt
                 )
             )
             return ImportResolution.MERGED_NEW_MATERIAL
         }
-        if (storedRing.encoded.contentEquals(incomingRing.encoded)) {
+        // Composite ML-DSA primaries do not round-trip the BouncyCastle refresh path (Android
+        // makes the same exception); they keep what is stored.
+        if (CompositeKeyFacade.isCompositePrimary(stored)) return ImportResolution.ALREADY_IN_KEYRING
+        if (stored.contentEquals(incomingRing.encoded)) return ImportResolution.ALREADY_IN_KEYRING
+        val merged = CertificateMerge.merge(
+            stored = stored,
+            fetched = incomingRing.encoded,
+            isKeyPair = existing.isKeyPair,
+            removedUserIds = RemovedUserIdStore.removed(existing.fingerprint)
+        )
+        if (merged.contentEquals(stored) || merged.contentEquals(CertificateBindings.sanitized(stored))) {
             return ImportResolution.ALREADY_IN_KEYRING
         }
-        val mergedRing = runCatching { PGPPublicKeyRing.join(storedRing, incomingRing) }
+        val mergedRing = runCatching { PGPPublicKeyRing(merged, BcKeyFingerprintCalculator()) }
             .getOrNull() ?: return ImportResolution.ALREADY_IN_KEYRING
-        if (mergedRing.encoded.contentEquals(storedRing.encoded)) {
-            return ImportResolution.ALREADY_IN_KEYRING   // nothing actually new
-        }
-        val mergedArmor = crypto.exportArmoredPublicKey(mergedRing)
-        materials.storePublic(existing.fingerprint, mergedArmor)
         val nowRevoked = runCatching { mergedRing.publicKey.hasRevocation() }.getOrDefault(false)
-        // D4 (Fix1) — expiry comes from the INCOMING ring's primary: the exact value Android
-        // hands to resolveDuplicate (KeyRefreshService derives fetchedExpiresAtMs from the
-        // FETCHED ring), so an upstream extension/removal lands on merge. Not the joined
-        // ring: BC's getValidSeconds picks the newest self-sig with a strict > on creation
-        // time, so a re-sign in the same second as the original ties and resolves by
-        // iteration order — the joined ring can report the stale value.
-        val newExpiresAt = incomingRing.publicKey?.let { k ->
-            k.validSeconds.takeIf { it > 0 }?.let { k.creationTime.time + it * 1000L }
-        }
+        val newlyRevoked = nowRevoked && !existing.isRevoked
+        // The expiry the fetched copy asserts. Taken from the INCOMING ring's primary, not the
+        // union (D4 Fix1): BC's getValidSeconds picks the newest self-sig with a strict > on
+        // creation time, so a re-sign in the same second as the original ties and the union can
+        // report the stale value.
+        val fetchedExpiresAt = primaryExpiry(incomingRing)
+        val downgrade = isExpiryDowngrade(existing.expiresAt, fetchedExpiresAt)
+        if (downgrade && !newlyRevoked) return ImportResolution.ALREADY_IN_KEYRING
+        val expiresAt = if (existing.isKeyPair || downgrade) existing.expiresAt else fetchedExpiresAt
+        // Armor the merged octets as they are, so packets BouncyCastle would drop are kept.
+        val mergedArmor = CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----", "-----END PGP PUBLIC KEY BLOCK-----", merged
+        )
+        materials.storePublic(existing.fingerprint, mergedArmor)
         dao.update(
             existing.copy(
                 armoredPublicKey = mergedArmor,
-                expiresAt = newExpiresAt,
+                expiresAt = expiresAt,
                 isRevoked = existing.isRevoked || nowRevoked,
-                revokedAt = if (!existing.isRevoked && nowRevoked) System.currentTimeMillis() else existing.revokedAt
+                revokedAt = if (newlyRevoked) System.currentTimeMillis() else existing.revokedAt
             )
         )
         return ImportResolution.MERGED_NEW_MATERIAL
+    }
+
+    private fun primaryExpiry(ring: PGPPublicKeyRing): Long? = ring.publicKey?.let { k ->
+        k.validSeconds.takeIf { it > 0 }?.let { k.creationTime.time + it * 1000L }
     }
 
     // ── D4 — keyserver support (Android KeyRepository keyserver section, ported) ──
@@ -507,11 +677,13 @@ class DesktopKeyRepository(
         recipientRings: List<PGPPublicKeyRing>,
         cardSession: com.pgpony.android.crypto.card.OpenPgpCardSession,
         cardPin: ByteArray,
-        cardSigningPublicKey: org.bouncycastle.openpgp.PGPPublicKey
+        cardSigningPublicKey: org.bouncycastle.openpgp.PGPPublicKey,
+        v4Algo35Recipients: List<V4Algo35Recipient> = emptyList()
     ): String = String(
         crypto.encrypt(
             data = message.toByteArray(Charsets.UTF_8),
             recipientPublicKeys = recipientRings,
+            v4Algo35Recipients = v4Algo35Recipients,
             cardSession = cardSession,
             cardPin = cardPin,
             cardSigningPublicKey = cardSigningPublicKey,
@@ -538,6 +710,23 @@ class DesktopKeyRepository(
         val secretRings = all.filter { it.isKeyPair }.mapNotNull { loadSecretKeyRing(it.fingerprint) }
         val publicRings = all.mapNotNull { loadPublicKeyRing(it.fingerprint) }
         return crypto.decryptArmored(armored, secretRings, passphrase, publicRings, compositePrimarySecretRings())
+    }
+
+    /**
+     * The keyring row whose primary OR any subkey has the 64-bit key id [keyIdHex] (16 hex).
+     * Signatures name the signing subkey, which is usually not the primary.
+     */
+    suspend fun findByKeyId(keyIdHex: String): PGPKeyEntity? {
+        val id = keyIdHex.trim()
+        val all = allKeys()
+        all.firstOrNull { it.longKeyId.equals(id, ignoreCase = true) }?.let { return it }
+        all.firstOrNull { it.fingerprint.endsWith(id, ignoreCase = true) }?.let { return it }
+        val wanted = runCatching { java.lang.Long.parseUnsignedLong(id, 16) }.getOrNull() ?: return null
+        for (e in all) {
+            val ring = loadPublicKeyRing(e.fingerprint) ?: continue
+            if (ring.publicKeys.asSequence().any { it.keyID == wanted }) return e
+        }
+        return null
     }
 
     // ── Ring loaders (desktop analogs of the Android load*KeyRing) ──────
@@ -599,12 +788,91 @@ class DesktopKeyRepository(
      * packet-level (BouncyCastle cannot load the composite primary) and unlocks with the passphrase.
      */
     suspend fun compositePrimarySecretRings(): List<ByteArray> =
-        allKeys().filter { it.isKeyPair && it.algorithm.isCompositeSign }
-            .mapNotNull { rawSecretBytes(it.fingerprint) }
+        allKeys().filter { it.isKeyPair }.mapNotNull { e ->
+            // Android loadCompositePrivateRing: a composite primary with secret material, or a
+            // v4 interop key (decrypt matches its 20-octet algo-35 subkey fingerprint).
+            rawSecretBytes(e.fingerprint)?.takeIf { raw ->
+                (CompositeKeyFacade.isCompositePrimary(raw) && CompositeKeyFacade.hasSecret(raw)) ||
+                    CompositeKeyFacade.hasV4Algo35Subkey(raw)
+            }
+        }
 
-    fun loadSecretKeyRing(fingerprint: String): PGPSecretKeyRing? =
-        materials.loadSecret(fingerprint)
-            ?.let { runCatching { crypto.importArmoredKey(it).secretKeyRing }.getOrNull() }
+    fun loadSecretKeyRing(fingerprint: String): PGPSecretKeyRing? {
+        val armored = materials.loadSecret(fingerprint) ?: return null
+        runCatching { crypto.importArmoredKey(armored).secretKeyRing }.getOrNull()?.let { return it }
+        // Android item 7 (#55): a v4 interop key carries an algo-35 subkey BouncyCastle cannot
+        // parse, so the whole ring fails to load. Fall back to the BouncyCastle-parseable base
+        // ring (Ed25519 primary + any classical subkey) so signing and classical decrypt still
+        // work; the algo-35 subkey is opened through the raw paths (decryptionRawRings).
+        val raw = runCatching { CompositeSigPacket.dearmor(armored) }.getOrNull() ?: return null
+        if (!CompositeKeyFacade.hasV4Algo35Subkey(raw)) return null
+        val base = CompositeKeyFacade.v4Algo35BaseBytes(raw) ?: return null
+        return runCatching { PGPSecretKeyRing(base, BcKeyFingerprintCalculator()) }.getOrNull()
+    }
+
+    /**
+     * 3.0.0: a v4 Ed25519 + algo-35 recipient's encryption material (Android
+     * KeyRepository.loadV4Algo35Recipient, 4.5.0 item 14 / 4.6.0 item 17.1). Such a key is not a
+     * BouncyCastle ring, so the encrypt paths carry it on the v4Algo35Recipients channel. The
+     * newest algo-35 subkey the primary bound with a verified, unrevoked, unexpired binding,
+     * under a usable primary. Null when the stored key has no such subkey.
+     */
+    suspend fun loadV4Algo35Recipient(fingerprint: String): V4Algo35Recipient? {
+        val raw = rawPublicBytes(fingerprint) ?: return null
+        if (!CompositeKeyFacade.hasV4Algo35Subkey(raw) || CompositeKeyFacade.isCompositePrimary(raw)) return null
+        val bindings = CertificateBindings.analyze(raw) ?: return null
+        val now = System.currentTimeMillis()
+        val subBody = CompositeKeyFacade.v4Algo35SubkeyBodies(raw).lastOrNull { body ->
+            if (!bindings.supported) return@lastOrNull true
+            val fpHex = org.bouncycastle.util.encoders.Hex.toHexString(CompositeKeyFacade.v4Algo35SubkeyFingerprint(body))
+            bindings.isUsableEncryptionKey(fpHex, now)
+        } ?: return null
+        return V4Algo35Recipient(
+            CompositeKeyFacade.v4Algo35PublicMaterial(subBody),
+            CompositeKeyFacade.v4Algo35SubkeyFingerprint(subBody)
+        )
+    }
+
+    /** What an encrypt site gets for its selected recipients (Android ShareRecipients.Loaded). */
+    class LoadedRecipients(
+        val rings: List<PGPPublicKeyRing>,
+        val v4Algo35: List<V4Algo35Recipient>,
+        /** Selected fingerprints that gave no encryption key at all. */
+        val unusable: List<String>
+    ) {
+        val isComplete: Boolean get() = unusable.isEmpty()
+    }
+
+    /**
+     * 3.0.0: the ONE recipient loader every desktop encrypt site uses (GUI text and files,
+     * folders, MIME bundles, watch folders, the CLI). A v4 algo-35 key goes on its own channel;
+     * everything else loads through loadEncryptionRecipientRing, which also reaches a composite
+     * ML-DSA key's ML-KEM subkey. The rule from Android 4.6.1 (#67): a selected recipient that
+     * cannot be loaded stops the operation and is named; it is never dropped.
+     */
+    suspend fun loadRecipients(fingerprints: Collection<String>): LoadedRecipients {
+        val rings = mutableListOf<PGPPublicKeyRing>()
+        val v4 = mutableListOf<V4Algo35Recipient>()
+        val unusable = mutableListOf<String>()
+        for (fp in fingerprints) {
+            loadV4Algo35Recipient(fp)?.let { v4.add(it); continue }
+            val r = loadEncryptionRecipientRing(fp)
+            if (r != null) rings.add(r) else unusable.add(fp)
+        }
+        return LoadedRecipients(rings, v4, unusable)
+    }
+
+    /** [loadRecipients], failing closed with an error that names every unusable key. */
+    suspend fun requireRecipients(fingerprints: Collection<String>): LoadedRecipients {
+        val loaded = loadRecipients(fingerprints)
+        if (!loaded.isComplete) {
+            val names = loaded.unusable.map { fp ->
+                byFingerprint(fp)?.let { it.userID.ifBlank { it.shortFingerprint } } ?: fp.take(16)
+            }
+            throw RecipientLoadException(names)
+        }
+        return loaded
+    }
 
     // ── Mutations (D2c — Android KeyRepository update section, ported) ──
 
@@ -723,6 +991,12 @@ class DesktopKeyRepository(
      *  ForSharing path, reused for copy/share/save surfaces. */
     suspend fun exportArmoredPublicKeyForSharing(fingerprint: String): String? {
         val armor = exportArmoredPublicKey(fingerprint) ?: return null
+        // A composite or v4 algo-35 key would lose packets in a BouncyCastle round trip; share
+        // the stored armor as it is.
+        val raw = runCatching { CompositeSigPacket.dearmor(armor) }.getOrNull()
+        if (raw != null && (CompositeKeyFacade.isCompositePrimary(raw) || CompositeKeyFacade.hasV4Algo35Subkey(raw))) {
+            return armor
+        }
         val ring = runCatching { crypto.importArmoredKey(armor).publicKeyRing }.getOrNull()
             ?: return armor
         return runCatching { crypto.exportArmoredPublicKeyForSharing(ring) }.getOrDefault(armor)
@@ -814,6 +1088,13 @@ class DesktopKeyRepository(
     private data class LegacyJsonKey(val fingerprint: String, val armored: String)
 
     companion object {
+        /** Android KeyDeduplicationService.isExpiryDowngrade (item 24): a fetched copy that
+         *  removes (null) or shortens a primary expiry the row already has. */
+        internal fun isExpiryDowngrade(existingExpiresAtMs: Long?, fetchedExpiresAtMs: Long?): Boolean {
+            val existing = existingExpiresAtMs ?: return false
+            return fetchedExpiresAtMs == null || fetchedExpiresAtMs < existing
+        }
+
         /** Split concatenated armored blocks; tolerant of surrounding prose (e.g. email bodies). */
         fun splitArmoredBlocks(text: String): List<String> {
             val begin = Regex("-----BEGIN PGP (PUBLIC|PRIVATE) KEY BLOCK-----")

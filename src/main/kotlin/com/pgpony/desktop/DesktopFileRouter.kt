@@ -63,6 +63,9 @@ object DesktopFileRouter {
     private const val TEXT_PREFILL_LIMIT = 32 * 1024
     private const val HEAD_SNIFF_BYTES = 1024
 
+    /** Detached signatures are small; a post-quantum composite one is a few KiB. */
+    private const val DETACHED_SIG_MAX_BYTES = 64 * 1024
+
     private val crypto get() = PGPCryptoService.shared
 
     /** Classify a file on disk into the action the UI should take. Never throws. */
@@ -198,12 +201,53 @@ object DesktopFileRouter {
         text.contains("-----BEGIN PGP SIGNATURE-----") &&
             !text.contains("-----BEGIN PGP SIGNED MESSAGE-----")
 
-    /** Binary detached signature: first packet is an OpenPGP Signature (tag 2), old or new format. */
+    /**
+     * Binary detached signature (3.0.0, the Android 4.7.0 item 2 / #67 bug, present here too).
+     *
+     * This used to decide from the first byte alone. A PNG starts with 0x89, which parses as an
+     * old-format header with tag 2, so every PNG opened with PGPony went to Verify; a JPEG could
+     * pass the same way. Now: known image, document and archive signatures are never signatures,
+     * and anything else must PARSE as one or more OpenPGP signature packets and nothing else,
+     * within a size cap (a detached signature is small, even a post-quantum one).
+     */
     private fun isBinaryDetachedSignature(bytes: ByteArray): Boolean {
-        if (bytes.isEmpty()) return false
+        if (bytes.isEmpty() || bytes.size > DETACHED_SIG_MAX_BYTES) return false
+        if (hasKnownNonPgpMagic(bytes)) return false
         val b = bytes[0].toInt() and 0xFF
         if (b and 0x80 == 0) return false
         val tag = if (b and 0x40 == 0) (b shr 2) and 0x0F else b and 0x3F
-        return tag == 2
+        if (tag != 2) return false
+        return try {
+            val factory = org.bouncycastle.openpgp.PGPObjectFactory(
+                bytes, org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator()
+            )
+            var sawSignature = false
+            while (true) {
+                val obj = factory.nextObject() ?: break
+                if (obj !is org.bouncycastle.openpgp.PGPSignatureList || obj.isEmpty) return false
+                sawSignature = true
+            }
+            sawSignature
+        } catch (_: Exception) {
+            // A composite ML-DSA detached signature does not parse in BouncyCastle; accept it when
+            // the composite reader recognizes it.
+            runCatching {
+                com.pgpony.android.crypto.pqc.CompositeDocumentVerifier.isCompositeSignature(
+                    com.pgpony.android.crypto.pqc.CompositeDocumentVerifier.rawSignaturePacket(bytes)
+                )
+            }.getOrDefault(false)
+        }
+    }
+
+    /** PNG, JPEG, GIF, WebP, PDF, ZIP (docx/xlsx/jar/apk too): never an OpenPGP signature. */
+    internal fun hasKnownNonPgpMagic(b: ByteArray): Boolean {
+        fun starts(vararg m: Int) = b.size >= m.size && m.indices.all { (b[it].toInt() and 0xFF) == m[it] }
+        return starts(0x89, 0x50, 0x4E, 0x47) ||                  // PNG
+            starts(0xFF, 0xD8, 0xFF) ||                            // JPEG
+            starts(0x47, 0x49, 0x46, 0x38) ||                      // GIF8
+            (starts(0x52, 0x49, 0x46, 0x46) && b.size >= 12 &&     // RIFF....WEBP
+                String(b, 8, 4, Charsets.ISO_8859_1) == "WEBP") ||
+            starts(0x25, 0x50, 0x44, 0x46) ||                      // %PDF
+            starts(0x50, 0x4B, 0x03, 0x04)                         // ZIP
     }
 }

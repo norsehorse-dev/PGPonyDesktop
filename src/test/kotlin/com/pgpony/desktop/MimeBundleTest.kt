@@ -108,6 +108,10 @@ class MimeBundleTest {
     fun emlFileDecryptsToBundleFolder() = runBlocking {
         val (db, repo, dir) = setup()
         val key = repo.gen("EmlFile", "emlfile@pgpony.app")
+        // 3.0.0 (Android 4.5.3, #57): a signature only reads VERIFIED from a key the user has
+        // confirmed; an untouched own key reads "signed, key not verified" (see
+        // signatureFromUnconfirmedKeyReadsNotVerified).
+        repo.updateTrustLevel(key.fingerprint, com.pgpony.android.data.TrustLevel.ULTIMATE)
         val mimeOps = MimeOps(repo)
         val fileOps = FileCryptoOps(repo)
 

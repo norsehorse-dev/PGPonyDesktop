@@ -792,4 +792,10 @@
     <string name="d_cards_move_done">Перемещено на карту: %1$s</string>
     <string name="d_cards_move_no_secret">Не удалось загрузить закрытый материал ключа.</string>
 
+    <string name="d_err_recipient_unusable">Нет ключа, для которого PGPony может зашифровать, поэтому ничего не зашифровано: %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · подписано, ключ не проверен</string>
+    <string name="d_file_sig_invalid"> · подпись НЕДЕЙСТВИТЕЛЬНА</string>
+    <string name="d_file_err_composite_too_large">Подпись ML-DSA загружает весь файл в память и ограничена 512 МБ. Подпишите файл меньшего размера или выберите классический ключ подписи.</string>
+    <string name="d_file_verify_ok_unconfirmed">Подписано, ключ не проверен: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">Расшифровано · подписано, ключ не проверен</string>
 </resources>

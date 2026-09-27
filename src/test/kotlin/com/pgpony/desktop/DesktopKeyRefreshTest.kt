@@ -146,4 +146,41 @@ class DesktopKeyRefreshTest {
         )
         db.close()
     }
+    // 3.0.0 (Android 4.6.0 item 24 guard): a server copy that drops the primary expiry the
+    // stored key has must not replace it. This is the re-published no-expiry copy that turned a
+    // tester's 2050 key into "Expires: Never" on Android.
+    @Test
+    fun serverCopyWithoutExpiryDoesNotStripStoredExpiry() = runBlocking {
+        val (db, repo, _) = temp()
+        val refresh = DesktopKeyRefresh(repo)
+        val gen = generate("keeps-expiry@pgpony.app")
+        val parsed = crypto.importArmoredKey(gen.armoredPrivateKey)
+        val expiry = Instant.now().plus(3650, ChronoUnit.DAYS).epochSecond
+        val expiring = KeyExpirationService.shared.setExpirationSoftware(
+            secretRing = parsed.secretKeyRing!!,
+            publicRing = parsed.publicKeyRing!!,
+            expiresAtEpochSeconds = expiry,
+            passphrase = "test-passphrase"
+        )
+        repo.importArmoredKeyDetailed(crypto.exportArmoredPublicKey(expiring.publicRing))
+        val stored = repo.byFingerprint(gen.fingerprint)!!.expiresAt
+        assertNotNull(stored, "the imported copy carries an expiry")
+
+        // The server hands back the original, never-expiring copy.
+        val result = refresh.processFetchedArmored(repo.byFingerprint(gen.fingerprint)!!, gen.armoredPublicKey)
+
+        assertTrue(result is KeyRefreshResult.UpToDate, "got $result")
+        assertEquals(stored, repo.byFingerprint(gen.fingerprint)!!.expiresAt, "stored expiry kept")
+        db.close()
+    }
+
+    @Test
+    fun expiryDowngradeRule() {
+        assertTrue(!DesktopKeyRepository.isExpiryDowngrade(null, null), "nothing stored: never a downgrade")
+        assertTrue(!DesktopKeyRepository.isExpiryDowngrade(null, 5L))
+        assertTrue(DesktopKeyRepository.isExpiryDowngrade(10L, null), "removing an expiry")
+        assertTrue(DesktopKeyRepository.isExpiryDowngrade(10L, 5L), "shortening an expiry")
+        assertTrue(!DesktopKeyRepository.isExpiryDowngrade(10L, 10L))
+        assertTrue(!DesktopKeyRepository.isExpiryDowngrade(10L, 20L), "extending is fine")
+    }
 }

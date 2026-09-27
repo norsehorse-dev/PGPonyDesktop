@@ -153,4 +153,37 @@ class DesktopFileRouterTest {
         assertEquals(ForcedOp.DECRYPT, ForcedOp.fromCli(" decrypt "))
         assertNull(ForcedOp.fromCli("sign"), "sign is not a forced op until signing UX exists")
     }
+
+    // 3.0.0 (the Android 4.7.0 item 2 / #67 bug): the first-byte sniff read 0x89 (PNG) as an
+    // old-format tag-2 header, so an image opened with PGPony went to Verify.
+    @Test
+    fun imagesAndDocumentsAreNeverDetachedSignatures() {
+        val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) + ByteArray(64)
+        val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte()) + ByteArray(64)
+        val pdf = "%PDF-1.7\n".toByteArray() + ByteArray(64)
+        val zip = byteArrayOf(0x50, 0x4B, 0x03, 0x04) + ByteArray(64)
+        val gif = "GIF89a".toByteArray() + ByteArray(64)
+        for ((bytes, name) in listOf(png to "photo.png", jpeg to "photo.jpg", pdf to "doc.pdf", zip to "a.zip", gif to "a.gif")) {
+            val a = DesktopFileRouter.classifyBytes(bytes, path(name))
+            assertTrue(a !is OpenAction.VerifyDetachedSignature, "$name routed to Verify: $a")
+        }
+    }
+
+    @Test
+    fun oldFormatTagTwoHeaderThatDoesNotParseIsNotASignature() {
+        // 0x88 is an old-format tag-2 header byte; the body is junk, so it must not route to Verify.
+        val junk = byteArrayOf(0x88.toByte(), 0x05, 1, 2, 3, 4, 5) + ByteArray(32)
+        val a = DesktopFileRouter.classifyBytes(junk, path("junk.bin"))
+        assertTrue(a !is OpenAction.VerifyDetachedSignature, "junk routed to Verify: $a")
+    }
+
+    @Test
+    fun binaryDetachedSignatureStillRoutesToVerify() {
+        val g = gen()
+        val ring = crypto.importArmoredKey(g.armoredPrivateKey).secretKeyRing!!
+        val sig = com.pgpony.android.crypto.SigningService.shared
+            .signDetached("data".toByteArray(), ring, "pw", armor = false)
+        val a = DesktopFileRouter.classifyBytes(sig, path("data.sig"))
+        assertTrue(a is OpenAction.VerifyDetachedSignature, "got $a")
+    }
 }

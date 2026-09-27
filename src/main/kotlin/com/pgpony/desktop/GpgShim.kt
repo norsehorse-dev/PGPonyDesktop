@@ -93,24 +93,49 @@ object GpgShim {
             val keys = runBlocking { repo.allKeys() }.filter { it.isKeyPair }
             val match = Cli.matchKeys(keys, selector).firstOrNull()
                 ?: return@withRepo fail(stderr, "sign: no secret key matches \"$selector\"")
-            val ring = repo.loadSecretKeyRing(match.fingerprint)
-                ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded")
+            // 3.0.0 (Android 4.5.3): an expired key does not sign, here as everywhere else. A
+            // commit signed by an expired key would show as bad on the other side anyway.
+            if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(match)) {
+                return@withRepo fail(stderr, "sign: key ${match.fingerprint} has expired " +
+                    "(turn on Allow expired keys in PGPony's Settings to sign with it)")
+            }
 
-            val armored = try {
-                SigningService.shared.signDetached(payload, ring, passphrase = null, armor = true)
-            } catch (e: Exception) {
-                // A passphrase-protected key can't be served non-interactively — git has no way
-                // to prompt through us. The GUI agent is the interactive path; say so.
-                return@withRepo fail(stderr, "sign: ${e.message ?: "signing failed"} " +
-                    "(protected keys are not available to the git shim)")
+            // gpg DETAILS SIG_CREATED fields: type(D) pk_algo hash_algo sig_class(00)
+            // timestamp(0, informational) fpr. git only needs to see the line.
+            val (armored, pkAlgo, hashAlgo) = if (match.algorithm.isCompositeSign) {
+                // 3.0.0: a composite ML-DSA key signs commits through the composite signer.
+                // Hosted forges show their own verdict for these; `git verify-commit` through
+                // this shim verifies them.
+                val info = runCatching { repo.loadCompositeKeyInfo(match.fingerprint, null) }.getOrNull()
+                    ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded")
+                val secret = info.compositeSecret
+                    ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded " +
+                        "(protected keys are not available to the git shim)")
+                Triple(
+                    com.pgpony.android.crypto.pqc.CompositeDocumentSigner
+                        .signDetachedArmored(info.suite, secret, info.fingerprint, payload)
+                        .toByteArray(Charsets.UTF_8),
+                    info.primaryAlgId,
+                    if (info.primaryAlgId == 31) 14 else 12
+                )
+            } else {
+                val ring = repo.loadSecretKeyRing(match.fingerprint)
+                    ?: return@withRepo fail(stderr, "sign: key ${match.fingerprint} could not be loaded")
+                val sig = try {
+                    SigningService.shared.signDetached(payload, ring, passphrase = null, armor = true)
+                } catch (e: Exception) {
+                    // A passphrase-protected key can't be served non-interactively: git has no
+                    // way to prompt through us. The GUI agent is the interactive path; say so.
+                    return@withRepo fail(stderr, "sign: ${e.message ?: "signing failed"} " +
+                        "(protected keys are not available to the git shim)")
+                }
+                Triple(sig, 22, 8)
             }
             stdout.write(armored)
             stdout.flush()
 
-            // git only needs to see SIG_CREATED to accept the signature. Fields per gpg's
-            // DETAILS: type(D) pk_algo hash_algo sig_class(00) timestamp(0 — informational) fpr.
             val fpr = match.fingerprint.uppercase()
-            status.println("[GNUPG:] SIG_CREATED D 22 8 00 0 $fpr")
+            status.println("[GNUPG:] SIG_CREATED D $pkAlgo $hashAlgo 00 0 $fpr")
             0
         }
     }
@@ -138,12 +163,27 @@ object GpgShim {
             val rings = runBlocking {
                 repo.allKeys().mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
             }
-            when (val r = VerifyService.shared.verifyDetached(sigBytes, signed, rings)) {
+            // 3.0.0: composite ML-DSA signatures first (BouncyCastle cannot parse them).
+            val result = runBlocking {
+                DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), signed)
+            } ?: VerifyService.shared.verifyDetached(sigBytes, signed, rings)
+            when (val r = result) {
                 is VerificationResult.Verified -> {
                     val who = "${r.signerName ?: ""} <${r.signerEmail ?: ""}>".trim()
                     // git reads GOODSIG + VALIDSIG off the status fd; the human line is stderr.
                     status.println("[GNUPG:] GOODSIG ${r.signerKeyID} $who")
                     status.println("[GNUPG:] VALIDSIG ${r.signerFingerprint} 0 0 0 0 0 0 0 ${r.signerFingerprint}")
+                    // 3.0.0 (Android 4.5.3, #57): the signer key's trust, the way gpg reports it,
+                    // so `git log --show-signature` and %G? tell a good signature from an
+                    // unconfirmed key ("U") apart from one from a key the user verified ("G").
+                    val signer = runBlocking { repo.byFingerprint(r.signerFingerprint) ?: repo.findByKeyId(r.signerKeyID) }
+                    status.println(
+                        when (r.signerTrust ?: signer?.trustLevel) {
+                            com.pgpony.android.data.TrustLevel.ULTIMATE -> "[GNUPG:] TRUST_ULTIMATE 0 pgp"
+                            com.pgpony.android.data.TrustLevel.VERIFIED -> "[GNUPG:] TRUST_FULLY 0 pgp"
+                            else -> "[GNUPG:] TRUST_UNDEFINED 0 pgp"
+                        }
+                    )
                     stderr.println("pgpony-gpg: Good signature from \"$who\" [${r.signerKeyID}]")
                     0
                 }

@@ -162,7 +162,8 @@ class DesktopKeyRefresh(
             return KeyRefreshResult.FingerprintMismatch(reload(existing))
         }
 
-        // 3. Merge (expiry recomputed from the merged primary inside the repo).
+        // 3. Merge: CertificateMerge's verified union, local authoritative for key pairs, never
+        //    removing or shortening a stored primary expiry (see DesktopKeyRepository).
         val (merged, changed) = repo.mergeFetchedPublicMaterial(existing, fetchedRing)
 
         // 4. Revocation scan on the fetched primary.
@@ -204,7 +205,13 @@ class DesktopKeyRefresh(
 
     /** First key-revocation signature (tag 2, type 0x20) on the fetched ring's primary. */
     private fun findKeyRevocationSignature(ring: PGPPublicKeyRing): PGPSignature? {
-        val primary = ring.publicKey ?: return null
+        // Android 4.6.0 (item 17.1): only a revocation the primary itself made, and that
+        // verifies, counts. The verified view drops every other 0x20, so a key server cannot
+        // mark someone else's key revoked with a forged or foreign signature.
+        val view = com.pgpony.android.crypto.CertificateBindings.verified(ring)
+        val report = view.report
+        if (report != null && report.supported && !report.primaryRevoked) return null
+        val primary = view.ring.publicKey ?: return null
         val sigs = primary.getSignaturesOfType(PGPSignature.KEY_REVOCATION) ?: return null
         while (sigs.hasNext()) {
             (sigs.next() as? PGPSignature)?.let { return it }

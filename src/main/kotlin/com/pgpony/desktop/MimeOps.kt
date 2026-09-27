@@ -27,7 +27,9 @@ class MimeOps(
         val signatureVerified: Boolean,
         val hasSignature: Boolean,
         val signerKeyID: String?,
-        val signatureKeyIDRaw: Long?
+        val signatureKeyIDRaw: Long?,
+        /** 3.0.0: the signature read once, trust and composite ML-DSA included. */
+        val signature: SignatureSummary.Summary? = null
     )
 
     /** Body + attachments → multipart/mixed → recipient-encrypted armored message. */
@@ -36,24 +38,19 @@ class MimeOps(
         attachmentPaths: List<Path>,
         recipientFingerprints: Collection<String>,
         signerFingerprint: String?,
-        signerPassphrase: String?
+        signerPassphrase: String?,
+        compositeInV1Decision: Boolean? = null
     ): String {
+        // 3.0.0: EncryptOps decides recipients (fail closed, v4 algo-35 channel), the expired-key
+        // rule and the signer, including a composite ML-DSA signer (Android 4.5.2). The Phase A3
+        // rule holds: a requested signature never silently drops.
+        val signer = signerFingerprint?.let {
+            repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
+        }
+        val ops = EncryptOps(repo)
+        val plan = ops.plan(recipientFingerprints, signer, signerPassphrase, compositeInV1Decision)
         val mimeBytes = MimeBuilder.buildMixed(body.ifBlank { null }, loadAttachments(attachmentPaths))
-        val rings = recipientFingerprints.map {
-            repo.loadEncryptionRecipientRing(it) ?: error("Recipient ring failed to load: ${it.take(16)}")
-        }
-        // The Phase A3 rule — a requested signature must never silently drop.
-        val signerRing = signerFingerprint?.let {
-            repo.loadSecretKeyRing(it) ?: error("Signing key could not be loaded: ${it.take(16)}")
-        }
-        val encrypted = crypto.encrypt(
-            data = mimeBytes,
-            recipientPublicKeys = rings,
-            signingSecretKey = signerRing,
-            passphrase = signerPassphrase,
-            armor = true
-        )
-        return String(encrypted, Charsets.UTF_8)
+        return String(ops.encryptBytes(plan, mimeBytes, signerPassphrase, armor = true), Charsets.UTF_8)
     }
 
     /**
@@ -69,12 +66,12 @@ class MimeOps(
         cardSigningPublicKey: org.bouncycastle.openpgp.PGPPublicKey
     ): String {
         val mimeBytes = MimeBuilder.buildMixed(body.ifBlank { null }, loadAttachments(attachmentPaths))
-        val rings = recipientFingerprints.map {
-            repo.loadEncryptionRecipientRing(it) ?: error("Recipient ring failed to load: ${it.take(16)}")
-        }
+        KeyUsePolicy.requireUsable(recipientFingerprints.mapNotNull { repo.byFingerprint(it) }, null)
+        val recipients = repo.requireRecipients(recipientFingerprints)
         val encrypted = crypto.encrypt(
             data = mimeBytes,
-            recipientPublicKeys = rings,
+            recipientPublicKeys = recipients.rings,
+            v4Algo35Recipients = recipients.v4Algo35,
             cardSession = session,
             cardPin = cardPin,
             cardSigningPublicKey = cardSigningPublicKey,
@@ -120,7 +117,11 @@ class MimeOps(
             signatureVerified = result.signatureVerified,
             hasSignature = result.hasSignature,
             signerKeyID = result.signerKeyID,
-            signatureKeyIDRaw = result.signatureKeyIDRaw
+            signatureKeyIDRaw = result.signatureKeyIDRaw,
+            signature = SignatureSummary.of(
+                repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
+                result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+            )
         )
     }
 

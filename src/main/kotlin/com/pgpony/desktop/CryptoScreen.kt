@@ -146,6 +146,13 @@ fun CryptoScreen(state: DesktopState) {
     val input = inputs[messageOp] ?: ""
     var output by remember { mutableStateOf("") }
     var banner by remember { mutableStateOf<Banner?>(null) }
+    // 3.0.0 (Android 4.6.0 item 14): an ML-DSA signature going to a v4-only recipient. Set when
+    // EncryptOps asks for a decision; the dialog re-runs the operation with the answer.
+    var pqcV4Retry by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
+    // The answer for the operation being re-run (null = not asked). Text takes it once; a file
+    // batch keeps it for every file in the batch and resets when the batch starts fresh.
+    var textV4Decision by remember { mutableStateOf<Boolean?>(null) }
+    var fileV4Decision by remember { mutableStateOf<Boolean?>(null) }
     var busy by remember { mutableStateOf(false) }
 
     // D17 (§3b) — per-file byte progress for the running batch, keyed by the source path, plus a
@@ -222,7 +229,8 @@ fun CryptoScreen(state: DesktopState) {
     // recipient once its PUBLIC certificate is present (pairing alone stores no key material,
     // so a card row with null armor can't be encrypted to).
     val recipients = state.keys.filter {
-        !it.isRevoked && !it.isExpired && (!it.isCardBacked || it.armoredPublicKey != null)
+        !it.isRevoked && (!it.isExpired || KeyUsePolicy.allowExpiredKeys()) &&
+            (!it.isCardBacked || it.armoredPublicKey != null)
     }
     // Signers: software key pairs OR paired card-backed keys (the Android availableSigners set).
     val signers = state.keys.filter {
@@ -427,13 +435,8 @@ fun CryptoScreen(state: DesktopState) {
                 }
 
                 Spacer(Modifier.height(Spacing.Large))
-                BrandButton(
-                    enabled = !busy && fileList.isNotEmpty() && when (fileOp) {
-                        FileOp.ENCRYPT -> selectedRecipients.isNotEmpty()
-                        FileOp.SIGN -> effectiveSigner != null
-                        else -> true
-                    },
-                    onClick = {
+                // 3.0.0: a named action so the ML-DSA-to-v4 prompt can re-run the batch with the answer.
+                fun doFileOp() {
                         // D7 — does this batch need the card? SIGN/ENCRYPT when the signer is a
                         // card key; DECRYPT when any file is addressed to a paired card key.
                         val signerOnCard = DesktopCardOps.signsOnCard(effectiveSigner)
@@ -456,6 +459,20 @@ fun CryptoScreen(state: DesktopState) {
                                 pendingCardOp = cardBatch
                                 return@run
                             }
+                            // 3.0.0: settle the whole batch's recipients, expiry and signer once
+                            // up front (a batch fails before any file is touched), and ask the
+                            // Android 4.6.0 item 14 question once for the batch if it applies.
+                            if (fileOp == FileOp.ENCRYPT) {
+                                val signerForPlan = if (signEnabled) effectiveSigner else null
+                                try {
+                                    EncryptOps(crypto).plan(
+                                        selectedRecipients, signerForPlan, signerPass.ifBlank { null }, fileV4Decision
+                                    )
+                                } catch (_: CompositeV4SignDecisionNeeded) {
+                                    pqcV4Retry = { keep -> fileV4Decision = keep; doFileOp() }
+                                    return@run
+                                }
+                            }
                             // D17 — fresh progress + cancel state for this batch.
                             cancelFlag.set(false)
                             fileProgress.clear()
@@ -473,18 +490,16 @@ fun CryptoScreen(state: DesktopState) {
                                     FileOp.ENCRYPT -> {
                                         val signFp = if (signEnabled && effectiveSigner != null)
                                             effectiveSigner.fingerprint else null
-                                        if (signEnabled && effectiveSigner?.algorithm?.isCompositeSign == true)
-                                            error(tr("d_crypto_err_composite_encrypt_sign"))
                                         // D16 — a directory tars-then-encrypts (§3a); a file goes
                                         // straight through. The card-signer batch above handles
                                         // files only, so a folder always lands on this path.
                                         for (f in fileList) acc +=
                                             if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
                                                 f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
-                                                tick(f), cancelled
+                                                tick(f), cancelled, compositeInV1Decision = fileV4Decision
                                             ) else fileOps.encryptFile(
                                                 f, selectedRecipients, signFp, signerPass.ifBlank { null }, fileArmor,
-                                                tick(f), cancelled
+                                                tick(f), cancelled, compositeInV1Decision = fileV4Decision
                                             )
                                     }
                                     FileOp.DECRYPT -> for (f in fileList)
@@ -505,6 +520,7 @@ fun CryptoScreen(state: DesktopState) {
                                 acc
                             }
                             fileResults = outcomes
+                            fileV4Decision = null
                             fileProgress.clear()
                             val ok = outcomes.count { it.ok }
                             banner = when {
@@ -513,7 +529,14 @@ fun CryptoScreen(state: DesktopState) {
                                 else -> Banner.Warn(tr("d_crypto_files_partial", ok, outcomes.size))
                             }
                         }
-                    }
+                }
+                BrandButton(
+                    enabled = !busy && fileList.isNotEmpty() && when (fileOp) {
+                        FileOp.ENCRYPT -> selectedRecipients.isNotEmpty()
+                        FileOp.SIGN -> effectiveSigner != null
+                        else -> true
+                    },
+                    onClick = { fileV4Decision = null; doFileOp() }
                 ) { Text(if (busy) tr("common_processing") else tr("d_crypto_run_op", tr(fileOp.labelKey))) }
 
                 // D17 (§3b) — cancel a running encrypt/decrypt batch. The flag trips the next
@@ -752,12 +775,8 @@ fun CryptoScreen(state: DesktopState) {
                         }
 
                         Spacer(Modifier.height(10.dp))
-                        BrandButton(
-                            enabled = !busy && (input.isNotBlank() || attachments.isNotEmpty()) && when (encryptWith) {
-                                EncryptWith.PUBLIC_KEYS -> selectedRecipients.isNotEmpty()
-                                EncryptWith.PASSPHRASE -> symPass.isNotBlank() && symPass == symPassConfirm
-                            },
-                            onClick = {
+                        // 3.0.0: a named action so the ML-DSA-to-v4 prompt can re-run it with the answer.
+                        fun doTextEncrypt() {
                                 val signWith0 = if (signEnabled && effectiveSigner != null) effectiveSigner else null
                                 // D7 — card-signed encrypt (PUBLIC_KEYS only; the whole encrypt
                                 // runs with the card connected because the signer taps it).
@@ -769,8 +788,12 @@ fun CryptoScreen(state: DesktopState) {
                                         com.pgpony.android.crypto.card.CardSigningService.shared
                                             .signingPublicKey(it, signWith0.cardSigFingerprint)
                                     }
-                                    val rings = selectedRecipients.mapNotNull { crypto.loadEncryptionRecipientRing(it) }
-                                    if (cardPubKey == null || rings.size != selectedRecipients.size) {
+                                    KeyUsePolicy.requireUsable(
+                                        selectedRecipients.mapNotNull { fp -> state.keys.firstOrNull { it.fingerprint == fp } },
+                                        signWith0
+                                    )
+                                    val loadedRecipients = crypto.requireRecipients(selectedRecipients)
+                                    if (cardPubKey == null) {
                                         banner = Banner.Bad(tr("d_crypto_err_card_or_recipient_load"))
                                     } else {
                                         pendingCardOp = CardOpRequest(
@@ -780,7 +803,10 @@ fun CryptoScreen(state: DesktopState) {
                                             )
                                         ) { session, pin ->
                                             output = if (attachments.isEmpty())
-                                                crypto.encryptTextWithCardSigner(input, rings, session, pin, cardPubKey)
+                                                crypto.encryptTextWithCardSigner(
+                                                    input, loadedRecipients.rings, session, pin, cardPubKey,
+                                                    loadedRecipients.v4Algo35
+                                                )
                                             else
                                                 mimeOps.encryptBundleWithCardSigner(
                                                     input, attachments, selectedRecipients, session, pin, cardPubKey
@@ -800,33 +826,32 @@ fun CryptoScreen(state: DesktopState) {
                                     // if Sign-as is on, a loadable secret ring is REQUIRED —
                                     // any failure aborts the whole encrypt with a named error.
                                     val signWith = signWith0
-                                    // A composite ML-DSA signature is not embeddable in a PGP
-                                    // encryption container; it signs on the Sign tab instead.
-                                    if (signWith?.algorithm?.isCompositeSign == true)
-                                        error(tr("d_crypto_err_composite_encrypt_sign"))
+                                    // 3.0.0: EncryptOps settles recipients (fail closed, v4 algo-35
+                                    // channel), the expired-key rule and the signer, composite
+                                    // ML-DSA included (Android 4.5.2). A composite signature to a
+                                    // v4-only recipient asks first (Android 4.6.0 item 14).
+                                    val v4Decision = textV4Decision.also { textV4Decision = null }
                                     output = when (encryptWith) {
-                                        EncryptWith.PUBLIC_KEYS -> {
+                                        EncryptWith.PUBLIC_KEYS -> try {
                                             if (attachments.isEmpty()) {
-                                                val loaded = selectedRecipients.map { fp -> fp to crypto.loadEncryptionRecipientRing(fp) }
-                                                loaded.firstOrNull { it.second == null }?.let { (fp, _) ->
-                                                    val name = state.keys.firstOrNull { it.fingerprint == fp }
-                                                        ?.userID?.ifBlank { null } ?: fp.take(16)
-                                                    error(tr("d_crypto_err_pubkey_missing", name))
-                                                }
-                                                val rings = loaded.mapNotNull { it.second }
-                                                val signerRing = signWith?.let {
-                                                    crypto.loadSecretKeyRing(it.fingerprint)
-                                                        ?: error(
-                                                            tr("d_crypto_err_signer_load", it.shortFingerprint)
-                                                        )
-                                                }
-                                                crypto.encryptText(
-                                                    input, rings, signerRing, signerPass.ifBlank { null }
+                                                val ops = EncryptOps(crypto)
+                                                val plan = ops.plan(
+                                                    selectedRecipients, signWith, signerPass.ifBlank { null }, v4Decision
+                                                )
+                                                String(
+                                                    ops.encryptBytes(
+                                                        plan, input.toByteArray(Charsets.UTF_8),
+                                                        signerPass.ifBlank { null }, armor = true
+                                                    ),
+                                                    Charsets.UTF_8
                                                 )
                                             } else mimeOps.encryptBundle(
                                                 input, attachments, selectedRecipients,
-                                                signWith?.fingerprint, signerPass.ifBlank { null }
+                                                signWith?.fingerprint, signerPass.ifBlank { null }, v4Decision
                                             )
+                                        } catch (_: CompositeV4SignDecisionNeeded) {
+                                            pqcV4Retry = { keep -> textV4Decision = keep; doTextEncrypt() }
+                                            return@run
                                         }
                                         EncryptWith.PASSPHRASE ->
                                             if (attachments.isEmpty()) crypto.encryptTextSymmetric(input, symPass)
@@ -837,13 +862,19 @@ fun CryptoScreen(state: DesktopState) {
                                     banner = Banner.Good(
                                         (if (encryptWith == EncryptWith.PUBLIC_KEYS)
                                             tr("d_crypto_banner_encrypted", selectedRecipients.size) +
-                                                (signWith?.let {
+                                                (signWith?.takeIf { v4Decision != false }?.let {
                                                     tr("d_crypto_banner_signed_as", it.userEmail, it.shortFingerprint)
                                                 } ?: tr("d_crypto_banner_unsigned"))
                                         else tr("d_crypto_banner_encrypted_pass")) + bundleNote
                                     )
                                 }
-                            }
+                        }
+                        BrandButton(
+                            enabled = !busy && (input.isNotBlank() || attachments.isNotEmpty()) && when (encryptWith) {
+                                EncryptWith.PUBLIC_KEYS -> selectedRecipients.isNotEmpty()
+                                EncryptWith.PASSPHRASE -> symPass.isNotBlank() && symPass == symPassConfirm
+                            },
+                            onClick = { textV4Decision = null; doTextEncrypt() }
                         ) { Text(if (busy) tr("common_processing") else tr("encrypt_action_encrypt")) }
                     }
 
@@ -917,7 +948,24 @@ fun CryptoScreen(state: DesktopState) {
                                     decryptedAttachments = result.attachments
                                     val attachNote = if (result.attachments.isEmpty()) ""
                                     else tr("d_crypto_banner_attach_suffix", result.attachments.size)
+                                    val sig = result.signature
                                     banner = when {
+                                        // 3.0.0 (Android 4.5.3): valid from an unconfirmed key reads
+                                        // amber; a composite ML-DSA signature inside the message is
+                                        // verified too (it used to read as unsigned).
+                                        sig != null && sig.state == SignatureSummary.State.UNCONFIRMED -> Banner.Warn(
+                                            tr("d_crypto_banner_decrypted_unconfirmed") +
+                                                (sig.signerLabel?.let { tr("d_crypto_banner_signer_suffix", it) } ?: "") +
+                                                attachNote
+                                        )
+                                        sig != null && sig.state == SignatureSummary.State.INVALID -> Banner.Bad(
+                                            tr("d_crypto_banner_invalid") + attachNote
+                                        )
+                                        sig != null && sig.state == SignatureSummary.State.VERIFIED && !result.signatureVerified -> Banner.Good(
+                                            tr("d_crypto_banner_decrypted_verified") +
+                                                (sig.signerLabel?.let { tr("d_crypto_banner_signer_suffix", it) } ?: "") +
+                                                attachNote
+                                        )
                                         result.signatureVerified -> Banner.Good(
                                             tr("d_crypto_banner_decrypted_verified") +
                                                 (resolveSigner(state.keys, result.signerKeyID)
@@ -964,7 +1012,10 @@ fun CryptoScreen(state: DesktopState) {
                             enabled = !busy && input.isNotBlank() && effectiveSigner != null,
                             onClick = {
                                 val signer = effectiveSigner!!
-                                if (DesktopCardOps.signsOnCard(signer)) run {
+                                if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(signer)) {
+                                    // 3.0.0 (Android 4.5.3): an expired key does not sign.
+                                    banner = Banner.Bad(tr("encrypt_expired_signing_blocked"))
+                                } else if (DesktopCardOps.signsOnCard(signer)) run {
                                     // D7 — clear/detached sign on the hardware key.
                                     val ring = crypto.loadPublicKeyRing(signer.fingerprint)
                                     val pubKey = ring?.let {
@@ -1077,14 +1128,16 @@ fun CryptoScreen(state: DesktopState) {
                                     when (result) {
                                         is VerificationResult.Verified -> {
                                             output = result.signedContent ?: detachedContent
-                                            banner = Banner.Good(
-                                                tr(
-                                                    "d_crypto_banner_verified",
-                                                    result.signerName ?: "",
-                                                    result.signerEmail ?: "?",
-                                                    result.signerKeyID
-                                                )
+                                            // 3.0.0 (Android 4.5.3, #57): amber for an unconfirmed signer key.
+                                            val confirmed = SignatureSummary.fromVerification(crypto, result).state ==
+                                                SignatureSummary.State.VERIFIED
+                                            val text = tr(
+                                                if (confirmed) "d_crypto_banner_verified" else "d_file_verify_ok_unconfirmed",
+                                                result.signerName ?: "",
+                                                result.signerEmail ?: "?",
+                                                result.signerKeyID
                                             )
+                                            banner = if (confirmed) Banner.Good(text) else Banner.Warn(text)
                                         }
                                         is VerificationResult.Invalid -> banner = Banner.Bad(
                                             tr("d_crypto_banner_invalid")
@@ -1202,6 +1255,26 @@ fun CryptoScreen(state: DesktopState) {
             if (!ok && msg != null) banner = Banner.Bad(msg)
             else if (!ok) banner = Banner.Info(tr("d_crypto_cancelled"))
         }
+    }
+    // 3.0.0 (Android 4.6.0 item 14): an ML-DSA signature inside a message to a v4-only recipient
+    // reads in PGPony, but GnuPG shows an error and Thunderbird cannot open it. Ask first.
+    pqcV4Retry?.let { retry ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pqcV4Retry = null; banner = Banner.Info(tr("d_crypto_cancelled")) },
+            title = { Text(tr("pqc_v4_sign_title")) },
+            text = { Text(tr("pqc_v4_sign_message")) },
+            confirmButton = {
+                TextButton(onClick = { pqcV4Retry = null; retry(true) }) { Text(tr("pqc_v4_sign_anyway")) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { pqcV4Retry = null; banner = Banner.Info(tr("d_crypto_cancelled")) }) {
+                        Text(tr("common_button_cancel"))
+                    }
+                    TextButton(onClick = { pqcV4Retry = null; retry(false) }) { Text(tr("pqc_v4_send_unsigned")) }
+                }
+            }
+        )
     }
 }
 

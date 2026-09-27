@@ -720,4 +720,10 @@
     <string name="d_cards_move_done">Movida a la tarjeta — %1$s</string>
     <string name="d_cards_move_no_secret">No se pudo cargar el material privado de la clave.</string>
 
+    <string name="d_err_recipient_unusable">No hay ninguna clave a la que PGPony pueda cifrar, así que no se cifró nada: %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · firmado, clave no verificada</string>
+    <string name="d_file_sig_invalid"> · firma NO VÁLIDA</string>
+    <string name="d_file_err_composite_too_large">La firma ML-DSA lee el archivo completo en memoria y está limitada a 512 MB. Firma un archivo más pequeño o elige una clave de firma clásica.</string>
+    <string name="d_file_verify_ok_unconfirmed">Firmado, clave no verificada: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">Descifrado · firmado, clave no verificada</string>
 </resources>

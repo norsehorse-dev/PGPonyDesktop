@@ -851,4 +851,10 @@
     <string name="d_cards_move_done">Moved onto the card — %1$s</string>
     <string name="d_cards_move_no_secret">Could not load the key's private material.</string>
 
+    <string name="d_err_recipient_unusable">No key PGPony can encrypt to, so nothing was encrypted: %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · signed, key not verified</string>
+    <string name="d_file_sig_invalid"> · signature INVALID</string>
+    <string name="d_file_err_composite_too_large">ML-DSA signing reads the whole file into memory and is limited to 512 MB. Sign a smaller file, or pick a classical signing key.</string>
+    <string name="d_file_verify_ok_unconfirmed">Signed, key not verified: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">Decrypted · signed, key not verified</string>
 </resources>

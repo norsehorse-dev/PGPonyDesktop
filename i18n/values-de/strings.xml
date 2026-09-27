@@ -720,4 +720,10 @@
     <string name="d_cards_move_done">Auf die Karte übertragen — %1$s</string>
     <string name="d_cards_move_no_secret">Privates Schlüsselmaterial konnte nicht geladen werden.</string>
 
+    <string name="d_err_recipient_unusable">Kein Schlüssel, an den PGPony verschlüsseln kann, daher wurde nichts verschlüsselt: %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · signiert, Schlüssel nicht überprüft</string>
+    <string name="d_file_sig_invalid"> · Signatur UNGÜLTIG</string>
+    <string name="d_file_err_composite_too_large">ML-DSA-Signaturen lesen die ganze Datei in den Speicher und sind auf 512 MB begrenzt. Signieren Sie eine kleinere Datei oder wählen Sie einen klassischen Signaturschlüssel.</string>
+    <string name="d_file_verify_ok_unconfirmed">Signiert, Schlüssel nicht überprüft: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">Entschlüsselt · signiert, Schlüssel nicht überprüft</string>
 </resources>
