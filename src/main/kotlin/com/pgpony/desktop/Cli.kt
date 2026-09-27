@@ -99,6 +99,8 @@ object Cli {
             }
             val signerRing = signAs?.let { sel ->
                 val e = resolveOne(repo, sel, requireSecret = true)
+                if (e.algorithm.isCompositeSign)
+                    throw CliError(ExitCode.USAGE, "composite ML-DSA keys cannot sign while encrypting; sign separately with `pgpony sign` or pick a classical key")
                 repo.loadSecretKeyRing(e.fingerprint)
                     ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} could not be loaded")
             }

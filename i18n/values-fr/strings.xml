@@ -117,6 +117,7 @@
     <string name="d_crypto_result_failed">ÉCHEC</string>
     <string name="d_crypto_signer_pass_label">Phrase secrète du signataire (vide si non protégée)</string>
     <string name="d_crypto_err_composite_pass">Cette clé de signature est protégée par une phrase secrète. Saisissez sa phrase secrète pour signer.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">Les clés composites ML-DSA ne peuvent pas signer pendant le chiffrement. Utilisez l'onglet Signer ou choisissez une clé de signature classique.</string>
     <string name="d_crypto_armor_gpg">Armure ASCII (.asc au lieu du binaire .gpg)</string>
     <string name="d_crypto_armor_sig">Armure ASCII (.asc au lieu du binaire .sig)</string>
     <string name="d_crypto_decrypt_pass_label">Phrase secrète de la clé ou du message</string>

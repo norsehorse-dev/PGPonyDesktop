@@ -117,6 +117,7 @@
     <string name="d_crypto_result_failed">FALHOU</string>
     <string name="d_crypto_signer_pass_label">Senha do signatário (vazia se não estiver protegida)</string>
     <string name="d_crypto_err_composite_pass">Esta chave de assinatura está protegida por senha. Digite a senha dela para assinar.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">Chaves compostas ML-DSA não podem assinar durante a criptografia. Use a aba Assinar ou escolha uma chave de assinatura clássica.</string>
     <string name="d_crypto_armor_gpg">Armadura ASCII (.asc em vez de .gpg binário)</string>
     <string name="d_crypto_armor_sig">Armadura ASCII (.asc em vez de .sig binário)</string>
     <string name="d_crypto_decrypt_pass_label">Senha da chave ou da mensagem</string>

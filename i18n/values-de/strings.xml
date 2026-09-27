@@ -117,6 +117,7 @@
     <string name="d_crypto_result_failed">FEHLGESCHLAGEN</string>
     <string name="d_crypto_signer_pass_label">Passphrase des Signaturschlüssels (leer, wenn ungeschützt)</string>
     <string name="d_crypto_err_composite_pass">Dieser Signaturschlüssel ist passphrasengeschützt. Geben Sie zum Signieren seine Passphrase ein.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">Composite-ML-DSA-Schlüssel können beim Verschlüsseln nicht signieren. Nutzen Sie den Signieren-Tab oder wählen Sie einen klassischen Signaturschlüssel.</string>
     <string name="d_crypto_armor_gpg">ASCII-Armor (.asc statt binär .gpg)</string>
     <string name="d_crypto_armor_sig">ASCII-Armor (.asc statt binär .sig)</string>
     <string name="d_crypto_decrypt_pass_label">Schlüssel- oder Nachrichten-Passphrase</string>

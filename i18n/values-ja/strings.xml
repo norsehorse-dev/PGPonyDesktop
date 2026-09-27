@@ -119,6 +119,7 @@
     <string name="d_crypto_result_failed">失敗</string>
     <string name="d_crypto_signer_pass_label">署名鍵のパスフレーズ（保護されていない場合は空欄）</string>
     <string name="d_crypto_err_composite_pass">この署名鍵はパスフレーズで保護されています。署名するにはパスフレーズを入力してください。</string>
+    <string name="d_crypto_err_composite_encrypt_sign">複合 ML-DSA 鍵は暗号化と同時に署名できません。署名タブを使うか、従来の署名鍵を選んでください。</string>
     <string name="d_crypto_armor_gpg">ASCII アーマー（バイナリ .gpg ではなく .asc）</string>
     <string name="d_crypto_armor_sig">ASCII アーマー（バイナリ .sig ではなく .asc）</string>
     <string name="d_crypto_decrypt_pass_label">鍵またはメッセージのパスフレーズ</string>

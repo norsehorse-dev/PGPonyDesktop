@@ -473,6 +473,8 @@ fun CryptoScreen(state: DesktopState) {
                                     FileOp.ENCRYPT -> {
                                         val signFp = if (signEnabled && effectiveSigner != null)
                                             effectiveSigner.fingerprint else null
+                                        if (signEnabled && effectiveSigner?.algorithm?.isCompositeSign == true)
+                                            error(tr("d_crypto_err_composite_encrypt_sign"))
                                         // D16 — a directory tars-then-encrypts (§3a); a file goes
                                         // straight through. The card-signer batch above handles
                                         // files only, so a folder always lands on this path.
@@ -798,6 +800,10 @@ fun CryptoScreen(state: DesktopState) {
                                     // if Sign-as is on, a loadable secret ring is REQUIRED —
                                     // any failure aborts the whole encrypt with a named error.
                                     val signWith = signWith0
+                                    // A composite ML-DSA signature is not embeddable in a PGP
+                                    // encryption container; it signs on the Sign tab instead.
+                                    if (signWith?.algorithm?.isCompositeSign == true)
+                                        error(tr("d_crypto_err_composite_encrypt_sign"))
                                     output = when (encryptWith) {
                                         EncryptWith.PUBLIC_KEYS -> {
                                             if (attachments.isEmpty()) {

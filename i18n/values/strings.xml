@@ -170,6 +170,7 @@
     <string name="d_crypto_result_failed">FAILED</string>
     <string name="d_crypto_signer_pass_label">Signer passphrase (blank if unprotected)</string>
     <string name="d_crypto_err_composite_pass">This signing key is passphrase-protected. Enter its passphrase to sign.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">Composite ML-DSA keys cannot sign while encrypting. Use the Sign tab, or pick a classical signing key.</string>
     <string name="d_crypto_armor_gpg">ASCII armor (.asc instead of binary .gpg)</string>
     <string name="d_crypto_armor_sig">ASCII armor (.asc instead of binary .sig)</string>
     <string name="d_crypto_decrypt_pass_label">Key or message passphrase</string>
