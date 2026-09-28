@@ -55,6 +55,7 @@ object Cli {
                     "sign" -> sign(repo, rest)
                     "verify" -> verify(repo, rest)
                     "import" -> importKeys(repo, rest)
+                    "import-gnupg" -> importGnupg(repo, rest)
                     "export" -> export(repo, rest)
                     "list-keys" -> listKeys(repo, rest)
                     "gen-key" -> genKey(repo, rest)
@@ -260,6 +261,22 @@ object Cli {
         val report = repo.importBytes(readAll(input))
         out("Import — ${report.summary()}")
         if (report.total == 0 || report.failed == report.total) ExitCode.FAILED else ExitCode.OK
+    }
+
+    // 3.0.0 (5b): the keys in a GnuPG home. Public keys always; trust unless --no-trust; secret
+    // keys with --secret, through gpg, which asks for each passphrase with its own pinentry.
+    private fun importGnupg(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
+        val o = Options(args)
+        val home = o.value("--homedir")?.let { Path.of(it) } ?: GnupgImport.defaultHome()
+        if (!GnupgImport.looksLikeHome(home)) throw CliError(ExitCode.NOT_FOUND, "no GnuPG keyring in $home")
+        val scan = GnupgImport.scan(home)
+        if (scan.gpg == null) err("gpg not found: public keys and trust only")
+        val result = GnupgImport.import(repo, scan, withTrust = !o.flag("--no-trust"), withSecrets = o.flag("--secret"))
+        out("Import from $home: ${result.report.summary()}")
+        if (!o.flag("--no-trust")) out("Trust raised on ${result.trustSet} key(s)")
+        if (o.flag("--secret")) out("Secret keys imported: ${result.secretsImported}")
+        result.notes.forEach { err(it) }
+        if (result.report.total > 0 && result.report.failed == result.report.total) ExitCode.FAILED else ExitCode.OK
     }
 
     private fun export(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
@@ -591,6 +608,7 @@ object Cli {
               sign      [-u <key>] [-b] [-a] [-o out] [file|-]
               verify    [-s <sigfile>] [file|-]
               import    [file|-]
+              import-gnupg [--homedir DIR] [--secret] [--no-trust]
               export    [--secret] [-a] [-o out] <key>
               list-keys [--secret]
               gen-key   --name <n> [--email <e>] [--algo ed25519] [--expires <days>] [--ssh-auth]
@@ -638,6 +656,7 @@ internal class Options(args: List<String>) {
         "--output", "-o", "--input", "-i", "--recipient", "-r", "--sign-as", "-u",
         "--signature", "-s", "--passphrase-env", "--passphrase-fd", "--name", "--email",
         "--algo", "--expires", "--decrypt-with", "--subkey",
+        "--homedir", // 3.0.0 (5b): `pgpony import-gnupg --homedir DIR`
         "--op" // D14 — `pgpony open --op <verb>` (Main.parseOpenArgs)
     )
 

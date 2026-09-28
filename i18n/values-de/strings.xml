@@ -784,4 +784,25 @@
     <string name="d_cards_pin_cache_follows">Gemerkt für die Sitzungsdauer aus den Einstellungen: %1$s.</string>
     <string name="d_crypto_pass_remembered">Für diese Sitzung gemerkt. Leer lassen, um sie zu verwenden.</string>
     <string name="d_shim_unlock_message">git hat PGPony gebeten, mit %1$s zu signieren; dieser Schlüssel ist passwortgeschützt.</string>
+
+    <!-- 3.0.0 stage 5b: GnuPG import -->
+    <string name="d_gnupg_import_button">Aus GnuPG importieren…</string>
+    <string name="d_gnupg_title">Aus GnuPG importieren</string>
+    <string name="d_gnupg_home">GnuPG-Verzeichnis: %1$s</string>
+    <string name="d_gnupg_choose_folder">Ordner wählen…</string>
+    <string name="d_gnupg_no_home">In diesem Ordner wurde kein GnuPG-Schlüsselbund gefunden. Wählen Sie den Ordner mit pubring.kbx.</string>
+    <string name="d_gnupg_counts">%1$d öffentliche Schlüssel, %2$d geheime Schlüssel</string>
+    <string name="d_gnupg_counts_public">%1$d öffentliche Schlüssel</string>
+    <string name="d_gnupg_gpg_found">Verwendet %1$s</string>
+    <string name="d_gnupg_gpg_missing">gpg wurde nicht gefunden, daher können geheime Schlüssel nicht gelesen werden. Öffentliche Schlüssel und Vertrauen lassen sich trotzdem importieren.</string>
+    <string name="d_gnupg_sandboxed">PGPony läuft in einer Sandbox und kann gpg nicht ausführen. Öffentliche Schlüssel und Vertrauen lassen sich trotzdem importieren.</string>
+    <string name="d_gnupg_opt_trust">Vertrauen übernehmen (uneingeschränkt und vollständig)</string>
+    <string name="d_gnupg_opt_secret">Geheime Schlüssel importieren (gpg fragt nach jeder Passphrase)</string>
+    <string name="d_gnupg_card_skipped">%1$s: auf einer Smartcard, übersprungen. Fügen Sie die Karte stattdessen unter Hardware-Schlüssel hinzu.</string>
+    <string name="d_gnupg_stub_skipped">%1$s: kein geheimes Material in diesem Schlüsselbund, übersprungen.</string>
+    <string name="d_gnupg_secret_failed">%1$s: Export fehlgeschlagen (%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: von gpg exportiert, aber der Import ist fehlgeschlagen.</string>
+    <string name="d_gnupg_import">Importieren</string>
+    <string name="d_gnupg_done">%1$s. Vertrauen bei %2$d Schlüsseln erhöht. Importierte geheime Schlüssel: %3$d.</string>
+    <string name="d_gnupg_readonly_note">GnuPG wird nur gelesen, nie verändert. Vertrauen in PGPony wird nur erhöht, nie gesenkt.</string>
 </resources>

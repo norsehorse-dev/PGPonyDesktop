@@ -784,4 +784,25 @@
     <string name="d_cards_pin_cache_follows">Conservé pendant la durée de session définie dans les Réglages : %1$s.</string>
     <string name="d_crypto_pass_remembered">Mémorisée pour cette session. Laissez vide pour l\'utiliser.</string>
     <string name="d_shim_unlock_message">git a demandé à PGPony de signer avec %1$s, qui est protégée par une phrase secrète.</string>
+
+    <!-- 3.0.0 stage 5b: GnuPG import -->
+    <string name="d_gnupg_import_button">Importer depuis GnuPG…</string>
+    <string name="d_gnupg_title">Importer depuis GnuPG</string>
+    <string name="d_gnupg_home">Dossier GnuPG : %1$s</string>
+    <string name="d_gnupg_choose_folder">Choisir un dossier…</string>
+    <string name="d_gnupg_no_home">Aucun trousseau GnuPG dans ce dossier. Choisissez le dossier qui contient pubring.kbx.</string>
+    <string name="d_gnupg_counts">%1$d clés publiques, %2$d clés secrètes</string>
+    <string name="d_gnupg_counts_public">%1$d clés publiques</string>
+    <string name="d_gnupg_gpg_found">Utilise %1$s</string>
+    <string name="d_gnupg_gpg_missing">gpg est introuvable, les clés secrètes ne peuvent donc pas être lues. Les clés publiques et la confiance peuvent tout de même être importées.</string>
+    <string name="d_gnupg_sandboxed">PGPony s\'exécute dans un bac à sable et ne peut pas lancer gpg. Les clés publiques et la confiance peuvent tout de même être importées.</string>
+    <string name="d_gnupg_opt_trust">Reprendre la confiance (ultime et complète)</string>
+    <string name="d_gnupg_opt_secret">Importer les clés secrètes (gpg demande chaque phrase secrète)</string>
+    <string name="d_gnupg_card_skipped">%1$s : sur une carte à puce, ignorée. Ajoutez plutôt la carte dans Clés matérielles.</string>
+    <string name="d_gnupg_stub_skipped">%1$s : aucun élément secret dans ce trousseau, ignorée.</string>
+    <string name="d_gnupg_secret_failed">%1$s : exportation impossible (%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s : exportée par gpg, mais l\'importation a échoué.</string>
+    <string name="d_gnupg_import">Importer</string>
+    <string name="d_gnupg_done">%1$s. Confiance relevée sur %2$d clés. Clés secrètes importées : %3$d.</string>
+    <string name="d_gnupg_readonly_note">GnuPG est seulement lu, jamais modifié. La confiance dans PGPony ne fait que monter, jamais baisser.</string>
 </resources>

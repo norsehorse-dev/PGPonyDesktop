@@ -915,4 +915,25 @@
     <string name="d_cards_pin_cache_follows">Kept for the session length in Settings: %1$s.</string>
     <string name="d_crypto_pass_remembered">Remembered for this session. Leave blank to use it.</string>
     <string name="d_shim_unlock_message">git asked PGPony to sign with %1$s, which is passphrase-protected.</string>
+
+    <!-- 3.0.0 stage 5b: GnuPG import -->
+    <string name="d_gnupg_import_button">Import from GnuPG…</string>
+    <string name="d_gnupg_title">Import from GnuPG</string>
+    <string name="d_gnupg_home">GnuPG home: %1$s</string>
+    <string name="d_gnupg_choose_folder">Choose folder…</string>
+    <string name="d_gnupg_no_home">No GnuPG keyring found in this folder. Choose the folder that holds pubring.kbx.</string>
+    <string name="d_gnupg_counts">%1$d public keys, %2$d secret keys</string>
+    <string name="d_gnupg_counts_public">%1$d public keys</string>
+    <string name="d_gnupg_gpg_found">Using %1$s</string>
+    <string name="d_gnupg_gpg_missing">gpg was not found, so secret keys cannot be read. Public keys and trust can still be imported.</string>
+    <string name="d_gnupg_sandboxed">PGPony is running in a sandbox and cannot run gpg. Public keys and trust can still be imported.</string>
+    <string name="d_gnupg_opt_trust">Carry over trust (ultimate and full)</string>
+    <string name="d_gnupg_opt_secret">Import secret keys (gpg asks for each passphrase)</string>
+    <string name="d_gnupg_card_skipped">%1$s: on a smartcard, skipped. Add the card under Hardware Keys instead.</string>
+    <string name="d_gnupg_stub_skipped">%1$s: no secret material in this keyring, skipped.</string>
+    <string name="d_gnupg_secret_failed">%1$s: could not export (%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: gpg exported it, but it could not be imported.</string>
+    <string name="d_gnupg_import">Import</string>
+    <string name="d_gnupg_done">%1$s. Trust raised on %2$d keys. Secret keys imported: %3$d.</string>
+    <string name="d_gnupg_readonly_note">GnuPG is only read, never changed. Trust in PGPony is only ever raised, never lowered.</string>
 </resources>

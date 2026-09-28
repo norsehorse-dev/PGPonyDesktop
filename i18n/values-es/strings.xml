@@ -784,4 +784,25 @@
     <string name="d_cards_pin_cache_follows">Se guarda durante la sesión definida en Ajustes: %1$s.</string>
     <string name="d_crypto_pass_remembered">Recordada para esta sesión. Déjalo en blanco para usarla.</string>
     <string name="d_shim_unlock_message">git pidió a PGPony firmar con %1$s, que está protegida con contraseña.</string>
+
+    <!-- 3.0.0 stage 5b: GnuPG import -->
+    <string name="d_gnupg_import_button">Importar desde GnuPG…</string>
+    <string name="d_gnupg_title">Importar desde GnuPG</string>
+    <string name="d_gnupg_home">Carpeta de GnuPG: %1$s</string>
+    <string name="d_gnupg_choose_folder">Elegir carpeta…</string>
+    <string name="d_gnupg_no_home">No se encontró ningún llavero de GnuPG en esta carpeta. Elige la carpeta que contiene pubring.kbx.</string>
+    <string name="d_gnupg_counts">%1$d claves públicas, %2$d claves secretas</string>
+    <string name="d_gnupg_counts_public">%1$d claves públicas</string>
+    <string name="d_gnupg_gpg_found">Usando %1$s</string>
+    <string name="d_gnupg_gpg_missing">No se encontró gpg, así que no se pueden leer las claves secretas. Aún puedes importar las claves públicas y la confianza.</string>
+    <string name="d_gnupg_sandboxed">PGPony se ejecuta en un entorno aislado y no puede ejecutar gpg. Aún puedes importar las claves públicas y la confianza.</string>
+    <string name="d_gnupg_opt_trust">Conservar la confianza (absoluta y completa)</string>
+    <string name="d_gnupg_opt_secret">Importar claves secretas (gpg pide cada frase de contraseña)</string>
+    <string name="d_gnupg_card_skipped">%1$s: está en una tarjeta inteligente, se omitió. Añade la tarjeta en Claves de hardware.</string>
+    <string name="d_gnupg_stub_skipped">%1$s: no hay material secreto en este llavero, se omitió.</string>
+    <string name="d_gnupg_secret_failed">%1$s: no se pudo exportar (%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: gpg la exportó, pero no se pudo importar.</string>
+    <string name="d_gnupg_import">Importar</string>
+    <string name="d_gnupg_done">%1$s. Confianza elevada en %2$d claves. Claves secretas importadas: %3$d.</string>
+    <string name="d_gnupg_readonly_note">GnuPG solo se lee, nunca se modifica. La confianza en PGPony solo se eleva, nunca se reduce.</string>
 </resources>

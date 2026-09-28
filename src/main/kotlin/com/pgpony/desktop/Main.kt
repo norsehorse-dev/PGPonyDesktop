@@ -16,7 +16,9 @@ private val PGPONY_VERBS = setOf(
     // 1.0.1 — card-info. This set is the GATE: a verb Cli.run() dispatches but that is missing
     // here never reaches it, and falls through to the usage text below instead. Adding a verb
     // means editing BOTH places, which is exactly what was forgotten first time round.
-    "card-info"
+    "card-info",
+    // 3.0.0 (5b)
+    "import-gnupg"
 )
 private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open", "help", "--help", "-h") + PGPONY_VERBS
 

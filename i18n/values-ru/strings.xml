@@ -858,4 +858,25 @@
     <string name="d_cards_pin_cache_follows">Хранится в течение сеанса, заданного в настройках: %1$s.</string>
     <string name="d_crypto_pass_remembered">Запомнена на этот сеанс. Оставьте поле пустым, чтобы использовать её.</string>
     <string name="d_shim_unlock_message">git запросил у PGPony подпись ключом %1$s, который защищён парольной фразой.</string>
+
+    <!-- 3.0.0 stage 5b: GnuPG import -->
+    <string name="d_gnupg_import_button">Импорт из GnuPG…</string>
+    <string name="d_gnupg_title">Импорт из GnuPG</string>
+    <string name="d_gnupg_home">Каталог GnuPG: %1$s</string>
+    <string name="d_gnupg_choose_folder">Выбрать папку…</string>
+    <string name="d_gnupg_no_home">В этой папке нет связки ключей GnuPG. Выберите папку, в которой лежит pubring.kbx.</string>
+    <string name="d_gnupg_counts">Открытых ключей: %1$d, секретных ключей: %2$d</string>
+    <string name="d_gnupg_counts_public">Открытых ключей: %1$d</string>
+    <string name="d_gnupg_gpg_found">Используется %1$s</string>
+    <string name="d_gnupg_gpg_missing">gpg не найден, поэтому секретные ключи прочитать нельзя. Открытые ключи и доверие всё равно можно импортировать.</string>
+    <string name="d_gnupg_sandboxed">PGPony работает в песочнице и не может запустить gpg. Открытые ключи и доверие всё равно можно импортировать.</string>
+    <string name="d_gnupg_opt_trust">Перенести доверие (абсолютное и полное)</string>
+    <string name="d_gnupg_opt_secret">Импортировать секретные ключи (gpg запросит каждую парольную фразу)</string>
+    <string name="d_gnupg_card_skipped">%1$s: ключ на смарт-карте, пропущен. Добавьте карту в разделе «Аппаратные ключи».</string>
+    <string name="d_gnupg_stub_skipped">%1$s: в этой связке нет секретного материала, пропущен.</string>
+    <string name="d_gnupg_secret_failed">%1$s: не удалось экспортировать (%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: gpg экспортировал ключ, но импортировать его не удалось.</string>
+    <string name="d_gnupg_import">Импортировать</string>
+    <string name="d_gnupg_done">%1$s. Доверие повышено у ключей: %2$d. Импортировано секретных ключей: %3$d.</string>
+    <string name="d_gnupg_readonly_note">GnuPG только читается и никогда не изменяется. Доверие в PGPony только повышается и никогда не понижается.</string>
 </resources>

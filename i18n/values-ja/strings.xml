@@ -759,4 +759,25 @@
     <string name="d_cards_pin_cache_follows">設定のセッション時間だけ保持します: %1$s</string>
     <string name="d_crypto_pass_remembered">このセッションで記憶済みです。空欄のままにすると使用します。</string>
     <string name="d_shim_unlock_message">git が %1$s での署名を PGPony に要求しました。この鍵はパスフレーズで保護されています。</string>
+
+    <!-- 3.0.0 stage 5b: GnuPG import -->
+    <string name="d_gnupg_import_button">GnuPG からインポート…</string>
+    <string name="d_gnupg_title">GnuPG からインポート</string>
+    <string name="d_gnupg_home">GnuPG ホーム: %1$s</string>
+    <string name="d_gnupg_choose_folder">フォルダを選択…</string>
+    <string name="d_gnupg_no_home">このフォルダに GnuPG の鍵束が見つかりません。pubring.kbx があるフォルダを選択してください。</string>
+    <string name="d_gnupg_counts">公開鍵 %1$d 件、秘密鍵 %2$d 件</string>
+    <string name="d_gnupg_counts_public">公開鍵 %1$d 件</string>
+    <string name="d_gnupg_gpg_found">%1$s を使用</string>
+    <string name="d_gnupg_gpg_missing">gpg が見つからないため、秘密鍵は読み込めません。公開鍵と信頼度はインポートできます。</string>
+    <string name="d_gnupg_sandboxed">PGPony はサンドボックス内で動作しているため gpg を実行できません。公開鍵と信頼度はインポートできます。</string>
+    <string name="d_gnupg_opt_trust">信頼度を引き継ぐ (究極および完全)</string>
+    <string name="d_gnupg_opt_secret">秘密鍵をインポート (gpg が各パスフレーズを尋ねます)</string>
+    <string name="d_gnupg_card_skipped">%1$s: スマートカード上の鍵のためスキップしました。「ハードウェア鍵」でカードを追加してください。</string>
+    <string name="d_gnupg_stub_skipped">%1$s: この鍵束に秘密の鍵素材がないためスキップしました。</string>
+    <string name="d_gnupg_secret_failed">%1$s: エクスポートできませんでした (%2$s)。</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: gpg はエクスポートしましたが、インポートできませんでした。</string>
+    <string name="d_gnupg_import">インポート</string>
+    <string name="d_gnupg_done">%1$s。%2$d 件の鍵の信頼度を上げました。インポートした秘密鍵: %3$d 件。</string>
+    <string name="d_gnupg_readonly_note">GnuPG は読み取るだけで、変更はしません。PGPony の信頼度は上げるだけで、下げることはありません。</string>
 </resources>

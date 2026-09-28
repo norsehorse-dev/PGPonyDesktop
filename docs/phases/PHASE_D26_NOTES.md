@@ -47,3 +47,34 @@ protected keys, the exit codes).
 
 Next for 5a: run the suite locally against `tools/pgpony-sop`, fix what it finds (engine fixes
 upstream first), then ask the suite maintainers to add PGPony to the public runs.
+
+## 5b: Import from GnuPG (plan F3)
+
+Keyring gets **Import from GnuPG…**, and the CLI gets `pgpony import-gnupg [--homedir DIR]
+[--secret] [--no-trust]`. Both read one GnuPG home: `$GNUPGHOME`, else `%APPDATA%\gnupg` on
+Windows (Gpg4win), else `~/.gnupg` (GPG Suite, Linux). The dialog can point at another folder.
+PGPony only reads: nothing in the GnuPG folder is written or changed.
+
+- **With gpg** (found on PATH or in the usual install places): public keys through `--export`,
+  trust through `--export-ownertrust` plus the validity column of `--list-keys`, secret keys
+  through `--export-secret-keys`, one key per call, so gpg's own pinentry asks for each
+  passphrase and the key arrives protected by it, as it was. Keys on a smartcard, and keys
+  whose primary secret gpg holds only as a stub, are skipped with a reason (a card is added
+  under Hardware Keys instead).
+- **Without gpg** (not installed, or inside the Flatpak sandbox, where running host gpg is not
+  possible): public keys from `pubring.kbx` (each OpenPGP blob in the keybox holds one keyblock)
+  or the older `pubring.gpg`, trust from `trustdb.gpg` (40-byte records; a trust record carries
+  a v4 fingerprint and the ownertrust). The dialog says that secret keys need gpg, or an export
+  and a file import.
+- **Trust mapping**: ultimate ownertrust or validity becomes Ultimate; full becomes Verified;
+  marginal, unknown and never carry nothing over. Trust in PGPony is only ever raised, never
+  lowered, so running the import twice, or after verifying keys in PGPony, changes nothing
+  that was already higher.
+- **Bounds** (the 4d rules): every file read and every gpg output is capped, each gpg call has
+  a timeout (five minutes for a secret key, which waits on a person at a pinentry), and gpg
+  runs with `--batch --no-auto-check-trustdb`, so the import never rebuilds GnuPG's trustdb.
+
+Tests: `GnupgImportTest` (keybox, trustdb and ownertrust export parsing, the colon listing and
+the trust mapping, and a whole import from a home without gpg, run twice). The gpg path is
+to be checked by hand: a GPG Suite home on the Mac with public keys, an ultimately trusted own key
+and a passphrase-protected secret key; a card key shows its skip note.

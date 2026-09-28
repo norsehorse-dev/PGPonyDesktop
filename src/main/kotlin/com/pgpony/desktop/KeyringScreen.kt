@@ -77,6 +77,7 @@ fun KeyringScreen(state: DesktopState) {
     var showServerSearch by remember { mutableStateOf(false) }
     var showQrImport by remember { mutableStateOf(false) }
     var showLinkImport by remember { mutableStateOf(false) }
+    var showGnupgImport by remember { mutableStateOf(false) }
     // 3.0.0 (plan 6.5, 6.6): pasted, QR and linked keys are previewed before anything is stored.
     var preview by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var detailKey by remember { mutableStateOf<PGPKeyEntity?>(null) }
@@ -131,6 +132,7 @@ fun KeyringScreen(state: DesktopState) {
             OutlinedButton(onClick = { showLinkImport = true }) { Text(tr("d_keyring_import_link")) }
             OutlinedButton(onClick = { showFilePicker = true }) { Text(tr("d_keyring_import_file")) }
             OutlinedButton(onClick = { showQrImport = true }) { Text(tr("d_keyring_import_qr")) }
+            OutlinedButton(onClick = { showGnupgImport = true }) { Text(tr("d_gnupg_import_button")) }
             if (state.deletedKeys.isNotEmpty()) {
                 OutlinedButton(onClick = { showRecentlyDeleted = true }) {
                     Text(tr("d_keyring_recently_deleted_button", state.deletedKeys.size))
@@ -269,6 +271,11 @@ fun KeyringScreen(state: DesktopState) {
 
     if (showServerSearch) {
         SearchKeyServersDialog(state) { showServerSearch = false }
+    }
+
+    // 3.0.0 (stage 5b): public keys, trust and, through gpg, secret keys from a GnuPG home.
+    if (showGnupgImport) {
+        GnupgImportDialog(state) { showGnupgImport = false }
     }
 
     val qrDialogTitle = tr("d_keyring_qr_dialog")
