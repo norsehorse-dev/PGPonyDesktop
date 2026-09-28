@@ -38,8 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.pgpony.android.network.HttpClientFactory
+import com.pgpony.android.network.ResponseLimits
+import com.pgpony.android.network.textCapped
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -134,6 +135,11 @@ object UpdateCheck {
         return if (i < 0) t to null else t.substring(0, i) to t.substring(i + 1)
     }
 
+    private val VERSION = Regex("[0-9]{1,4}(\\.[0-9]{1,4}){0,3}(-[0-9A-Za-z.]{1,20})?")
+
+    /** A dotted version with an optional short pre-release tag, nothing else. */
+    fun isVersionString(v: String): Boolean = VERSION.matches(v)
+
     /** True when [remote] is a strictly newer release than what this build reports. */
     fun isNewer(remote: String, running: String = AppVersion.VERSION): Boolean =
         remote.isNotBlank() && compareVersions(remote, running) > 0
@@ -145,8 +151,11 @@ object UpdateCheck {
      */
     private suspend fun fetchLatest(): String? = withContext(Dispatchers.IO) {
         runCatching {
-            val body = HttpClientFactory.client().get(MANIFEST_URL).bodyAsText()
-            JSONObject(body).optJSONObject("current")?.optString("version", "")?.ifBlank { null }
+            // 3.0.0 (4d): the body is read up to the metadata cap, and the version is shown only
+            // when it looks like a version. The Settings line prints it, so a manifest (or
+            // anything answering for pgpony.app) cannot put its own sentence in the app.
+            val body = HttpClientFactory.client().get(MANIFEST_URL).textCapped(ResponseLimits.MAX_METADATA_RESPONSE_BYTES)
+            JSONObject(body).optJSONObject("current")?.optString("version", "")?.takeIf(::isVersionString)
         }.getOrNull()
     }
 

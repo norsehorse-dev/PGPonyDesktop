@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.runBlocking
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
@@ -140,7 +141,12 @@ object WatchFolderService {
                 // Quiesce sweep: stat every candidate; act on the ones that just went stable.
                 for (path in active.toList()) {
                     if (stopRequested) break
-                    if (!Files.isRegularFile(path)) { quiesce.forget(path); active.remove(path); continue }
+                    // 3.0.0 (4d): a link is never followed. An arrival that is a symlink to a file
+                    // elsewhere (a synced or shared folder) would otherwise encrypt that file and
+                    // write the result where the link's author can collect it.
+                    if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                        quiesce.forget(path); active.remove(path); continue
+                    }
                     val mtime = runCatching { Files.getLastModifiedTime(path).toMillis() }.getOrDefault(0L)
                     if (processed[path] == mtime) { active.remove(path); continue }
                     val size = runCatching { Files.size(path) }.getOrNull()
@@ -171,6 +177,10 @@ object WatchFolderService {
         val matches = byFolder[folder].orEmpty().filter { it.matches(name) }
         if (matches.isEmpty()) return
 
+        // 3.0.0 (4d): the file as it was when encrypting began. Delete-original only removes a
+        // file that is still exactly that, so a writer that paused past the quiesce window and
+        // then appended does not lose what it wrote after the ciphertext was made.
+        val before = snapshot(path) ?: return
         var anyDelete = false
         var allOk = true
         for (rule in matches) {
@@ -193,9 +203,15 @@ object WatchFolderService {
         }
 
         // delete-original only after every matching rule succeeded (default off per rule).
-        if (allOk && anyDelete) runCatching { Files.deleteIfExists(path) }
+        if (allOk && anyDelete && snapshot(path) == before) runCatching { Files.deleteIfExists(path) }
         processed[path] = runCatching { Files.getLastModifiedTime(path).toMillis() }.getOrDefault(0L)
     }
+
+    /** Size and modification time of a regular file (not a link), or null. */
+    internal fun snapshot(path: Path): Pair<Long, Long>? = runCatching {
+        val attrs = Files.readAttributes(path, java.nio.file.attribute.BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+        if (attrs.isRegularFile) attrs.size() to attrs.lastModifiedTime().toMillis() else null
+    }.getOrNull()
 
     private fun record(rule: WatchRule, outcome: FileCryptoOps.FileOutcome) {
         val entry = WatchOutcome(

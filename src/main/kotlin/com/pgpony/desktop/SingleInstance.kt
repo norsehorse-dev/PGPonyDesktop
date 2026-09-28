@@ -10,6 +10,11 @@
 //     serves newline-delimited file paths to AppOpen.
 //   • A later process can't take the lock → it's a SECONDARY. It reads the port, connects,
 //     sends its file arguments, and exits. Nothing is drawn twice.
+//   • 3.0.0 (4d): the port file also holds a fresh token and is owner-only (OwnerOnlyFile),
+//     and the two sides prove the token to each other over nonces before any path is sent
+//     (LocalIpc). A loopback port is open to every account on the machine; without this, any
+//     of them could make the window open a path of its choosing, or hold the listener. Each
+//     connection has one short deadline and bounded lines.
 //
 // AppOpen is the bus in between: the initial CLI file args, macOS "Open With" events, and
 // forwarded paths from secondaries all funnel through it; DesktopState registers a handler and
@@ -17,10 +22,10 @@
 
 package com.pgpony.desktop
 
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.BufferedInputStream
 import java.io.OutputStreamWriter
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.channels.FileChannel
@@ -137,7 +142,10 @@ object SingleInstance {
 
     private fun startServer(portPath: Path) {
         val server = ServerSocket(0, 4, InetAddress.getLoopbackAddress())
-        Files.writeString(portPath, server.localPort.toString())
+        val token = LocalSecret.newToken()
+        // 3.0.0 (4d): the port and a fresh token, owner-only. The port alone would let any
+        // account on the machine make this window open a path of its choosing.
+        OwnerOnlyFile.write(portPath, "${server.localPort} $token\n")
         val t = Thread {
             while (!server.isClosed) {
                 val socket = try {
@@ -145,7 +153,7 @@ object SingleInstance {
                 } catch (_: Exception) {
                     break
                 }
-                handleConnection(socket)
+                runCatching { handleConnection(socket, token) }
             }
         }
         t.isDaemon = true
@@ -153,18 +161,66 @@ object SingleInstance {
         t.start()
     }
 
-    private fun handleConnection(socket: Socket) {
+    private fun handleConnection(socket: Socket, token: String) {
         socket.use { s ->
-            var request = OpenRequest(emptyList())
-            runCatching {
-                BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8)).use { reader ->
-                    request = parseForwarded(reader.lineSequence())
-                }
-            }
+            s.soTimeout = REQUEST_TIMEOUT_MS.toInt()
+            val input = DeadlineInputStream(BufferedInputStream(s.getInputStream()), REQUEST_TIMEOUT_MS)
+            val lines = serverExchange(input, s.getOutputStream(), token) ?: return
+            val request = parseForwarded(lines.asSequence())
             // Always raise the window on a forwarded launch, even a bare one.
             AppOpen.focusWindow?.invoke()
             if (request.paths.isNotEmpty()) AppOpen.deliver(request)
         }
+    }
+
+    private const val PROTOCOL = "PGPONY-OPEN 1"
+    private const val REQUEST_TIMEOUT_MS = 5_000L
+    private const val CONNECT_TIMEOUT_MS = 2_000
+    private const val MAX_LINE = 4096
+    private const val MAX_LINES = 256
+    private val NONCE = Regex("[0-9a-f]{64}")
+
+    /**
+     * The primary's side of the handshake (the ShimBridge shape): the secondary sends a nonce,
+     * the primary answers with its own and an HMAC over the secondary's, and the secondary
+     * proves the token over the primary's. Then up to [MAX_LINES] request lines. Null when the
+     * peer cannot prove it holds the token.
+     */
+    internal fun serverExchange(input: java.io.InputStream, out: java.io.OutputStream, token: String): List<String>? {
+        if (readBoundedLine(input, MAX_LINE) != PROTOCOL) return null
+        val clientNonce = readBoundedLine(input, MAX_LINE)?.takeIf { NONCE.matches(it) } ?: return null
+        val serverNonce = LocalSecret.newToken()
+        out.write("HELLO $serverNonce ${LocalSecret.proof(token, "server", clientNonce)}\n".toByteArray(Charsets.UTF_8))
+        out.flush()
+        if (!LocalSecret.sameText(readBoundedLine(input, MAX_LINE), LocalSecret.proof(token, "client", serverNonce))) {
+            return null
+        }
+        val lines = mutableListOf<String>()
+        while (lines.size < MAX_LINES) lines += readBoundedLine(input, MAX_LINE) ?: break
+        return lines
+    }
+
+    /** The secondary's side. False when the listener is not the running PGPony. */
+    internal fun clientExchange(
+        input: java.io.InputStream,
+        out: java.io.OutputStream,
+        token: String,
+        lines: List<String>
+    ): Boolean {
+        val clientNonce = LocalSecret.newToken()
+        out.write("$PROTOCOL\n$clientNonce\n".toByteArray(Charsets.UTF_8))
+        out.flush()
+        val hello = readBoundedLine(input, MAX_LINE)?.split(' ') ?: return false
+        if (hello.size != 3 || hello[0] != "HELLO" || !NONCE.matches(hello[1]) ||
+            !LocalSecret.sameText(hello[2], LocalSecret.proof(token, "server", clientNonce))
+        ) {
+            return false
+        }
+        val w = OutputStreamWriter(out, Charsets.UTF_8)
+        w.write(LocalSecret.proof(token, "client", hello[1]) + "\n")
+        lines.forEach { w.write(it + "\n") }
+        w.flush()
+        return true
     }
 
     /**
@@ -192,16 +248,24 @@ object SingleInstance {
     private const val OP_HEADER = "--op "
 
     private fun forward(portPath: Path, request: OpenRequest): Boolean {
-        val port = runCatching { Files.readString(portPath).trim().toInt() }.getOrNull() ?: return false
+        val endpoint = runCatching {
+            val parts = Files.readString(portPath).trim().split(' ')
+            parts[0].toInt() to parts[1]
+        }.getOrNull()?.takeIf { (port, token) -> port in 1..65535 && token.length == 64 } ?: return false
+        val lines = buildList {
+            request.op?.let { add(OP_HEADER + it.cliName) }
+            request.paths.forEach { add(it.toAbsolutePath().toString()) }
+        }
         return try {
-            Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
-                OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8).use { w ->
-                    request.op?.let { w.write(OP_HEADER + it.cliName + "\n") }
-                    request.paths.forEach { w.write(it.toAbsolutePath().toString() + "\n") }
-                    w.flush()
-                }
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), endpoint.first), CONNECT_TIMEOUT_MS)
+                socket.soTimeout = REQUEST_TIMEOUT_MS.toInt()
+                val ok = clientExchange(
+                    BufferedInputStream(socket.getInputStream()), socket.getOutputStream(), endpoint.second, lines
+                )
+                if (ok) socket.shutdownOutput()
+                ok
             }
-            true
         } catch (_: Exception) {
             false
         }

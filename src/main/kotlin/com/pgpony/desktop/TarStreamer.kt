@@ -150,10 +150,17 @@ object TarStreamer {
 
     class TarSecurityException(message: String) : Exception(message)
 
+    // 3.0.0 (4d) bounds on a hostile archive. A long name is a path, and no file system takes a
+    // path past a few KiB; the member count stops a tiny archive from creating files without end.
+    private const val MAX_LONG_NAME = 16 * 1024
+    internal const val MAX_MEMBERS = 250_000
+
     fun extract(input: InputStream, targetRoot: Path): Int {
         val rootNorm = targetRoot.toAbsolutePath().normalize()
         Files.createDirectories(rootNorm)
+        val rootReal = rootNorm.toRealPath()
         var written = 0
+        var members = 0
         var pendingLongName: String? = null
         val header = ByteArray(BLOCK)
 
@@ -167,8 +174,11 @@ object TarStreamer {
             val size = parseOctal(header, 124, 12)
             val typeflag = header[156]
 
+            if (++members > MAX_MEMBERS) throw TarSecurityException("more than $MAX_MEMBERS members")
+
             if (typeflag == TYPE_LONGNAME) {
                 // Body is the real path; capture it for the next header, skip its blocks.
+                if (size < 0 || size > MAX_LONG_NAME) throw TarSecurityException("long name of $size bytes")
                 val body = ByteArray(size.toInt())
                 readFully(input, body) ?: throw EOFException("truncated long-name entry")
                 skipPadding(input, size)
@@ -183,14 +193,17 @@ object TarStreamer {
                 TYPE_DIR -> {
                     val dest = safeResolve(rootNorm, name)
                     Files.createDirectories(dest)
+                    requireInside(rootReal, dest, name)
                 }
                 TYPE_FILE, 0.toByte() -> {
                     val dest = safeResolve(rootNorm, name)
                     Files.createDirectories(dest.parent ?: rootNorm)
-                    // Refuse to follow an existing symlink at the destination (TOCTOU-ish, but
-                    // an extract into a prepared tree shouldn't write through a planted link).
-                    if (Files.isSymbolicLink(dest)) {
-                        throw TarSecurityException("refusing to write through a symlink: $name")
+                    // 3.0.0 (4d): the folder the file lands in, resolved through any links, must
+                    // still be inside the target; the file itself is created new, never written
+                    // through an existing link or over an earlier member of the same name.
+                    requireInside(rootReal, dest.parent ?: rootNorm, name)
+                    if (Files.exists(dest, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                        throw TarSecurityException("duplicate or existing member: $name")
                     }
                     copyExactly(input, dest, size)
                     skipPadding(input, size)
@@ -215,6 +228,7 @@ object TarStreamer {
         if (clean.isEmpty()) throw TarSecurityException("empty member name")
         val parts = clean.split('/').filter { it.isNotEmpty() && it != "." }
         if (parts.any { it == ".." }) throw TarSecurityException("path traversal in member: $name")
+        if (parts.any { !isPortableComponent(it) }) throw TarSecurityException("unsafe member name: $name")
         var dest = root
         for (p in parts) dest = dest.resolve(p)
         val norm = dest.normalize()
@@ -222,6 +236,30 @@ object TarStreamer {
             throw TarSecurityException("member escapes the target folder: $name")
         }
         return norm
+    }
+
+    /** [dir], resolved through any links, must be [rootReal] or inside it. */
+    private fun requireInside(rootReal: Path, dir: Path, name: String) {
+        val real = dir.toRealPath()
+        if (real != rootReal && !real.startsWith(rootReal)) {
+            throw TarSecurityException("member escapes the target folder: $name")
+        }
+    }
+
+    private val WINDOWS_DEVICE = Regex("(?i)(con|prn|aux|nul|com[0-9]|lpt[0-9])(\\..*)?")
+
+    /**
+     * 3.0.0 (4d): one path component that is a plain name on every desktop OS. Refused: control
+     * characters, a colon (a drive or an NTFS alternate data stream on Windows), a trailing dot
+     * or space (Windows drops them, so two names become one), and Windows device names, which
+     * open the device instead of a file there. The archive is refused, not renamed, so what
+     * lands on disk is always exactly what the archive says.
+     */
+    internal fun isPortableComponent(part: String): Boolean {
+        if (part.any { it < ' ' || it == '\u007F' || it == ':' }) return false
+        if (part.endsWith('.') || part.endsWith(' ')) return false
+        if (WINDOWS_DEVICE.matches(part)) return false
+        return true
     }
 
     // ── Detection ────────────────────────────────────────────────────────────
@@ -237,7 +275,7 @@ object TarStreamer {
     // ── Byte helpers ─────────────────────────────────────────────────────────
 
     private fun copyExactly(input: InputStream, dest: Path, size: Long) {
-        BufferedOutputStream(Files.newOutputStream(dest)).use { out ->
+        BufferedOutputStream(Files.newOutputStream(dest, java.nio.file.StandardOpenOption.CREATE_NEW)).use { out ->
             val buf = ByteArray(64 * 1024)
             var remaining = size
             while (remaining > 0) {

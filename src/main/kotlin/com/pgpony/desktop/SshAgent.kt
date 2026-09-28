@@ -332,35 +332,54 @@ object SshAgentService {
     }
 
     /**
-     * Accept loop, serial like SingleInstance's: ssh clients hold a connection for
-     * milliseconds, and a queue of one keeps every signature request behind the same
-     * single prompt path.
+     * Accept loop. 3.0.0 (4d): each client gets its own thread, up to [MAX_CLIENTS] at once, so
+     * one that connects and never speaks (or waits on a passphrase prompt) does not stall every
+     * other ssh on the machine; a client past the cap is closed at once. Prompts stay one at a
+     * time (AgentPrompt).
      */
     private fun serve(server: ServerSocketChannel) {
+        val slots = java.util.concurrent.Semaphore(MAX_CLIENTS)
         while (server.isOpen) {
             val client = try {
                 server.accept()
             } catch (_: Exception) {
                 break // closed by stop(); the thread ends with the socket
             }
-            runCatching {
-                client.use { c ->
-                    val input = Channels.newInputStream(c)
-                    val output = Channels.newOutputStream(c)
-                    while (true) {
-                        val payload = SshWire.readFrame(input) ?: break
-                        val repo = repository ?: break
-                        val response = SshWire.handleRequest(
-                            payload,
-                            identities = { SshAgentKeys.identities(repo).map { it.identity } },
-                            sign = { blob, data, flags -> SshAgentKeys.sign(repo, blob, data, flags) }
-                        )
-                        SshWire.writeFrame(output, response)
-                    }
+            if (!slots.tryAcquire()) {
+                runCatching { client.close() }
+                continue
+            }
+            Thread({
+                try {
+                    runCatching { serveClient(client) }
+                } finally {
+                    slots.release()
                 }
+            }, "pgpony-ssh-agent-client").apply {
+                isDaemon = true
+                start()
             }
         }
     }
+
+    private fun serveClient(client: java.nio.channels.SocketChannel) {
+        client.use { c ->
+            val input = Channels.newInputStream(c)
+            val output = Channels.newOutputStream(c)
+            while (true) {
+                val payload = SshWire.readFrame(input) ?: break
+                val repo = repository ?: break
+                val response = SshWire.handleRequest(
+                    payload,
+                    identities = { SshAgentKeys.identities(repo).map { it.identity } },
+                    sign = { blob, data, flags -> SshAgentKeys.sign(repo, blob, data, flags) }
+                )
+                SshWire.writeFrame(output, response)
+            }
+        }
+    }
+
+    private const val MAX_CLIENTS = 8
 
     /** KeyMaterialStore's owner-only helper, repeated for the socket (theirs is private). */
     private fun restrictToOwner(path: Path, directory: Boolean = false) {

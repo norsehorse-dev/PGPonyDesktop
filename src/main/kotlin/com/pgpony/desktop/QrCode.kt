@@ -125,11 +125,7 @@ object QrCode {
      * first, then the single passes of [decodeFromImage] for what it misses.
      */
     fun decodeAllFromImage(file: File): List<String> {
-        val image = try {
-            ImageIO.read(file)
-        } catch (_: Exception) {
-            null
-        } ?: return emptyList()
+        val image = readImageBounded(file) ?: return emptyList()
         val found = linkedSetOf<String>()
         runCatching {
             val bitmap = BinaryBitmap(HybridBinarizer(BufferedImageLuminanceSource(image)))
@@ -199,12 +195,37 @@ object QrCode {
      * material.
      */
     fun decodeFromImage(file: File): String? {
-        val image = try {
-            ImageIO.read(file)
+        val image = readImageBounded(file) ?: return null
+        return decodeWith(image, pure = false) ?: decodeWith(image, pure = true)
+    }
+
+    /** 3.0.0 (4d): the largest image decoded: a phone screenshot is a few megapixels. */
+    internal const val MAX_IMAGE_PIXELS = 40L * 1000 * 1000
+
+    /**
+     * [file] as an image, or null. The size in the image's header is checked before any pixel is
+     * decoded: a small file can declare a huge image, and decoding it would exhaust the heap.
+     */
+    internal fun readImageBounded(file: File): BufferedImage? {
+        return try {
+            ImageIO.createImageInputStream(file)?.use { stream ->
+                val reader = ImageIO.getImageReaders(stream).asSequence().firstOrNull()
+                if (reader == null) {
+                    null
+                } else {
+                    try {
+                        reader.setInput(stream, true, true)
+                        val w = reader.getWidth(0).toLong()
+                        val h = reader.getHeight(0).toLong()
+                        if (w <= 0 || h <= 0 || w * h > MAX_IMAGE_PIXELS) null else reader.read(0)
+                    } finally {
+                        reader.dispose()
+                    }
+                }
+            }
         } catch (_: Exception) {
             null
-        } ?: return null
-        return decodeWith(image, pure = false) ?: decodeWith(image, pure = true)
+        }
     }
 
     /** One decode attempt. [pure] swaps the photo detector for the direct grid reader. */

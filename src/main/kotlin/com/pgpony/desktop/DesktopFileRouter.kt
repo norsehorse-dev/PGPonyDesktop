@@ -68,10 +68,21 @@ object DesktopFileRouter {
 
     private val crypto get() = PGPCryptoService.shared
 
+    /**
+     * 3.0.0 (4d): the most of a file read into memory to classify it. Past this only the head is
+     * read, which is all the decision needs except for a key import (see [classifyLargeHead]).
+     */
+    internal const val FULL_READ_LIMIT = 16L * 1024 * 1024
+    private const val LARGE_HEAD_BYTES = 1024 * 1024
+
     /** Classify a file on disk into the action the UI should take. Never throws. */
     fun classify(path: Path): OpenAction = try {
-        val bytes = Files.readAllBytes(path)
-        if (bytes.isEmpty()) OpenAction.None else classifyBytes(bytes, path)
+        val size = Files.size(path)
+        when {
+            size == 0L -> OpenAction.None
+            size <= FULL_READ_LIMIT -> classifyBytes(Files.readAllBytes(path), path)
+            else -> classifyLargeHead(Files.newInputStream(path).use { it.readNBytes(LARGE_HEAD_BYTES) }, path)
+        }
     } catch (_: Exception) {
         OpenAction.None
     }
@@ -92,7 +103,8 @@ object DesktopFileRouter {
         return try {
             val bytes = when (op) {
                 ForcedOp.ENCRYPT, ForcedOp.VERIFY, ForcedOp.RESTORE -> EMPTY
-                ForcedOp.IMPORT -> Files.readAllBytes(path)
+                ForcedOp.IMPORT ->
+                    if (Files.size(path) <= FULL_READ_LIMIT) Files.readAllBytes(path) else return OpenAction.None
                 ForcedOp.DECRYPT ->
                     if (Files.size(path) <= TEXT_PREFILL_LIMIT) Files.readAllBytes(path) else EMPTY
             }
@@ -128,6 +140,24 @@ object DesktopFileRouter {
     }
 
     private val EMPTY = ByteArray(0)
+
+    /**
+     * A file past [FULL_READ_LIMIT], from its head alone (exposed for tests). The same tree as
+     * [classifyBytes] except that a key block is not imported (a key that size is not a key
+     * anyone meant to open) and a zip's entries are counted from the file as a stream.
+     */
+    internal fun classifyLargeHead(head: ByteArray, path: Path): OpenAction {
+        if (head.isEmpty()) return OpenAction.None
+        val text = headText(head)
+        if (text.contains("-----BEGIN PGP PUBLIC KEY BLOCK-----") || text.contains("-----BEGIN PGP PRIVATE KEY BLOCK-----")) {
+            return OpenAction.None
+        }
+        if (ZipTransport.looksLikeZip(head)) {
+            val count = runCatching { Files.newInputStream(path).use { ZipTransport.pgpEntryCount(it) } }.getOrDefault(0)
+            return if (count == 1) OpenAction.DecryptFile(path) else OpenAction.EncryptFile(path)
+        }
+        return classifyBytes(head, path)
+    }
 
     /** The classification core (exposed for tests, which build bytes in memory). */
     fun classifyBytes(bytes: ByteArray, path: Path): OpenAction {

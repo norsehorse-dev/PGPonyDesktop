@@ -93,7 +93,9 @@ object GpgShim {
             ?: args.dropWhile { it != "-bsau" }.drop(1).firstOrNull() // `-bsau KEYID` positional
             ?: return fail(stderr, "sign: no signing key given (-u)")
 
-        val payload = stdin.readBytes()
+        // 3.0.0 (4d): bounded. A commit or tag object is small; the running app takes no more.
+        val payload = stdin.readNBytes(ShimBridge.MAX_PAYLOAD + 1)
+        if (payload.size > ShimBridge.MAX_PAYLOAD) return fail(stderr, "sign: the data to sign is too large")
         return withRepo { repo ->
             val keys = runBlocking { repo.allKeys() }.filter { it.isKeyPair }
             val picked = Cli.matchKeys(keys, selector).firstOrNull()
@@ -172,7 +174,10 @@ object GpgShim {
             } ?: VerifyService.shared.verifyDetached(sigBytes, signed, rings)
             when (val r = result) {
                 is VerificationResult.Verified -> {
-                    val who = "${r.signerName ?: ""} <${r.signerEmail ?: ""}>".trim()
+                    // 3.0.0 (4d): the name and email come from the signer's User ID, which the
+                    // signer wrote. Escaped the way gpg escapes status lines, or a line break in a
+                    // User ID would add a status line of its own (a second VALIDSIG, a TRUST_).
+                    val who = statusText("${r.signerName ?: ""} <${r.signerEmail ?: ""}>".trim())
                     // git reads GOODSIG + VALIDSIG off the status fd; the human line is stderr.
                     status.println("[GNUPG:] GOODSIG ${r.signerKeyID} $who")
                     status.println("[GNUPG:] VALIDSIG ${r.signerFingerprint} 0 0 0 0 0 0 0 ${r.signerFingerprint}")
@@ -192,7 +197,7 @@ object GpgShim {
                 }
                 is VerificationResult.Invalid -> {
                     status.println("[GNUPG:] BADSIG ${r.signerKeyID ?: "0000000000000000"}")
-                    stderr.println("pgpony-gpg: BAD signature — ${r.reason}")
+                    stderr.println("pgpony-gpg: BAD signature: ${statusText(r.reason)}")
                     1
                 }
                 is VerificationResult.UnknownSigner -> {
@@ -212,6 +217,17 @@ object GpgShim {
 
     private const val VERSION_BANNER =
         "gpg (PGPony shim) 2.0.0\nCompatible with the git commit/tag signing interface only."
+
+    /**
+     * Text from a signature for a status or message line: gpg's status-fd escaping, where a
+     * control character or '%' becomes %XX, so the text can never end the line it is on.
+     */
+    internal fun statusText(raw: String): String = buildString {
+        for (ch in raw) {
+            if (ch < ' ' || ch == '%' || ch == '\u007F') append('%').append("%02X".format(ch.code))
+            else append(ch)
+        }
+    }
 
     private fun hasShort(args: List<String>, c: Char): Boolean =
         args.any { it.length >= 2 && it[0] == '-' && it[1] != '-' && it.contains(c) }

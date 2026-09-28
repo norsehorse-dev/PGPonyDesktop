@@ -92,3 +92,34 @@ passphrase and prompt, composite keys).
 Tests: `TransportTest` (zip round trips for a file and a folder with nothing left behind, no or
 several entries, a hostile entry path, router, frame format and reassembly, a post-quantum key
 through framed PNGs, import outcomes).
+
+### Checkpoint 4d: desktop hardening (plan section 8)
+
+The desktop-only surfaces under the review's categories: input bounds, archive and file names,
+trust in what a peer or the network says. The findings themselves stay with the pre-audit
+material outside this repository; this is what changed.
+
+- **Tar extraction**: bounded long names and member count; a member is created new, never over
+  an earlier one or through a link, and the folder it lands in must resolve inside the target;
+  names that are not plain on every desktop OS (colons, trailing dots or spaces, Windows device
+  names, control characters) refuse the archive.
+- **Watch folders**: a symlink is never followed; delete-original only removes a file whose size
+  and time are unchanged since encryption began.
+- **File router**: past 16 MiB only the head is read; a key block that large is not imported;
+  a large zip is counted as a stream.
+- **SSH agent**: one thread per client (up to 8), so a silent client cannot stall the others.
+- **git shim**: text from a signature (the signer's User ID, a failure reason) is escaped the
+  way gpg escapes status lines; input is capped at the bridge's limit.
+- **Loopback channels** (`LocalIpc`): the single-instance listener and the git shim bridge both
+  keep a fresh token in an owner-only file and prove it over nonces (HMAC) before anything is
+  sent, so no other account can drive them and a stale port cannot collect a request; one
+  deadline per request, bounded lines. Bridge protocol is now version 2.
+- **Update check**: body capped at the metadata limit; the version is shown only when it looks
+  like one.
+- **CLI**: `export --secret --gpg-compat` takes its passphrase from env, fd or a prompt (the
+  old flag was never parsed); a secret key written to a file is owner-only; a named passphrase
+  variable that is unset, or an fd that cannot be read, is an error instead of an empty
+  passphrase.
+- **QR import**: an image's declared size is checked before decoding (40 megapixels).
+
+Tests: `HardeningTest`, and new cases in `TarStreamerTest` and `ShimBridgeTest`.

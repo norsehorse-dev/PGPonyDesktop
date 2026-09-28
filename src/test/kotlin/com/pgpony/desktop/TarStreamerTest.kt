@@ -150,6 +150,53 @@ class TarStreamerTest {
         assertFalse(Files.exists(out.resolve("link")), "the symlink was not materialized")
     }
 
+    // ── 3.0.0 (4d) hardening ─────────────────────────────────────────────
+
+    @Test
+    fun aDuplicateMemberIsRefusedNotOverwritten() {
+        val first = oneFileTar("a.txt", "one")
+        val tar = first.copyOf(first.size - 1024) + oneFileTar("a.txt", "two")
+        val out = work.resolve("dup")
+        assertFailsWith<TarStreamer.TarSecurityException> { TarStreamer.extract(ByteArrayInputStream(tar), out) }
+        assertEquals("one", Files.readString(out.resolve("a.txt")), "the first member stands")
+    }
+
+    @Test
+    fun namesThatAreNotPlainOnEveryDesktopAreRefused() {
+        for (bad in listOf("CON", "nul.txt", "docs/aux", "a:b.txt", "trailing.", "space ", "tab\tname")) {
+            assertFalse(TarStreamer.isPortableComponent(bad.substringAfterLast('/')), bad)
+            assertFailsWith<TarStreamer.TarSecurityException>(bad) {
+                TarStreamer.extract(ByteArrayInputStream(oneFileTar(bad, "x")), work.resolve("names-${bad.hashCode()}"))
+            }
+        }
+        for (good in listOf("console.txt", "report.pdf", ".hidden", "Übersicht.txt", "con-fig")) {
+            assertTrue(TarStreamer.isPortableComponent(good), good)
+        }
+    }
+
+    @Test
+    fun anOversizedLongNameIsRefusedBeforeItIsRead() {
+        val tar = oneFileTar("././@LongLink", "x")
+        tar[156] = 'L'.code.toByte()
+        val size = String.format("%011o", 1_000_000_000L).toByteArray(Charsets.US_ASCII)
+        System.arraycopy(size, 0, tar, 124, 11)
+        assertFailsWith<TarStreamer.TarSecurityException> {
+            TarStreamer.extract(ByteArrayInputStream(tar), work.resolve("longname"))
+        }
+    }
+
+    @Test
+    fun aLinkAlreadyInTheTargetIsNotFollowed() {
+        val out = Files.createDirectories(work.resolve("prepared"))
+        val outside = Files.createDirectories(work.resolve("outside"))
+        val linked = runCatching { Files.createSymbolicLink(out.resolve("sub"), outside) }.getOrNull() ?: return
+        assertTrue(Files.isSymbolicLink(linked))
+        assertFailsWith<TarStreamer.TarSecurityException> {
+            TarStreamer.extract(ByteArrayInputStream(oneFileTar("sub/evil.txt", "x")), out)
+        }
+        assertFalse(Files.exists(outside.resolve("evil.txt")))
+    }
+
     @Test
     fun looksLikeTarIsFalseForShortOrNonTarHeads() {
         assertFalse(TarStreamer.looksLikeTar(ByteArray(10)))

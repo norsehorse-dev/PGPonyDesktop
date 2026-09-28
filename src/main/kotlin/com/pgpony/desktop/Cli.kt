@@ -183,7 +183,7 @@ object Cli {
             val info = repo.loadCompositeKeyInfo(e.fingerprint, passphraseOrNull(o)?.toCharArray())
                 ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} could not be loaded")
             val secret = info.compositeSecret
-                ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} is passphrase-protected; pass --passphrase")
+                ?: throw CliError(ExitCode.FAILED, "signing key ${e.shortFingerprint} is passphrase-protected; give it with --passphrase-env or --passphrase-fd")
             val data = readAll(input)
             val out = if (detached)
                 CompositeDocumentSigner.signDetachedArmored(info.suite, secret, info.fingerprint, data)
@@ -270,11 +270,15 @@ object Cli {
         val outPath = o.value("--output", "-o")
         val e = resolveOne(repo, selector, requireSecret = secret)
         val armor = if (secret) {
-            if (gpgCompat) repo.exportArmoredPrivateKeyGpgCompat(e.fingerprint, o.value("--passphrase", "-p"))
+            // 3.0.0 (4d): the passphrase comes the way every other verb takes one (env, fd or a
+            // prompt), never as a flag: a flag is visible to every process on the machine.
+            if (gpgCompat) repo.exportArmoredPrivateKeyGpgCompat(e.fingerprint, passphraseOrNull(o))
             else repo.exportArmoredPrivateKey(e.fingerprint)
         } else repo.exportArmoredPublicKeyForSharing(e.fingerprint)
         armor ?: throw CliError(ExitCode.NOT_FOUND, "no ${if (secret) "secret" else "public"} material for ${e.shortFingerprint}")
-        writeAll(outPath, armor.toByteArray(Charsets.UTF_8))
+        // 3.0.0 (4d): a secret key file is created readable by its owner only.
+        if (secret && outPath != null && outPath != "-") OwnerOnlyFile.write(Path.of(outPath), armor)
+        else writeAll(outPath, armor.toByteArray(Charsets.UTF_8))
         ExitCode.OK
     }
 
@@ -478,23 +482,38 @@ object Cli {
 
     // ── Passphrase ──────────────────────────────────────────────────────
 
+    /**
+     * 3.0.0 (4d): a named source that gives nothing is an error, not "no passphrase". A typo in
+     * the variable name would otherwise make gen-key write an unprotected key without a word.
+     */
+    internal fun passphraseFromEnv(name: String): String =
+        System.getenv(name) ?: throw CliError(ExitCode.USAGE, "environment variable $name is not set")
+
+    internal fun passphraseFromFd(fd: String): String {
+        val n = fd.trim().toIntOrNull()?.takeIf { it >= 0 }
+            ?: throw CliError(ExitCode.USAGE, "--passphrase-fd wants a file descriptor number, not \"$fd\"")
+        return runCatching { File("/dev/fd/$n").readText().trimEnd('\n', '\r') }.getOrElse {
+            throw CliError(ExitCode.USAGE, "could not read a passphrase from file descriptor $n")
+        }
+    }
+
     /** Passphrase from --passphrase-env / --passphrase-fd, or null (no interactive prompt). */
     private fun passphraseOrNull(o: Options): String? {
-        o.value("--passphrase-env")?.let { return System.getenv(it) }
-        o.value("--passphrase-fd")?.let { fd ->
-            return runCatching { File("/dev/fd/$fd").readText().trimEnd('\n', '\r') }.getOrNull()
-        }
+        o.value("--passphrase-env")?.let { return passphraseFromEnv(it).ifEmpty { null } }
+        o.value("--passphrase-fd")?.let { return passphraseFromFd(it).ifEmpty { null } }
         // Interactive only if a console is attached (not piped).
         val console = System.console() ?: return null
         val chars = console.readPassword("Passphrase (empty if none): ")
         return chars?.concatToString()?.ifEmpty { null }
     }
 
+    private fun requireGiven(passphrase: String, allowEmpty: Boolean) {
+        if (!allowEmpty && passphrase.isEmpty()) throw CliError(ExitCode.USAGE, "passphrase required")
+    }
+
     private fun requirePassphrase(o: Options, prompt: String, allowEmpty: Boolean = false): String {
-        o.value("--passphrase-env")?.let { return System.getenv(it) ?: "" }
-        o.value("--passphrase-fd")?.let { fd ->
-            return runCatching { File("/dev/fd/$fd").readText().trimEnd('\n', '\r') }.getOrElse { "" }
-        }
+        o.value("--passphrase-env")?.let { return passphraseFromEnv(it).also { p -> requireGiven(p, allowEmpty) } }
+        o.value("--passphrase-fd")?.let { return passphraseFromFd(it).also { p -> requireGiven(p, allowEmpty) } }
         val console = System.console()
             ?: throw CliError(ExitCode.USAGE, "no terminal for a passphrase prompt — use --passphrase-env or --passphrase-fd")
         val first = console.readPassword(prompt).concatToString()

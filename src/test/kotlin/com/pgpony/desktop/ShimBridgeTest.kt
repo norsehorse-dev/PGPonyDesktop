@@ -22,6 +22,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ShimBridgeTest {
@@ -43,25 +44,19 @@ class ShimBridgeTest {
         SettingsStores.uninstall()
     }
 
-    private fun request(bytes: ByteArray) = ShimBridge.readRequest(ByteArrayInputStream(bytes), token)
+    private fun sign(bytes: ByteArray) = ShimBridge.readSign(ByteArrayInputStream(bytes))
 
     @Test
-    fun theWireFormatRoundTripsAndRefusesWhatItShould() {
-        val buf = ByteArrayOutputStream()
-        ShimBridge.writeRequest(buf, token, fp, "payload".toByteArray())
-        val sign = assertIs<ShimBridge.Request.Sign>(request(buf.toByteArray()))
-        assertEquals(fp, sign.fingerprint)
-        assertContentEquals("payload".toByteArray(), sign.payload)
-
-        val wrongToken = ShimBridge.readRequest(ByteArrayInputStream(buf.toByteArray()), "b".repeat(64))
-        assertEquals("not authorized", assertIs<ShimBridge.Request.Bad>(wrongToken).message)
-
-        fun head(line3: String, length: String) = "PGPONY-SHIM 1\n$token\n$line3\n$length\n".toByteArray()
-        assertIs<ShimBridge.Request.Bad>(request(head("SIGN ../../etc/passwd", "1") + byteArrayOf(1)), "not a fingerprint")
-        assertIs<ShimBridge.Request.Bad>(request(head("EXPORT $fp", "0")), "only signing is served")
-        assertIs<ShimBridge.Request.Bad>(request(head("SIGN $fp", "${ShimBridge.MAX_PAYLOAD + 1}")), "too large")
-        assertIs<ShimBridge.Request.Bad>(request(head("SIGN $fp", "10") + byteArrayOf(1, 2)), "ended early")
-        assertIs<ShimBridge.Request.Bad>(request(ByteArray(10_000) { 'A'.code.toByte() }), "an endless first line")
+    fun requestsAndRepliesAreBounded() {
+        fun body(line: String, length: String) = "$line\n$length\n".toByteArray()
+        val ok = assertIs<ShimBridge.Request.Sign>(sign(body("SIGN $fp", "7") + "payload".toByteArray()))
+        assertEquals(fp, ok.fingerprint)
+        assertContentEquals("payload".toByteArray(), ok.payload)
+        assertIs<ShimBridge.Request.Bad>(sign(body("SIGN ../../etc/passwd", "1") + byteArrayOf(1)), "not a fingerprint")
+        assertIs<ShimBridge.Request.Bad>(sign(body("EXPORT $fp", "0")), "only signing is served")
+        assertIs<ShimBridge.Request.Bad>(sign(body("SIGN $fp", "${ShimBridge.MAX_PAYLOAD + 1}")), "too large")
+        assertIs<ShimBridge.Request.Bad>(sign(body("SIGN $fp", "10") + byteArrayOf(1, 2)), "ended early")
+        assertIs<ShimBridge.Request.Bad>(sign(ByteArray(10_000) { 'A'.code.toByte() }), "an endless line")
 
         val out = ByteArrayOutputStream()
         ShimBridge.writeReply(out, ShimBridge.Reply.Signed("sig".toByteArray(), 22, 8))
@@ -73,8 +68,30 @@ class ShimBridgeTest {
         val refusedOut = ByteArrayOutputStream()
         ShimBridge.writeReply(refusedOut, ShimBridge.Reply.Refused("two\nlines"))
         val refused = assertIs<ShimBridge.Reply.Refused>(ShimBridge.readReply(ByteArrayInputStream(refusedOut.toByteArray())))
-        assertEquals("two lines", refused.message)
+        assertEquals("twolines", refused.message)
         assertEquals(ShimBridge.Reply.Unreachable, ShimBridge.readReply(ByteArrayInputStream(ByteArray(0))))
+    }
+
+    @Test
+    fun theHandshakeNeverSendsTheTokenOrTheCommitToAStranger() {
+        // The shim talking to a listener that does not hold the token: it answers HELLO with a
+        // wrong proof. The shim must stop after its first line.
+        val stranger = ByteArrayInputStream("HELLO ${"c".repeat(64)} ${"d".repeat(64)}\n".toByteArray())
+        val sent = ByteArrayOutputStream()
+        val reply = ShimBridge.clientExchange(stranger, sent, token, fp, "secret commit".toByteArray())
+        assertEquals(ShimBridge.Reply.Unreachable, reply)
+        val wire = sent.toString(Charsets.UTF_8)
+        assertEquals(2, wire.lines().filter { it.isNotEmpty() }.size, "protocol line and nonce only: $wire")
+        assertFalse(wire.contains(token), "the token never crosses the socket")
+        assertFalse(wire.contains("secret commit"))
+
+        // The app talking to a client that cannot prove the token.
+        val shimNonce = "e".repeat(64)
+        val impostor = ByteArrayInputStream("PGPONY-SHIM 2\n$shimNonce\n${"f".repeat(64)}\nSIGN $fp\n1\nx".toByteArray())
+        val hello = ByteArrayOutputStream()
+        val request = ShimBridge.serverExchange(impostor, hello, token)
+        assertEquals("not authorized", assertIs<ShimBridge.Request.Bad>(request).message)
+        assertTrue(hello.toString(Charsets.UTF_8).endsWith(LocalSecret.proof(token, "server", shimNonce) + "\n"))
     }
 
     @Test
@@ -91,6 +108,14 @@ class ShimBridgeTest {
         val reply = assertIs<ShimBridge.Reply.Signed>(ShimBridge.requestSignature(dir, fp, "abc".toByteArray()))
         assertEquals("cba", String(reply.armored))
         assertEquals(fp, seen)
+
+        // The same port with another token (a stale file, another account): nothing is signed.
+        seen = null
+        val other = Files.createTempDirectory("pgpony-bridge-other")
+        val port = Files.readString(endpoint).trim().substringBefore(' ')
+        Files.writeString(other.resolve(ShimBridge.FILE_NAME), "$port ${"0".repeat(64)}\n")
+        assertEquals(ShimBridge.Reply.Unreachable, ShimBridge.requestSignature(other, fp, "abc".toByteArray()))
+        assertNull(seen)
 
         ShimBridge.stop()
         assertFalse(Files.exists(endpoint), "the endpoint goes with the app")
