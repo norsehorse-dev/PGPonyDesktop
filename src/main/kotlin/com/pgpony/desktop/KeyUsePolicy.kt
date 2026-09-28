@@ -26,7 +26,14 @@ object KeyUsePolicy {
     private fun prefs(): Preferences =
         prefsOverride ?: Preferences.userRoot().node("app/pgpony/desktop")
 
-    fun allowExpiredKeys(): Boolean = prefs().getBoolean(KEY_ALLOW_EXPIRED, false)
+    /**
+     * 3.0.0 (5a): a process that must not follow the user's setting sets this. pgpony-sop is
+     * stateless: an expired certificate cannot encrypt and an expired key cannot sign there,
+     * whatever the app's Settings say.
+     */
+    @Volatile var forced: Boolean? = null
+
+    fun allowExpiredKeys(): Boolean = forced ?: prefs().getBoolean(KEY_ALLOW_EXPIRED, false)
 
     fun setAllowExpiredKeys(enabled: Boolean) {
         prefs().putBoolean(KEY_ALLOW_EXPIRED, enabled)

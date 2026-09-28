@@ -1,0 +1,6 @@
+#!/bin/sh
+# pgpony-sop: PGPony's Stateless OpenPGP interface (draft-dkg-openpgp-stateless-cli).
+# Point the OpenPGP interoperability test suite's configuration at this file.
+# PGPONY names the PGPony launcher when `pgpony` is not on PATH, for example
+#   PGPONY=/Applications/PGPony.app/Contents/MacOS/PGPony
+exec "${PGPONY:-pgpony}" sop "$@"

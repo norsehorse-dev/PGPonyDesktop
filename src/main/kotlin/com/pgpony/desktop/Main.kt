@@ -21,6 +21,15 @@ private val PGPONY_VERBS = setOf(
 private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open", "help", "--help", "-h") + PGPONY_VERBS
 
 fun main(args: Array<String>) {
+    // 3.0.0 (5a): the Stateless OpenPGP face, `pgpony-sop` or `pgpony sop`. First, before the
+    // settings seam is installed: it never reads or writes the user's settings or keyring.
+    if (invokedAs("pgpony-sop") || args.firstOrNull() == "sop") {
+        I18n.pinEnglish()
+        KeyUsePolicy.forced = false
+        val sopArgs = if (args.firstOrNull() == "sop") args.drop(1) else args.toList()
+        exitProcess(Sop.run(sopArgs, System.`in`, System.out, System.err))
+    }
+
     // 3.0.0: the settings seam (vendored data/settings/KeyValueSettings.kt). First, before any
     // face of the binary can reach a vendored store.
     DesktopPrefsSettings.install()
@@ -97,12 +106,15 @@ fun main(args: Array<String>) {
  * distinguishes the `pgpony-gpg` launcher from `pgpony` within the one app image. Falls back to
  * `sun.java.command` for a `java -jar` / dev run. Never throws — an unknown launcher is `pgpony`.
  */
-internal fun invokedAsGpgShim(): Boolean {
+internal fun invokedAsGpgShim(): Boolean = invokedAs("pgpony-gpg")
+
+/** True when this process was launched under the launcher name [name] (see above). */
+internal fun invokedAs(name: String): Boolean {
     fun basename(p: String?): String =
         p?.substringAfterLast('/')?.substringAfterLast('\\')?.lowercase() ?: ""
     val appPath = basename(System.getProperty("jpackage.app-path"))
-    if (appPath.isNotEmpty()) return appPath.removeSuffix(".exe") == "pgpony-gpg"
-    return basename(System.getProperty("sun.java.command")).removeSuffix(".exe") == "pgpony-gpg"
+    if (appPath.isNotEmpty()) return appPath.removeSuffix(".exe") == name
+    return basename(System.getProperty("sun.java.command")).removeSuffix(".exe") == name
 }
 
 private const val OPEN_USAGE =
