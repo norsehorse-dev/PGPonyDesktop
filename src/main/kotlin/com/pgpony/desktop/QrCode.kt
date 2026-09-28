@@ -5,6 +5,11 @@
 // WriterException and the caller shows the 4.1.0 §11 "too large for a QR, share the .asc"
 // message instead of a broken image. Decoding reads a QR out of any image file the user picks
 // (screenshot, photo export); there is no camera in 1.0.
+//
+// 3.0.0 (stage 4c, Android 4.4.1 audit item 10): a key too large for one symbol is shown as an
+// animated sequence of framed symbols (QrChunking), each encoded at its natural module size and
+// scaled by a whole number, as Android 4.5.1 does (#63). Import reads every QR in every chosen
+// image and reassembles the frames.
 
 package com.pgpony.desktop
 
@@ -16,6 +21,7 @@ import com.google.zxing.MultiFormatReader
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource
 import com.google.zxing.client.j2se.MatrixToImageWriter
 import com.google.zxing.common.HybridBinarizer
+import com.google.zxing.multi.qrcode.QRCodeMultiReader
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import java.awt.image.BufferedImage
@@ -65,6 +71,111 @@ object QrCode {
         }
     } catch (_: Exception) {
         null
+    }
+
+    /**
+     * [text] as the PNG symbols to show: one for a key that fits, or the frames of a split key.
+     * Null when even [QrChunking.MAX_FRAMES] frames cannot hold it.
+     */
+    fun encodeFrames(text: String, target: Int = FRAME_TARGET): List<ByteArray>? {
+        val parts = QrChunking.split(text) ?: return null
+        val pngs = parts.map { encodeSymbolPng(it, target) }
+        return if (pngs.any { it == null }) null else pngs.filterNotNull()
+    }
+
+    /** Pixels a framed symbol is scaled toward (Android QrBitmap.TARGET). */
+    const val FRAME_TARGET = 800
+
+    /**
+     * One symbol at its natural module size, scaled by a whole number toward [target] pixels:
+     * every frame gets the same crisp modules with no variable border (Android 4.5.1, #63).
+     */
+    fun encodeSymbolPng(text: String, target: Int = FRAME_TARGET): ByteArray? = try {
+        val hints = mapOf(
+            EncodeHintType.MARGIN to 1,
+            EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+            EncodeHintType.CHARACTER_SET to "UTF-8"
+        )
+        val matrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 1, 1, hints)
+        val modules = matrix.width
+        val scale = (target / modules).coerceAtLeast(1)
+        val size = modules * scale
+        val image = BufferedImage(size, size, BufferedImage.TYPE_BYTE_BINARY)
+        val g = image.createGraphics()
+        try {
+            g.color = java.awt.Color.WHITE
+            g.fillRect(0, 0, size, size)
+            g.color = java.awt.Color.BLACK
+            for (y in 0 until modules) for (x in 0 until modules) {
+                if (matrix.get(x, y)) g.fillRect(x * scale, y * scale, scale, scale)
+            }
+        } finally {
+            g.dispose()
+        }
+        ByteArrayOutputStream().use { out ->
+            ImageIO.write(image, "PNG", out)
+            out.toByteArray()
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * Every QR in [file]: a screenshot may hold several frames at once. The multi reader
+     * first, then the single passes of [decodeFromImage] for what it misses.
+     */
+    fun decodeAllFromImage(file: File): List<String> {
+        val image = try {
+            ImageIO.read(file)
+        } catch (_: Exception) {
+            null
+        } ?: return emptyList()
+        val found = linkedSetOf<String>()
+        runCatching {
+            val bitmap = BinaryBitmap(HybridBinarizer(BufferedImageLuminanceSource(image)))
+            val hints = mapOf(
+                DecodeHintType.TRY_HARDER to true,
+                DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE)
+            )
+            QRCodeMultiReader().decodeMultiple(bitmap, hints).forEach { found += it.text }
+        }
+        if (found.isEmpty()) (decodeWith(image, pure = false) ?: decodeWith(image, pure = true))?.let { found += it }
+        return found.toList()
+    }
+
+    /** What a set of decoded QR texts adds up to. */
+    sealed interface Import {
+        data class Key(val armored: String) : Import
+        data class Partial(val have: Int, val total: Int) : Import
+        data object Mixed : Import
+        data object NotAKey : Import
+        data object Empty : Import
+    }
+
+    /**
+     * Reassemble [texts] (from one image or several): a complete key, a split key missing
+     * frames, frames of two different keys, or no key at all.
+     */
+    fun importFrom(texts: List<String>): Import {
+        if (texts.isEmpty()) return Import.Empty
+        texts.firstOrNull { !QrChunking.isFrame(it) && it.contains("-----BEGIN PGP") }?.let { return Import.Key(it) }
+        val frames = texts.filter { QrChunking.isFrame(it) }
+        if (frames.isEmpty()) return Import.NotAKey
+        val collector = QrChunking.Collector()
+        var restarted = false
+        for (raw in frames.sortedBy { QrChunking.parse(it)?.id.orEmpty() }) {
+            when (val o = collector.offer(raw)) {
+                is QrChunking.Outcome.Complete ->
+                    return if (o.text.contains("-----BEGIN PGP")) Import.Key(o.text) else Import.NotAKey
+                is QrChunking.Outcome.Restarted -> restarted = true
+                else -> Unit
+            }
+        }
+        return when {
+            restarted -> Import.Mixed
+            collector.expected == 0 -> Import.NotAKey
+            else -> Import.Partial(collector.have, collector.expected)
+        }
     }
 
     /**

@@ -139,7 +139,7 @@ object Cli {
         val selected = o.value("--decrypt-with")?.let { sel -> resolveOne(repo, sel, requireSecret = true).fingerprint }
         val keys = repo.decryptKeys(selected)
         val pass = passphraseOrNull(o)
-        val data = readAll(input)
+        val data = unzipIfZip(readAll(input))
 
         outStream(outPath).use { output ->
             val result = try {
@@ -439,6 +439,22 @@ object Cli {
         else Files.readAllBytes(Path.of(input).also {
             if (!Files.exists(it)) throw CliError(ExitCode.NOT_FOUND, "input file not found: $input")
         })
+
+    /**
+     * 3.0.0 (Android #31): a .zip holding one PGP message decrypts as that message. None, or
+     * several, is an error rather than a guess.
+     */
+    private fun unzipIfZip(data: ByteArray): ByteArray {
+        if (!ZipTransport.looksLikeZip(data)) return data
+        val out = java.io.ByteArrayOutputStream()
+        return when (ZipTransport.extractSinglePgpEntry(data.inputStream(), out)) {
+            is ZipTransport.Found.One -> out.toByteArray()
+            ZipTransport.Found.None -> throw CliError(ExitCode.FAILED, "decrypt: no encrypted message in this .zip")
+            ZipTransport.Found.Several -> throw CliError(
+                ExitCode.FAILED, "decrypt: this .zip holds several encrypted files; extract them and decrypt one at a time"
+            )
+        }
+    }
 
     private fun outStream(outPath: String?): OutputStream =
         if (outPath == null || outPath == "-") UncloseableStream(System.out)

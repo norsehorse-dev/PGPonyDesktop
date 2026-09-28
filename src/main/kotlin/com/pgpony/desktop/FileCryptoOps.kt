@@ -51,7 +51,8 @@ class FileCryptoOps(
         isCancelled: () -> Boolean = NOT_CANCELLED,
         outputDir: Path? = null,
         compositeInV1Decision: Boolean? = true,
-        subkeyChoices: Map<String, Long> = emptyMap()
+        subkeyChoices: Map<String, Long> = emptyMap(),
+        zip: Boolean = false
     ): FileOutcome = try {
         // The Phase A3 rule: a requested signature must never silently drop, so a signer that
         // cannot be loaded stops the op (EncryptOps.plan throws).
@@ -85,8 +86,7 @@ class FileCryptoOps(
         // Output beside the source, or in a rule's output directory (D18 watch folders).
         val outName = file.name + if (armor) ".asc" else ".gpg"
         val outParent = outputDir?.also { Files.createDirectories(it) } ?: file.parent
-        val out = uniquePath(outParent.resolve(outName))
-        Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
+        val out = placeOutput(tmp, outParent, outName, zip)
         FileOutcome(
             file, out, true,
             trQuantity("d_file_encrypted_to", recipientFingerprints.size) +
@@ -112,7 +112,8 @@ class FileCryptoOps(
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
         isCancelled: () -> Boolean = NOT_CANCELLED,
         compositeInV1Decision: Boolean? = true,
-        subkeyChoices: Map<String, Long> = emptyMap()
+        subkeyChoices: Map<String, Long> = emptyMap(),
+        zip: Boolean = false
     ): FileOutcome = try {
         val signer = signerFingerprint?.let {
             repo.byFingerprint(it) ?: error(tr("d_file_err_signing_key", it.take(16)))
@@ -158,8 +159,7 @@ class FileCryptoOps(
         }
         producerError.get()?.let { Files.deleteIfExists(tmp); throw it } // a walk failure fails the op
 
-        val out = uniquePath(folder.resolveSibling(tarName + if (armor) ".asc" else ".gpg"))
-        Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
+        val out = placeOutput(tmp, folder.toAbsolutePath().parent, tarName + if (armor) ".asc" else ".gpg", zip)
         FileOutcome(
             folder, out, true,
             trQuantity("d_file_folder_encrypted", recipientFingerprints.size) +
@@ -167,6 +167,35 @@ class FileCryptoOps(
         )
     } catch (t: Throwable) {
         cancelledOrError(folder, t) { tr("d_file_err_encrypt") }
+    }
+
+    /**
+     * Move the finished ciphertext [tmp] to [parent]/[name] (never overwriting), or with [zip]
+     * wrap it first as the one entry of [name].zip (3.0.0, Android #31: transport packaging for
+     * channels that mangle .gpg and .asc). [tmp] is gone either way.
+     */
+    private fun placeOutput(tmp: Path, parent: Path, name: String, zip: Boolean): Path {
+        if (!zip) {
+            val out = uniquePath(parent.resolve(name))
+            Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING)
+            return out
+        }
+        val zipped = Files.createTempFile(parent, ".pgpony-zip", ".tmp")
+        try {
+            Files.newOutputStream(zipped).use { sink ->
+                ZipTransport.writeSingleEntry(sink, name) { entry ->
+                    Files.newInputStream(tmp).use { it.copyTo(entry) }
+                }
+            }
+        } catch (t: Throwable) {
+            Files.deleteIfExists(zipped)
+            throw t
+        } finally {
+            Files.deleteIfExists(tmp)
+        }
+        val out = uniquePath(parent.resolve(name + ZipTransport.ZIP_SUFFIX))
+        Files.move(zipped, out, StandardCopyOption.REPLACE_EXISTING)
+        return out
     }
 
     private fun folderSize(folder: Path): Long {
@@ -185,6 +214,7 @@ class FileCryptoOps(
      *   Both go through the byte path; if the plaintext is a MIME bundle, it unpacks into a
      *   sibling FOLDER — body.txt + each attachment as a real file.
      *   3. Anything else (binary .gpg/.pgp) — the original streaming path, heap-free.
+     *   4. (3.0.0, Android #31) A .zip holding one of the above: see [decryptZip].
      */
     suspend fun decryptFile(
         file: Path,
@@ -192,6 +222,68 @@ class FileCryptoOps(
         onProgress: (Long, Long) -> Unit = NO_PROGRESS,
         isCancelled: () -> Boolean = NOT_CANCELLED,
         selected: String? = null
+    ): FileOutcome =
+        if (ZipTransport.looksLikeZip(file)) decryptZip(file, passphrase, onProgress, isCancelled, selected)
+        else decryptFileDirect(file, passphrase, onProgress, isCancelled, selected)
+
+    /**
+     * A .zip holding one PGP message (3.0.0, Android #31 and 4.4.1 audit item 9). The entry is
+     * extracted, bounded, into a hidden scratch folder beside the zip and decrypted there; what
+     * that produced moves out beside the zip, and the scratch folder is always removed. No PGP
+     * entry, or several, is reported rather than guessed at.
+     */
+    private suspend fun decryptZip(
+        file: Path,
+        passphrase: String?,
+        onProgress: (Long, Long) -> Unit,
+        isCancelled: () -> Boolean,
+        selected: String?
+    ): FileOutcome {
+        val parent = file.toAbsolutePath().parent
+        val scratch = try {
+            Files.createTempDirectory(parent, ".pgpony-zip")
+        } catch (t: Throwable) {
+            return cancelledOrError(file, t) { tr("decrypt_zip_failed") }
+        }
+        return try {
+            val staging = scratch.resolve(".entry")
+            val found = Files.newInputStream(file).use { input ->
+                Files.newOutputStream(staging).use { ZipTransport.extractSinglePgpEntry(input, it) }
+            }
+            when (found) {
+                ZipTransport.Found.None -> FileOutcome(file, null, false, tr("decrypt_zip_no_pgp"))
+                ZipTransport.Found.Several -> FileOutcome(file, null, false, tr("decrypt_zip_multiple"))
+                is ZipTransport.Found.One -> {
+                    val entry = scratch.resolve(found.name)
+                    Files.move(staging, entry, StandardCopyOption.REPLACE_EXISTING)
+                    val inner = decryptFileDirect(entry, passphrase, onProgress, isCancelled, selected)
+                    val produced = inner.output
+                    if (produced == null) {
+                        inner.copy(input = file)
+                    } else {
+                        val out = uniquePath(parent.resolve(produced.fileName.toString()))
+                        Files.move(produced, out)
+                        inner.copy(input = file, output = out)
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            cancelledOrError(file, t) { tr("decrypt_zip_failed") }
+        } finally {
+            runCatching {
+                Files.walk(scratch).use { walk ->
+                    walk.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+                }
+            }
+        }
+    }
+
+    private suspend fun decryptFileDirect(
+        file: Path,
+        passphrase: String?,
+        onProgress: (Long, Long) -> Unit,
+        isCancelled: () -> Boolean,
+        selected: String?
     ): FileOutcome = try {
         // 3.0.0 (plan 3.7): [selected], its fallbacks, then the rest unless strict.
         val keys = repo.decryptKeys(selected)

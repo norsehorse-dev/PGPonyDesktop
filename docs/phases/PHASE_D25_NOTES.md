@@ -63,3 +63,32 @@ Tests: `SessionPolicyTest` (one duration, carry-over, expiry, Clear now, the loc
 decrypt cascade with remembered passphrases, a streamed file), `ShimBridgeTest` (wire format and
 token, endpoint file permissions, reachable only while running, the app side's remembered
 passphrase and prompt, composite keys).
+
+### Checkpoint 4c: zip transport and the animated QR
+
+- **Zip output** (Android #31, 4.4.1 audit item 9): Files, Encrypt, "Wrap in .zip" (remembered,
+  Android's key). The finished .gpg or .asc (or a folder's .tar.gpg) becomes the one entry of
+  `<name>.zip`, streamed. Packaging for channels that mangle .gpg, not encryption; gpg reads the
+  entry after an unzip. `ZipTransport` is the port of Android's ZipPackaging (app layer, not
+  vendored). Not wired: the hardware-key signer batch and watch folders.
+- **Decrypting a zip**: Files, the file router and `pgpony decrypt` take a .zip holding one PGP
+  entry (.gpg, .pgp, .asc). The entry is extracted, bounded (entry count and payload caps, as
+  Android 4.6.0), into a hidden scratch folder beside the zip, decrypted there, and the result
+  moves out beside the zip; the scratch folder always goes. Entry names are reduced to a base
+  name on write and read. None or several PGP entries is an error, not a guess. The router sends
+  any other zip (a .docx, an archive of files) to Encrypt, as before.
+- **Animated QR** (4.4.1 audit item 10): Key Detail, Public key QR. A key over 1,200 characters
+  splits into `PGPONY1:` frames of 1,000 characters (`QrChunking`, byte-identical to Android's
+  format, up to 32 frames), each at its natural module size scaled by a whole number (the 4.5.1
+  density, #63). Rotates every 500 ms like Android, with pause, previous and next, "Part n of m"
+  and the PGPony-only note. Save PNG saves the part on screen. Behavior change: keys between
+  1,200 characters and one symbol's ceiling used to be one dense symbol and are now frames.
+- **QR import**: the image picker takes several images, and every QR in each (the multi reader,
+  then the single passes) goes to `QrCode.importFrom`: a complete key opens the import preview;
+  missing parts say how many were read; frames of two keys say so.
+- Manual checks (plan matrix): an ML-DSA-87 key's animated QR scanned by PGPony Android imports
+  with the same fingerprint; a zipped file decrypts with gpg after unzip.
+
+Tests: `TransportTest` (zip round trips for a file and a folder with nothing left behind, no or
+several entries, a hostile entry path, router, frame format and reassembly, a post-quantum key
+through framed PNGs, import outcomes).

@@ -207,6 +207,8 @@ fun CryptoScreen(state: DesktopState) {
     var fileOp by remember { mutableStateOf(FileOp.ENCRYPT) }
     var fileOpTouched by remember { mutableStateOf(false) }
     var fileArmor by remember { mutableStateOf(false) }
+    // 3.0.0 (Android #31): wrap encrypted files in a .zip for transport; remembered.
+    var fileZip by remember { mutableStateOf(ZipTransport.wrapByDefault()) }
     var fileResults by remember { mutableStateOf<List<FileCryptoOps.FileOutcome>>(emptyList()) }
     val fileOps = remember { FileCryptoOps(state.repository) }
 
@@ -446,6 +448,20 @@ fun CryptoScreen(state: DesktopState) {
                             Checkbox(checked = fileArmor, onCheckedChange = { fileArmor = it })
                             Text(tr("d_crypto_armor_gpg"))
                         }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = fileZip,
+                                onCheckedChange = { fileZip = it; ZipTransport.setWrapByDefault(it) }
+                            )
+                            Text(tr("enc_result_wrap_zip_label"))
+                        }
+                        if (fileZip) {
+                            Text(
+                                tr("enc_result_wrap_zip_note"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     FileOp.DECRYPT -> {
                         DecryptWithPicker(decryptKeys, decryptWith) { decryptWith = it }
@@ -553,11 +569,11 @@ fun CryptoScreen(state: DesktopState) {
                                             if (java.nio.file.Files.isDirectory(f)) fileOps.encryptFolder(
                                                 f, selectedRecipients, signFp, signPass(signFp), fileArmor,
                                                 tick(f), cancelled, compositeInV1Decision = fileV4Decision,
-                                                subkeyChoices = subkeyChoices
+                                                subkeyChoices = subkeyChoices, zip = fileZip
                                             ) else fileOps.encryptFile(
                                                 f, selectedRecipients, signFp, signPass(signFp), fileArmor,
                                                 tick(f), cancelled, compositeInV1Decision = fileV4Decision,
-                                                subkeyChoices = subkeyChoices
+                                                subkeyChoices = subkeyChoices, zip = fileZip
                                             )
                                     }
                                     FileOp.DECRYPT -> for (f in fileList)

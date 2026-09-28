@@ -170,6 +170,13 @@ object DesktopFileRouter {
             return OpenAction.DecryptFile(path)
         }
 
+        // 3.0.0 (Android #31): a .zip holding exactly one PGP message opens to Decrypt; any other
+        // zip (a document, an archive of files) is a file to encrypt.
+        if (ZipTransport.looksLikeZip(bytes)) {
+            val count = runCatching { ZipTransport.pgpEntryCount(bytes.inputStream()) }.getOrDefault(0)
+            return if (count == 1) OpenAction.DecryptFile(path) else OpenAction.EncryptFile(path)
+        }
+
         // Binary detached signature (gpg -b without --armor, packet tag 2).
         if (isBinaryDetachedSignature(bytes)) return OpenAction.VerifyDetachedSignature(path)
 

@@ -29,8 +29,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -371,25 +378,38 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
 private enum class SaveTarget { PUBLIC, SECRET, SECRET_GPG, REVOCATION_CERT }
 
 /**
- * D9 — render the public key as a QR for scan-to-import on another device. A large key
- * (RSA-4096) may exceed QR capacity; then we show the "share the .asc instead" message rather
- * than a broken image (the 4.1.0 §11 too-large posture). Offers to save the QR as a PNG.
+ * D9: the public key as a QR for scan-to-import on another device, with a Save PNG option.
+ * 3.0.0 (stage 4c, Android 4.4.1 audit item 10): a key too large for one symbol shows as an
+ * animated sequence of framed symbols (the 4.5.1 density), rotating every half second like
+ * Android's, with pause and step. Only past QrChunking.MAX_FRAMES does it say to share the .asc.
  */
 @Composable
 private fun PublicKeyQrDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
-    var png by remember { mutableStateOf<ByteArray?>(null) }
+    var frames by remember { mutableStateOf<List<ByteArray>>(emptyList()) }
     var tooLarge by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var saveQr by remember { mutableStateOf(false) }
+    var index by remember { mutableStateOf(0) }
+    var playing by remember { mutableStateOf(true) }
 
     LaunchedEffect(key.fingerprint) {
         val armor = state.repository.exportArmoredPublicKeyForSharing(key.fingerprint)
         if (armor == null) { loading = false; return@LaunchedEffect }
-        val encoded = QrCode.encodeToPng(armor)
-        png = encoded
+        val encoded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { QrCode.encodeFrames(armor) }
+        frames = encoded.orEmpty()
         tooLarge = encoded == null
         loading = false
+    }
+    val bitmaps = remember(frames) {
+        frames.map { org.jetbrains.skia.Image.makeFromEncoded(it).toComposeImageBitmap() }
+    }
+    val count = bitmaps.size
+    LaunchedEffect(count, playing) {
+        while (playing && count > 1) {
+            kotlinx.coroutines.delay(QR_FRAME_INTERVAL_MS)
+            index = (index + 1) % count
+        }
     }
 
     BrandDialog(
@@ -400,18 +420,37 @@ private fun PublicKeyQrDialog(state: DesktopState, key: PGPKeyEntity, onDismiss:
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val current = png
                 when {
                     loading -> Text(tr("d_common_rendering"), style = MaterialTheme.typography.bodyMedium)
-                    current != null -> {
-                        val bitmap = remember(current) {
-                            org.jetbrains.skia.Image.makeFromEncoded(current).toComposeImageBitmap()
-                        }
+                    count > 0 -> {
+                        val shown = index.coerceIn(0, count - 1)
                         Image(
-                            bitmap = bitmap,
+                            bitmap = bitmaps[shown],
                             contentDescription = tr("exchange_qr_cd"),
                             modifier = Modifier.size(320.dp)
                         )
+                        if (count > 1) {
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { playing = false; index = (shown - 1 + count) % count }) {
+                                    Icon(Icons.Filled.SkipPrevious, contentDescription = tr("qr_part_previous"))
+                                }
+                                IconButton(onClick = { playing = !playing }) {
+                                    if (playing) Icon(Icons.Filled.Pause, contentDescription = tr("qr_autorotate_pause_cd"))
+                                    else Icon(Icons.Filled.PlayArrow, contentDescription = tr("qr_autorotate_play_cd"))
+                                }
+                                IconButton(onClick = { playing = false; index = (shown + 1) % count }) {
+                                    Icon(Icons.Filled.SkipNext, contentDescription = tr("qr_part_next"))
+                                }
+                            }
+                            Text(tr("qr_part_of_format", shown + 1, count), style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                tr("qr_multipart_hint"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         Text(
                             tr("d_keydetail_qr_hint", key.userID.ifBlank { key.shortFingerprint }),
@@ -432,16 +471,19 @@ private fun PublicKeyQrDialog(state: DesktopState, key: PGPKeyEntity, onDismiss:
             }
         },
         confirmButton = {
-            if (png != null) TextButton(onClick = { saveQr = true }) { Text(tr("d_keydetail_qr_save_png")) }
+            if (count > 0) TextButton(onClick = { playing = false; saveQr = true }) { Text(tr("d_keydetail_qr_save_png")) }
             else TextButton(onClick = onDismiss) { Text(tr("common_button_close")) }
         },
-        dismissButton = { if (png != null) TextButton(onClick = onDismiss) { Text(tr("common_button_close")) } }
+        dismissButton = { if (count > 0) TextButton(onClick = onDismiss) { Text(tr("common_button_close")) } }
     )
 
     if (saveQr) {
-        SaveFileDialog("${key.shortFingerprint.lowercase()}-qr.png") { file ->
+        // A split key saves the part on screen, named for its place in the sequence.
+        val shown = index.coerceIn(0, (count - 1).coerceAtLeast(0))
+        val suffix = if (count > 1) "-qr-${shown + 1}of$count" else "-qr"
+        SaveFileDialog("${key.shortFingerprint.lowercase()}$suffix.png") { file ->
             saveQr = false
-            val bytes = png
+            val bytes = frames.getOrNull(shown)
             if (file != null && bytes != null) scope.launch {
                 file.writeBytes(bytes)
                 state.status = tr("d_keydetail_status_qr_saved", file.name)
@@ -449,6 +491,9 @@ private fun PublicKeyQrDialog(state: DesktopState, key: PGPKeyEntity, onDismiss:
         }
     }
 }
+
+/** Android QrAnimation.FRAME_INTERVAL_MS: both platforms rotate at the same pace. */
+private const val QR_FRAME_INTERVAL_MS = 500L
 
 // ── Mutation sub-dialogs ───────────────────────────────────────────────
 

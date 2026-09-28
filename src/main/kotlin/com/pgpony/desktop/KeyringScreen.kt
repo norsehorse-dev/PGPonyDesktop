@@ -273,18 +273,20 @@ fun KeyringScreen(state: DesktopState) {
 
     val qrDialogTitle = tr("d_keyring_qr_dialog")
     if (showQrImport) {
-        // Pick an image file (screenshot/photo export) and decode a key QR out of it.
-        QrImageDialog(qrDialogTitle) { file ->
+        // Pick image files (screenshots, photo exports) and decode a key QR out of them. 3.0.0
+        // (stage 4c): a split key's parts can be in several images, or several in one image;
+        // every QR in every chosen image goes to QrCode.importFrom.
+        QrImageDialog(qrDialogTitle) { files ->
             showQrImport = false
-            if (file != null) {
-                val decoded = QrCode.decodeFromImage(file)
-                when {
-                    decoded == null ->
-                        state.status = tr("d_keyring_qr_none_found", file.name)
-                    decoded.contains("-----BEGIN PGP") ->
-                        preview = decoded to null
-                    else ->
-                        state.status = tr("d_keyring_qr_not_a_key")
+            if (files.isNotEmpty()) {
+                when (val result = QrCode.importFrom(files.flatMap { QrCode.decodeAllFromImage(it) })) {
+                    is QrCode.Import.Key -> preview = result.armored to null
+                    is QrCode.Import.Partial ->
+                        state.status = tr("qr_scan_progress_format", result.have, result.total)
+                    QrCode.Import.Mixed -> state.status = tr("qr_scan_restarted")
+                    QrCode.Import.NotAKey -> state.status = tr("d_keyring_qr_not_a_key")
+                    QrCode.Import.Empty ->
+                        state.status = tr("d_keyring_qr_none_found", files.joinToString { it.name })
                 }
             }
         }
@@ -516,14 +518,18 @@ private fun KeyFileDialog(title: String, onResult: (File?) -> Unit) = AwtWindow(
     dispose = FileDialog::dispose
 )
 
-/** D9 — image picker for QR import (a screenshot/photo containing a key QR). */
+/** D9: image picker for QR import. 3.0.0: several images at once, for a split key's parts. */
 @Composable
-private fun QrImageDialog(title: String, onResult: (File?) -> Unit) = AwtWindow(
+private fun QrImageDialog(title: String, onResult: (List<File>) -> Unit) = AwtWindow(
     create = {
         object : FileDialog(null as Frame?, title, LOAD) {
+            init {
+                isMultipleMode = true
+            }
+
             override fun setVisible(visible: Boolean) {
                 super.setVisible(visible)
-                if (visible) onResult(file?.let { File(directory, it) })
+                if (visible) onResult(files?.toList().orEmpty())
             }
         }
     },
