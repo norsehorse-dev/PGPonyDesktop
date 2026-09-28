@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=PGPony
-Comment=OpenPGP on the desktop: encrypt, decrypt, sign, verify, manage keys
-Exec=pgpony %f
-Icon=org.pgpony.PGPony
-Categories=Utility;Security;
-MimeType=application/pgp-encrypted;application/x-pgpony-backup;
-Terminal=false

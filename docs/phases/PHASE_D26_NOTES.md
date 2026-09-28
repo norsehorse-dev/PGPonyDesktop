@@ -78,3 +78,51 @@ Tests: `GnupgImportTest` (keybox, trustdb and ownertrust export parsing, the col
 the trust mapping, and a whole import from a home without gpg, run twice). The gpg path is
 to be checked by hand: a GPG Suite home on the Mac with public keys, an ultimately trusted own key
 and a passphrase-protected secret key; a card key shows its skip note.
+
+## 5c: Flathub (plan 13a)
+
+`packaging/flathub/` is now a buildable Flatpak; `packaging/flathub/README.md` is the procedure
+(generate sources, build, test matrix, lint, submit). It is built and tested on a Linux x86_64
+machine; this checkpoint's Mac build covers the app code and its tests only.
+
+- **App ID `app.pgpony.PGPony`.** A Flathub ID reverses a domain the developer controls, and
+  that is the domain verification checks: `app.pgpony` is pgpony.app. The draft's
+  `org.pgpony.PGPony` would have needed pgpony.org.
+- **Offline Gradle build**, as the plan decided. `generate-sources.init.gradle` applies the
+  flatpak-gradle-generator plugin (the one flatpak-builder-tools recommends) from an init script,
+  so the project's build never declares it, and writes `gradle-sources.json`. The Gradle
+  distribution is an archive source checked against the wrapper's own sha256, and
+  `offline.init.gradle` puts the downloaded repository first for plugins and dependencies. The
+  build is `createDistributable`, the same jpackage image the .deb, tarball and AppImage ship,
+  with its jlink runtime made in the build from the OpenJDK 17 SDK extension. Nothing prebuilt.
+- **x86_64 only** (`flathub.json`), because the Skiko runtime in the sources is the generating
+  machine's. aarch64 is a second generation run on ARM Linux.
+- **Sandbox**: `--socket=x11` with `--share=ipc`, not Wayland: Compose Desktop on JDK 17 draws
+  through AWT, which is X11 only, and a Wayland socket with X11 only as fallback would leave it
+  no display on a Wayland session. `--socket=pcsc` plus a pcsc-lite module (client library only)
+  for smart cards. `--share=network`. `--filesystem=home`, because the AWT file chooser does not
+  use the portal and watch folders work on whole directories; the reason is in the manifest.
+  The draft's notification and `xdg-run` grants are gone: the app never talks to the
+  notification service over D-Bus, and the agent socket needs no grant (below).
+- **ssh-agent**: the socket stays where every Linux build puts it, under the data directory,
+  which in a Flatpak is `~/.var/app/app.pgpony.PGPony/data`, a host path. Host ssh uses it as it
+  is; nothing to grant or move.
+- **git shim and SOP**: `/app/bin/pgpony-gpg` and `/app/bin/pgpony-sop` run the `gpg-shim` and
+  `sop` faces. Host git runs `gpg.program` as one program, so the README gives a two-line host
+  wrapper around `flatpak run --command=pgpony-gpg`. The shim reaches the running app over
+  loopback (ShimBridge), which `--share=network` allows.
+- **In the app** (`Flatpak.kt`, before anything else in `main`): java.util.prefs moves to the
+  Flatpak's config directory, so a Flatpak and a host install on the same account do not share
+  settings while keeping separate keyrings; javax.smartcardio is pointed at the bundled
+  `/app/lib/libpcsclite.so.1`, since the JDK looks under /usr only. Settings hides Updates and
+  the update check never runs (Flathub delivers updates). GnuPG import already reads public keys
+  and trust without gpg (5b); `GnupgImport.sandboxed()` now asks `Flatpak`. "Until the screen
+  locks" is not offered, as on any system where the lock state cannot be read (no `loginctl`).
+- **Metadata**: metainfo rewritten for the ID (3.0.0 features, branding colors, two
+  screenshots that must be committed under `docs/screenshots/` before the lint passes), a mime
+  package for `.pgpony` backups, a desktop entry with keywords.
+- **Release process**: `RELEASING.md` section 8 and `CLAUDE_RELEASE.md` step 10 (a metainfo
+  release entry before the tag; a PR to the Flathub repository after it).
+
+Tests: `FlatpakTest` (detection, and the properties set inside and outside a sandbox). The
+Flatpak itself is tested by hand against the README's matrix.

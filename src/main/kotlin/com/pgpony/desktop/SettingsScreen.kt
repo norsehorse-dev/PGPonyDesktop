@@ -218,10 +218,13 @@ fun SettingsScreen(state: DesktopState) {
         // ── Updates (D13) ───────────────────────────────────────────────
         // Sits directly above About, because the version number there is the thing this section
         // is talking about. UpdateSection lives in UpdateCheck.kt beside the logic it drives.
-        SectionCard(tr("d_settings_section_updates"), tr("d_settings_updates_note")) {
-            UpdateSection(state)
+        // 3.0.0 (5c): not under Flatpak, where Flathub and the software center deliver updates.
+        if (!Flatpak.active) {
+            SectionCard(tr("d_settings_section_updates"), tr("d_settings_updates_note")) {
+                UpdateSection(state)
+            }
+            Spacer(Modifier.height(Spacing.Large))
         }
-        Spacer(Modifier.height(Spacing.Large))
 
         SectionCard(tr("settings_section_about"), tr("d_settings_about_note")) {
             AboutSection(state)

@@ -1,0 +1,10 @@
+// offline.init.gradle: used by the Flatpak build (app.pgpony.PGPony.yaml), never by a normal
+// build. flatpak-builder downloads everything in gradle-sources.json into ./offline-repository
+// before Gradle starts; this puts that repository first for plugins and for dependencies, ahead
+// of the ones settings.gradle.kts declares, so an --offline build resolves everything from it.
+
+beforeSettings { settings ->
+    def offline = new File(settings.settingsDir, 'offline-repository').toURI()
+    settings.pluginManagement.repositories.maven { url = offline }
+    settings.dependencyResolutionManagement.repositories.maven { url = offline }
+}

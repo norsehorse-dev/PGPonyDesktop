@@ -360,7 +360,7 @@ Progress: stage 1 (2.1 to 2.11) is green on the Mac; see `docs/phases/PHASE_D22_
 Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3 (3a to 3d) is
 green; see `docs/phases/PHASE_D24_NOTES.md`. Stage 4: 4a (subkey selector, post-quantum weak
 link, armor comment), 4b (session policy), 4c (zip, animated QR) and 4d (hardening) are
-green. Stage 5: 5a (pgpony-sop) is green; 5b (GnuPG import) awaits its build; 5c (Flathub) follows.
+green. Stage 5: 5a (pgpony-sop) and 5b (GnuPG import) are green; 5c (Flathub) awaits its Linux build.
 See `docs/phases/PHASE_D26_NOTES.md`. See `docs/phases/PHASE_D25_NOTES.md`.
 
 ## 12. Features (decided: all three, inside 3.0.0)
@@ -440,7 +440,8 @@ launcher in `packaging/flathub/` (uncommitted). 3.0.0 finishes it:
   shim through a documented `flatpak run --command=pgpony-gpg` wrapper, with stdin and the status
   fd confirmed to survive; context menus out of scope on Flatpak; clipboard sentinel verified on
   Wayland before it is claimed; F1 and F3 as noted in section 12.
-- App ID `org.pgpony.PGPony`, backed in review by ownership of pgpony.app.
+- App ID `app.pgpony.PGPony`, backed in review by ownership of pgpony.app (5c: the ID reverses
+  the domain it is verified against, so `org.pgpony` would have needed pgpony.org).
 - Submit to flathub/flathub, answer review, add the badge to the README and the download page.
 
 Flathub review runs on Flathub's schedule, not ours. 3.0.0 does not wait for it (decided, Q11):

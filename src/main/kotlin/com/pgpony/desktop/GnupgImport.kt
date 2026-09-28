@@ -22,8 +22,8 @@
 // owner you trust fully, becomes Verified. Nothing is ever lowered: a key already Verified in
 // PGPony stays Verified.
 //
-// Under Flatpak there is no gpg in the sandbox and ~/.gnupg is not visible without a grant, so
-// the user picks the folder through the file portal and only public keys and trust import.
+// Under Flatpak there is no gpg in the sandbox, so only public keys and trust import. The
+// Flatpak's home grant (5c) makes ~/.gnupg readable, and the dialog can still pick another folder.
 
 package com.pgpony.desktop
 
@@ -104,7 +104,7 @@ object GnupgImport {
     private const val TRUST_RECORD = 40
     private const val RECTYPE_TRUST = 12
 
-    fun sandboxed(): Boolean = System.getenv("FLATPAK_ID") != null || Files.exists(Path.of("/.flatpak-info"))
+    fun sandboxed(): Boolean = Flatpak.active
 
     private val isWindows = System.getProperty("os.name").orEmpty().lowercase().contains("win")
 

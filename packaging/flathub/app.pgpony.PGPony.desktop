@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=PGPony
+GenericName=OpenPGP Encryption
+Comment=Encrypt, decrypt, sign and verify with OpenPGP, and manage your keys
+Exec=pgpony %f
+Icon=app.pgpony.PGPony
+Categories=Utility;Security;
+Keywords=pgp;gpg;gnupg;openpgp;encryption;signature;smartcard;
+MimeType=application/pgp-encrypted;application/x-pgpony-backup;
+Terminal=false

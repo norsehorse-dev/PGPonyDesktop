@@ -276,3 +276,21 @@ Two things that are easy to get wrong here:
   `makepkg --printsrcinfo` is authoritative — if you have a container, regenerate and diff before
   pushing. `SKIP` checksums are acceptable for a first push; `updpkgsums` fills in real ones once
   the release assets exist.
+
+## 8. Flathub
+
+The Flatpak is built by Flathub from the tagged source, so it follows the GitHub release like the
+AUR package does. Sources live in `packaging/flathub/`; the procedure, the test matrix and the
+first submission are in `packaging/flathub/README.md`. For each release after the first:
+
+- Add a `<release version="X.Y.Z" date="YYYY-MM-DD"/>` entry at the top of `<releases>` in
+  `packaging/flathub/app.pgpony.PGPony.metainfo.xml`, in the commit that is tagged. Flathub shows
+  it as the version, so a missing entry leaves the store page on the previous one.
+- If Gradle or any dependency changed since the last release, regenerate
+  `packaging/flathub/gradle-sources.json` on the Linux machine (README step 2) and commit it
+  before tagging.
+- After the tag: in the `flathub/app.pgpony.PGPony` repository, move the git source's `tag` and
+  `commit` to the new release, copy in `gradle-sources.json` if it changed, and open a pull
+  request. Flathub's bot builds it; merge when the test build passes.
+
+Flathub review and builds run on Flathub's schedule. A release is not held for them.

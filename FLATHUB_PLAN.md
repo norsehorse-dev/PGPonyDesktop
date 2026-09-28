@@ -1,7 +1,13 @@
 # Flathub distribution plan for PGPony Desktop
 
-Status: draft. Target: publish PGPony to Flathub as a third Linux channel
-beside the AppImage and the AUR package.
+Status: superseded in 3.0.0 (stage 5c) by `packaging/flathub/README.md`, which holds the
+decisions and the procedure. Kept for the reasoning. Two things changed from this draft: the app
+ID is `app.pgpony.PGPony` (it has to reverse a domain we control, pgpony.app), and the sandbox
+takes `--socket=x11` rather than Wayland, because Compose Desktop on JDK 17 draws through AWT,
+which is X11 only.
+
+Target: publish PGPony to Flathub as a third Linux channel beside the AppImage and the AUR
+package.
 
 PGPony Desktop is a Compose Desktop (Skiko) app packaged today by jpackage with
 a bundled jlink runtime. It talks to smart cards through javax.smartcardio and

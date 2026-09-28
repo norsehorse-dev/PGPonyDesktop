@@ -23,6 +23,10 @@ private val PGPONY_VERBS = setOf(
 private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open", "help", "--help", "-h") + PGPONY_VERBS
 
 fun main(args: Array<String>) {
+    // 3.0.0 (5c): under Flatpak, the JVM defaults the sandbox needs (preferences beside the app's
+    // data, the bundled pcsc-lite). First of all: the JDK reads them once, on first use.
+    Flatpak.apply()
+
     // 3.0.0 (5a): the Stateless OpenPGP face, `pgpony-sop` or `pgpony sop`. First, before the
     // settings seam is installed: it never reads or writes the user's settings or keyring.
     if (invokedAs("pgpony-sop") || args.firstOrNull() == "sop") {
