@@ -439,6 +439,18 @@ sync-vendor; the SOP-only ones are desktop code. Four packets, then a second sui
 - 5d-3 Algorithm policy, with the decisions below.
 - 5d-4 SOP layer: cleartext signatures, several signing keys, password encryption profiles.
 
+5d-1 status (2026-09-29): done upstream in PGPonyAndroid (CertificateBindings, SignerStatus,
+SignaturePolicy, VerifyService, PGPCryptoService, new CertificateValidityTest) plus the SOP
+verification line in SopCrypto.kt. A signer is judged at the time it signed: a signature older
+than its key fails, a self-signature must be alive then, hard revocations apply at every time and
+soft ones only from when they were made. Critical subpackets and notations that are not understood
+invalidate a signature, a hashed creation time is required, an empty key flags subpacket grants
+nothing, an expired back-signature no longer binds, and only keys marked for encryption decrypt.
+A signature whose issuer subpacket names the wrong key verifies under the key that made it.
+Unknown critical packets reject a certificate; an unreadable classical subkey or third-party
+certification is skipped instead of failing it. A public primary with secret subkeys imports as
+a key. Replayed against the first run's rows: 37 fixed, none regressed.
+
 Decided (2026-09-29):
 - RSA under 2048 bits, DSA and ElGamal become read-only: no encrypting to them and no signing
   with them; decrypting and verifying old material still works, with a weak-key warning in the

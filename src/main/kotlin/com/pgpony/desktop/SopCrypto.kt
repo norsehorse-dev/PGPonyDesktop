@@ -341,9 +341,13 @@ internal object SopCrypto {
     private fun verifyClassical(rings: List<PGPPublicKeyRing>, packet: ByteArray, data: ByteArray): Pair<String, String>? {
         val verdict = runCatching { VerifyService.shared.verifyDetached(packet, data, rings) }.getOrNull()
         val good = verdict as? VerificationResult.Verified ?: return null
-        val sig = runCatching { (JcaPGPObjectFactory(packet).nextObject() as PGPSignatureList)[0] }.getOrNull() ?: return null
-        val key = rings.firstNotNullOfOrNull { it.getPublicKey(sig.keyID) } ?: return null
-        return hex(key.fingerprint) to good.signerFingerprint.uppercase()
+        // The engine reports the key the signature verified under, which is not
+        // always the one its issuer subpacket names (5d-1).
+        val signing = good.signingKeyFingerprint ?: run {
+            val sig = runCatching { (JcaPGPObjectFactory(packet).nextObject() as PGPSignatureList)[0] }.getOrNull() ?: return null
+            rings.firstNotNullOfOrNull { it.getPublicKey(sig.keyID) }?.let { hex(it.fingerprint) } ?: return null
+        }
+        return signing.uppercase() to good.signerFingerprint.uppercase()
     }
 
     private suspend fun verifyComposite(
