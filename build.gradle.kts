@@ -173,6 +173,13 @@ compose.desktop {
         // launchers (the full dev JDK doesn't put it in the root set; jlink includes it via
         // nativeDistributions.modules("java.smartcardio")).
         jvmArgs += listOf("--add-modules=java.smartcardio")
+        // 3.0.0 (SOP interop run): keep the JVM's own messages off stdout. HotSpot's unified
+        // logging prints warnings to stdout by default, so a warning at startup (a busy or
+        // unwritable /tmp/hsperfdata_<user> is the one the interop suite hit, on a third of its
+        // calls) lands in the middle of armored output from the CLI, pgpony-sop and the git shim.
+        // No perf-data file at all (it also named every running PGPony process in /tmp), and
+        // warnings and errors go to stderr instead.
+        jvmArgs += listOf("-XX:-UsePerfData", "-Xlog:disable", "-Xlog:all=warning:stderr")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Msi)
             packageName = "PGPony"
