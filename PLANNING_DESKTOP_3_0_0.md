@@ -451,6 +451,21 @@ Unknown critical packets reject a certificate; an unreadable classical subkey or
 certification is skipped instead of failing it. A public primary with secret subkeys imports as
 a key. Replayed against the first run's rows: 37 fixed, none regressed.
 
+5d-2 status (2026-09-29): done upstream (new MessageGrammar, wired into PGPCryptoService.decrypt)
+plus the SOP decrypt check skipping marker packets. Decrypted and signed messages must follow the
+RFC 9580 message grammar: one literal message, one-pass signatures with their signatures, no
+stray packets, unknown critical packets rejected, non-critical ones and marker packets skipped,
+compressed data that ends inside its packet, nesting capped at 16. Encrypted messages are ESKs
+plus one encrypted data packet; ESKs of an unknown version or algorithm are skipped, a v6 PKESK
+or SKESK in front of SEIPDv1 and a v4 SKESK in front of SEIPDv2 are refused. The packet reader
+refuses a first partial chunk under 512 octets. Signatures of an unknown version or algorithm
+inside an encrypted message are dropped so the rest still reads. Replayed: 53 rows fixed, none
+regressed. Left as is on purpose: a v3 PKESK in front of SEIPDv2 still decrypts, because PGPony
+4.5 and later write exactly that for a v4 recipient of a message that also goes to a composite
+key. 5d-3 changes the encrypt side to write v6 PKESKs in SEIPDv2 messages. The streaming file
+decrypt path (decryptStream) keeps its current checks; the grammar covers text, in-memory and
+SOP decryption.
+
 Decided (2026-09-29):
 - RSA under 2048 bits, DSA and ElGamal become read-only: no encrypting to them and no signing
   with them; decrypting and verifying old material still works, with a weak-key warning in the

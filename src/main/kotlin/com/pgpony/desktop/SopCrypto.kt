@@ -547,14 +547,6 @@ internal object SopCrypto {
         return SopExit.OK
     }
 
-    /** The tag of the first packet in [raw], or -1. */
-    private fun firstTag(raw: ByteArray): Int {
-        if (raw.isEmpty()) return -1
-        val c = raw[0].toInt() and 0xFF
-        if (c and 0x80 == 0) return -1
-        return if (c and 0x40 != 0) c and 0x3F else (c shr 2) and 0x0F
-    }
-
     fun decrypt(rest: List<String>, io: SopIo, stdin: InputStream, out: OutputStream): Int {
         val a = SopArgs(
             rest,
@@ -581,7 +573,7 @@ internal object SopCrypto {
         val keyPasswords = a.all("--with-key-password").flatMap { io.passwordsForReading(it) }
 
         val ciphertext = stdin.readBytes()
-        val tag = firstTag(SopArmor.binary(ciphertext))
+        val tag = com.pgpony.android.crypto.MessageGrammar.firstSignificantTag(SopArmor.binary(ciphertext))
         if (tag !in setOf(1, 3, 9, 18, 20)) throw SopException(SopExit.BAD_DATA, "not an encrypted message")
 
         val (plaintext, lines) = SopKeyring.open().use { r ->
