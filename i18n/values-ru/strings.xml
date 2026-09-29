@@ -883,4 +883,7 @@
     <string name="d_gnupg_import">Импортировать</string>
     <string name="d_gnupg_done">%1$s. Доверие повышено у ключей: %2$d. Импортировано секретных ключей: %3$d.</string>
     <string name="d_gnupg_readonly_note">GnuPG только читается и никогда не изменяется. Доверие в PGPony только повышается и никогда не понижается.</string>
+    <!-- 3.0.0 (5d-3): a signature or decryption with a weak key (RSA under 2048 bits, DSA, ElGamal). -->
+    <string name="d_sig_weak_suffix"> · слабый ключ подписи (%1$s)</string>
+    <string name="d_decrypt_weak_suffix"> · открыто слабым ключом (%1$s)</string>
 </resources>

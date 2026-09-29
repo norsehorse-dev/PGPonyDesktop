@@ -809,4 +809,7 @@
     <string name="d_gnupg_import">Importar</string>
     <string name="d_gnupg_done">%1$s. Confianza elevada en %2$d claves. Claves secretas importadas: %3$d.</string>
     <string name="d_gnupg_readonly_note">GnuPG solo se lee, nunca se modifica. La confianza en PGPony solo se eleva, nunca se reduce.</string>
+    <!-- 3.0.0 (5d-3): a signature or decryption with a weak key (RSA under 2048 bits, DSA, ElGamal). -->
+    <string name="d_sig_weak_suffix"> · clave de firma débil (%1$s)</string>
+    <string name="d_decrypt_weak_suffix"> · abierto con una clave débil (%1$s)</string>
 </resources>

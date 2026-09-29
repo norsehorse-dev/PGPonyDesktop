@@ -312,7 +312,8 @@ class FileCryptoOps(
             val sigNote = SignatureSummary.fileNote(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
-                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp,
+                    weakKey = result.signerWeakKey
                 )
             )
             val mime = MimeParser.parse(result.data)
@@ -373,7 +374,8 @@ class FileCryptoOps(
             val sigNote = SignatureSummary.fileNote(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
-                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp,
+                    weakKey = result.signerWeakKey
                 )
             )
             // Peek the plaintext head: a §3a folder tarball extracts to a sibling folder,
@@ -644,7 +646,7 @@ class FileCryptoOps(
                     tr(
                         if (confirmed) "d_file_verify_ok" else "d_file_verify_ok_unconfirmed",
                         result.signerName ?: "", result.signerEmail ?: "?", result.signerKeyID
-                    )
+                    ) + SignatureSummary.weakNote(result.signerWeakKey, null)
                 )
             }
             is VerificationResult.Invalid -> FileOutcome(

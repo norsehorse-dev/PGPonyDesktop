@@ -784,4 +784,7 @@
     <string name="d_gnupg_import">インポート</string>
     <string name="d_gnupg_done">%1$s。%2$d 件の鍵の信頼度を上げました。インポートした秘密鍵: %3$d 件。</string>
     <string name="d_gnupg_readonly_note">GnuPG は読み取るだけで、変更はしません。PGPony の信頼度は上げるだけで、下げることはありません。</string>
+    <!-- 3.0.0 (5d-3): a signature or decryption with a weak key (RSA under 2048 bits, DSA, ElGamal). -->
+    <string name="d_sig_weak_suffix"> · 弱い署名鍵 (%1$s)</string>
+    <string name="d_decrypt_weak_suffix"> · 弱い鍵で復号 (%1$s)</string>
 </resources>

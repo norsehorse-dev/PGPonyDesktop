@@ -466,6 +466,25 @@ key. 5d-3 changes the encrypt side to write v6 PKESKs in SEIPDv2 messages. The s
 decrypt path (decryptStream) keeps its current checks; the grammar covers text, in-memory and
 SOP decryption.
 
+5d-3 status (2026-09-29): done upstream (new KeyPolicy and RecipientPreferences; SignerStatus,
+VerifyService, SecurityLimits, PGPCryptoService) plus desktop. Weak keys (RSA under 2048 bits,
+DSA, ElGamal, and every key of a certificate whose primary is weak) are read-only: nothing is
+encrypted to them and nothing is signed with them; decrypting and verifying still work and the
+result names the weak key, which the desktop banners, file notes and CLI now show. SOP runs strict
+and refuses them outright. A secret key protected with Argon2 but without AEAD, or a v6 key with a
+legacy protection form, is refused at import. Desktop starts its JVM with up to half the machine's
+memory and lets the Argon2 guard use three quarters of the heap, so a 2 GiB Argon2 cost opens on a
+machine that has the memory; Android keeps its limit. A message now uses the strongest cipher
+(AES-256, 192, 128) and signature hash (SHA-512, 384, 256) every recipient lists, AES-128 and
+SHA-256 always allowed, AES-256 and SHA-256 when nobody lists anything. Desktop fixes on the way:
+an armored v4 ML-KEM key now imports with its ML-KEM subkey (it was dropped), and adding a secret
+key to a certificate already held keeps the union of both instead of replacing the newer
+certificate. Replayed: 35 more rows fixed, none regressed.
+Deferred, waiting on the PGPony iOS check: SEIPDv2 for v4 recipients that advertise it, and with
+it v6 PKESKs for every recipient of a SEIPDv2 message (which also retires the v3-PKESK-before-
+SEIPDv2 pairing noted in 5d-2). Not done: unclamped Cv25519 secrets (Sequoia fails it too), and
+the weak-key warning on Android's own screens (the engine fields are there; Android release).
+
 Decided (2026-09-29):
 - RSA under 2048 bits, DSA and ElGamal become read-only: no encrypting to them and no signing
   with them; decrypting and verifying old material still works, with a weak-key warning in the

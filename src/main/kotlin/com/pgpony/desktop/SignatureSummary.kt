@@ -35,7 +35,9 @@ object SignatureSummary {
         val state: State,
         val signer: PGPKeyEntity? = null,
         /** 16 hex, for display when the signer is not held. */
-        val keyIdHex: String? = null
+        val keyIdHex: String? = null,
+        /** 3.0.0 (5d-3): the signer key's label ("RSA 1024", "DSA") when it is weak. */
+        val weakKey: String? = null
     ) {
         val signerLabel: String? get() = signer?.userID?.ifBlank { null } ?: keyIdHex
     }
@@ -56,7 +58,8 @@ object SignatureSummary {
         signatureKeyIDRaw: Long?,
         compositeInline: Boolean = false,
         compositeBytes: ByteArray? = null,
-        compositeClaimedFp: String? = null
+        compositeClaimedFp: String? = null,
+        weakKey: String? = null
     ): Summary {
         if (compositeInline && compositeBytes != null) {
             return fromVerification(repo, DesktopCompositeVerify.verifyInlineBytes(repo, compositeBytes, compositeClaimedFp))
@@ -65,7 +68,7 @@ object SignatureSummary {
         return when {
             verified -> {
                 val signer = signerKeyID?.let { repo.findByKeyId(it) }
-                Summary(if (isConfirmed(signer?.trustLevel)) State.VERIFIED else State.UNCONFIRMED, signer, signerKeyID)
+                Summary(if (isConfirmed(signer?.trustLevel)) State.VERIFIED else State.UNCONFIRMED, signer, signerKeyID, weakKey)
             }
             hasSignature -> Summary(State.UNHELD, null, rawHex ?: signerKeyID)
             else -> Summary(State.NONE)
@@ -77,7 +80,7 @@ object SignatureSummary {
         is VerificationResult.Verified -> {
             val signer = repo.byFingerprint(r.signerFingerprint) ?: repo.findByKeyId(r.signerKeyID)
             val trust = r.signerTrust ?: signer?.trustLevel
-            Summary(if (isConfirmed(trust)) State.VERIFIED else State.UNCONFIRMED, signer, r.signerKeyID)
+            Summary(if (isConfirmed(trust)) State.VERIFIED else State.UNCONFIRMED, signer, r.signerKeyID, r.signerWeakKey)
         }
         is VerificationResult.Invalid -> Summary(State.INVALID, null, r.signerKeyID)
         is VerificationResult.UnknownSigner -> Summary(State.UNHELD, null, r.signerKeyID)
@@ -91,5 +94,13 @@ object SignatureSummary {
         State.UNHELD -> tr("d_file_sig_unheld") + (s.keyIdHex?.let { tr("d_file_sig_id_suffix", it) } ?: "")
         State.INVALID -> tr("d_file_sig_invalid")
         State.NONE -> ""
-    }
+    } + (s.weakKey?.let { tr("d_sig_weak_suffix", it) } ?: "")
+
+    /**
+     * 3.0.0 (5d-3): the note a result adds when a weak key (RSA under 2048 bits, DSA, ElGamal)
+     * made the signature or opened the message. Both still work; the note says so.
+     */
+    fun weakNote(signerWeak: String?, decryptWeak: String?): String =
+        (signerWeak?.let { tr("d_sig_weak_suffix", it) } ?: "") +
+            (decryptWeak?.let { tr("d_decrypt_weak_suffix", it) } ?: "")
 }

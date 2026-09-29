@@ -1022,8 +1022,8 @@ fun CryptoScreen(state: DesktopState) {
                                     val result = mimeOps.decryptStructured(input, decryptPass.ifBlank { null }, decryptWith)
                                     output = result.body
                                     decryptedAttachments = result.attachments
-                                    val attachNote = if (result.attachments.isEmpty()) ""
-                                    else tr("d_crypto_banner_attach_suffix", result.attachments.size)
+                                    val attachNote = (if (result.attachments.isEmpty()) ""
+                                    else tr("d_crypto_banner_attach_suffix", result.attachments.size)) + result.weakNote
                                     val sig = result.signature
                                     banner = when {
                                         // 3.0.0 (Android 4.5.3): valid from an unconfirmed key reads
@@ -1216,8 +1216,9 @@ fun CryptoScreen(state: DesktopState) {
                                                 result.signerName ?: "",
                                                 result.signerEmail ?: "?",
                                                 result.signerKeyID
-                                            )
-                                            banner = if (confirmed) Banner.Good(text) else Banner.Warn(text)
+                                            ) + SignatureSummary.weakNote(result.signerWeakKey, null)
+                                            // 3.0.0 (5d-3): a weak signing key reads amber too.
+                                            banner = if (confirmed && result.signerWeakKey == null) Banner.Good(text) else Banner.Warn(text)
                                         }
                                         is VerificationResult.Invalid -> banner = Banner.Bad(
                                             tr("d_crypto_banner_invalid")

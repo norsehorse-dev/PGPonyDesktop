@@ -27,11 +27,18 @@ fun main(args: Array<String>) {
     // data, the bundled pcsc-lite). First of all: the JDK reads them once, on first use.
     Flatpak.apply()
 
+    // 3.0.0 (5d-3): the JVM gets up to half the machine's memory (build.gradle.kts), so the
+    // Argon2 guard may use most of the heap: a cost of up to 2 GiB then fits when the machine
+    // has the memory. Android keeps its lower share.
+    com.pgpony.android.crypto.SecurityLimits.kdfHeapFraction = 0.75
+
     // 3.0.0 (5a): the Stateless OpenPGP face, `pgpony-sop` or `pgpony sop`. First, before the
     // settings seam is installed: it never reads or writes the user's settings or keyring.
     if (invokedAs("pgpony-sop") || args.firstOrNull() == "sop") {
         I18n.pinEnglish()
         KeyUsePolicy.forced = false
+        // 3.0.0 (5d-3): SOP refuses weak keys (RSA under 2048 bits, DSA, ElGamal) outright.
+        com.pgpony.android.crypto.KeyPolicy.strict = true
         val sopArgs = if (args.firstOrNull() == "sop") args.drop(1) else args.toList()
         exitProcess(Sop.run(sopArgs, System.`in`, System.out, System.err))
     }

@@ -29,7 +29,9 @@ class MimeOps(
         val signerKeyID: String?,
         val signatureKeyIDRaw: Long?,
         /** 3.0.0: the signature read once, trust and composite ML-DSA included. */
-        val signature: SignatureSummary.Summary? = null
+        val signature: SignatureSummary.Summary? = null,
+        /** 3.0.0 (5d-3): the banner note for a weak signing or decrypting key, or "". */
+        val weakNote: String = ""
     )
 
     /** Body + attachments → multipart/mixed → recipient-encrypted armored message. */
@@ -128,8 +130,10 @@ class MimeOps(
             signatureKeyIDRaw = result.signatureKeyIDRaw,
             signature = SignatureSummary.of(
                 repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
-                result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
-            )
+                result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp,
+                weakKey = result.signerWeakKey
+            ),
+            weakNote = SignatureSummary.weakNote(result.signerWeakKey, result.decryptionWeakKey)
         )
     }
 

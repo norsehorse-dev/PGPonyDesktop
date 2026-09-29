@@ -155,7 +155,8 @@ object Cli {
             reportSignature(
                 SignatureSummary.of(
                     repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
-                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp
+                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp,
+                    weakKey = result.signerWeakKey
                 )
             )
         }
@@ -242,7 +243,8 @@ object Cli {
                 val confirmed = SignatureSummary.fromVerification(repo, result).state == SignatureSummary.State.VERIFIED
                 out(
                     "Good signature — ${result.signerName ?: ""} <${result.signerEmail ?: "?"}> · ${result.signerKeyID}" +
-                        if (confirmed) "" else " (signer key not verified)"
+                        (if (confirmed) "" else " (signer key not verified)") +
+                        (result.signerWeakKey?.let { " (weak signing key: $it)" } ?: "")
                 )
                 ExitCode.OK
             }
@@ -443,7 +445,7 @@ object Cli {
     // ── Signature reporting (decrypt) ───────────────────────────────────
 
     private fun reportSignature(s: SignatureSummary.Summary) {
-        val who = s.signerLabel?.let { " — $it" } ?: ""
+        val who = (s.signerLabel?.let { " — $it" } ?: "") + (s.weakKey?.let { " (weak signing key: $it)" } ?: "")
         when (s.state) {
             SignatureSummary.State.VERIFIED -> err("Good signature$who")
             SignatureSummary.State.UNCONFIRMED -> err("Good signature$who (signer key not verified)")

@@ -180,6 +180,10 @@ compose.desktop {
         // No perf-data file at all (it also named every running PGPony process in /tmp), and
         // warnings and errors go to stderr instead.
         jvmArgs += listOf("-XX:-UsePerfData", "-Xlog:disable", "-Xlog:all=warning:stderr")
+        // 3.0.0 (5d-3): heap up to half the machine's memory (the JVM default is a quarter), so a
+        // message or key whose Argon2 cost is up to 2 GiB can be opened on a machine that has
+        // the memory. The heap only grows when something needs it.
+        jvmArgs += listOf("-XX:MaxRAMPercentage=50")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Msi)
             packageName = "PGPony"

@@ -330,6 +330,19 @@ class DesktopKeyRepository(
                 )
             )
         }
+        // 3.0.0 (5d-3): the same for an ARMORED one. BouncyCastle's explode would hand back
+        // a v4 algo-35 key without its algo-35 subkey (and fail on a composite primary), so
+        // such blocks go block by block through importArmoredKeyDetailed, which recognizes them.
+        if (looksArmored) {
+            val text = data.toString(Charsets.UTF_8)
+            val composite = splitArmoredBlocks(text).any { block ->
+                runCatching {
+                    val raw = org.bouncycastle.bcpg.ArmoredInputStream(block.byteInputStream()).readBytes()
+                    CompositeKeyFacade.isCompositePrimary(raw) || CompositeKeyFacade.hasV4Algo35Subkey(raw)
+                }.getOrDefault(false)
+            }
+            if (composite) return importArmoredText(text)
+        }
         val blocks = runCatching { crypto.explodeToArmoredKeys(data) }.getOrDefault(emptyList())
         if (blocks.isNotEmpty()) return importBlocks(blocks)
         val asText = data.toString(Charsets.UTF_8)
@@ -417,8 +430,20 @@ class DesktopKeyRepository(
             }
             result.hasPrivateKey && !existing.isKeyPair -> {
                 materials.storeSecret(fingerprint, block)
-                publicArmor?.let { materials.storePublic(fingerprint, it) }
-                dao.update(existing.copy(isKeyPair = true, armoredPublicKey = publicArmor ?: existing.armoredPublicKey))
+                // 3.0.0 (5d-3): the certificate already held may carry newer self-signatures
+                // (changed preferences, a later expiry) than the key being added; keep the
+                // verified union rather than replacing it with the key's public part.
+                val union = runCatching {
+                    val stored = rawPublicBytes(fingerprint)
+                    val incoming = result.publicKeyRing?.encoded
+                    if (stored == null || incoming == null) null
+                    else CertificateMerge.merge(stored = stored, fetched = incoming, isKeyPair = false)
+                        .let { PGPPublicKeyRing(it, BcKeyFingerprintCalculator()) }
+                        .let { crypto.exportArmoredPublicKey(it) }
+                }.getOrNull()
+                val armor = union ?: publicArmor
+                armor?.let { materials.storePublic(fingerprint, it) }
+                dao.update(existing.copy(isKeyPair = true, armoredPublicKey = armor ?: existing.armoredPublicKey))
                 ImportResolution.UPGRADED_TO_KEY_PAIR
             }
             else -> mergeIfNewMaterial(existing, result.publicKeyRing)
