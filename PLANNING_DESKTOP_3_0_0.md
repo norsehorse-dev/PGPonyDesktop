@@ -360,7 +360,8 @@ Progress: stage 1 (2.1 to 2.11) is green on the Mac; see `docs/phases/PHASE_D22_
 Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3 (3a to 3d) is
 green; see `docs/phases/PHASE_D24_NOTES.md`. Stage 4: 4a (subkey selector, post-quantum weak
 link, armor comment), 4b (session policy), 4c (zip, animated QR) and 4d (hardening) are
-green. Stage 5: 5a (pgpony-sop) and 5b (GnuPG import) are green; 5c (Flathub) awaits its Linux build.
+green. Stage 5: 5a (pgpony-sop), 5b (GnuPG import) and 5c (Flathub build) are green; the Flathub
+submission waits for the 3.0.0 tag. Next: the SOP interop run, then stage 6.
 See `docs/phases/PHASE_D26_NOTES.md`. See `docs/phases/PHASE_D25_NOTES.md`.
 
 ## 12. Features (decided: all three, inside 3.0.0)

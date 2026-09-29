@@ -146,3 +146,9 @@ Lint (flatpak-builder-lint, manifest and repo): one error that stays until Flath
 two screenshot errors that only a local build shows, because Flathub's build mirrors the
 screenshots itself. The runtime moved to 26.08 on the linter's advice (the OpenJDK 17 extension
 has a 26.08 branch).
+
+5c is green: on the 26.08 runtime the Flatpak builds offline, installs and runs in the aarch64
+VM, the pcsc-lite extras are cleaned out (nothing but the app's own metainfo is exported), and the
+README's test matrix passed (encrypt and decrypt, file chooser, ML-DSA sign and verify, GnuPG
+import note, watch folders, host ssh through the agent socket, SOP from the host). Left for the
+release: the metainfo release entry, the git source pinned to the tag, and the submission.
