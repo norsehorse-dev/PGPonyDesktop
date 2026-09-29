@@ -4,10 +4,10 @@ App ID: `app.pgpony.PGPony`. The ID has to name a domain we control, reversed: `
 is `pgpony.app`, which is what Flathub verifies (step 6). The earlier draft used
 `org.pgpony.PGPony`, which would have needed `pgpony.org`.
 
-Everything here is built and tested on a Linux x86_64 machine; macOS cannot run
-flatpak-builder. The Flatpak is x86_64 only for now (`flathub.json`): the Skiko runtime in the
-generated sources is the one for the machine that generated them. aarch64 means a second
-generation run on an ARM Linux machine and `only-arches` entries per architecture.
+Everything here is built and tested on Linux (an aarch64 Debian VM so far); macOS cannot run
+flatpak-builder. The Flatpak targets x86_64 and aarch64. `gradle-sources.json` covers both from
+one run on either: the Skiko and Compose natives for the other architecture are added with
+`only-arches`.
 
 ## Files
 
@@ -20,31 +20,43 @@ generation run on an ARM Linux machine and `only-arches` entries per architectur
 - `pgpony-gpg`, `pgpony-sop`: the git signing shim and the SOP command line, as commands inside
   the Flatpak.
 - `gradle.properties`: Gradle settings for the Flatpak build only.
-- `generate-sources.init.gradle`: writes `gradle-sources.json` (step 2).
+- `gradle-cache-sources.py`: writes `gradle-sources.json` from an online build's Gradle cache
+  (step 2).
 - `offline.init.gradle`: points the offline build at the downloaded artifacts.
-- `gradle-sources.json`: generated, every Maven artifact the build resolves with its URL and
+- `gradle-sources.json`: generated, every Maven artifact the build downloads with its URL and
   checksum. Regenerate whenever Gradle or a dependency changes.
-- `flathub.json`: the architectures Flathub builds.
 
 ## 1. One-time setup on the Linux machine
 
-A JDK 17 on the host (for step 2 only; the Flatpak build uses the SDK extension), flatpak, and
-the Flathub remote.
+flatpak, the Flathub remote, the builder, and the runtime, SDK and OpenJDK 17 extension. No
+JDK on the host: step 2 runs Gradle inside the SDK with the same JDK the Flatpak build uses.
 
 ```
-flatpak install -y flathub org.flatpak.Builder org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.openjdk17//25.08
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user -y flathub org.flatpak.Builder org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.openjdk17//25.08
 git clone https://github.com/norsehorse-dev/PGPonyDesktop.git
 ```
 
 ## 2. Generate the offline sources
 
-The one step that needs the network. It resolves the project's real dependency graph and
-writes `packaging/flathub/gradle-sources.json`.
+The one step that needs the network. A real `createDistributable` runs online, inside the SDK,
+against an empty Gradle home; then `gradle-cache-sources.py` lists every file that build
+downloaded, with the repository that serves it and its sha256. Listing what a build actually
+fetched, rather than walking its configurations, also catches what Gradle resolves on the fly
+(Compose's `checkRuntime` probe is one). The first run compiles the whole app, so it takes a
+while.
 
 ```
 cd PGPonyDesktop
-./gradlew --no-configuration-cache --init-script packaging/flathub/generate-sources.init.gradle flatpakGradleGenerator
+mkdir -p ../pgpony-gradle-cache
+cp packaging/flathub/gradle.properties ../pgpony-gradle-cache/
+flatpak run --share=network --filesystem="$PWD" --filesystem="$(realpath ../pgpony-gradle-cache)" --env=JAVA_HOME=/usr/lib/sdk/openjdk17/jvm/openjdk-17 --env=GRADLE_USER_HOME="$(realpath ../pgpony-gradle-cache)" --command="$PWD/gradlew" org.freedesktop.Sdk//25.08 -p "$PWD" --no-daemon createDistributable
+python3 packaging/flathub/gradle-cache-sources.py ../pgpony-gradle-cache > packaging/flathub/gradle-sources.json
 ```
+
+The script prints how many sources it wrote and names any file no repository serves; that list
+should be empty. To regenerate, empty `../pgpony-gradle-cache` first (keep its `wrapper/`
+folder to skip downloading Gradle again), so the list holds only what the current build uses.
 
 ## 3. Build, install and run
 
@@ -56,9 +68,9 @@ flatpak run org.flatpak.Builder --force-clean --user --install --install-deps-fr
 flatpak run app.pgpony.PGPony
 ```
 
-If the offline build stops on an artifact it cannot find, that artifact was resolved outside
-the configurations the generator walks (a plugin marker or a detached configuration). The
-error names it; it goes into `gradle-sources.json` as one more entry.
+If the offline build stops on an artifact it cannot find, the online build in step 2 did not
+download it: check that step 2 ran the same task (`createDistributable`) with the same
+`gradle.properties`, then regenerate.
 
 ## 4. Test matrix
 
@@ -115,8 +127,8 @@ The repo lint fetches the screenshots, so `docs/screenshots/keyring.png` and
 1. Verify `pgpony.app` for the app ID: Flathub gives a token to publish at
    `https://pgpony.app/.well-known/org.flathub.VerifiedApps.txt`.
 2. Fork `github.com/flathub/flathub` and branch from `new-pr`.
-3. Add the manifest, `gradle-sources.json` and `flathub.json`. The other files the manifest
-   installs come from the source tree at the tag, so only those three go in. In the submitted
+3. Add the manifest and `gradle-sources.json`. The other files the manifest installs come from
+   the source tree at the tag, so only those two go in. In the submitted
    manifest, replace the `dir` source with the release:
 
 ```

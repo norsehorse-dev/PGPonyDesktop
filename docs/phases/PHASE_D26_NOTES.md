@@ -82,21 +82,26 @@ and a passphrase-protected secret key; a card key shows its skip note.
 ## 5c: Flathub (plan 13a)
 
 `packaging/flathub/` is now a buildable Flatpak; `packaging/flathub/README.md` is the procedure
-(generate sources, build, test matrix, lint, submit). It is built and tested on a Linux x86_64
-machine; this checkpoint's Mac build covers the app code and its tests only.
+(generate sources, build, test matrix, lint, submit). It is built and tested on Linux (first
+in an aarch64 Debian VM); this checkpoint's Mac build covers the app code and its tests only.
 
 - **App ID `app.pgpony.PGPony`.** A Flathub ID reverses a domain the developer controls, and
   that is the domain verification checks: `app.pgpony` is pgpony.app. The draft's
   `org.pgpony.PGPony` would have needed pgpony.org.
-- **Offline Gradle build**, as the plan decided. `generate-sources.init.gradle` applies the
-  flatpak-gradle-generator plugin (the one flatpak-builder-tools recommends) from an init script,
-  so the project's build never declares it, and writes `gradle-sources.json`. The Gradle
+- **Offline Gradle build**, as the plan decided. `gradle-cache-sources.py` writes
+  `gradle-sources.json` from the Gradle cache of an online `createDistributable` run inside the
+  SDK: every file that build downloaded, with the repository that serves it and its sha256. The
+  first attempt used the flatpak-gradle-generator plugin, which walks the declared
+  configurations; the offline build then failed on Compose's `checkRuntime` probe, resolved in a
+  detached configuration the plugin never sees. Listing what a real build fetched has no such
+  gap. The Gradle
   distribution is an archive source checked against the wrapper's own sha256, and
   `offline.init.gradle` puts the downloaded repository first for plugins and dependencies. The
   build is `createDistributable`, the same jpackage image the .deb, tarball and AppImage ship,
   with its jlink runtime made in the build from the OpenJDK 17 SDK extension. Nothing prebuilt.
-- **x86_64 only** (`flathub.json`), because the Skiko runtime in the sources is the generating
-  machine's. aarch64 is a second generation run on ARM Linux.
+- **x86_64 and aarch64.** A build downloads the Skiko and Compose natives for its own
+  architecture only; the script adds the other architecture's, tagged `only-arches`, so one run
+  on either covers both.
 - **Sandbox**: `--socket=x11` with `--share=ipc`, not Wayland: Compose Desktop on JDK 17 draws
   through AWT, which is X11 only, and a Wayland socket with X11 only as fallback would leave it
   no display on a Wayland session. `--socket=pcsc` plus a pcsc-lite module (client library only)
