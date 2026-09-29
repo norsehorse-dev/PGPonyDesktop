@@ -140,3 +140,9 @@ sandbox: the same app image run directly on Debian prints it too, so the .deb, t
 AppImage have always had it. Known upstream (JDK-8289195). Exit codes survive it (`pgpony-sop
 version` exits 0, an unsupported subcommand exits 69), so scripts, the git shim and SOP are
 unaffected. Stage 6 checks whether a newer JDK's launcher clears it.
+
+Lint (flatpak-builder-lint, manifest and repo): one error that stays until Flathub grants it,
+`finish-args-home-filesystem-access` (the case for it is in the README's submission step), and
+two screenshot errors that only a local build shows, because Flathub's build mirrors the
+screenshots itself. The runtime moved to 26.08 on the linter's advice (the OpenJDK 17 extension
+has a 26.08 branch).

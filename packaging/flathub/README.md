@@ -33,7 +33,7 @@ JDK on the host: step 2 runs Gradle inside the SDK with the same JDK the Flatpak
 
 ```
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --user -y flathub org.flatpak.Builder org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.openjdk17//25.08
+flatpak install --user -y flathub org.flatpak.Builder org.freedesktop.Platform//26.08 org.freedesktop.Sdk//26.08 org.freedesktop.Sdk.Extension.openjdk17//26.08
 git clone https://github.com/norsehorse-dev/PGPonyDesktop.git
 ```
 
@@ -50,7 +50,7 @@ while.
 cd PGPonyDesktop
 mkdir -p ../pgpony-gradle-cache
 cp packaging/flathub/gradle.properties ../pgpony-gradle-cache/
-flatpak run --share=network --filesystem="$PWD" --filesystem="$(realpath ../pgpony-gradle-cache)" --env=JAVA_HOME=/usr/lib/sdk/openjdk17/jvm/openjdk-17 --env=GRADLE_USER_HOME="$(realpath ../pgpony-gradle-cache)" --command="$PWD/gradlew" org.freedesktop.Sdk//25.08 -p "$PWD" --no-daemon createDistributable
+flatpak run --share=network --filesystem="$PWD" --filesystem="$(realpath ../pgpony-gradle-cache)" --env=JAVA_HOME=/usr/lib/sdk/openjdk17/jvm/openjdk-17 --env=GRADLE_USER_HOME="$(realpath ../pgpony-gradle-cache)" --command="$PWD/gradlew" org.freedesktop.Sdk//26.08 -p "$PWD" --no-daemon createDistributable
 python3 packaging/flathub/gradle-cache-sources.py ../pgpony-gradle-cache > packaging/flathub/gradle-sources.json
 ```
 
@@ -119,8 +119,23 @@ flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest packagin
 flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo ../pgpony-flatpak-repo
 ```
 
-The repo lint fetches the screenshots, so `docs/screenshots/keyring.png` and
-`docs/screenshots/crypto.png` (taken from this build, around 1600x900) must be on `main` first.
+The screenshots, `docs/screenshots/keyring.png` and `docs/screenshots/crypto.png` (taken from
+this build, around 1600x900, demo keys with example.com identities), must be on `main` first.
+
+What a clean local run still reports, and why each is expected:
+
+- `finish-args-home-filesystem-access` (both lints). An error until Flathub grants an exception
+  for the app; the case for it goes in the submission (step 6).
+- `appstream-external-screenshot-url` and `appstream-screenshots-not-mirrored-in-ostree` (repo
+  lint only). Flathub's own build mirrors the screenshots to dl.flathub.org; a local build does
+  not unless asked to. To check that part locally too, build with the mirror option and commit
+  the screenshots into the repo before linting:
+
+```
+flatpak run org.flatpak.Builder --force-clean --user --install-deps-from=flathub --mirror-screenshots-url=https://dl.flathub.org/media/ --state-dir=../pgpony-flatpak-state --repo=../pgpony-flatpak-repo ../pgpony-flatpak-build packaging/flathub/app.pgpony.PGPony.yaml
+flatpak run --command=ostree org.flatpak.Builder commit --repo=../pgpony-flatpak-repo --canonical-permissions --branch=screenshots/$(uname -m) ../pgpony-flatpak-build/screenshots
+flatpak run --command=flatpak-builder-lint org.flatpak.Builder repo ../pgpony-flatpak-repo
+```
 
 ## 6. Submit
 
@@ -138,8 +153,13 @@ The repo lint fetches the screenshots, so `docs/screenshots/keyring.png` and
         commit: <the tag's commit>
 ```
 
-4. Open the pull request against `new-pr`. Review looks hardest at the offline build and at
-   `--filesystem=home`; the reason for the home grant is in the manifest beside it.
+4. Open the pull request against `new-pr`, and ask in it for the
+   `finish-args-home-filesystem-access` exception. The case: PGPony encrypts, decrypts, signs and
+   verifies files and whole folders the user picks, and watch folders process directories on
+   their own as files arrive. Compose Desktop's file chooser is AWT's, which does not go through
+   the file chooser portal, so a portal grant cannot reach the files; the pass store
+   (`~/.password-store`) and GnuPG import (`~/.gnupg`) read fixed folders in home as well. Review
+   also looks hard at the offline build.
 5. On acceptance, add the Flathub badge to the README and the download page.
 
 ## What is different under Flatpak
