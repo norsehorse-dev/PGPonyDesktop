@@ -361,7 +361,8 @@ Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3 (3a
 green; see `docs/phases/PHASE_D24_NOTES.md`. Stage 4: 4a (subkey selector, post-quantum weak
 link, armor comment), 4b (session policy), 4c (zip, animated QR) and 4d (hardening) are
 green. Stage 5: 5a (pgpony-sop), 5b (GnuPG import) and 5c (Flathub build) are green; the Flathub
-submission waits for the 3.0.0 tag. Next: the SOP interop run, then stage 6.
+submission waits for the 3.0.0 tag. The SOP interop run is done and adds a checkpoint, 5d
+(engine fixes from the run, PGPonyAndroid first), before stage 6.
 See `docs/phases/PHASE_D26_NOTES.md`. See `docs/phases/PHASE_D25_NOTES.md`.
 
 ## 12. Features (decided: all three, inside 3.0.0)
@@ -426,6 +427,27 @@ the user picks through the file portal, public keys only, and says so.
   is published. The CHANGELOG-style summary covers 2.1.3 to 3.0.0.
 - desktop.json, winget, AUR as in RELEASING.md, plus Flathub (13a, decided Q8).
 - RELEASING.md and CLAUDE_RELEASE.md gain a Flathub step (metainfo release entry, manifest bump).
+
+### 5d. Engine fixes from the SOP interop run (L)
+The interop suite (Sequoia's OpenPGP interoperability test suite, `pgpony-sop` against `sqop`)
+passes 933 checks and fails 180. The findings list stays outside the repo, like the 4d review.
+The fixes are engine work, so they land in PGPonyAndroid first and reach the desktop through
+sync-vendor; the SOP-only ones are desktop code. Four packets, then a second suite run:
+
+- 5d-1 Certificates and signatures: which subkeys and signatures count as valid.
+- 5d-2 Message parsing: what a well-formed message is, and what gets skipped rather than fatal.
+- 5d-3 Algorithm policy, with the decisions below.
+- 5d-4 SOP layer: cleartext signatures, several signing keys, password encryption profiles.
+
+Decided (2026-09-29):
+- RSA under 2048 bits, DSA and ElGamal become read-only: no encrypting to them and no signing
+  with them; decrypting and verifying old material still works, with a weak-key warning in the
+  app. SOP reports those operations as failures.
+- Argon2 memory up to 2 GiB is allowed on desktop when the machine has the memory; Android keeps
+  its device-based cap.
+- Encryption follows the recipients' preferences: the strongest cipher and hash every recipient
+  lists (AES-128 is always allowed), and SEIPDv2 when every recipient advertises it, once PGPony
+  iOS is confirmed to read SEIPDv2.
 
 ### 13a. Flathub (L)
 The groundwork exists: `FLATHUB_PLAN.md`, and an unbuilt manifest, metainfo, desktop entry and
