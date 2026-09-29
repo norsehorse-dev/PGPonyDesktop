@@ -100,6 +100,10 @@
     <string name="d_app_quorumpony_desc">秘密情報を複数のバックアップカードに分割します。一定枚数を集めれば復元でき、1 枚だけでは何も分かりません。</string>
     <string name="d_app_relaypony_desc">Wi-Fi 経由で端末から端末へ直接ファイルを送ります。エンドツーエンドで暗号化され、間にサーバーは入りません。</string>
     <string name="d_app_burnpony_desc">自動的に消える暗号化メモ。端末上で封をし、読まれた後に削除されます。</string>
+    <string name="d_app_vaultpony_desc">スマートフォン上の暗号化保管庫。VeraCrypt コンテナ形式なので、同じ保管庫をコンピュータでも開けます。</string>
+    <string name="d_app_passpony_desc">pass と passage のパスワードストア用クライアント。パスワードはあなた自身の git リポジトリ内の暗号化ファイルのままです。</string>
+    <string name="d_app_hashpony_desc">sha256sum のようにファイルのハッシュを計算・検証。チェックサムファイル、フォルダ検証、主要なアルゴリズムすべてに対応。</string>
+    <string name="d_app_tappony_desc">NFC タグにかざすだけで、その ID と内容をあなた自身のサーバーに送信。アカウント不要、クラウド不要。</string>
 
     <!-- ── Status line ───────────────────────────────────── -->
     <string name="d_status_copied">クリップボードにコピーしました。</string>

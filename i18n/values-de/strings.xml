@@ -98,6 +98,10 @@
     <string name="d_app_quorumpony_desc">Verteilt ein Geheimnis auf mehrere Backup-Karten. Eine festgelegte Anzahl stellt es wieder her, eine einzelne verrät nichts.</string>
     <string name="d_app_relaypony_desc">Sendet Dateien direkt von Gerät zu Gerät über WLAN. Ende-zu-Ende verschlüsselt, ohne Server dazwischen.</string>
     <string name="d_app_burnpony_desc">Selbstzerstörende verschlüsselte Notizen: auf deinem Gerät versiegelt und nach dem Lesen verschwunden.</string>
+    <string name="d_app_vaultpony_desc">Verschlüsselte Tresore auf Ihrem Telefon im VeraCrypt-Containerformat, damit derselbe Tresor auch auf Ihrem Computer aufgeht.</string>
+    <string name="d_app_passpony_desc">Ein Client für pass- und passage-Passwortspeicher. Ihre Passwörter bleiben verschlüsselte Dateien in Ihrem eigenen git-Repository.</string>
+    <string name="d_app_hashpony_desc">Dateien hashen und prüfen wie mit sha256sum, mit Prüfsummendateien, Ordnerprüfungen und allen gängigen Algorithmen.</string>
+    <string name="d_app_tappony_desc">Halten Sie das Telefon an ein NFC-Tag, und seine ID und sein Inhalt gehen an Ihren eigenen Server. Kein Konto, keine Cloud.</string>
 
     <!-- ── Status line ───────────────────────────────────── -->
     <string name="d_status_copied">In die Zwischenablage kopiert.</string>

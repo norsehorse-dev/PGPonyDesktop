@@ -53,6 +53,10 @@ modules:
       - /lib/systemd
       - /share/man
       - /share/doc
+      # pcsc-lite's own AppStream file and daemon config; the app's metainfo is the only one.
+      - /share/metainfo/fr.apdu.pcsclite.metainfo.xml
+      - /etc/default/pcscd
+      - /sysusers.d
     sources:
       - type: archive
         url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.2.tar.xz

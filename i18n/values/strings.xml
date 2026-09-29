@@ -142,6 +142,10 @@
     <string name="d_app_quorumpony_desc">Split a secret across backup cards. A threshold of them restores it; any single one reveals nothing.</string>
     <string name="d_app_relaypony_desc">Send files straight from one device to another over Wi-Fi. Encrypted end to end, with no server in between.</string>
     <string name="d_app_burnpony_desc">Self-destructing encrypted notes, sealed on your device and gone once they have been read.</string>
+    <string name="d_app_vaultpony_desc">Encrypted vaults on your phone, in the VeraCrypt container format, so the same vault opens on your computer.</string>
+    <string name="d_app_passpony_desc">A client for pass and passage password stores. Your passwords stay encrypted files in your own git repository.</string>
+    <string name="d_app_hashpony_desc">Hash and verify files the way sha256sum does, with checksum files, folder checks and every common algorithm.</string>
+    <string name="d_app_tappony_desc">Tap an NFC tag and send its ID and contents to your own server. No account, no cloud.</string>
 
     <!-- ── Status line ───────────────────────────────────── -->
     <string name="d_status_copied">Copied to the clipboard.</string>

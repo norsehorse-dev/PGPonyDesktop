@@ -91,8 +91,9 @@ data class PonyApp(
 object PonyApps {
     /**
      * Ordered by how close each app sits to what someone in a PGP keyring app is already doing:
-     * the mobile PGPony first (same keys, same engine), then the two that also speak OpenPGP,
-     * then key backup, then transport, then the ephemeral one.
+     * the mobile PGPony first (same keys, same engine), then the ones that also speak OpenPGP or
+     * encrypt files, then key backup and encrypted storage, then transport, then the ephemeral
+     * one, then the tools (3.0.0: VaultPony, PassPony, HashPony and TapPony added).
      */
     val ALL: List<PonyApp> = listOf(
         PonyApp(
@@ -119,11 +120,25 @@ object PonyApps {
             icon = "agepony"
         ),
         PonyApp(
+            title = "PassPony",
+            url = "https://passpony.app",
+            descriptionKey = "d_app_passpony_desc",
+            platforms = "Android",
+            icon = "passpony"
+        ),
+        PonyApp(
             title = "QuorumPony",
             url = "https://quorumpony.com",
             descriptionKey = "d_app_quorumpony_desc",
-            platforms = "iPhone",
+            platforms = "iPhone · Android",
             icon = "quorumpony"
+        ),
+        PonyApp(
+            title = "VaultPony",
+            url = "https://vaultpony.app",
+            descriptionKey = "d_app_vaultpony_desc",
+            platforms = "iPhone · Android",
+            icon = "vaultpony"
         ),
         PonyApp(
             title = "RelayPony",
@@ -138,6 +153,20 @@ object PonyApps {
             descriptionKey = "d_app_burnpony_desc",
             platforms = "iPhone",
             icon = "burnpony"
+        ),
+        PonyApp(
+            title = "HashPony",
+            url = "https://hashpony.app",
+            descriptionKey = "d_app_hashpony_desc",
+            platforms = "Android",
+            icon = "hashpony"
+        ),
+        PonyApp(
+            title = "TapPony",
+            url = "https://tappony.app",
+            descriptionKey = "d_app_tappony_desc",
+            platforms = "iPhone · Android",
+            icon = "tappony"
         )
     )
 }

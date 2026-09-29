@@ -98,6 +98,10 @@
     <string name="d_app_quorumpony_desc">Divide um segredo entre vários cartões de backup. Um número mínimo deles restaura o segredo; um sozinho não revela nada.</string>
     <string name="d_app_relaypony_desc">Envia arquivos direto de um dispositivo para outro por Wi-Fi. Com criptografia de ponta a ponta e sem servidor no meio.</string>
     <string name="d_app_burnpony_desc">Notas criptografadas que se autodestroem: são seladas no seu dispositivo e somem depois de lidas.</string>
+    <string name="d_app_vaultpony_desc">Cofres criptografados no seu celular, no formato de contêiner do VeraCrypt, para que o mesmo cofre abra no seu computador.</string>
+    <string name="d_app_passpony_desc">Um cliente para repositórios de senhas pass e passage. Suas senhas continuam sendo arquivos criptografados no seu próprio repositório git.</string>
+    <string name="d_app_hashpony_desc">Calcule e verifique hashes de arquivos como o sha256sum, com arquivos de soma de verificação, verificação de pastas e todos os algoritmos comuns.</string>
+    <string name="d_app_tappony_desc">Aproxime uma etiqueta NFC e envie o ID e o conteúdo dela para o seu próprio servidor. Sem conta, sem nuvem.</string>
 
     <!-- ── Status line ───────────────────────────────────── -->
     <string name="d_status_copied">Copiado para a área de transferência.</string>

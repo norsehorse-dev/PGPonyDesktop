@@ -98,6 +98,10 @@
     <string name="d_app_quorumpony_desc">Répartit un secret entre plusieurs cartes de sauvegarde. Un nombre suffisant le restitue ; une seule ne révèle rien.</string>
     <string name="d_app_relaypony_desc">Envoie des fichiers directement d\'un appareil à l\'autre par Wi-Fi. Chiffré de bout en bout, sans serveur intermédiaire.</string>
     <string name="d_app_burnpony_desc">Notes chiffrées qui s\'autodétruisent : scellées sur votre appareil et effacées une fois lues.</string>
+    <string name="d_app_vaultpony_desc">Des coffres chiffrés sur votre téléphone, au format de conteneur VeraCrypt, pour que le même coffre s\'ouvre sur votre ordinateur.</string>
+    <string name="d_app_passpony_desc">Un client pour les magasins de mots de passe pass et passage. Vos mots de passe restent des fichiers chiffrés dans votre propre dépôt git.</string>
+    <string name="d_app_hashpony_desc">Calculez et vérifiez les empreintes de fichiers comme avec sha256sum, avec fichiers de sommes de contrôle, vérification de dossiers et tous les algorithmes courants.</string>
+    <string name="d_app_tappony_desc">Approchez une étiquette NFC pour envoyer son identifiant et son contenu à votre propre serveur. Sans compte, sans cloud.</string>
 
     <!-- ── Status line ───────────────────────────────────── -->
     <string name="d_status_copied">Copié dans le presse-papiers.</string>

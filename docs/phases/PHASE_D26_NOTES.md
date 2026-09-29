@@ -131,3 +131,12 @@ in an aarch64 Debian VM); this checkpoint's Mac build covers the app code and it
 
 Tests: `FlatpakTest` (detection, and the properties set inside and outside a sandbox). The
 Flatpak itself is tested by hand against the README's matrix.
+
+First Linux run (aarch64 Debian VM): the sources script lists 634 files with none missing, the
+offline build installs, and the window opens (Skiko falls back from GL to software rendering in
+the VM, which has no 3D acceleration). Every launch prints "pure virtual method called /
+terminate called without an active exception" on stderr. It is the jpackage launcher, not the
+sandbox: the same app image run directly on Debian prints it too, so the .deb, tarball and
+AppImage have always had it. Known upstream (JDK-8289195). Exit codes survive it (`pgpony-sop
+version` exits 0, an unsupported subcommand exits 69), so scripts, the git shim and SOP are
+unaffected. Stage 6 checks whether a newer JDK's launcher clears it.
