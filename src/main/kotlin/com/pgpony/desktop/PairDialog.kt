@@ -51,6 +51,8 @@ import com.pgpony.pair.PairSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
 import java.net.InetAddress
 import java.time.Instant
 import java.time.ZoneId
@@ -65,6 +67,11 @@ private sealed class PairStage {
     class Paired(val session: PairSession) : PairStage()
     class Failed(val message: String) : PairStage()
 }
+
+/** The clipboard's text, trimmed, or null when it holds none. */
+private fun clipboardText(): String? = runCatching {
+    Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as? String
+}.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
 
 /** The message a failed attempt shows. */
 internal fun pairFailureMessage(e: Throwable): String {
@@ -198,8 +205,12 @@ private fun HostingPane(window: PairController.HostWindow) {
     }
     Text(tr("d_pair_host_waiting"), style = MaterialTheme.typography.bodyMedium)
     Spacer(Modifier.height(8.dp))
-    addresses.forEach {
-        Text(it, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
+    addresses.forEach { address ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(address, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
+            Spacer(Modifier.width(Spacing.Small))
+            TextButton(onClick = { DesktopClipboard.copy(address, secret = false) }) { Text(tr("common_button_copy")) }
+        }
     }
     Spacer(Modifier.height(8.dp))
     Text(tr("d_pair_host_closes", closesAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -226,6 +237,7 @@ private fun JoiningPane(controller: PairController, onAttempt: (PairAttempt) -> 
         modifier = Modifier.fillMaxWidth()
     )
     if (bad) Text(tr("d_pair_bad_address"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    TextButton(enabled = !working, onClick = { clipboardText()?.let { text = it; bad = false } }) { Text(tr("common_button_paste")) }
     Spacer(Modifier.height(8.dp))
     OutlinedButton(enabled = !working && text.isNotBlank(), onClick = {
         working = true
@@ -369,10 +381,18 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
         }
     } else if (outgoing != null) {
         Text(progress ?: tr("d_pair_waiting_answer"), style = MaterialTheme.typography.bodyMedium)
-        outgoing?.recoveryCode?.let {
+        outgoing?.recoveryCode?.let { code ->
             Spacer(Modifier.height(8.dp))
             Text(tr("d_pair_backup_code_tell"), style = MaterialTheme.typography.bodyMedium)
-            Text(it, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(code, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
+                Spacer(Modifier.width(Spacing.Small))
+                TextButton(onClick = {
+                    // The code opens the backup, so it counts as a secret and auto-clear applies.
+                    DesktopClipboard.copy(code, secret = true)
+                    state.status = tr("d_backup_code_copied")
+                }) { Text(tr("common_button_copy")) }
+            }
         }
     } else {
         progress?.let {
@@ -481,6 +501,7 @@ private fun IncomingPane(
             value = backupCode, onValueChange = onBackupCode, label = { Text(tr("d_pair_backup_code_label")) },
             singleLine = true, modifier = Modifier.fillMaxWidth()
         )
+        TextButton(onClick = { clipboardText()?.let(onBackupCode) }) { Text(tr("common_button_paste")) }
     }
     Spacer(Modifier.height(8.dp))
     Row {
