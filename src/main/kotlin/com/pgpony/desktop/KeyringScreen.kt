@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
@@ -37,6 +38,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,6 +95,7 @@ fun KeyringScreen(state: DesktopState) {
     var query by remember { mutableStateOf("") }
     var sortMode by remember { mutableStateOf(SortMode.RECENT) }
     var sortMenuOpen by remember { mutableStateOf(false) }
+    var importMenuOpen by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
 
@@ -100,6 +103,16 @@ fun KeyringScreen(state: DesktopState) {
     androidx.compose.runtime.LaunchedEffect(state.uiRequest) {
         if (state.uiRequest == UiRequest.NEW_KEY) { showGenerate = true; state.consumeUiRequest() }
         if (state.uiRequest == UiRequest.PAIR) { showPair = true; state.consumeUiRequest() }
+        // 3.0.0: File > Import in the menu bar opens the same dialogs as the Import menu here.
+        when (state.uiRequest) {
+            UiRequest.IMPORT_FILE -> { showFilePicker = true; state.consumeUiRequest() }
+            UiRequest.IMPORT_PASTE -> { showPasteDialog = true; state.consumeUiRequest() }
+            UiRequest.IMPORT_LINK -> { showLinkImport = true; state.consumeUiRequest() }
+            UiRequest.IMPORT_QR -> { showQrImport = true; state.consumeUiRequest() }
+            UiRequest.SEARCH_SERVERS -> { showServerSearch = true; state.consumeUiRequest() }
+            UiRequest.IMPORT_GNUPG -> { showGnupgImport = true; state.consumeUiRequest() }
+            else -> {}
+        }
     }
 
     // D2c — client-side search + sort over the Room rows. Manual drag-reorder (the Android
@@ -129,18 +142,25 @@ fun KeyringScreen(state: DesktopState) {
             title = tr("keyring_title"),
             subtitle = trQuantity("d_keyring_key_count", state.keys.size)
         ) {
-            OutlinedButton(onClick = { showServerSearch = true }) { Text(tr("d_keyring_search_servers")) }
-            OutlinedButton(onClick = { showPasteDialog = true }) { Text(tr("d_keyring_paste_armor")) }
-            OutlinedButton(onClick = { showLinkImport = true }) { Text(tr("d_keyring_import_link")) }
-            OutlinedButton(onClick = { showFilePicker = true }) { Text(tr("d_keyring_import_file")) }
-            OutlinedButton(onClick = { showQrImport = true }) { Text(tr("d_keyring_import_qr")) }
-            OutlinedButton(onClick = { showGnupgImport = true }) { Text(tr("d_gnupg_import_button")) }
-            OutlinedButton(onClick = { showPair = true }) { Text(tr("d_pair_button")) }
-            if (state.deletedKeys.isNotEmpty()) {
-                OutlinedButton(onClick = { showRecentlyDeleted = true }) {
-                    Text(tr("d_keyring_recently_deleted_button", state.deletedKeys.size))
+            // 3.0.0: every way a key comes in sits in one Import menu (the same items as File >
+            // Import in the menu bar), so the header keeps three buttons in every language.
+            // Boxed with its menu for the same reason as the sort button below.
+            Box {
+                OutlinedButton(onClick = { importMenuOpen = true }) {
+                    Text(tr("d_keyring_import_menu"))
+                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+                }
+                DropdownMenu(expanded = importMenuOpen, onDismissRequest = { importMenuOpen = false }) {
+                    DropdownMenuItem(text = { Text(tr("d_keyring_import_file")) }, onClick = { importMenuOpen = false; showFilePicker = true })
+                    DropdownMenuItem(text = { Text(tr("d_keyring_paste_armor")) }, onClick = { importMenuOpen = false; showPasteDialog = true })
+                    DropdownMenuItem(text = { Text(tr("d_keyring_import_link")) }, onClick = { importMenuOpen = false; showLinkImport = true })
+                    DropdownMenuItem(text = { Text(tr("d_keyring_import_qr")) }, onClick = { importMenuOpen = false; showQrImport = true })
+                    DropdownMenuItem(text = { Text(tr("d_keyring_search_servers")) }, onClick = { importMenuOpen = false; showServerSearch = true })
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text(tr("d_gnupg_import_button")) }, onClick = { importMenuOpen = false; showGnupgImport = true })
                 }
             }
+            OutlinedButton(onClick = { showPair = true }) { Text(tr("d_pair_button")) }
             BrandButton(onClick = { showGenerate = true }) { Text(tr("d_menu_new_key")) }
         }
 
@@ -171,6 +191,12 @@ fun KeyringScreen(state: DesktopState) {
                             onClick = { sortMode = mode; sortMenuOpen = false }
                         )
                     }
+                }
+            }
+            // 3.0.0: Recently Deleted belongs to the list, not to the import actions.
+            if (state.deletedKeys.isNotEmpty()) {
+                TextButton(onClick = { showRecentlyDeleted = true }) {
+                    Text(tr("d_keyring_recently_deleted_button", state.deletedKeys.size))
                 }
             }
             if (query.isNotBlank()) {

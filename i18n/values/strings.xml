@@ -672,10 +672,10 @@
 
     <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
          entry is a compile-time constant and cannot hold a translated string. ── -->
-    <string name="d_keyring_search_servers">Search servers…</string>
+    <string name="d_keyring_search_servers">Search key servers…</string>
     <string name="d_keyring_paste_armor">Paste armor…</string>
-    <string name="d_keyring_import_file">Import file…</string>
-    <string name="d_keyring_import_qr">Import QR…</string>
+    <string name="d_keyring_import_file">From a file…</string>
+    <string name="d_keyring_import_qr">From a QR image…</string>
     <string name="d_keyring_search_placeholder">Search name, email, fingerprint</string>
     <string name="d_keyring_sort_label">Sort: %1$s</string>
     <string name="d_keyring_sort_recent">Recent</string>
@@ -902,7 +902,7 @@
     <string name="d_import_preview_meta">%1$s · %2$s</string>
     <string name="d_import_preview_in_keyring">Already in your keyring. Importing adds anything new.</string>
     <string name="d_import_link_title">Import from link</string>
-    <string name="d_keyring_import_link">Import from link…</string>
+    <string name="d_keyring_import_link">From a link…</string>
     <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
     <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
     <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
@@ -921,7 +921,7 @@
     <string name="d_shim_unlock_message">git asked PGPony to sign with %1$s, which is passphrase-protected.</string>
 
     <!-- 3.0.0 stage 5b: GnuPG import -->
-    <string name="d_gnupg_import_button">Import from GnuPG…</string>
+    <string name="d_gnupg_import_button">From GnuPG…</string>
     <string name="d_gnupg_title">Import from GnuPG</string>
     <string name="d_gnupg_home">GnuPG home: %1$s</string>
     <string name="d_gnupg_choose_folder">Choose folder…</string>
@@ -1003,4 +1003,6 @@
     <string name="d_pair_err_too_large">%1$s is too large to send.</string>
     <string name="d_pair_err_import">Could not import %1$s.</string>
     <string name="d_pair_err_backup_code">Enter the recovery code shown on the other computer.</string>
+    <!-- 3.0.0: the keyring's Import menu. -->
+    <string name="d_keyring_import_menu">Import</string>
 </resources>

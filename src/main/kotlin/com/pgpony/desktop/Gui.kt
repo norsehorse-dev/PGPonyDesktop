@@ -510,7 +510,7 @@ private const val STALE_AFTER_MS = 24 * 60 * 60 * 1000L
 private const val EXPIRY_SCAN_TICK_MS = 24 * 60 * 60 * 1000L
 
 /** D9 — menu-bar requests a screen fulfills by opening a dialog. */
-enum class UiRequest { NEW_KEY, RESTORE, PAIR }
+enum class UiRequest { NEW_KEY, RESTORE, PAIR, IMPORT_FILE, IMPORT_PASTE, IMPORT_LINK, IMPORT_QR, SEARCH_SERVERS, IMPORT_GNUPG }
 
 /** Where Key Detail sends the Crypto screen: a recipient to preselect, or a key to decrypt with. */
 data class CryptoPreset(val encryptTo: String? = null, val decryptWith: String? = null)
@@ -700,6 +700,17 @@ private fun guiApplication() = application {
         MenuBar {
             Menu(tr("d_menu_file"), mnemonic = tr("d_menu_file_mnemonic").firstOrNull() ?: 'F') {
                 Item(tr("d_menu_goto_keyring"), shortcut = shortcut(Key.I)) { state.destination = Destination.Keyring }
+                // 3.0.0: the keyring's Import menu, reachable from the menu bar too.
+                Menu(tr("d_keyring_import_menu")) {
+                    fun open(request: UiRequest) { state.destination = Destination.Keyring; state.uiRequest = request }
+                    Item(tr("d_keyring_import_file")) { open(UiRequest.IMPORT_FILE) }
+                    Item(tr("d_keyring_paste_armor")) { open(UiRequest.IMPORT_PASTE) }
+                    Item(tr("d_keyring_import_link")) { open(UiRequest.IMPORT_LINK) }
+                    Item(tr("d_keyring_import_qr")) { open(UiRequest.IMPORT_QR) }
+                    Item(tr("d_keyring_search_servers")) { open(UiRequest.SEARCH_SERVERS) }
+                    Separator()
+                    Item(tr("d_gnupg_import_button")) { open(UiRequest.IMPORT_GNUPG) }
+                }
                 Item(tr("d_menu_restore_backup")) { state.destination = Destination.Settings; state.uiRequest = UiRequest.RESTORE }
                 Separator()
                 Item(tr("d_menu_quit"), shortcut = shortcut(Key.Q)) { exitApplication() }

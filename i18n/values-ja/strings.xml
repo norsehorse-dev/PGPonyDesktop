@@ -527,10 +527,10 @@
 
     <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
          entry is a compile-time constant and cannot hold a translated string. ── -->
-    <string name="d_keyring_search_servers">サーバーを検索…</string>
+    <string name="d_keyring_search_servers">鍵サーバーを検索…</string>
     <string name="d_keyring_paste_armor">ASCII アーマーを貼り付け…</string>
-    <string name="d_keyring_import_file">ファイルをインポート…</string>
-    <string name="d_keyring_import_qr">QR をインポート…</string>
+    <string name="d_keyring_import_file">ファイルから…</string>
+    <string name="d_keyring_import_qr">QR 画像から…</string>
     <string name="d_keyring_search_placeholder">名前・メール・フィンガープリントを検索</string>
     <string name="d_keyring_sort_label">並び替え: %1$s</string>
     <string name="d_keyring_sort_recent">最近</string>
@@ -746,7 +746,7 @@
     <string name="d_import_preview_meta">%1$s · %2$s</string>
     <string name="d_import_preview_in_keyring">すでにキーリングにあります。インポートすると新しい部分だけが追加されます。</string>
     <string name="d_import_link_title">リンクからインポート</string>
-    <string name="d_keyring_import_link">リンクからインポート…</string>
+    <string name="d_keyring_import_link">リンクから…</string>
     <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
     <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
     <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
@@ -765,7 +765,7 @@
     <string name="d_shim_unlock_message">git が %1$s での署名を PGPony に要求しました。この鍵はパスフレーズで保護されています。</string>
 
     <!-- 3.0.0 stage 5b: GnuPG import -->
-    <string name="d_gnupg_import_button">GnuPG からインポート…</string>
+    <string name="d_gnupg_import_button">GnuPG から…</string>
     <string name="d_gnupg_title">GnuPG からインポート</string>
     <string name="d_gnupg_home">GnuPG ホーム: %1$s</string>
     <string name="d_gnupg_choose_folder">フォルダを選択…</string>
@@ -847,4 +847,6 @@
     <string name="d_pair_err_too_large">%1$s は大きすぎて送れません。</string>
     <string name="d_pair_err_import">%1$s を取り込めませんでした。</string>
     <string name="d_pair_err_backup_code">もう一方のコンピュータに表示された復元コードを入力してください。</string>
+    <!-- 3.0.0: the keyring's Import menu. -->
+    <string name="d_keyring_import_menu">インポート</string>
 </resources>

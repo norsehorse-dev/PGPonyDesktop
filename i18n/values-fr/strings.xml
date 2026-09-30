@@ -541,10 +541,10 @@
 
     <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
          entry is a compile-time constant and cannot hold a translated string. ── -->
-    <string name="d_keyring_search_servers">Rechercher sur les serveurs…</string>
+    <string name="d_keyring_search_servers">Rechercher sur les serveurs de clés…</string>
     <string name="d_keyring_paste_armor">Coller l\'ASCII armor…</string>
-    <string name="d_keyring_import_file">Importer un fichier…</string>
-    <string name="d_keyring_import_qr">Importer un QR…</string>
+    <string name="d_keyring_import_file">Depuis un fichier…</string>
+    <string name="d_keyring_import_qr">Depuis une image QR…</string>
     <string name="d_keyring_search_placeholder">Rechercher nom, e-mail, empreinte</string>
     <string name="d_keyring_sort_label">Tri : %1$s</string>
     <string name="d_keyring_sort_recent">Récentes</string>
@@ -771,7 +771,7 @@
     <string name="d_import_preview_meta">%1$s · %2$s</string>
     <string name="d_import_preview_in_keyring">Déjà dans votre trousseau. L\'import ajoute seulement ce qui est nouveau.</string>
     <string name="d_import_link_title">Importer depuis un lien</string>
-    <string name="d_keyring_import_link">Importer depuis un lien…</string>
+    <string name="d_keyring_import_link">Depuis un lien…</string>
     <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
     <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
     <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
@@ -790,7 +790,7 @@
     <string name="d_shim_unlock_message">git a demandé à PGPony de signer avec %1$s, qui est protégée par une phrase secrète.</string>
 
     <!-- 3.0.0 stage 5b: GnuPG import -->
-    <string name="d_gnupg_import_button">Importer depuis GnuPG…</string>
+    <string name="d_gnupg_import_button">Depuis GnuPG…</string>
     <string name="d_gnupg_title">Importer depuis GnuPG</string>
     <string name="d_gnupg_home">Dossier GnuPG : %1$s</string>
     <string name="d_gnupg_choose_folder">Choisir un dossier…</string>
@@ -872,4 +872,6 @@
     <string name="d_pair_err_too_large">%1$s est trop volumineux pour être envoyé.</string>
     <string name="d_pair_err_import">Impossible d\'importer %1$s.</string>
     <string name="d_pair_err_backup_code">Saisissez le code de récupération affiché sur l\'autre ordinateur.</string>
+    <!-- 3.0.0: the keyring's Import menu. -->
+    <string name="d_keyring_import_menu">Importer</string>
 </resources>

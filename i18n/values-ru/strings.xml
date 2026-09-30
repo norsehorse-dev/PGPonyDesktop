@@ -603,10 +603,10 @@
     <string name="d_publish_outcome_failed">%1$s: сбой · %2$s</string>
 
     <!-- Keyring screen -->
-    <string name="d_keyring_search_servers">Искать на серверах…</string>
+    <string name="d_keyring_search_servers">Искать на серверах ключей…</string>
     <string name="d_keyring_paste_armor">Вставить ASCII-броню…</string>
-    <string name="d_keyring_import_file">Импорт из файла…</string>
-    <string name="d_keyring_import_qr">Импорт из QR…</string>
+    <string name="d_keyring_import_file">Из файла…</string>
+    <string name="d_keyring_import_qr">Из изображения QR…</string>
     <string name="d_keyring_search_placeholder">Поиск по имени, эл. почте, отпечатку</string>
     <string name="d_keyring_sort_label">Сортировка: %1$s</string>
     <string name="d_keyring_sort_recent">Недавние</string>
@@ -845,7 +845,7 @@
     <string name="d_import_preview_meta">%1$s · %2$s</string>
     <string name="d_import_preview_in_keyring">Уже есть в вашей связке ключей. При импорте добавится только новое.</string>
     <string name="d_import_link_title">Импорт по ссылке</string>
-    <string name="d_keyring_import_link">Импорт по ссылке…</string>
+    <string name="d_keyring_import_link">По ссылке…</string>
     <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
     <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
     <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
@@ -864,7 +864,7 @@
     <string name="d_shim_unlock_message">git запросил у PGPony подпись ключом %1$s, который защищён парольной фразой.</string>
 
     <!-- 3.0.0 stage 5b: GnuPG import -->
-    <string name="d_gnupg_import_button">Импорт из GnuPG…</string>
+    <string name="d_gnupg_import_button">Из GnuPG…</string>
     <string name="d_gnupg_title">Импорт из GnuPG</string>
     <string name="d_gnupg_home">Каталог GnuPG: %1$s</string>
     <string name="d_gnupg_choose_folder">Выбрать папку…</string>
@@ -946,4 +946,6 @@
     <string name="d_pair_err_too_large">%1$s слишком велик для отправки.</string>
     <string name="d_pair_err_import">Не удалось импортировать %1$s.</string>
     <string name="d_pair_err_backup_code">Введите код восстановления, показанный на другом компьютере.</string>
+    <!-- 3.0.0: the keyring's Import menu. -->
+    <string name="d_keyring_import_menu">Импорт</string>
 </resources>

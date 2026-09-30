@@ -541,10 +541,10 @@
 
     <!-- ── Keyring screen. Sort-mode labels are keys held by the SortMode enum — an enum
          entry is a compile-time constant and cannot hold a translated string. ── -->
-    <string name="d_keyring_search_servers">Buscar en servidores…</string>
+    <string name="d_keyring_search_servers">Buscar en servidores de claves…</string>
     <string name="d_keyring_paste_armor">Pegar ASCII armor…</string>
-    <string name="d_keyring_import_file">Importar archivo…</string>
-    <string name="d_keyring_import_qr">Importar QR…</string>
+    <string name="d_keyring_import_file">Desde un archivo…</string>
+    <string name="d_keyring_import_qr">Desde una imagen QR…</string>
     <string name="d_keyring_search_placeholder">Buscar nombre, correo, huella digital</string>
     <string name="d_keyring_sort_label">Orden: %1$s</string>
     <string name="d_keyring_sort_recent">Recientes</string>
@@ -771,7 +771,7 @@
     <string name="d_import_preview_meta">%1$s · %2$s</string>
     <string name="d_import_preview_in_keyring">Ya está en tu llavero. Al importar se añade lo que sea nuevo.</string>
     <string name="d_import_link_title">Importar desde un enlace</string>
-    <string name="d_keyring_import_link">Importar desde un enlace…</string>
+    <string name="d_keyring_import_link">Desde un enlace…</string>
     <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
     <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
     <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
@@ -790,7 +790,7 @@
     <string name="d_shim_unlock_message">git pidió a PGPony firmar con %1$s, que está protegida con contraseña.</string>
 
     <!-- 3.0.0 stage 5b: GnuPG import -->
-    <string name="d_gnupg_import_button">Importar desde GnuPG…</string>
+    <string name="d_gnupg_import_button">Desde GnuPG…</string>
     <string name="d_gnupg_title">Importar desde GnuPG</string>
     <string name="d_gnupg_home">Carpeta de GnuPG: %1$s</string>
     <string name="d_gnupg_choose_folder">Elegir carpeta…</string>
@@ -872,4 +872,6 @@
     <string name="d_pair_err_too_large">%1$s es demasiado grande para enviarlo.</string>
     <string name="d_pair_err_import">No se pudo importar %1$s.</string>
     <string name="d_pair_err_backup_code">Introduzca el código de recuperación que muestra el otro ordenador.</string>
+    <!-- 3.0.0: the keyring's Import menu. -->
+    <string name="d_keyring_import_menu">Importar</string>
 </resources>
