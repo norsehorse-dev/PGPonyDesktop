@@ -819,7 +819,7 @@
     <string name="d_pair_intro">Mueva claves o una copia de seguridad completa entre dos ordenadores de la misma red. Uno espera, el otro se conecta y usted compara un código en ambas pantallas. No se guarda nada al cerrar esta ventana.</string>
     <string name="d_pair_host">Esperar al otro ordenador</string>
     <string name="d_pair_join">Conectar con el otro ordenador</string>
-    <string name="d_pair_host_waiting">En el otro ordenador, elija Conectar y escriba una de estas direcciones:</string>
+    <string name="d_pair_host_waiting">En el otro ordenador, elija Conectar y escriba esta dirección:</string>
     <string name="d_pair_host_closes">Esta ventana permanece abierta hasta las %1$s.</string>
     <string name="d_pair_firewall">Si el cortafuegos lo pregunta, permita que PGPony acepte conexiones mientras esta ventana esté abierta.</string>
     <string name="d_pair_no_address">Este ordenador no tiene ninguna dirección de red que otro ordenador pueda alcanzar.</string>
@@ -874,4 +874,7 @@
     <string name="d_pair_err_backup_code">Introduzca el código de recuperación que muestra el otro ordenador.</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">Importar</string>
+    <string name="d_pair_other_addresses">Otras direcciones (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Ocultar otras direcciones</string>
+    <string name="d_pair_other_addresses_note">Pruebe estas si el otro ordenador no logra conectar, por ejemplo si es una máquina virtual en este ordenador o está en otro adaptador de red.</string>
 </resources>

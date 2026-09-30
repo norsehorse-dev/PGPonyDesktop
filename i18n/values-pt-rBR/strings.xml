@@ -819,7 +819,7 @@
     <string name="d_pair_intro">Transfira chaves ou um backup completo entre dois computadores na mesma rede. Um computador aguarda, o outro se conecta e você compara um código nas duas telas. Nada é mantido depois que você fecha esta janela.</string>
     <string name="d_pair_host">Aguardar o outro computador</string>
     <string name="d_pair_join">Conectar ao outro computador</string>
-    <string name="d_pair_host_waiting">No outro computador, escolha Conectar e digite um destes endereços:</string>
+    <string name="d_pair_host_waiting">No outro computador, escolha Conectar e digite este endereço:</string>
     <string name="d_pair_host_closes">Esta janela fica aberta até %1$s.</string>
     <string name="d_pair_firewall">Se o firewall perguntar, permita que o PGPony aceite conexões enquanto esta janela estiver aberta.</string>
     <string name="d_pair_no_address">Este computador não tem nenhum endereço de rede que outro computador possa alcançar.</string>
@@ -874,4 +874,7 @@
     <string name="d_pair_err_backup_code">Digite o código de recuperação mostrado no outro computador.</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">Importar</string>
+    <string name="d_pair_other_addresses">Outros endereços (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Ocultar outros endereços</string>
+    <string name="d_pair_other_addresses_note">Tente estes se o outro computador não conseguir se conectar, por exemplo quando ele é uma máquina virtual neste computador ou está em outro adaptador de rede.</string>
 </resources>

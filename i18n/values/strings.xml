@@ -950,7 +950,7 @@
     <string name="d_pair_intro">Move keys or a full backup between two computers on the same network. One computer waits, the other connects, and you compare a code on both screens. Nothing is kept after you close this window.</string>
     <string name="d_pair_host">Wait for the other computer</string>
     <string name="d_pair_join">Connect to the other computer</string>
-    <string name="d_pair_host_waiting">On the other computer, choose Connect and type one of these addresses:</string>
+    <string name="d_pair_host_waiting">On the other computer, choose Connect and type this address:</string>
     <string name="d_pair_host_closes">This window stays open until %1$s.</string>
     <string name="d_pair_firewall">If your firewall asks, allow PGPony to accept connections while this window is open.</string>
     <string name="d_pair_no_address">This computer has no network address another computer can reach.</string>
@@ -1005,4 +1005,7 @@
     <string name="d_pair_err_backup_code">Enter the recovery code shown on the other computer.</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">Import</string>
+    <string name="d_pair_other_addresses">Other addresses (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Hide other addresses</string>
+    <string name="d_pair_other_addresses_note">Try these if the other computer cannot connect, for example when it is a virtual machine on this computer or on another network adapter.</string>
 </resources>

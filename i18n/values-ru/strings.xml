@@ -893,7 +893,7 @@
     <string name="d_pair_intro">Перенос ключей или полной резервной копии между двумя компьютерами в одной сети. Один компьютер ждёт, другой подключается, и вы сравниваете код на обоих экранах. После закрытия этого окна ничего не сохраняется.</string>
     <string name="d_pair_host">Ждать другой компьютер</string>
     <string name="d_pair_join">Подключиться к другому компьютеру</string>
-    <string name="d_pair_host_waiting">На другом компьютере выберите «Подключиться» и введите один из этих адресов:</string>
+    <string name="d_pair_host_waiting">На другом компьютере выберите «Подключиться» и введите этот адрес:</string>
     <string name="d_pair_host_closes">Это окно открыто до %1$s.</string>
     <string name="d_pair_firewall">Если брандмауэр спросит, разрешите PGPony принимать подключения, пока это окно открыто.</string>
     <string name="d_pair_no_address">У этого компьютера нет сетевого адреса, доступного другому компьютеру.</string>
@@ -948,4 +948,7 @@
     <string name="d_pair_err_backup_code">Введите код восстановления, показанный на другом компьютере.</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">Импорт</string>
+    <string name="d_pair_other_addresses">Другие адреса (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Скрыть другие адреса</string>
+    <string name="d_pair_other_addresses_note">Попробуйте их, если другой компьютер не может подключиться, например если это виртуальная машина на этом компьютере или другой сетевой адаптер.</string>
 </resources>

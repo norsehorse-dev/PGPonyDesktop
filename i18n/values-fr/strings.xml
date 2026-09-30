@@ -819,7 +819,7 @@
     <string name="d_pair_intro">Transférez des clés ou une sauvegarde complète entre deux ordinateurs du même réseau. L\'un attend, l\'autre se connecte, et vous comparez un code sur les deux écrans. Rien n\'est conservé après la fermeture de cette fenêtre.</string>
     <string name="d_pair_host">Attendre l\'autre ordinateur</string>
     <string name="d_pair_join">Se connecter à l\'autre ordinateur</string>
-    <string name="d_pair_host_waiting">Sur l\'autre ordinateur, choisissez Se connecter et saisissez l\'une de ces adresses :</string>
+    <string name="d_pair_host_waiting">Sur l\'autre ordinateur, choisissez Se connecter et saisissez cette adresse :</string>
     <string name="d_pair_host_closes">Cette fenêtre reste ouverte jusqu\'à %1$s.</string>
     <string name="d_pair_firewall">Si votre pare-feu le demande, autorisez PGPony à accepter des connexions tant que cette fenêtre est ouverte.</string>
     <string name="d_pair_no_address">Cet ordinateur n\'a aucune adresse réseau joignable par un autre ordinateur.</string>
@@ -874,4 +874,7 @@
     <string name="d_pair_err_backup_code">Saisissez le code de récupération affiché sur l\'autre ordinateur.</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">Importer</string>
+    <string name="d_pair_other_addresses">Autres adresses (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Masquer les autres adresses</string>
+    <string name="d_pair_other_addresses_note">Essayez-les si l\'autre ordinateur ne parvient pas à se connecter, par exemple s\'il s\'agit d\'une machine virtuelle sur cet ordinateur ou d\'un autre adaptateur réseau.</string>
 </resources>

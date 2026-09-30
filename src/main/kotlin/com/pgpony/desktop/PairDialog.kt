@@ -193,23 +193,38 @@ fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
 
 @Composable
 private fun HostingPane(window: PairController.HostWindow) {
-    val addresses = remember(window) { window.addresses() }
+    val (primary, others) = remember(window) { window.addresses() }
+    var showOthers by remember(window) { mutableStateOf(false) }
     val closesAt = remember(window) {
         DateTimeFormatter.ofPattern("HH:mm").format(
             Instant.ofEpochMilli(window.openedAt + PairController.WINDOW_MS).atZone(ZoneId.systemDefault())
         )
     }
-    if (addresses.isEmpty()) {
+    if (primary == null) {
         Text(tr("d_pair_no_address"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         return
     }
     Text(tr("d_pair_host_waiting"), style = MaterialTheme.typography.bodyMedium)
     Spacer(Modifier.height(8.dp))
-    addresses.forEach { address ->
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(address, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
-            Spacer(Modifier.width(Spacing.Small))
-            TextButton(onClick = { DesktopClipboard.copy(address, secret = false) }) { Text(tr("common_button_copy")) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(primary, style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace)
+        Spacer(Modifier.width(Spacing.Small))
+        TextButton(onClick = { DesktopClipboard.copy(primary, secret = false) }) { Text(tr("common_button_copy")) }
+    }
+    // Virtual machine and VPN adapters have addresses too; they stay out of the way until needed.
+    if (others.isNotEmpty()) {
+        TextButton(onClick = { showOthers = !showOthers }) {
+            Text(if (showOthers) tr("d_pair_other_addresses_hide") else tr("d_pair_other_addresses", others.size))
+        }
+        if (showOthers) {
+            Text(tr("d_pair_other_addresses_note"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            others.forEach { address ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(address, style = MaterialTheme.typography.bodyLarge, fontFamily = FontFamily.Monospace)
+                    Spacer(Modifier.width(Spacing.Small))
+                    TextButton(onClick = { DesktopClipboard.copy(address, secret = false) }) { Text(tr("common_button_copy")) }
+                }
+            }
         }
     }
     Spacer(Modifier.height(8.dp))

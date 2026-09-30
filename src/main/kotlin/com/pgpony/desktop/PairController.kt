@@ -117,6 +117,32 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
                 .sortedBy { if (it is Inet4Address) 0 else 1 }
         }.getOrDefault(emptyList())
 
+        /**
+         * The address on the interface that carries the default route, which is the one another
+         * computer on the same network almost always reaches. A connected UDP socket only picks a
+         * route; it sends nothing. Null when there is no default route (a network with no way out).
+         */
+        fun primaryAddress(): InetAddress? = runCatching {
+            java.net.DatagramSocket().use { s ->
+                s.connect(InetAddress.getByAddress(byteArrayOf(192.toByte(), 0, 2, 1)), 9)
+                s.localAddress.takeIf { !it.isAnyLocalAddress && !it.isLoopbackAddress }
+            }
+        }.getOrNull()
+
+        /**
+         * What the host screen lists: the primary address first, then the other IPv4 addresses
+         * (virtual machine and VPN adapters among them, which a VM on this computer may need).
+         * IPv6 addresses are listed only when the computer has no IPv4 address at all: a Mac
+         * holds several rotating IPv6 privacy addresses, and a local network pairs over IPv4.
+         */
+        fun hostAddresses(): Pair<InetAddress?, List<InetAddress>> {
+            val all = localAddresses()
+            val v4 = all.filterIsInstance<Inet4Address>()
+            val candidates = if (v4.isNotEmpty()) v4 else all
+            val primary = primaryAddress()?.takeIf { it in candidates } ?: candidates.firstOrNull()
+            return primary to candidates.filter { it != primary }
+        }
+
         /** `192.168.1.20:49152` or `[fd00::1]:49152` as the host screen shows it. */
         fun display(address: InetAddress, port: Int): String =
             if (address is Inet4Address) "${address.hostAddress}:$port"
@@ -146,7 +172,11 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
         val port: Int get() = server.localPort
         val openedAt = System.currentTimeMillis()
 
-        fun addresses(): List<String> = localAddresses().map { display(it, port) }
+        /** The primary address and the others, formatted with this window's port. */
+        fun addresses(): Pair<String?, List<String>> {
+            val (primary, others) = hostAddresses()
+            return primary?.let { display(it, port) } to others.map { display(it, port) }
+        }
 
         fun accept(): PairAttempt {
             server.soTimeout = WINDOW_MS

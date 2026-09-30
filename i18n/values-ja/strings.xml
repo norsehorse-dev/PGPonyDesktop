@@ -794,7 +794,7 @@
     <string name="d_pair_intro">同じネットワーク上の 2 台のコンピュータ間で鍵や完全なバックアップを移動します。一方が待機し、もう一方が接続して、両方の画面に表示されるコードを比べます。このウィンドウを閉じると何も残りません。</string>
     <string name="d_pair_host">もう一方のコンピュータを待つ</string>
     <string name="d_pair_join">もう一方のコンピュータに接続</string>
-    <string name="d_pair_host_waiting">もう一方のコンピュータで「接続」を選び、次のいずれかのアドレスを入力してください:</string>
+    <string name="d_pair_host_waiting">もう一方のコンピュータで「接続」を選び、このアドレスを入力してください:</string>
     <string name="d_pair_host_closes">このウィンドウは %1$s まで開いたままです。</string>
     <string name="d_pair_firewall">ファイアウォールの確認が表示されたら、このウィンドウが開いている間 PGPony が接続を受け付けることを許可してください。</string>
     <string name="d_pair_no_address">このコンピュータには、他のコンピュータから到達できるネットワークアドレスがありません。</string>
@@ -849,4 +849,7 @@
     <string name="d_pair_err_backup_code">もう一方のコンピュータに表示された復元コードを入力してください。</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">インポート</string>
+    <string name="d_pair_other_addresses">その他のアドレス(%1$d)</string>
+    <string name="d_pair_other_addresses_hide">その他のアドレスを隠す</string>
+    <string name="d_pair_other_addresses_note">もう一方のコンピュータが接続できない場合(このコンピュータ上の仮想マシンや別のネットワークアダプタなど)は、こちらを試してください。</string>
 </resources>

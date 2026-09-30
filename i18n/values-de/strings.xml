@@ -819,7 +819,7 @@
     <string name="d_pair_intro">Schlüssel oder eine vollständige Sicherung zwischen zwei Computern im selben Netzwerk übertragen. Ein Computer wartet, der andere verbindet sich, und Sie vergleichen einen Code auf beiden Bildschirmen. Nach dem Schließen dieses Fensters wird nichts aufbewahrt.</string>
     <string name="d_pair_host">Auf den anderen Computer warten</string>
     <string name="d_pair_join">Mit dem anderen Computer verbinden</string>
-    <string name="d_pair_host_waiting">Wählen Sie auf dem anderen Computer „Verbinden“ und geben Sie eine dieser Adressen ein:</string>
+    <string name="d_pair_host_waiting">Wählen Sie auf dem anderen Computer „Verbinden“ und geben Sie diese Adresse ein:</string>
     <string name="d_pair_host_closes">Dieses Fenster bleibt bis %1$s geöffnet.</string>
     <string name="d_pair_firewall">Wenn Ihre Firewall fragt, erlauben Sie PGPony, Verbindungen anzunehmen, solange dieses Fenster geöffnet ist.</string>
     <string name="d_pair_no_address">Dieser Computer hat keine Netzwerkadresse, die ein anderer Computer erreichen kann.</string>
@@ -874,4 +874,7 @@
     <string name="d_pair_err_backup_code">Geben Sie den Wiederherstellungscode vom anderen Computer ein.</string>
     <!-- 3.0.0: the keyring's Import menu. -->
     <string name="d_keyring_import_menu">Importieren</string>
+    <string name="d_pair_other_addresses">Weitere Adressen (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Weitere Adressen ausblenden</string>
+    <string name="d_pair_other_addresses_note">Versuchen Sie diese, wenn der andere Computer keine Verbindung bekommt, etwa wenn er eine virtuelle Maschine auf diesem Computer ist oder an einem anderen Netzwerkadapter hängt.</string>
 </resources>
