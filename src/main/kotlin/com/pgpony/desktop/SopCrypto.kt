@@ -402,9 +402,26 @@ internal object SopCrypto {
         val result = SopKeyring.open().use { r ->
             runBlocking {
                 val keys = a.positionals.flatMap { r.load(io.read(it), "key") }
-                if (keys.size != 1) throw SopException(SopExit.UNSUPPORTED_OPTION, "inline-sign with more than one key is not supported")
-                val k = keys.single()
-                requireSigner(k)
+                keys.forEach { requireSigner(it) }
+                // 3.0.0 (5d-4): several keys, a cleartext signature from a classical key and a text
+                // signature from an ML-DSA key are built here from detached signatures (SopInline,
+                // SopCleartext); one classical or ML-DSA key otherwise keeps the engine's own path.
+                val single = keys.singleOrNull()
+                val enginePath = single != null &&
+                    if (single.algorithm.isCompositeSign) mode != "text" else mode != "clearsigned"
+                if (!enginePath) {
+                    return@runBlocking if (mode == "clearsigned") {
+                        val signed = SopCleartext.signedOctetsOf(data)
+                        SopCleartext.write(data, keys.map { signOne(r, it, signed, true, passwords) })
+                    } else {
+                        val text = mode == "text"
+                        SopArmor.output(
+                            SopInline.build(keys.map { signOne(r, it, data, text, passwords) }, data, text),
+                            SopArmor.MESSAGE, noArmor
+                        )
+                    }
+                }
+                val k = single!!
                 if (k.algorithm.isCompositeSign) {
                     val info = unlockComposite(r, k, passwords)
                     val secret = info.compositeSecret!!
@@ -459,11 +476,10 @@ internal object SopCrypto {
             runBlocking {
                 val certs = a.positionals.flatMap { r.load(io.read(it), "certificate") }
                 if (head.contains("-----BEGIN PGP SIGNED MESSAGE-----")) {
-                    val parsed = com.pgpony.android.crypto.ClearSignedParser.parse(String(input, Charsets.UTF_8))
-                        ?: throw SopException(SopExit.BAD_DATA, "a malformed cleartext signed message")
-                    val packets = SopPackets.signatures(SopArmor.binary(parsed.signatureBlock.toByteArray(Charsets.UTF_8)))
-                    val signed = CompositeSigPacket.canonicalizeCleartext(parsed.cleartext)
-                    parsed.cleartext.toByteArray(Charsets.UTF_8) to verifyPackets(r, certs, packets, signed, window)
+                    // 3.0.0 (5d-4): SopCleartext keeps the text as signed, final line ending included.
+                    val parsed = SopCleartext.parse(input)
+                    val packets = SopPackets.signatures(SopArmor.binary(parsed.signatureBlock))
+                    parsed.text to verifyPackets(r, certs, packets, parsed.signed, window)
                 } else if (isCompositeInline(input)) {
                     // An ML-DSA signed message: BouncyCastle cannot parse its one-pass packet.
                     val raw = SopArmor.binary(input)
@@ -507,12 +523,14 @@ internal object SopCrypto {
             throw SopException(SopExit.UNSUPPORTED_OPTION, "a password together with certificates or signing is not supported")
         }
         if (passwords.size > 1) throw SopException(SopExit.UNSUPPORTED_OPTION, "one --with-password at a time")
-        if (text && signerArgs.isNotEmpty()) throw SopException(SopExit.UNSUPPORTED_OPTION, "text-mode signatures inside encryption are not supported")
         val data = stdin.readBytes()
         if (text) requireText(data)
 
         if (passwords.isNotEmpty()) {
-            out.write(crypto.encryptSymmetric(data, passwords.single(), armor = !noArmor))
+            // 3.0.0 (5d-4): the rfc9580 profile gives a password its RFC 9580 form (SKESKv6,
+            // SEIPDv2 with Argon2); the default stays SKESKv4 and SEIPDv1 for older readers.
+            val rfc9580 = a.value("--profile") == "rfc9580"
+            out.write(crypto.encryptSymmetric(data, passwords.single(), armor = !noArmor, useAead = rfc9580, useArgon2 = rfc9580))
             return SopExit.OK
         }
         val keyPasswords = keyPasswords(a, io)
@@ -520,8 +538,23 @@ internal object SopCrypto {
             runBlocking {
                 val recipients = certArgs.flatMap { r.load(io.read(it), "certificate") }
                 val signers = signerArgs.flatMap { r.load(io.read(it), "key") }
-                if (signers.size > 1) throw SopException(SopExit.UNSUPPORTED_OPTION, "signing with more than one key is not supported")
-                val signer = signers.singleOrNull()?.also { requireSigner(it) }
+                signers.forEach { requireSigner(it) }
+                // 3.0.0 (5d-4): several signing keys, or a text signature, are signed here and the
+                // finished signed message is encrypted as it stands.
+                if (signers.size > 1 || (text && signers.isNotEmpty())) {
+                    val packets = signers.map { signOne(r, it, data, text, keyPasswords) }
+                    val plan = try {
+                        EncryptOps(r.repo).plan(recipients.map { it.fingerprint }, null, null, compositeInV1Decision = true)
+                    } catch (e: RecipientLoadException) {
+                        throw SopException(SopExit.CERT_CANNOT_ENCRYPT, "no usable encryption key: ${e.message}")
+                    } catch (e: ExpiredKeyException) {
+                        throw SopException(SopExit.CERT_CANNOT_ENCRYPT, e.message ?: "expired certificate")
+                    }
+                    return@runBlocking EncryptOps(r.repo).encryptBytes(
+                        plan, data, null, armor = !noArmor, presignedInline = SopInline.build(packets, data, text)
+                    )
+                }
+                val signer = signers.singleOrNull()
                 val ops = EncryptOps(r.repo)
                 var last: Exception? = null
                 for (p in if (signer == null) listOf<String?>(null) else keyPasswords) {

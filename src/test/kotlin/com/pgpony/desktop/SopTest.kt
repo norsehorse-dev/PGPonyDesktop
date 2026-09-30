@@ -2,6 +2,8 @@
 // PGPony Desktop 3.0.0, stage 5 checkpoint 5a: pgpony-sop end to end, through Sop.run with
 // in-memory streams and temporary files, the way the interop suite drives it. Round trips for
 // each key profile, the verification line format, and the exit codes the spec names.
+// 5d-4: several signing keys, the Cleartext Signature Framework, text-mode signing inside an
+// encrypted message, and the rfc9580 password profile.
 
 package com.pgpony.desktop
 
@@ -162,5 +164,82 @@ class SopTest {
         assertTrue(info.isText)
         assertTrue(info.issuerFingerprint!!.length == 64)
         assertTrue(info.created!!.time <= System.currentTimeMillis())
+    }
+
+    // ── 5d-4 ─────────────────────────────────────────────────────────
+
+    private class Party(val key: String, val cert: String)
+
+    private fun party(name: String, profile: String): Party {
+        val key = ok(sop("generate-key", "--profile=$profile", "$name <${name.lowercase()}@openpgp.example>")).out
+        return Party(file("$name.key", key), file("$name.cert", ok(sop("extract-cert", input = key)).out))
+    }
+
+    private fun lines(path: String): List<String> = Files.readAllLines(Path.of(path)).filter { it.isNotBlank() }
+
+    @Test
+    fun inlineSignWithSeveralKeys() {
+        val signers = listOf(
+            party("V4", "draft-koch-eddsa-for-openpgp-00"),
+            party("V6", "rfc9580"),
+            party("Pqc", "draft-ietf-openpgp-pqc")
+        )
+        // CRLF and LF lines, a line starting with a dash, trailing spaces: the text comes back
+        // exactly as it went in.
+        val text = "First line  \r\n- dashed\nlast line\n".toByteArray()
+        for (mode in listOf("binary", "text", "clearsigned")) {
+            val signed = ok(sop("inline-sign", "--as=$mode", *signers.map { it.key }.toTypedArray(), input = text)).out
+            for (s in signers) {
+                val ver = dir.resolve("inline-$mode-${s.cert.hashCode()}").toString()
+                val out = ok(sop("inline-verify", "--verifications-out=$ver", s.cert, input = signed)).out
+                assertContentEquals(text, out, "$mode, verified with ${s.cert}")
+                assertEquals(1, lines(ver).size, "$mode: one verification per matching cert")
+            }
+        }
+    }
+
+    @Test
+    fun cleartextFrameworkIsReadStrictly() {
+        val p = party("Clear", "rfc9580")
+        val clear = String(ok(sop("inline-sign", "--as=clearsigned", p.key, input = message)).out)
+        assertContentEquals(message, SopCleartext.parse(clear.toByteArray()).text)
+        assertContentEquals("Hello, interop.\r\nSecond line.".toByteArray(), SopCleartext.signedOctetsOf(message))
+
+        val header = "-----BEGIN PGP SIGNED MESSAGE-----\n"
+        val bad = listOf(
+            "Unsigned text\n" + clear,
+            clear.replaceFirst(header, header + "Comment: signed\n"),
+            clear + "Unsigned text\n"
+        )
+        for (b in bad) {
+            assertEquals(SopExit.BAD_DATA, runCatching { SopCleartext.parse(b.toByteArray()) }.exceptionOrNull().let { (it as SopException).code })
+            assertTrue(sop("inline-verify", p.cert, input = b.toByteArray()).code != 0)
+        }
+        ok(sop("inline-verify", p.cert, input = clear.replaceFirst(header, header + "Hash: SHA512\n").toByteArray()))
+    }
+
+    @Test
+    fun encryptWithSeveralSignersAndText() {
+        val a = party("SignerA", "rfc9580")
+        val b = party("SignerB", "draft-ietf-openpgp-pqc")
+        val r = party("Reader", "rfc9580")
+        val ct = ok(sop("encrypt", "--as=text", "--sign-with=${a.key}", "--sign-with=${b.key}", r.cert, input = message)).out
+        val ver = dir.resolve("two.verifications").toString()
+        val pt = ok(sop("decrypt", "--verify-with=${a.cert}", "--verify-with=${b.cert}", "--verifications-out=$ver", r.key, input = ct)).out
+        assertContentEquals(message, pt)
+        val v = lines(ver)
+        assertEquals(2, v.size)
+        assertTrue(v.all { it.contains("mode:text") }, v.toString())
+    }
+
+    @Test
+    fun passwordProfiles() {
+        val pwFile = file("pw9580", "correct horse\n".toByteArray())
+        val v6 = ok(sop("encrypt", "--no-armor", "--profile=rfc9580", "--with-password=$pwFile", input = message)).out
+        assertEquals(0xC3, v6[0].toInt() and 0xFF, "a symmetric-key encrypted session key packet")
+        assertEquals(6, v6[2].toInt(), "SKESK version 6")
+        assertContentEquals(message, ok(sop("decrypt", "--with-password=$pwFile", input = v6)).out)
+        val v4 = ok(sop("encrypt", "--no-armor", "--with-password=$pwFile", input = message)).out
+        assertEquals(4, v4[2].toInt(), "the default profile keeps SKESK version 4")
     }
 }

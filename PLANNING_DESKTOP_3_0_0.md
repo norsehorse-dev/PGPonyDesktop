@@ -485,6 +485,26 @@ it v6 PKESKs for every recipient of a SEIPDv2 message (which also retires the v3
 SEIPDv2 pairing noted in 5d-2). Not done: unclamped Cv25519 secrets (Sequoia fails it too), and
 the weak-key warning on Android's own screens (the engine fields are there; Android release).
 
+5d-4 status (2026-09-29): done, desktop SOP layer (new SopCleartext; SopCrypto, EncryptOps, Sop)
+plus three engine fixes upstream (PGPCryptoService, CardDecryptService). Cleartext signed
+messages are read strictly: text before the BEGIN line or after the END line, and any header but
+Hash, make the message malformed; the text comes back exactly as signed, line endings and final
+newline included, and the signed octets follow RFC 9580 7.2. inline-sign and encrypt take
+several signing keys, and encrypt takes text-mode signing: the signatures are made one by one and
+the signed message (one-pass packets in signer order, literal data, signatures in reverse) is
+encrypted as it stands through a new presignedInline parameter. The rfc9580 encrypt profile gives
+a password SKESKv6 with Argon2 and SEIPDv2; the default stays SKESKv4 and SEIPDv1. Engine: the
+Argon2 password method had no random source, so SKESKv6 always failed (the Android AEAD password
+test had been skipping itself); and decrypt, in the software and card paths, checked only the
+first one-pass packet against the first signature, so a message signed by several keys showed
+as invalid in the app. It now verifies the first signer whose key is held, against its own
+signature. Replayed: 5 more consumer rows fixed, none regressed; the producer rows (several
+signers, the password profile) are checked by the second suite run.
+Open: an inline text-mode signature from pgpony-sop keeps the text as given (LF line endings) in
+a 'u' literal packet; Sequoia verifies it, GnuPG reports it BAD because it expects the literal to
+carry CRLF. Detached and cleartext text signatures verify in both. Changing it means SOP hands
+back CRLF text after a round trip.
+
 Decided (2026-09-29):
 - RSA under 2048 bits, DSA and ElGamal become read-only: no encrypting to them and no signing
   with them; decrypting and verifying old material still works, with a weak-key warning in the

@@ -89,7 +89,9 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         data: ByteArray,
         signerPassphrase: String?,
         armor: Boolean,
-        filename: String? = null
+        filename: String? = null,
+        /** 3.0.0 (5d-4): a finished signed message to encrypt as it stands (SOP, several signers). */
+        presignedInline: ByteArray? = null
     ): ByteArray = crypto.encrypt(
         data = data,
         recipientPublicKeys = plan.recipients.rings,
@@ -102,7 +104,8 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         compositeSignSuite = plan.compositeSigner?.suite,
         compositeSignSecret = plan.compositeSigner?.compositeSecret,
         compositeSignerFingerprint = plan.compositeSigner?.fingerprint,
-        compositeSignInSeipdV1 = plan.keepCompositeInSeipdV1
+        compositeSignInSeipdV1 = plan.keepCompositeInSeipdV1,
+        presignedInline = presignedInline
     )
 
     /**

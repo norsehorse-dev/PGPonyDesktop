@@ -221,7 +221,7 @@ object Sop {
     )
 
     internal val ENCRYPT_PROFILES = linkedMapOf(
-        "rfc9580" to "SEIPDv2 when every recipient supports it, else SEIPDv1"
+        "rfc9580" to "SEIPDv2 when every recipient supports it, else SEIPDv1; with a password, SKESKv6 and SEIPDv2"
     )
 
     private fun listProfiles(rest: List<String>, out: OutputStream): Int {
