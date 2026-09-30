@@ -1,0 +1,853 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PGPony Desktop: the desktop-owned string layer, Korean.
+  Keys and order follow ../values/strings.xml; see its header for how the layers work.
+  A key missing here falls back to the English base.
+-->
+<resources>
+
+    <!-- ── Navigation rail ─────────────────────────────────────────────── -->
+    <string name="d_nav_crypto">암호화</string>
+    <string name="d_nav_cards">하드웨어 키</string>
+
+    <!-- ── Settings · Network ──────────────────────────────────────────── -->
+    <string name="d_settings_section_network">네트워크</string>
+    <string name="d_settings_proxy_title">프록시</string>
+    <string name="d_settings_proxy_off">직접 연결</string>
+    <string name="d_settings_proxy_tor">Tor(로컬 데몬, %1$s:%2$d)</string>
+    <string name="d_settings_proxy_custom">사용자 지정 SOCKS 프록시</string>
+    <string name="d_settings_proxy_tor_note">이 컴퓨터에 Tor 데몬이 있어야 합니다. Tor Browser(실행 중일 때)와 tor 서비스는 모두 %1$s:%2$d에서 연결을 기다립니다.</string>
+    <string name="d_status_proxy_set">프록시 설정됨: %1$s</string>
+    <string name="d_settings_keyservers_title">키 서버(조회 순서)</string>
+    <string name="d_keyservers_lookup">조회</string>
+    <string name="d_keyservers_publish">게시</string>
+    <string name="d_keyservers_first_party"> · 공식</string>
+    <string name="d_keyservers_remove">서버 제거</string>
+    <string name="d_keyservers_add">서버 추가…</string>
+    <string name="d_keyservers_note">조회는 활성화된 서버에 순서대로 질의합니다(WKD 다음). 게시할 때는 게시가 활성화된 서버를 하나씩 선택지로 보여 줍니다. keys.openpgp.org는 이메일을 확인하지만 v6/PQC 키를 거부할 수 있습니다. keys.pgpony.app은 PGPony가 만드는 모든 종류의 키를 받습니다.</string>
+    <string name="d_keyservers_add_title">키 서버 추가</string>
+    <string name="d_keyservers_add_url_label">기본 URL(스킴 + 호스트, 끝에 슬래시 없이)</string>
+    <string name="d_keyservers_add_note">서버는 keys.openpgp.org VKS API를 지원해야 합니다. VKS가 없는 서버에 게시할 때는 PGPony가 HKP(/pks/add)를 대신 사용합니다.</string>
+    <string name="d_status_keyserver_added">키 서버 %1$s 추가됨</string>
+    <string name="d_settings_autorefresh">키 서버에서 키를 자동으로 새로 고침(실행 중 12시간마다)</string>
+
+    <!-- ── Settings · Backup ───────────────────────────────────────────── -->
+    <string name="d_settings_backup_export">키링 백업…</string>
+    <string name="d_settings_backup_restore">백업 복구…</string>
+    <string name="d_settings_backup_note">.pgpony 형식은 iOS 및 Android용 PGPony와 서로 복구할 수 있습니다. OpenKeychain 백업도 복구됩니다.</string>
+    <string name="d_settings_subtitle">이 컴퓨터의 PGPony에 적용되는 모든 설정입니다.</string>
+    <string name="d_settings_network_note">프록시, 키 서버, 키 자동 새로 고침.</string>
+    <string name="d_settings_appearance_note">테마 및 언어. 둘 다 바로 적용됩니다.</string>
+
+    <!-- ── Settings · Password store ───────────────────────────────────── -->
+    <string name="d_settings_pass_show_tab">비밀번호 저장소 탭 표시</string>
+    <string name="d_settings_pass_note">표준 `pass` 저장소(.gpg-id 수신자 파일이 들어 있는 .gpg 파일 폴더)를 탐색하고, 키링의 소프트웨어 키나 하드웨어 키로 항목을 복호화합니다. 읽기 전용: PGPony는 저장소에 아무것도 쓰지 않습니다.</string>
+    <string name="d_settings_pass_default_location">기본 위치:</string>
+    <plurals name="d_settings_pass_status_configured">
+        <item quantity="other">저장소 %1$d개가 설정되어 있습니다. 비밀번호 저장소 탭에서 관리하세요.</item>
+    </plurals>
+    <string name="d_settings_pass_status_exists">이 폴더가 있습니다. 비밀번호 저장소 탭에서 추가하세요.</string>
+    <string name="d_settings_pass_status_none">아직 여기에 저장소가 없습니다. PASSWORD_STORE_DIR을 설정했다면 그 값을 따릅니다. 그렇지 않으면 비밀번호 저장소 탭에서 아무 폴더나 추가하세요.</string>
+
+    <!-- ── Settings · Clipboard ────────────────────────────────────────── -->
+    <string name="d_settings_clipboard_autoclear">복사한 비밀 정보를 자동으로 지우기</string>
+    <string name="d_settings_clipboard_seconds_label">초</string>
+    <string name="d_settings_clipboard_note">5초에서 600초 사이입니다. 타이머는 클립보드에 PGPony가 넣은 내용이 그대로 있을 때만 클립보드를 비웁니다. 그 사이에 다른 것을 복사했다면 클립보드는 건드리지 않습니다. 클립보드 관리자나 동기화 서비스(KDE Klipper, Windows 클라우드 클립보드, macOS 유니버설 클립보드)가 PGPony가 지울 수 없는 사본을 보관할 수 있다는 점에 유의하세요.</string>
+    <string name="d_status_clipboard_seconds">%1$d초 후 클립보드를 비웁니다</string>
+
+    <!-- ── Settings · Appearance · Language ────────────────────────────── -->
+    <string name="d_settings_language_system">시스템(%1$s)</string>
+    <string name="d_settings_language_note">다시 시작할 필요 없이 창 전체가 바로 바뀝니다. 키나 파일에서 온 텍스트는 저장된 그대로 표시되며 번역되지 않습니다.</string>
+
+    <!-- ── Settings · Storage ──────────────────────────────────────────── -->
+    <string name="d_settings_section_storage">저장 공간</string>
+    <string name="d_settings_storage_data_folder">데이터 폴더:</string>
+    <string name="d_settings_storage_note">키 메타데이터는 pgpony.db(Android용 PGPony와 같은 Room 스키마)에 있고, 아머 처리된 키 자료는 keys/ 아래에 공개 부분과 개인 부분마다 파일 하나씩, 모드 0600으로 있습니다. 개인 키는 저장된 상태에서도 자체 비밀구절(S2K) 보호를 유지합니다. 이 저장소는 별도의 암호화를 더하지 않습니다.</string>
+
+    <!-- ── Settings · About ────────────────────────────────────────────── -->
+    <string name="d_settings_about_version">PGPony Desktop %1$s</string>
+    <string name="d_settings_about_note">Android용 PGPony와 같은 OpenPGP 엔진과 Room 스키마를 사용합니다(새로 작성하지 않고 그대로 포함).</string>
+    <string name="d_about_title">PGPony 소개</string>
+    <string name="d_about_links">링크</string>
+
+    <!-- ── Shared desktop buttons ──────────────────────────────────────── -->
+    <string name="d_common_apply">적용</string>
+    <string name="d_common_add">추가</string>
+    <string name="d_common_clear_now">지금 지우기</string>
+    <string name="d_common_remove">제거</string>
+
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
+    <string name="d_settings_storage_open_folder">폴더 열기</string>
+    <string name="d_settings_storage_copy_path">경로 복사</string>
+
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
+    <string name="d_settings_about_repo">GitHub의 소스 코드</string>
+    <string name="d_settings_about_repo_note">데스크톱 소스는 1.0 릴리스와 함께 공개됩니다. Android 앱과 공유 암호화 코어는 이미 공개되어 있습니다.</string>
+    <string name="d_settings_about_issues">문제 신고</string>
+    <string name="d_settings_about_website">PGPony 웹사이트</string>
+    <string name="d_settings_about_runtime_label">런타임:</string>
+    <string name="d_settings_about_copy_diagnostics">복사</string>
+
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
+    <string name="d_settings_section_apps">NorseHorse의 다른 앱</string>
+    <string name="d_settings_apps_note">같은 개발자가 만든 다른 앱들입니다. 링크는 브라우저에서 열립니다.</string>
+    <string name="d_app_pgpony_desc">어디서나 같은 키링. 휴대폰부터 데스크톱까지 하나의 OpenPGP 엔진과 하나의 백업 형식을 씁니다.</string>
+    <string name="d_app_carrierpony_desc">OpenPGP로 종단 간 암호화되는 메시지와 파일 전송. 계정도 전화번호도 필요 없습니다.</string>
+    <string name="d_app_agepony_desc">age 기반의 파일 암호화와 분리 서명. GitHub 사용자 이름으로 암호화하고 보안 키로 서명하세요.</string>
+    <string name="d_app_quorumpony_desc">비밀을 여러 장의 백업 카드에 나눠 보관하세요. 정해진 수만큼 모이면 복구되고, 한 장만으로는 아무것도 알 수 없습니다.</string>
+    <string name="d_app_relaypony_desc">Wi-Fi로 한 기기에서 다른 기기로 파일을 바로 보냅니다. 종단 간 암호화되며 중간에 서버가 없습니다.</string>
+    <string name="d_app_burnpony_desc">기기에서 봉인되고 읽고 나면 사라지는 자동 파기 암호화 메모.</string>
+    <string name="d_app_vaultpony_desc">VeraCrypt 컨테이너 형식으로 휴대폰에 만드는 암호화 금고. 같은 금고를 컴퓨터에서도 열 수 있습니다.</string>
+    <string name="d_app_passpony_desc">pass 및 passage 비밀번호 저장소 클라이언트. 비밀번호는 내 git 리포지토리 안의 암호화된 파일로 남습니다.</string>
+    <string name="d_app_hashpony_desc">sha256sum처럼 파일을 해시하고 검증합니다. 체크섬 파일, 폴더 검사, 널리 쓰이는 모든 알고리즘을 지원합니다.</string>
+    <string name="d_app_tappony_desc">NFC 태그를 탭해 태그의 ID와 내용을 내 서버로 보냅니다. 계정도 클라우드도 없습니다.</string>
+
+    <!-- ── Status line ───────────────────────────────────── -->
+    <string name="d_status_copied">클립보드에 복사되었습니다.</string>
+    <string name="d_status_open_failed">%1$s을(를) 열 수 없습니다. 대신 클립보드에 복사해 두었습니다.</string>
+
+    <!-- ── Tabs and file operations ────────────────────────────────────── -->
+    <string name="d_crypto_tab_files">파일</string>
+    <string name="d_crypto_tab_message">메시지</string>
+    <string name="d_crypto_fileop_sign">서명(분리)</string>
+    <string name="d_crypto_fileop_verify">검증(분리)</string>
+    <string name="d_crypto_err_generic">작업 실패</string>
+
+    <!-- ── Files pane ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_add_files">파일 추가…</string>
+    <string name="d_crypto_drop_hint">…또는 창 아무 곳에나 파일을 끌어다 놓으세요</string>
+    <string name="d_crypto_no_files">선택한 파일이 없습니다.</string>
+    <string name="d_crypto_no_files_title">대기 중인 파일 없음</string>
+    <string name="d_crypto_result_ok">성공</string>
+    <string name="d_crypto_result_failed">실패</string>
+    <string name="d_crypto_signer_pass_label">서명자 비밀구절(보호되지 않은 키는 비워 두기)</string>
+    <string name="d_crypto_err_composite_pass">이 서명 키는 비밀구절로 보호되어 있습니다. 서명하려면 비밀구절을 입력하세요.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">복합 ML-DSA 키는 암호화와 동시에 서명할 수 없습니다. 서명 탭을 사용하거나 기존 방식의 서명 키를 선택하세요.</string>
+    <string name="d_crypto_armor_gpg">ASCII 아머(바이너리 .gpg 대신 .asc)</string>
+    <string name="d_crypto_armor_sig">ASCII 아머(바이너리 .sig 대신 .asc)</string>
+    <string name="d_crypto_decrypt_pass_label">키 또는 메시지 비밀구절</string>
+    <string name="d_crypto_decrypt_files_note">복호화된 파일은 메시지에 원래 이름이 있으면 그 이름으로 복원되며, 기존 파일을 덮어쓰지 않습니다.</string>
+    <string name="d_crypto_sign_as_colon">다음으로 서명:</string>
+    <string name="d_crypto_verify_files_hint">내용 파일이 옆에 있는(확장자를 뺀 같은 이름) .sig/.asc 서명을 선택하거나, 서명과 내용 파일 딱 두 개를 선택하세요.</string>
+    <string name="d_crypto_err_no_pairing">서명과 내용 파일의 짝을 찾지 못했습니다. 위의 안내를 참고하세요.</string>
+    <string name="d_crypto_err_no_signer">서명할 키쌍이 없습니다</string>
+    <string name="d_crypto_files_done">파일 %1$d/%2$d개 처리됨</string>
+    <string name="d_crypto_files_partial">%1$d/%2$d개 성공. 파일별 결과를 확인하세요.</string>
+    <string name="d_crypto_run_op">%1$s 실행</string>
+    <string name="d_crypto_input_verify">평문 서명된 메시지 또는 아머 처리된 서명</string>
+
+    <!-- ── Encrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_encrypt_with">다음으로 암호화:</string>
+    <string name="d_crypto_with_public_keys">공개 키</string>
+    <string name="d_crypto_attach_files">파일 첨부…</string>
+    <string name="d_crypto_clear_attachments">첨부 파일 비우기</string>
+    <string name="d_crypto_bundle_note">PGP/MIME 묶음으로 보냅니다. 본문과 첨부 파일 %1$d개를 하나의 암호화된 multipart/mixed에 담습니다.</string>
+    <string name="d_crypto_err_card_or_recipient_load">수신자 또는 카드 키를 불러오지 못했습니다</string>
+    <string name="d_crypto_card_sign_encrypt_title">%1$s에서 서명 및 암호화</string>
+    <string name="d_crypto_hardware_key">하드웨어 키</string>
+    <string name="d_crypto_err_pubkey_missing">“%1$s”의 공개 키를 불러올 수 없습니다. 저장된 키 자료가 없습니다. 키링에서 해당 항목을 제거하고 공개 키를 다시 가져오세요.</string>
+    <string name="d_crypto_err_signer_load">서명 키 %1$s을(를) 불러올 수 없어 아무것도 암호화하지 않았습니다. (서명 없이 보내려면 “다음으로 서명”을 해제하세요.)</string>
+    <string name="d_crypto_banner_encrypted">수신자 %1$d명에게 암호화됨</string>
+    <string name="d_crypto_banner_encrypted_card">수신자 %1$d명에게 암호화됨, 카드에서 %2$s(으)로 서명됨</string>
+    <string name="d_crypto_banner_encrypted_pass">비밀구절로 암호화됨</string>
+    <string name="d_crypto_banner_signed_as">, 서명: %1$s(%2$s)</string>
+    <string name="d_crypto_banner_unsigned">, 서명 없음</string>
+
+    <!-- ── Banners: stems and fragments ────────────────────────────────── -->
+    <string name="d_crypto_banner_bundle_suffix"> · 첨부 파일 %1$d개가 든 묶음</string>
+    <string name="d_crypto_banner_attach_suffix"> · 첨부 파일 %1$d개</string>
+    <string name="d_crypto_banner_signer_suffix">: %1$s</string>
+    <string name="d_crypto_banner_keyid_suffix"> (키 ID %1$s)</string>
+
+    <!-- ── Decrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_decrypt_note">아머 처리된 메시지나 완전한 PGP/MIME .eml을 넣을 수 있습니다. 묶음은 출력 옆에 첨부 파일을 보여 줍니다.</string>
+    <string name="d_crypto_card_decrypt_title">%1$s에서 복호화</string>
+    <string name="d_crypto_banner_decrypted_card_verified">카드에서 복호화됨 · 서명 검증됨</string>
+    <string name="d_crypto_banner_decrypted_card_unknown">카드에서 복호화됨 · 서명자가 키링에 없음</string>
+    <string name="d_crypto_banner_decrypted_card_unsigned">카드에서 복호화됨 · 서명 없음</string>
+    <string name="d_crypto_banner_decrypted_verified">복호화됨 · 서명 검증됨</string>
+    <string name="d_crypto_banner_decrypted_unknown">복호화됨 · 키링에 없는 키로 서명됨</string>
+    <string name="d_crypto_banner_decrypted_unsigned">복호화됨 · 서명 없음</string>
+
+    <!-- ── Sign tab ────────────────────────────────────────────────────── -->
+    <string name="d_crypto_detached_toggle">분리된 서명(서명만 만들고 텍스트는 따로 둠)</string>
+    <string name="d_crypto_clear_signed">평문 서명</string>
+    <string name="d_crypto_err_card_pubkey">카드 공개 키를 불러올 수 없습니다</string>
+    <string name="d_crypto_card_sign_title">%1$s에서 서명</string>
+    <string name="d_crypto_banner_signed_card">카드에서 %1$s · %2$s</string>
+    <string name="d_crypto_banner_signed">%1$s · %2$s</string>
+    <string name="d_crypto_err_signer_ring">서명자의 개인 키링을 불러오지 못했습니다</string>
+
+    <!-- ── Verify tab ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_verify_hint">위에 평문 서명된 메시지를 붙여넣으세요. 분리된 서명이라면 위에 서명을, 아래에 원본 텍스트를 붙여넣으세요.</string>
+    <string name="d_crypto_detached_content_label">원본 텍스트(분리된 서명 검증에만 사용)</string>
+    <string name="d_crypto_err_detached_needs_text">분리된 서명: 두 번째 칸에 원본 텍스트를 붙여넣으세요</string>
+    <string name="d_crypto_err_is_encrypted">암호화된 메시지입니다. 복호화 탭을 사용하세요.</string>
+    <string name="d_crypto_err_no_framing">인식할 수 있는 PGP 서명 형식을 찾지 못했습니다</string>
+    <string name="d_crypto_banner_verified">서명 검증됨: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_invalid">서명이 유효하지 않음: 내용이 서명과 일치하지 않습니다</string>
+    <string name="d_crypto_banner_unknown_signer">키링에 없는 키로 서명되었습니다. 검증하려면 서명자의 공개 키를 가져오세요.</string>
+    <string name="d_crypto_banner_no_signature">입력에서 서명을 찾지 못했습니다</string>
+
+    <!-- ── Output pane ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_output">출력</string>
+    <string name="d_crypto_attachment_meta">%1$s · %2$d바이트</string>
+    <string name="d_common_save_as">저장…</string>
+    <string name="d_crypto_copy_output">출력 복사</string>
+    <string name="d_crypto_save_eml">.eml 저장…</string>
+    <string name="d_status_saved">%1$s 저장됨</string>
+    <string name="d_status_saved_bytes">%1$s 저장됨(%2$d바이트)</string>
+    <string name="d_crypto_cancelled">취소됨</string>
+    <string name="d_crypto_no_signer_available">사용 가능한 키쌍이 없습니다</string>
+
+    <!-- ── Hardware-key batch prompts ──────────────────────────────────── -->
+    <string name="d_crypto_card_sign_files">%2$s에서 파일 %1$d개 서명</string>
+    <string name="d_crypto_card_sign_encrypt_files">%2$s에서 파일 %1$d개 서명 및 암호화</string>
+    <string name="d_crypto_card_decrypt_files">%2$s에서 파일 %1$d개 복호화</string>
+
+    <!-- ── Store bar ───────────────────────────────────────────────────── -->
+    <string name="d_pass_store_unreadable">%1$s을(를) 읽을 수 없습니다. 옮겨졌거나, 마운트가 해제되었거나, 더 이상 읽을 수 없는 상태입니다.</string>
+    <string name="d_pass_not_a_store">읽을 수 있는 비밀번호 저장소가 아닙니다: %1$s</string>
+    <string name="d_pass_store_added">비밀번호 저장소 추가됨: %1$s</string>
+    <string name="d_pass_choose_store">저장소 선택</string>
+    <string name="d_pass_add_store">저장소 추가…</string>
+    <string name="d_pass_store_title">비밀번호 저장소</string>
+    <string name="d_pass_use_default">~/.password-store 사용</string>
+    <string name="d_pass_rescan">다시 스캔</string>
+    <string name="d_pass_empty_title">아직 비밀번호 저장소가 없습니다</string>
+    <string name="d_pass_select_entry_title">선택한 항목 없음</string>
+    <string name="d_pass_store_removed">PGPony에서 %1$s을(를) 제거했습니다(폴더는 그대로입니다)</string>
+    <string name="d_pass_choose_folder">비밀번호 저장소 폴더 선택</string>
+
+    <!-- ── Browser pane ────────────────────────────────────────────────── -->
+    <string name="d_pass_search_label">항목 검색</string>
+    <string name="d_pass_no_entries">항목이 없습니다.</string>
+    <plurals name="d_pass_match_count">
+        <item quantity="other">%1$d개 일치</item>
+    </plurals>
+    <string name="d_pass_up">상위 폴더로</string>
+    <string name="d_pass_select_entry">복호화할 항목을 선택하세요.</string>
+    <string name="d_pass_empty_intro">PGPony가 사용할 `pass` 저장소를 지정하세요. OpenPGP로 암호화된 .gpg 파일들이 있는 폴더로, 표준 password-store 도구가 쓰는 구조입니다.</string>
+    <string name="d_pass_empty_detail">저장소를 제자리에서 읽으므로 저장소를 동기화하는 도구(git, Syncthing, Nextcloud)는 그대로 작동합니다. PGPony는 읽기만 하며, 폴더 안의 어떤 것도 쓰거나 옮기거나 다시 암호화하지 않습니다. 항목은 열 때 하나씩 복호화됩니다. 트리를 탐색할 때는 파일 이름만 읽습니다.</string>
+
+    <!-- ── Entry pane ──────────────────────────────────────────────────── -->
+    <string name="d_pass_entry_missing">항목 파일이 없거나 읽을 수 없습니다.</string>
+    <string name="d_pass_no_matching_key">키링에 이 항목을 열 수 있는 키가 없습니다. 이 항목의 암호화 대상인 개인 키를 가져오거나, 그 키가 들어 있는 하드웨어 키를 연결하세요.</string>
+    <string name="d_pass_decrypting">복호화 중…</string>
+    <string name="d_pass_card_entry">이 항목은 하드웨어 키로 암호화되어 있습니다.</string>
+    <string name="d_pass_card_key_missing">이 항목에 연결된 카드 키가 키링에 없습니다.</string>
+    <string name="d_pass_card_decrypt_title">%2$s에서 %1$s 복호화</string>
+    <string name="d_pass_card_failed">하드웨어 키 복호화 실패: %1$s</string>
+    <string name="d_pass_encrypted_to">암호화 대상: %1$s</string>
+    <string name="d_common_reveal">표시</string>
+    <string name="d_common_hide">숨기기</string>
+    <string name="d_pass_password_copied">비밀번호 복사됨</string>
+    <string name="d_pass_password_copied_clearing">비밀번호 복사됨. %1$d초 후 클립보드를 비웁니다</string>
+    <string name="d_pass_copy_password">비밀번호 복사</string>
+    <string name="d_pass_clipboard_countdown">%1$d초 후 클립보드를 비웁니다</string>
+    <string name="d_pass_fields">필드</string>
+    <string name="d_pass_field_copied">%1$s 복사됨</string>
+    <string name="d_pass_copy_field">%1$s 복사</string>
+    <string name="d_pass_lock">잠그기</string>
+    <string name="d_pass_relock_note">%1$d초 후 자동으로 잠깁니다.</string>
+
+    <!-- ── One-time codes ──────────────────────────────────────────────── -->
+    <string name="d_pass_otp_unparsable">PGPony가 이 URI로 코드를 생성할 수 없습니다. TOTP URI가 아니거나 비밀 값이 올바른 base32가 아닙니다. 이 항목에는 인증 앱을 사용하세요.</string>
+    <string name="d_pass_otp_uri_copied">otpauth URI 복사됨</string>
+    <string name="d_pass_otp_display_only">PGPony는 이 설정 URI를 보여 주기만 하고 이 기기에서 코드를 생성하지 않습니다. 인증 앱에 복사해 넣으세요.</string>
+    <string name="d_pass_copy_uri">URI 복사</string>
+    <string name="d_pass_otp_no_provider">이 JVM에는 HMAC-%1$s 제공자가 없어서 여기서는 코드를 생성할 수 없습니다.</string>
+    <string name="d_pass_code_copied">코드 복사됨</string>
+    <string name="d_pass_code_copied_clearing">코드 복사됨. %1$d초 후 클립보드를 비웁니다</string>
+    <string name="d_pass_copy_code">일회용 코드 복사</string>
+    <string name="d_pass_otp_rolls_in">%1$d초 후 바뀜</string>
+    <string name="d_pass_otp_meta">%1$s: %2$s, %3$d자리, %4$d초</string>
+    <string name="d_pass_show_uri">설정 URI 표시</string>
+    <string name="d_pass_hide_uri">설정 URI 숨기기</string>
+    <string name="d_pass_copy_setup_uri">설정 URI 복사</string>
+    <string name="d_cards_subtitle">USB로 연결하는 OpenPGP 스마트 카드: YubiKey 5, Token2, Nitrokey 3 등. 비밀 정보는 키 안에만 있고 이 컴퓨터로 옮겨지지 않습니다.</string>
+
+    <!-- ── Reader row (USB PC/SC — the phone taps NFC instead) ─────────── -->
+    <string name="d_cards_reader_label">리더:</string>
+    <string name="d_cards_no_reader">리더를 찾을 수 없음</string>
+    <string name="d_cards_reader_with_card">%1$s · 카드 있음</string>
+    <string name="d_cards_read_card">카드 읽기</string>
+    <string name="d_cards_no_reader_detected">PC/SC 리더가 감지되지 않았습니다. 키를 꽂으세요(키 자체가 하나의 리더로 인식됩니다).</string>
+    <string name="d_cards_no_reader_linux">Linux에서는 pcscd를 설치하고 실행하세요.</string>
+    <string name="d_cards_section_reader">리더</string>
+    <string name="d_cards_no_reader_title">감지된 리더 없음</string>
+    <string name="d_cards_no_card_title">아직 읽은 카드 없음</string>
+    <string name="d_cards_no_card_body">하드웨어 키를 꽂고 “카드 읽기”를 선택하세요. PGPony는 카드의 공개 슬롯만 읽으며, 카드에 아무것도 쓰지 않습니다.</string>
+
+    <!-- ── Card info ──────────────────────────────────────────────────── -->
+    <string name="d_cards_aid">AID %1$s</string>
+    <string name="d_cards_pin_tries">남은 PIN 시도 횟수: 사용자 %1$d · 관리자 %2$d</string>
+
+    <!-- ── Pairing ────────────────────────────────────────────────────── -->
+    <string name="d_cards_paired">연결됨. 키링 항목: %1$s</string>
+    <string name="d_cards_pair">키링과 연결</string>
+    <string name="d_cards_keygen_open">카드에서 키 생성…</string>
+    <string name="d_cards_pair_note">연결하면 카드가 키링에 기록되어 카드로 메시지를 암호화할 수 있고, 복호화와 서명이 하드웨어를 거쳐 처리됩니다. 카드의 공개 키 인증서가 이미 키링에 있다면(가져왔거나 키 서버에서 받은 경우) 그 항목에 연결되며, 기본 키를 오프라인에 둔 구성도 지원합니다.</string>
+    <string name="d_cards_keygen_done">카드에서 생성하고 연결했습니다: %1$s. 공개 키를 내보내 반드시 백업하세요. 개인 키는 카드 밖으로 꺼낼 수 없습니다.</string>
+
+    <!-- ── Management buttons (ellipsis = opens a dialog) ──────────────── -->
+    <string name="d_cards_change_pin_open">PIN 변경…</string>
+    <string name="d_cards_change_admin_open">관리자 PIN 변경…</string>
+    <string name="d_cards_unblock_open">PIN 차단 해제…</string>
+    <string name="d_cards_reset_open">공장 초기화…</string>
+
+    <!-- ── PIN cache ──────────────────────────────────────────────────── -->
+    <string name="d_cards_pin_cache_title">PIN 캐시</string>
+    <string name="d_cards_pin_cache_toggle">작업에 성공하면 사용자 PIN 기억하기</string>
+    <string name="d_cards_pin_cache_keep_for">유지 시간:</string>
+    <string name="d_cards_pin_cache_custom_seconds">%1$d초</string>
+    <string name="d_cards_pin_held_no_timer">PIN 보관 중(타이머 없음)</string>
+    <string name="d_cards_pin_cache_note">메모리에만 보관하며 디스크에는 절대 쓰지 않습니다. PIN을 잘못 입력하거나, 앱을 종료하거나, “지금 지우기”를 누르면 지워집니다. 관리자 PIN은 캐시하지 않습니다.</string>
+
+    <!-- ── Dialogs ────────────────────────────────────────────────────── -->
+    <string name="d_cards_new_pin_min6">새 PIN(최소 6자리)</string>
+    <string name="d_cards_new_admin_min8">새 관리자 PIN(최소 8자리)</string>
+    <string name="d_cards_new_user_pin_min6">새 사용자 PIN(최소 6자리)</string>
+    <string name="d_cards_pin_retry_warning">잘못 입력할 때마다 남은 시도 횟수가 줄어듭니다. 너무 많이 틀리면 PIN이 차단됩니다.</string>
+    <string name="d_cards_reset_warning">카드의 모든 키를 지우고 두 PIN을 기본값(123456 / 12345678)으로 되돌립니다. 카드에서 생성한 키는 복구할 수 없습니다. 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="d_cards_reset_type_prompt">확인하려면 %1$s을(를) 입력하세요</string>
+    <string name="d_cards_reset_confirm">카드 지우기</string>
+    <string name="d_cards_keygen_warning">카드 안에서 Ed25519 서명 키와 Cv25519 암호화 키를 생성합니다. 카드의 서명 슬롯과 복호화 슬롯을 덮어씁니다. 개인 키는 하드웨어 밖으로 나오지 않으며 백업할 수 없습니다. 카드를 잃어버리면 키도 잃습니다.</string>
+    <string name="d_cards_expires_colon">만료:</string>
+    <string name="d_cards_keygen_ack">카드의 키를 덮어쓰며 이 키는 백업할 수 없다는 것을 이해합니다</string>
+
+    <!-- ── Shared desktop buttons (cont.) ─────────────────────────────── -->
+    <string name="d_common_working">진행 중…</string>
+    <string name="d_keydetail_no_user_id">(사용자 ID 없음)</string>
+    <string name="d_keydetail_badge_secret">개인 키</string>
+    <string name="d_keydetail_badge_card">카드</string>
+    <string name="d_keydetail_badge_expired">만료됨</string>
+
+    <!-- ── Identity ────────────────────────────────────── -->
+    <string name="d_keydetail_copy_fingerprint">지문 복사</string>
+    <string name="d_keydetail_status_fingerprint_copied">지문 복사됨</string>
+    <string name="d_keydetail_key_id">키 ID</string>
+    <string name="d_keydetail_make_default_signing">기본 서명 키로 설정</string>
+
+    <!-- ── Subkey list ─────────────────────────────────── -->
+    <string name="d_keydetail_section_keys">키(%1$d)</string>
+    <string name="d_keydetail_subkey">서브키</string>
+    <string name="d_keydetail_subkey_meta">%1$s · 생성 %2$s</string>
+    <string name="d_keydetail_subkey_meta_expires">%1$s · 생성 %2$s · 만료 %3$s</string>
+
+    <!-- ── Export row (short labels; Android's are phone-sized sentences) ─ -->
+    <string name="d_keydetail_copy_public">공개 키 복사</string>
+    <string name="d_keydetail_export_public">공개 키 내보내기…</string>
+    <string name="d_keydetail_show_qr">QR 표시…</string>
+    <string name="d_keydetail_export_secret">개인 키 내보내기…</string>
+    <string name="d_keydetail_export_secret_gpg">GnuPG용으로 내보내기</string>
+    <string name="d_keydetail_status_pub_copied">공개 키 복사됨: %1$s</string>
+    <string name="d_keydetail_err_no_public_armor">저장된 공개 키 아머가 없습니다</string>
+    <string name="d_keydetail_secret_export_note">내보낸 개인 키는 비밀구절(S2K) 보호를 그대로 유지합니다.</string>
+
+    <!-- ── Key servers ─────────────────────────────────── -->
+    <string name="d_keydetail_refresh_servers">키 서버에서 새로 고침</string>
+
+    <!-- ── Danger zone + save dialog ───────────────────── -->
+    <string name="d_keydetail_danger_zone">위험 구역</string>
+    <string name="d_keydetail_save_dialog_title">키 내보내기</string>
+    <string name="d_keydetail_status_exported">%1$s 내보냄</string>
+    <string name="d_keydetail_status_nothing_to_export">내보낼 항목이 없습니다</string>
+
+    <!-- ── QR dialog ───────────────────────────────────── -->
+    <string name="d_keydetail_qr_title">공개 키 QR</string>
+    <string name="d_keydetail_qr_hint">다른 기기의 PGPony로 스캔하면 %1$s을(를) 가져올 수 있습니다.</string>
+    <string name="d_keydetail_qr_too_large">이 키는 너무 커서 QR 코드에 담을 수 없습니다. .asc 파일로 내보내 그 파일을 공유하세요.</string>
+    <string name="d_keydetail_qr_no_material">표시할 공개 키 자료가 없습니다.</string>
+    <string name="d_keydetail_qr_save_png">PNG 저장…</string>
+    <string name="d_keydetail_status_qr_saved">QR 저장됨: %1$s</string>
+
+    <!-- ── Expiration dialog ───────────────────────────── -->
+    <string name="d_keydetail_expiry_never">만료 없음</string>
+    <string name="d_keydetail_expiry_date_label">만료일(YYYY-MM-DD)</string>
+    <string name="d_keydetail_expiry_note">키의 자체 인증과 서브키 바인딩에 다시 서명합니다.</string>
+
+    <!-- ── Revoke dialog ──────────────────────────────── -->
+    <string name="d_keydetail_revoke_title">%1$s 해지</string>
+    <string name="d_keydetail_revoke_warning">해지하면 이 키는 새 서명과 암호화에 쓸 수 없는 키로 표시됩니다. 지난 메시지는 계속 복호화할 수 있습니다. 이 작업은 되돌릴 수 없습니다.</string>
+    <string name="d_keydetail_revoke_ack">되돌릴 수 없다는 것을 이해합니다</string>
+
+    <!-- ── Shared desktop buttons (cont.) ───────────────── -->
+    <string name="d_common_edit_ellipsis">편집…</string>
+    <string name="d_common_add_ellipsis">추가…</string>
+    <string name="d_common_rendering">렌더링 중…</string>
+
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
+    <plurals name="d_import_summary_blocks">
+        <item quantity="other">블록 %1$d개: %2$s</item>
+    </plurals>
+    <plurals name="d_import_summary_added">
+        <item quantity="other">%1$d개 추가됨</item>
+    </plurals>
+    <plurals name="d_import_summary_upgraded">
+        <item quantity="other">, %1$d개 키쌍으로 업그레이드됨</item>
+    </plurals>
+    <plurals name="d_import_summary_merged">
+        <item quantity="other">, %1$d개에 새 자료 병합됨</item>
+    </plurals>
+    <plurals name="d_import_summary_already">
+        <item quantity="other">, %1$d개 이미 키링에 있음</item>
+    </plurals>
+    <plurals name="d_import_summary_failed">
+        <item quantity="other">, %1$d개 실패</item>
+    </plurals>
+
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
+    <string name="d_repo_err_no_card_keys">이 카드에서 OpenPGP 키를 찾지 못했습니다</string>
+    <string name="d_repo_err_key_not_found">키를 찾을 수 없습니다: %1$s</string>
+    <string name="d_repo_err_revoke_public_only">공개 키만 있는 키는 해지할 수 없습니다. 서명하려면 개인 키가 필요합니다.</string>
+    <string name="d_repo_err_secret_ring_load">%1$s의 개인 키링을 불러올 수 없습니다</string>
+    <string name="d_repo_err_public_ring_load">%1$s의 공개 키링을 불러올 수 없습니다</string>
+    <string name="d_repo_err_no_public_ring">생성한 키에서 공개 키링이 만들어지지 않았습니다</string>
+    <string name="d_repo_err_card_row_missing">가져오기 후 생성한 카드 키 항목을 찾을 수 없습니다</string>
+    <string name="d_repo_err_expiry_public_only">공개 키만 있는 키는 만료를 편집할 수 없습니다. 다시 서명하려면 개인 키가 필요합니다.</string>
+    <string name="d_repo_err_expiry_card">이 키는 하드웨어 키에 들어 있습니다. 여기서는 아직 만료 변경을 지원하지 않습니다.</string>
+
+    <!-- ── Status line ── -->
+    <string name="d_list_separator">, </string>
+    <string name="d_status_migrated_legacy">이전 형식 키링 마이그레이션 완료: %1$s</string>
+    <string name="d_status_autorefresh">키 서버 자동 새로 고침: %1$s</string>
+    <string name="d_status_import">가져오기: %1$s</string>
+    <string name="d_status_generating">%1$s 키 생성 중…</string>
+    <string name="d_status_generated">%1$s 생성됨: %2$s</string>
+    <string name="d_status_generate_failed">생성 실패: %1$s</string>
+    <string name="d_status_deleted">%1$s 삭제됨</string>
+    <string name="d_status_trust_set">신뢰 단계를 %1$s(으)로 설정: %2$s</string>
+    <string name="d_status_expiration_removed">만료를 제거했습니다. 이 키는 만료되지 않습니다.</string>
+    <string name="d_status_expiration_updated">만료 업데이트됨</string>
+    <string name="d_status_expiration_failed">만료 편집 실패: %1$s</string>
+    <string name="d_status_revoked">%1$s 해지됨(%2$s)</string>
+    <string name="d_status_checking_servers">키 서버 확인 중: %1$s…</string>
+    <string name="d_status_refresh_not_published">활성화된 키 서버 어디에도 게시되지 않았습니다</string>
+    <string name="d_status_refresh_also_merged"> (새 자료도 병합됨)</string>
+    <string name="d_status_refresh_key_missing">키링에서 키를 찾을 수 없습니다</string>
+    <plurals name="d_status_files_dropped">
+        <item quantity="other">파일 %1$d개를 끌어다 놓음</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_revoked">
+        <item quantity="other">키 %1$d개가 서버에서 해지됨</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_updated">
+        <item quantity="other">키 %1$d개 업데이트됨</item>
+    </plurals>
+
+    <!-- ── Tray + expiration notifications ── -->
+    <string name="d_tray_open">PGPony 열기</string>
+    <string name="d_tray_quit">PGPony 종료</string>
+    <string name="d_notif_key_expiring">PGPony: 키 만료 예정</string>
+    <string name="d_notif_key_expiration">PGPony: 키 만료</string>
+
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
+    <string name="d_menu_file">파일</string>
+    <string name="d_menu_file_mnemonic">F</string>
+    <string name="d_menu_goto_keyring">키링으로 이동(가져오기)</string>
+    <string name="d_menu_restore_backup">백업 복구…</string>
+    <string name="d_menu_quit">종료</string>
+    <string name="d_menu_keys">키</string>
+    <string name="d_menu_keys_mnemonic">K</string>
+    <string name="d_menu_new_key">새 키…</string>
+    <string name="d_menu_hardware_keys">하드웨어 키</string>
+    <string name="d_menu_message">메시지</string>
+    <string name="d_menu_message_mnemonic">M</string>
+    <string name="d_menu_help">도움말</string>
+    <string name="d_menu_help_mnemonic">H</string>
+    <string name="d_menu_about">PGPony 소개</string>
+    <string name="d_menu_encrypt_decrypt">암호화 / 복호화</string>
+    <string name="d_gen_no_passphrase_warning">비밀구절 없음: 개인 키가 보호되지 않은 채로 이 컴퓨터에 저장됩니다.</string>
+    <string name="d_cards_choose_reader">리더 선택</string>
+    <string name="d_cards_rescan">다시 스캔</string>
+    <string name="d_cards_pin_pw1">카드 PIN(PW1)</string>
+    <string name="d_cards_talking_touch">하드웨어 키와 통신 중… 터치 확인이 켜진 키라면 지금 터치하세요.</string>
+    <string name="d_cards_pin_scope_note">PIN은 키 자체에서 이 작업 하나만 승인합니다. 비밀 정보는 하드웨어 밖으로 나가지 않습니다.</string>
+    <string name="d_common_run">실행</string>
+    <string name="d_card_err_unplugged">작업 도중 하드웨어 키가 분리되었습니다</string>
+    <string name="d_card_err_io">카드 입출력 실패: %1$s</string>
+    <string name="d_card_err_connect">“%1$s”의 카드에 연결할 수 없습니다: %2$s</string>
+    <string name="d_card_err_no_service">사용할 수 있는 스마트 카드 서비스가 없습니다</string>
+    <string name="d_card_err_pcscd_hint">. pcscd가 설치되어 실행 중인지 확인하세요.</string>
+    <string name="d_card_err_detail_suffix"> (%1$s)</string>
+    <string name="d_card_err_reader_gone">“%1$s” 리더가 더 이상 연결되어 있지 않습니다.</string>
+    <string name="d_card_err_no_card">“%1$s”에 카드가 없습니다. 하드웨어 키를 꽂거나 다시 꽂으세요.</string>
+
+    <!-- ── Key server refresh failures ── -->
+    <string name="d_refresh_err_no_servers">조회가 활성화된 키 서버가 없습니다</string>
+    <string name="d_refresh_err_server_prefix">%1$s: %2$s</string>
+    <string name="d_refresh_err_parse">키 서버 응답을 파싱할 수 없습니다: %1$s</string>
+    <string name="d_expiry_headline_expired">%1$s이(가) 만료되었습니다</string>
+    <string name="d_expiry_headline_today">%1$s이(가) 오늘 만료됩니다</string>
+    <string name="d_expiry_headline_tomorrow">%1$s이(가) 내일 만료됩니다</string>
+    <plurals name="d_expiry_headline_days">
+        <item quantity="other">%2$s이(가) %1$d일 후 만료됩니다</item>
+    </plurals>
+    <string name="d_backup_err_not_a_backup">PGPony 백업 파일이 아닙니다</string>
+    <string name="d_backup_err_wrong_code">이 복구 코드로는 백업을 열 수 없습니다</string>
+    <string name="d_backup_err_corrupt">백업이 손상되었습니다: %1$s</string>
+    <string name="d_backup_err_empty_keyring">백업할 키가 없습니다</string>
+    <string name="d_backup_detail_unreadable_archive">아카이브를 읽을 수 없음</string>
+    <string name="d_backup_detail_empty_archive">빈 아카이브</string>
+    <string name="d_backup_detail_no_keys">백업에 키가 없음</string>
+    <string name="d_backup_detail_integrity">무결성 검사 실패</string>
+    <string name="d_restore_unreadable_block">키 블록을 읽을 수 없음</string>
+    <plurals name="d_restore_summary_added">
+        <item quantity="other">%1$d개 추가됨</item>
+    </plurals>
+    <plurals name="d_restore_summary_upgraded">
+        <item quantity="other">, %1$d개 키쌍으로 업그레이드됨</item>
+    </plurals>
+    <plurals name="d_restore_summary_updated">
+        <item quantity="other">, %1$d개 업데이트됨</item>
+    </plurals>
+    <plurals name="d_restore_summary_unchanged">
+        <item quantity="other">, %1$d개 이미 최신</item>
+    </plurals>
+    <plurals name="d_restore_summary_failed">
+        <item quantity="other">, %1$d개 복구 실패</item>
+    </plurals>
+    <string name="d_backup_export_title">키링 백업</string>
+    <string name="d_backup_export_intro">키링에 있는 모든 것이 들어갑니다. 개인 키는 각자의 비밀구절 보호를 유지합니다. 파일 전체는 이 복구 코드로 봉인됩니다:</string>
+    <string name="d_backup_code_copied">복구 코드 복사됨</string>
+    <string name="d_backup_reenter_warning">적어 두거나 비밀번호 관리자에 보관하세요. 이 코드가 없으면 백업을 열 수 없습니다. 계속하려면 다시 입력하세요:</string>
+    <string name="d_backup_save_action">백업 저장…</string>
+    <string name="d_backup_saved_status">백업 저장됨: %1$s</string>
+    <string name="d_backup_failed">백업 실패</string>
+    <string name="d_backup_save_dialog_title">백업 저장</string>
+    <string name="d_restore_title">백업 복구</string>
+    <string name="d_restore_choose_file">백업 파일 선택…</string>
+    <string name="d_restore_kind_pgpony">PGPony 백업</string>
+    <string name="d_restore_kind_okc">OpenKeychain 백업</string>
+    <string name="d_restore_code_label_okc">백업 코드(4자리씩 9묶음)</string>
+    <string name="d_restore_note">복구해도 이미 가지고 있는 개인 키는 덮어쓰지 않습니다.</string>
+    <string name="d_restore_done_status">복구됨: %1$s</string>
+    <string name="d_restore_status">복구: %1$s</string>
+    <string name="d_restore_failed">복구 실패</string>
+    <string name="d_restore_open_dialog_title">백업 선택</string>
+    <string name="d_search_servers_title">키 서버 검색</string>
+    <string name="d_search_lookup_order">조회 순서: WKD(수신자 자신의 메일 도메인) → 설정한 서버 → keys.openpgp.org.</string>
+    <string name="d_search_none">키를 찾지 못했습니다(WKD, 설정한 서버, keys.openpgp.org).</string>
+    <string name="d_search_unparseable">(해석할 수 없음)</string>
+    <string name="d_search_failed">검색 실패: %1$s</string>
+    <string name="d_search_found_via">%1$s에서 찾음</string>
+    <string name="d_search_trust_warning">가져온 키는 신뢰 단계가 “알 수 없음”으로 추가됩니다. 이 키를 믿고 쓰기 전에 소유자와 지문을 직접 확인하세요.</string>
+    <string name="d_search_again">다시 검색</string>
+    <string name="d_common_import">가져오기</string>
+    <string name="d_publish_title">공개 키 게시</string>
+    <string name="d_publish_no_servers">게시가 활성화된 서버가 없습니다. 설정 → 네트워크에서 하나를 활성화하세요.</string>
+    <string name="d_publish_may_not_accept">%1$s 키를 받지 않을 수 있음</string>
+    <string name="d_publish_warning">공개 키만 업로드됩니다. 키 서버는 누구나 볼 수 있는 영구적인 디렉터리이므로 한번 게시하면 되돌리기 어렵습니다.</string>
+    <string name="d_publish_in_progress">게시 중…</string>
+    <string name="d_publish_outcome_ok">%1$s: 게시됨 ✓</string>
+    <string name="d_publish_outcome_pending">. %1$s(으)로 확인 이메일을 보냈습니다(이메일의 링크를 누르면 이메일 주소로 검색할 수 있게 됩니다)</string>
+    <string name="d_publish_outcome_rejected">%1$s: 거부됨(HTTP %2$d). 이 서버는 %3$s 키를 받지 않는 것 같습니다.</string>
+    <string name="d_publish_outcome_failed">%1$s: 실패(%2$s)</string>
+    <string name="d_keyring_search_servers">키 서버 검색…</string>
+    <string name="d_keyring_paste_armor">아머 붙여넣기…</string>
+    <string name="d_keyring_import_file">파일에서…</string>
+    <string name="d_keyring_import_qr">QR 이미지에서…</string>
+    <string name="d_keyring_search_placeholder">이름, 이메일, 지문 검색</string>
+    <string name="d_keyring_sort_label">정렬: %1$s</string>
+    <string name="d_keyring_sort_recent">최근</string>
+    <string name="d_keyring_sort_name">이름</string>
+    <string name="d_keyring_sort_algorithm">알고리즘</string>
+    <string name="d_keyring_empty_title">아직 키가 없습니다</string>
+    <string name="d_keyring_empty_body">키쌍을 생성하거나, 키 파일(.asc, .gpg)을 가져오거나, 아머 블록을 붙여넣으세요.</string>
+    <string name="d_keyring_no_matches_title">일치하는 항목 없음</string>
+    <string name="d_keyring_no_matches_body">키링에서 “%1$s”와(과) 일치하는 항목이 없습니다. 이름, 이메일 주소 또는 지문의 일부로 검색하세요.</string>
+    <string name="d_keyring_clear_search">검색 지우기</string>
+    <string name="d_keyring_err_no_public_armor_for">%1$s에 저장된 공개 키 아머가 없습니다</string>
+    <string name="d_keyring_qr_none_found">%1$s에서 QR 코드를 찾지 못했습니다</string>
+    <string name="d_keyring_qr_not_a_key">이 QR은 OpenPGP 키가 아닙니다</string>
+    <string name="d_keyring_delete_secret_warning">\n\n개인 키도 함께 삭제됩니다. 백업이 없으면 이 키로 암호화된 메시지를 더 이상 읽을 수 없습니다.</string>
+    <string name="d_keyring_cd_copy_public">공개 키 복사</string>
+    <string name="d_keyring_cd_delete">키 삭제</string>
+    <string name="d_keyring_meta_line">생성 %1$s%2$s · 키 ID %3$s</string>
+    <string name="d_keyring_meta_expires"> · 만료 %1$s</string>
+    <string name="d_keyring_import_file_dialog">키 파일 가져오기</string>
+    <string name="d_keyring_qr_dialog">QR 이미지 선택</string>
+    <plurals name="d_keyring_key_count">
+        <item quantity="other">키 %1$d개</item>
+    </plurals>
+    <plurals name="d_keyring_match_count">
+        <item quantity="other">%1$d개 일치</item>
+    </plurals>
+    <string name="d_file_err_recipient_ring">수신자 키링을 불러오지 못했습니다: %1$s</string>
+    <string name="d_file_err_signing_key">서명 키를 불러올 수 없습니다: %1$s</string>
+    <string name="d_file_signed_suffix">, 서명됨</string>
+    <string name="d_file_err_encrypt">암호화 실패</string>
+    <string name="d_file_err_decrypt">복호화 실패</string>
+    <string name="d_file_sig_written">분리된 서명 작성됨</string>
+    <string name="d_file_sig_written_card">분리된 서명 작성됨(하드웨어 키)</string>
+    <string name="d_file_err_sign">서명 실패</string>
+    <string name="d_file_err_card_sign">카드 서명 실패</string>
+    <string name="d_file_err_card_decrypt">카드 복호화 실패</string>
+    <plurals name="d_file_encrypted_to">
+        <item quantity="other">수신자 %1$d명에게 암호화됨</item>
+    </plurals>
+    <plurals name="d_file_encrypted_to_card">
+        <item quantity="other">수신자 %1$d명에게 암호화됨, 서명됨(하드웨어 키)</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle">
+        <item quantity="other">묶음 복호화됨 → 파일 %1$d개</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle_card">
+        <item quantity="other">묶음 복호화됨(하드웨어 키) → 파일 %1$d개</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes">
+        <item quantity="other">%1$d바이트 복호화됨</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes_card">
+        <item quantity="other">%1$d바이트 복호화됨(하드웨어 키)</item>
+    </plurals>
+    <string name="d_file_sig_verified"> · 서명 검증됨</string>
+    <string name="d_file_sig_unheld"> · 키링에 없는 키로 서명됨</string>
+    <string name="d_file_sig_id_suffix"> (%1$s)</string>
+
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">서명 검증됨: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_file_verify_invalid">서명이 유효하지 않음: 내용이 서명과 일치하지 않습니다</string>
+    <string name="d_file_verify_unknown_signer">키링에 없는 키로 서명됨</string>
+    <string name="d_file_verify_unsigned">서명을 찾지 못했습니다</string>
+    <string name="d_file_err_verify">검증 실패</string>
+
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
+    <string name="d_settings_section_updates">판올림</string>
+    <string name="d_settings_updates_note">기본값은 꺼짐입니다. 켜면 PGPony가 하루에 한 번 pgpony.app에서 새 판이 있는지 확인합니다. 사용자나 키에 관한 정보는 전혀 보내지 않으며, 프록시 설정을 따릅니다.</string>
+    <string name="d_settings_updates_idle">아직 확인하지 않았습니다.</string>
+    <string name="d_settings_updates_checking">확인 중…</string>
+    <string name="d_settings_updates_current">최신 판을 사용하고 있습니다.</string>
+    <string name="d_settings_updates_available">새 판 %1$s을(를) 사용할 수 있습니다.</string>
+    <string name="d_settings_updates_failed">pgpony.app에 연결할 수 없습니다.</string>
+    <string name="d_settings_updates_check_now">지금 확인하기</string>
+    <string name="d_settings_updates_download">다운로드</string>
+    <string name="d_settings_updates_auto">하루에 한 번 자동으로 확인</string>
+
+    <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
+    <string name="d_cards_pcsc_error">PC/SC 보고: %1$s</string>
+
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH 에이전트</string>
+    <string name="d_settings_ssh_agent_note">기본값은 꺼짐입니다. 켜면 PGPony가 로컬 소켓을 통해 ssh에 인증 키를 제공합니다. ssh-agent와 비슷하지만 키링을 기반으로 동작합니다. 요청과 요청 사이에 키를 보관하지 않으며, 보호된 키는 매번 비밀구절을 묻습니다. 이번 릴리스에서는 macOS와 Linux만 지원합니다.</string>
+    <string name="d_settings_ssh_agent_windows">이번 릴리스에서는 Windows에서 SSH 에이전트를 사용할 수 없습니다. Windows의 ssh는 앱이 아직 제공하지 못하는 명명된 파이프를 사용합니다.</string>
+    <string name="d_settings_ssh_agent_enable">ssh에 인증 키 제공</string>
+    <string name="d_settings_ssh_agent_error">에이전트를 시작할 수 없습니다: %1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">복사</string>
+    <string name="d_agent_unlock_title">서명 키 잠금 해제</string>
+    <string name="d_agent_unlock_message">ssh가 PGPony에 %1$s(으)로 서명하도록 요청했습니다. 이 키는 비밀구절로 보호되어 있습니다.</string>
+    <string name="d_agent_unlock_field">비밀구절</string>
+    <string name="d_agent_unlock_confirm">잠금 해제</string>
+    <string name="d_agent_unlock_cancel">취소</string>
+
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="other">폴더를 수신자 %1$d명에게 암호화함</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="other">폴더 추출됨 → 파일 %1$d개</item>
+    </plurals>
+
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">취소 중…</string>
+    <string name="d_crypto_progress_bytes">%1$s / %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s 처리됨</string>
+    <string name="d_file_cancelled">취소됨</string>
+
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">감시 폴더</string>
+    <string name="d_settings_watch_note">기본값은 꺼짐입니다. 켜면 PGPony가 지정한 폴더를 감시하다가 새 파일이 생길 때마다 선택한 수신자에게 암호화합니다. 암호화 전용이며 공개 키만 사용하므로, 자리를 비운 사이 규칙이 실행되어도 비밀구절이나 카드가 필요 없고, 최악의 경우라도 암호화만 할 뿐입니다. macOS, Linux, Windows에서 동작합니다.</string>
+    <string name="d_settings_watch_enable">아래 폴더 감시</string>
+    <string name="d_settings_watch_rules">규칙</string>
+    <string name="d_settings_watch_no_rules">아직 규칙이 없습니다. 폴더를 감시하려면 규칙을 추가하세요.</string>
+    <string name="d_settings_watch_rule_summary">수신자 %1$d명 → %2$s</string>
+    <string name="d_settings_watch_beside_source">원본 옆</string>
+    <string name="d_settings_watch_rule_on">켜짐</string>
+    <string name="d_settings_watch_deletes">원본 삭제</string>
+    <string name="d_settings_watch_add_rule">규칙 추가</string>
+    <string name="d_settings_watch_recent">최근 활동</string>
+    <string name="d_settings_watch_folder">감시할 폴더</string>
+    <string name="d_settings_watch_browse">찾아보기…</string>
+    <string name="d_settings_watch_glob">일치 패턴(glob, 예: *.pdf)</string>
+    <string name="d_settings_watch_output">출력 폴더(선택 사항)</string>
+    <string name="d_settings_watch_no_recipients">사용할 수 있는 수신자가 없습니다. 먼저 공개 키를 가져오세요.</string>
+    <string name="d_settings_watch_armor">출력을 ASCII 아머로 저장(.asc)</string>
+    <string name="d_settings_watch_delete_original">암호화 후 원본 삭제</string>
+    <string name="d_settings_watch_delete_warning">원본은 되돌릴 수 없게 삭제됩니다. 확실하지 않다면 꺼 두세요.</string>
+    <string name="d_watch_notif_encrypted">감시 폴더: 암호화됨</string>
+    <string name="d_watch_notif_failed">감시 폴더: 실패</string>
+    <string name="d_crypto_add_folder">폴더 추가…</string>
+
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">스마트 카드 서비스가 실행되고 있지 않습니다.</string>
+    <string name="d_cards_pcsc_sharing">다른 프로그램이 리더를 사용하고 있습니다. 그 프로그램(GnuPG나 OpenSC 등)을 닫고 다시 스캔하세요.</string>
+    <string name="d_cards_pcsc_unknown">리더 서비스 보고: %1$s.</string>
+    <string name="d_cards_pcsc_unknown_generic">리더 서비스에서 문제를 보고했습니다.</string>
+    <string name="d_cards_keygen_algo_label">키 종류</string>
+
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">카드로 키 옮기기…</string>
+    <string name="d_cards_move_title">카드로 키 옮기기</string>
+    <string name="d_cards_move_warning">기존 키를 카드에 쓰고 카드의 키 슬롯을 덮어씁니다. 카드에서 생성한 키와 달리 이 키는 이미 카드 밖에 존재했으므로 백업을 안전하게 보관하세요. 카드의 PIN은 바뀌지 않습니다.</string>
+    <string name="d_cards_move_pick_key">옮길 키</string>
+    <string name="d_cards_move_no_candidates">키링에 개인 키가 있는 RSA 키쌍이 없습니다. 먼저 생성하거나 가져오세요.</string>
+    <string name="d_cards_move_passphrase">키 비밀구절(없으면 비워 두기)</string>
+    <string name="d_cards_move_format">가져오기 형식</string>
+    <string name="d_cards_move_ack">카드의 키 슬롯을 덮어쓴다는 것을 이해합니다</string>
+    <string name="d_cards_move_confirm">카드로 옮기기</string>
+    <string name="d_cards_move_done">카드로 옮겼습니다: %1$s</string>
+    <string name="d_cards_move_no_secret">키의 개인 키 자료를 불러올 수 없습니다.</string>
+    <string name="d_err_recipient_unusable">PGPony가 암호화에 쓸 수 있는 키가 없어 아무것도 암호화하지 않았습니다: %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · 서명됨, 키 미검증</string>
+    <string name="d_file_sig_invalid"> · 서명이 유효하지 않음</string>
+    <string name="d_file_err_composite_too_large">ML-DSA 서명은 파일 전체를 메모리로 읽으므로 512 MB까지만 가능합니다. 더 작은 파일에 서명하거나 기존 방식의 서명 키를 선택하세요.</string>
+    <string name="d_file_verify_ok_unconfirmed">서명됨, 키 미검증: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">복호화됨 · 서명됨, 키 미검증</string>
+    <string name="d_edit_err_public_only">개인 키가 필요한 작업인데, 키링에는 공개 키만 있습니다.</string>
+    <string name="d_edit_err_card">이 키는 하드웨어 키에 들어 있어서 여기서 편집할 수 없습니다.</string>
+    <string name="d_edit_err_last_encryption_subkey">이 키의 마지막 암호화 서브키입니다. 이 서브키가 없으면 아무도 이 키로 암호화할 수 없습니다.</string>
+    <string name="d_edit_err_subkey_not_found">서브키 %1$s이(가) 이 키에 없습니다.</string>
+    <string name="d_edit_err_primary_as_subkey">기본 키는 서브키처럼 제거하거나 해지할 수 없습니다.</string>
+    <string name="d_settings_protect_destructive_subtitle">키를 삭제하거나, 서브키나 사용자 ID를 제거하거나, 모든 데이터를 지우기 전에 “%1$s”를 입력하도록 요청합니다. 기본값은 켜짐입니다.</string>
+    <string name="d_keyring_recently_deleted_button">최근 삭제된 항목(%1$d)</string>
+    <string name="d_recycle_less_than_day">하루 미만 남음</string>
+    <string name="d_status_moved_to_bin">%1$s을(를) 최근 삭제된 항목으로 옮겼습니다</string>
+    <string name="d_status_purged">%1$s을(를) 영구히 삭제했습니다</string>
+    <string name="d_status_bin_emptied">최근 삭제된 항목을 비웠습니다</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="other">%1$d일 남음</item>
+    </plurals>
+    <string name="d_edit_err_v6_subkey_type">v6 키에는 Ed25519 및 X25519 서브키만 추가할 수 있습니다.</string>
+    <string name="d_edit_err_v4_mlkem768_only">v4 키에는 ML-KEM-768 양자 내성 서브키만 추가할 수 있습니다. ML-KEM-1024에는 v6 키가 필요합니다.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">양자 내성 서명 서브키에는 v6 키가 필요합니다.</string>
+    <string name="d_keydetail_decrypt_with">이 키로 복호화</string>
+    <string name="d_keydetail_last_backed_up">마지막 백업</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">비밀구절</string>
+    <string name="d_keydetail_passphrase_on">비밀구절로 보호되어 있습니다.</string>
+    <string name="d_keydetail_passphrase_off">비밀구절이 없습니다. 이 컴퓨터에서 키 파일은 파일 권한으로만 보호되므로, 내 계정을 사용할 수 있는 사람은 누구나 이 키를 쓸 수 있습니다.</string>
+    <string name="d_keydetail_subkey_revoke_title">서브키 %1$s 해지</string>
+    <string name="d_keydetail_subkey_revoke_body">해지하면 서명이 게시되고, 상대방이 내 키를 새로 고치면 이 서브키를 더 이상 사용하지 않게 됩니다. 되돌릴 수 없습니다.</string>
+    <string name="d_settings_clear_ack1">모든 키가 복구 기간 없이 지금 바로 파기된다는 것을 이해합니다.</string>
+    <string name="d_settings_clear_countdown">%1$s(%2$d)</string>
+    <string name="d_settings_clear_done_body">이제 PGPony가 종료됩니다. 다음에 실행하면 처음 상태로 시작합니다.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">함께 제거되는 항목: 모든 PGPony 설정(키 서버, 네트워크, SSH 에이전트, 감시 폴더, 비밀번호 저장소), 감시 규칙, 캐시된 카드 PIN. 비밀번호 저장소 폴더와 다른 곳에 저장한 파일은 건드리지 않습니다.</string>
+    <string name="d_status_userid_added">사용자 ID 추가됨</string>
+    <string name="d_status_userid_revoked">사용자 ID 해지됨</string>
+    <string name="d_status_userid_removed">사용자 ID 제거됨</string>
+    <string name="d_status_primary_userid">기본 사용자 ID 변경됨</string>
+    <string name="d_status_subkey_added">서브키 추가됨</string>
+    <string name="d_status_subkey_revoked">서브키 해지됨</string>
+    <string name="d_status_notations_saved">노테이션 저장됨</string>
+    <string name="d_crypto_decrypt_with_any">내 모든 키</string>
+    <string name="d_crypto_signing_default_note">이 키의 기본 서명 키인 %1$s(으)로 서명합니다. 그 키의 비밀구절을 입력하세요.</string>
+    <string name="d_settings_ssh_agent_keys_note">각 키는 서명이나 인증서 발급(certify)을 겸하지 않는 가장 최근의 인증 서브키를 제공합니다. Ed25519, RSA, NIST P-256, P-384, P-521 곡선의 ECDSA를 지원하며, 양자 내성 키에 딸린 기존 방식 서브키도 포함됩니다. 키 세부 정보에서 또는 키를 생성할 때 추가하세요. RSA 키는 서버가 요청하면 예전 SHA-1 ssh-rsa 요청에도 응답합니다.</string>
+    <string name="d_import_preview_title">키 가져오기</string>
+    <string name="d_import_preview_none">이 텍스트에서 키를 찾지 못했습니다.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">이미 키링에 있습니다. 가져오면 새로운 내용만 추가됩니다.</string>
+    <string name="d_import_link_title">링크에서 가져오기</string>
+    <string name="d_keyring_import_link">링크에서…</string>
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">아머 주석</string>
+    <string name="d_settings_armor_comment_note">ASCII 아머 출력의 Comment 줄입니다. 앱, pgpony 명령, git 서명 shim, 감시 폴더에 모두 적용됩니다.</string>
+    <string name="d_settings_section_session">세션</string>
+    <string name="d_settings_session_note">키 비밀구절이나 카드 PIN을 입력한 뒤 PGPony가 메모리에 보관하는 시간입니다. 이 설정 하나가 앱, SSH 에이전트, pgpony-gpg를 통한 git 서명에 모두 적용됩니다. 디스크에는 아무것도 쓰지 않으며, PGPony를 종료하면 모두 잊습니다.</string>
+    <string name="d_session_until_screen_locks">화면이 잠길 때까지</string>
+    <string name="d_session_held_until_locked">화면이 잠기거나 직접 지울 때까지 비밀구절을 기억합니다.</string>
+    <string name="d_session_lock_unsupported">PGPony가 이 컴퓨터의 화면 잠금을 감지할 수 없으므로, 보관 중인 비밀 정보는 직접 지우거나 종료할 때까지 유지됩니다.</string>
+    <string name="d_session_pin_held">카드 PIN을 기억하고 있습니다.</string>
+    <string name="d_cards_pin_cache_follows">설정의 세션 시간을 따릅니다: %1$s.</string>
+    <string name="d_crypto_pass_remembered">이 세션 동안 기억됩니다. 기억된 값을 쓰려면 비워 두세요.</string>
+    <string name="d_shim_unlock_message">git이 PGPony에 %1$s(으)로 서명하도록 요청했습니다. 이 키는 비밀구절로 보호되어 있습니다.</string>
+    <string name="d_gnupg_import_button">GnuPG에서…</string>
+    <string name="d_gnupg_title">GnuPG에서 가져오기</string>
+    <string name="d_gnupg_home">GnuPG 홈: %1$s</string>
+    <string name="d_gnupg_choose_folder">폴더 선택…</string>
+    <string name="d_gnupg_no_home">이 폴더에서 GnuPG 키링을 찾지 못했습니다. pubring.kbx가 들어 있는 폴더를 선택하세요.</string>
+    <string name="d_gnupg_counts">공개 키 %1$d개, 개인 키 %2$d개</string>
+    <string name="d_gnupg_counts_public">공개 키 %1$d개</string>
+    <string name="d_gnupg_gpg_found">%1$s 사용</string>
+    <string name="d_gnupg_gpg_missing">gpg를 찾을 수 없어 개인 키를 읽을 수 없습니다. 공개 키와 신뢰는 가져올 수 있습니다.</string>
+    <string name="d_gnupg_sandboxed">PGPony가 샌드박스 안에서 실행 중이라 gpg를 실행할 수 없습니다. 공개 키와 신뢰는 가져올 수 있습니다.</string>
+    <string name="d_gnupg_opt_trust">신뢰 가져오기(궁극적 신뢰 및 완전 신뢰)</string>
+    <string name="d_gnupg_opt_secret">개인 키 가져오기(gpg가 키마다 비밀구절을 묻습니다)</string>
+    <string name="d_gnupg_card_skipped">%1$s: 스마트 카드에 있어 건너뜀. 대신 하드웨어 키 화면에서 카드를 추가하세요.</string>
+    <string name="d_gnupg_stub_skipped">%1$s: 이 키링에 개인 키 자료가 없어 건너뜀.</string>
+    <string name="d_gnupg_secret_failed">%1$s: 내보낼 수 없음(%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: gpg가 내보냈지만 가져올 수 없었습니다.</string>
+    <string name="d_gnupg_import">가져오기</string>
+    <string name="d_gnupg_done">%1$s. 키 %2$d개의 신뢰를 높였습니다. 가져온 개인 키: %3$d개.</string>
+    <string name="d_gnupg_readonly_note">GnuPG는 읽기만 하고 변경하지 않습니다. PGPony의 신뢰는 높아지기만 하며 낮아지지 않습니다.</string>
+    <string name="d_sig_weak_suffix"> · 약한 서명 키(%1$s)</string>
+    <string name="d_decrypt_weak_suffix"> · 약한 키로 열림(%1$s)</string>
+    <string name="d_pair_menu">다른 컴퓨터와 페어링…</string>
+    <string name="d_pair_button">다른 컴퓨터와 페어링</string>
+    <string name="d_pair_title">다른 컴퓨터와 페어링</string>
+    <string name="d_pair_intro">같은 네트워크에 있는 두 컴퓨터 사이에서 키나 전체 백업을 옮깁니다. 한 컴퓨터는 기다리고 다른 컴퓨터가 연결한 뒤, 두 화면에 표시된 코드를 비교합니다. 이 창을 닫으면 아무것도 남지 않습니다.</string>
+    <string name="d_pair_host">다른 컴퓨터 기다리기</string>
+    <string name="d_pair_join">다른 컴퓨터에 연결</string>
+    <string name="d_pair_host_waiting">다른 컴퓨터에서 “다른 컴퓨터에 연결”을 선택하고 이 주소를 입력하세요:</string>
+    <string name="d_pair_host_closes">이 창은 %1$s까지 열려 있습니다.</string>
+    <string name="d_pair_firewall">방화벽이 묻는다면, 이 창이 열려 있는 동안 PGPony가 연결을 받을 수 있도록 허용하세요.</string>
+    <string name="d_pair_no_address">이 컴퓨터에는 다른 컴퓨터가 접속할 수 있는 네트워크 주소가 없습니다.</string>
+    <string name="d_pair_join_intro">다른 컴퓨터에서 “다른 컴퓨터 기다리기”를 선택하세요. 그런 다음 그 컴퓨터에 표시된 주소를 입력하세요.</string>
+    <string name="d_pair_join_label">다른 컴퓨터에 표시된 주소</string>
+    <string name="d_pair_bad_address">주소와 포트를 표시된 그대로 입력하세요. 예: 192.168.1.20:49152</string>
+    <string name="d_pair_connect">연결</string>
+    <string name="d_pair_compare_body">다른 컴퓨터에도 같은 코드가 표시되나요? 코드가 다르다면 누군가 두 컴퓨터 사이에 끼어들었을 수 있습니다. “다름”을 선택하고 처음부터 다시 시작하세요.</string>
+    <string name="d_pair_codes_match">같은 코드</string>
+    <string name="d_pair_codes_differ">다름</string>
+    <string name="d_pair_waiting_other">다른 컴퓨터를 기다리는 중…</string>
+    <string name="d_pair_paired_with">%1$s와(과) 페어링됨</string>
+    <string name="d_pair_paired_unnamed">다른 컴퓨터와 페어링됨</string>
+    <string name="d_pair_send_heading">다른 컴퓨터로 보내기</string>
+    <string name="d_pair_group_keypairs">키쌍</string>
+    <string name="d_pair_group_public">공개 키</string>
+    <string name="d_pair_group_backup">전체</string>
+    <string name="d_pair_item_backup">전체 백업</string>
+    <string name="d_pair_transfer_pass_note">선택한 키쌍 중 일부에는 비밀구절이 없습니다. 이 키쌍은 전송 비밀구절로 보호된 채 전송되며, 다른 컴퓨터에서 사용하려면 이 비밀구절이 필요합니다.</string>
+    <string name="d_pair_transfer_pass">전송 비밀구절</string>
+    <string name="d_pair_transfer_pass_repeat">전송 비밀구절 다시 입력</string>
+    <string name="d_pair_send">보내기</string>
+    <string name="d_pair_waiting_answer">다른 컴퓨터가 수락하기를 기다리는 중…</string>
+    <string name="d_pair_sending">%1$s 보내는 중…</string>
+    <string name="d_pair_receiving">%1$s 받는 중: %2$d%%</string>
+    <string name="d_pair_backup_code_tell">다른 컴퓨터의 사용자에게 이 복구 코드를 알려 주세요. 그 컴퓨터에서 백업을 열 때 필요합니다.</string>
+    <string name="d_pair_incoming_heading">%1$s에서 다음 항목을 보내려고 합니다:</string>
+    <string name="d_pair_incoming_heading_unnamed">다른 컴퓨터에서 다음 항목을 보내려고 합니다:</string>
+    <string name="d_pair_kind_keypair">%1$s(키쌍)</string>
+    <string name="d_pair_kind_public">%1$s(공개 키)</string>
+    <string name="d_pair_backup_code_label">다른 컴퓨터에 표시된 복구 코드</string>
+    <string name="d_pair_accept">선택 항목 수락</string>
+    <string name="d_pair_decline">거절</string>
+    <string name="d_pair_declined">다른 컴퓨터에서 거절했습니다.</string>
+    <string name="d_pair_result_ok">%1$s: %2$s</string>
+    <string name="d_pair_result_failed">%1$s: 가져오지 못함(%2$s)</string>
+    <string name="d_pair_sent_ok">%1$s: 다른 컴퓨터에서 받음</string>
+    <string name="d_pair_end">세션 종료</string>
+    <string name="d_pair_ended">세션이 종료되었습니다. 세션 키는 삭제되었습니다.</string>
+    <string name="d_pair_again">다시 시작</string>
+    <string name="d_pair_fail_refused">다른 컴퓨터에서 코드가 다르다고 응답했습니다. 페어링되지 않았습니다.</string>
+    <string name="d_pair_fail_you_refused">코드가 다르다고 선택했으므로 페어링되지 않았습니다. 예상하지 못한 결과라면 네트워크에 다른 사람이 없는지 확인하고 다시 시작하세요.</string>
+    <string name="d_pair_fail_handshake">페어링을 확인할 수 없어 페어링되지 않았습니다. 다시 시작하세요.</string>
+    <string name="d_pair_fail_timeout">다른 컴퓨터가 더 이상 응답하지 않습니다.</string>
+    <string name="d_pair_fail_version">다른 컴퓨터의 PGPony는 페어링 방식이 다릅니다. 두 컴퓨터 모두 PGPony를 판올림한 뒤 다시 시작하세요.</string>
+    <string name="d_pair_fail_protocol">상대방이 PGPony 페어링 창이 아니거나, 예상하지 못한 데이터를 보냈습니다.</string>
+    <string name="d_pair_fail_closed">연결이 끊어졌습니다.</string>
+    <string name="d_pair_err_window_expired">다른 컴퓨터가 연결하기 전에 페어링 창이 닫혔습니다.</string>
+    <string name="d_pair_err_export">%1$s을(를) 내보낼 수 없습니다.</string>
+    <string name="d_pair_err_needs_passphrase">%1$s에는 비밀구절이 없습니다. 보내려면 전송 비밀구절을 입력하세요.</string>
+    <string name="d_pair_err_too_large">%1$s은(는) 너무 커서 보낼 수 없습니다.</string>
+    <string name="d_pair_err_import">%1$s을(를) 가져올 수 없습니다.</string>
+    <string name="d_pair_err_backup_code">다른 컴퓨터에 표시된 복구 코드를 입력하세요.</string>
+    <string name="d_keyring_import_menu">가져오기</string>
+    <string name="d_pair_other_addresses">다른 주소(%1$d)</string>
+    <string name="d_pair_other_addresses_hide">다른 주소 숨기기</string>
+    <string name="d_pair_other_addresses_note">다른 컴퓨터가 연결하지 못하면 이 주소들을 시도해 보세요. 예를 들어 다른 컴퓨터가 이 컴퓨터의 가상 머신이거나 다른 네트워크 어댑터에 연결되어 있을 때입니다.</string>
+</resources>

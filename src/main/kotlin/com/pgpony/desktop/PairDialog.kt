@@ -310,7 +310,7 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
 
     fun onMessage(m: PairMessage) {
         when (m) {
-            is PairMessage.Info -> peerName = m.info.name.ifBlank { tr("d_pair_other_computer") }
+            is PairMessage.Info -> peerName = m.info.name.takeIf { it.isNotBlank() }
             is PairMessage.Offer -> incoming = Incoming(m.offer)
             is PairMessage.Answer -> {
                 val prepared = outgoing ?: return
@@ -383,12 +383,14 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
         }
     }
 
-    Text(tr("d_pair_paired_with", peerName ?: tr("d_pair_other_computer")), style = MaterialTheme.typography.titleMedium)
+    // No name: a whole sentence per language, since a bare "the other computer" would need a
+    // different grammatical case in each slot it filled.
+    Text(peerName?.let { tr("d_pair_paired_with", it) } ?: tr("d_pair_paired_unnamed"), style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(8.dp))
 
     val inc = incoming
     if (inc != null) {
-        IncomingPane(inc.offer, peerName ?: tr("d_pair_other_computer"), backupCode, { backupCode = it }) { accept ->
+        IncomingPane(inc.offer, peerName, backupCode, { backupCode = it }) { accept ->
             val picked = inc.offer.items.filter { it.id in accept }
             picked.forEach { expected[it.id] = it.size; acceptedItems[it.id] = it }
             incoming = null
@@ -492,10 +494,10 @@ private fun OutgoingGroup(
 
 @Composable
 private fun IncomingPane(
-    offer: PairOffer, from: String, backupCode: String, onBackupCode: (String) -> Unit, onAnswer: (List<Int>) -> Unit
+    offer: PairOffer, from: String?, backupCode: String, onBackupCode: (String) -> Unit, onAnswer: (List<Int>) -> Unit
 ) {
     val chosen = remember(offer) { mutableStateListOf<Int>().apply { addAll(offer.items.map { it.id }) } }
-    Text(tr("d_pair_incoming_heading", from), style = MaterialTheme.typography.titleSmall)
+    Text(from?.let { tr("d_pair_incoming_heading", it) } ?: tr("d_pair_incoming_heading_unnamed"), style = MaterialTheme.typography.titleSmall)
     offer.items.forEach { item ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = item.id in chosen, onCheckedChange = { if (it) chosen += item.id else chosen -= item.id })

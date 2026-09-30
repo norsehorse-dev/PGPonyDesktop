@@ -17,7 +17,11 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   `keyserver/` tree (MultiKeyServerService + the excluded KeyServerDirectory). Synced D4. The
   ktor "Android" client engine is a plain-JVM artifact, so the vendored services run
   unchanged; three Android-coupled files are excluded with twins (table below).
-- `app-strings/` = the six `res/values*/strings.xml` files (en, de, es, fr, ja, pt-rBR). Synced
+- `app-strings/` = Android's `res/values*/strings.xml` files: en, de, es, fr, ja, pt-rBR and ru, and
+  since 3.0.0 also ko, tr, uk and b+zh+Hans (Simplified Chinese), to match the mobile apps. The
+  last three do not exist at the v4.6.1 tag, so the 3.0.0 translation pass (2026-09-30) syncs
+  every locale from PGPonyAndroid main: a recorded exception to the tag rule, for resources only.
+  Main's English carries 4.7.0 keys the desktop does not use yet; they cost nothing. Synced
   D11. NOT compiled — mounted as RESOURCES by `processResources` under `/i18n/android/…`, beside
   the desktop-owned `i18n/` tree at `/i18n/desktop/…` (the two use Android's identical directory
   shape, so they need distinct prefixes or they overwrite each other in the jar). A key belongs

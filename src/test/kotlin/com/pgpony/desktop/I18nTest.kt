@@ -201,7 +201,8 @@ class I18nTest {
             val table = I18n.tableOf(I18n.DESKTOP_LAYER, tag)
             var absent = base.keys.filterNot { it in table }
             // Japanese has no `one` form; see everyTranslatedPluralHasAnOtherItem.
-            if (tag == "ja") absent = absent.filterNot { it.endsWith("/one") }
+            // Japanese, Korean and Chinese have no `one` form; see everyTranslatedPluralHasAnOtherItem.
+            if (tag in setOf("ja", "ko", "zh-Hans")) absent = absent.filterNot { it.endsWith("/one") }
             if (absent.isNotEmpty()) gaps += "$tag: ${absent.sorted()}"
         }
         assertTrue(gaps.isEmpty(), "untranslated desktop keys:\n" + gaps.joinToString("\n"))
@@ -300,7 +301,11 @@ class I18nTest {
             "fr" to oneAtExactlyOne,
             "pt-BR" to oneAtExactlyOne,
             "ja" to List(7) { "other" },
+            "ko" to List(7) { "other" },
+            "zh-Hans" to List(7) { "other" },
+            "tr" to oneAtExactlyOne,
             "ru" to listOf("one", "few", "few", "many", "many", "one", "one"),
+            "uk" to listOf("one", "few", "few", "many", "many", "one", "one"),
         )
         for ((tag, categories) in expected) {
             for ((i, count) in counts.withIndex()) {
@@ -467,7 +472,13 @@ class I18nTest {
         assertEquals("pt-BR", I18n.systemMatch(Locale.forLanguageTag("pt-BR")))
         assertEquals("en", I18n.systemMatch(Locale.forLanguageTag("pt-PT")))
         assertEquals("en", I18n.systemMatch(Locale.forLanguageTag("pt")))
-        assertEquals("en", I18n.systemMatch(Locale.KOREA))
+        assertEquals("ko", I18n.systemMatch(Locale.KOREA))
+        assertEquals("tr", I18n.systemMatch(Locale.forLanguageTag("tr-TR")))
+        assertEquals("uk", I18n.systemMatch(Locale.forLanguageTag("uk-UA")))
+        assertEquals("zh-Hans", I18n.systemMatch(Locale.SIMPLIFIED_CHINESE))
+        assertEquals("zh-Hans", I18n.systemMatch(Locale.forLanguageTag("zh-Hans-SG")))
+        assertEquals("en", I18n.systemMatch(Locale.TRADITIONAL_CHINESE))
+        assertEquals("en", I18n.systemMatch(Locale.forLanguageTag("zh-Hant-HK")))
         assertEquals("en", I18n.systemMatch(Locale.forLanguageTag("und")))
     }
 

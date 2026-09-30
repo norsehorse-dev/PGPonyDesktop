@@ -1,29 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PGPony Desktop, the DESKTOP-OWNED string layer, Russian (ru).
-
-  Translations of the desktop-only keys declared in values/strings.xml. Keys the
-  desktop does not own fall through to the vendored Android layer, which carries its
-  own Russian. Placeholders (%1$s, %2$d) keep the base arity and order. Russian plural
-  forms follow CLDR: one, few, many, other. Where a count sits after the preposition
-  "для", the noun is genitive plural for every count above one, so one and other alone
-  are correct and complete there.
+  PGPony Desktop: the desktop-owned string layer, Russian.
+  Keys and order follow ../values/strings.xml; see its header for how the layers work.
+  A key missing here falls back to the English base.
 -->
 <resources>
 
-    <!-- Navigation rail -->
+    <!-- ── Navigation rail ─────────────────────────────────────────────── -->
     <string name="d_nav_crypto">Шифрование</string>
     <string name="d_nav_cards">Аппаратные ключи</string>
 
-    <!-- Settings, Network -->
+    <!-- ── Settings · Network ──────────────────────────────────────────── -->
     <string name="d_settings_section_network">Сеть</string>
     <string name="d_settings_proxy_title">Прокси</string>
     <string name="d_settings_proxy_off">Прямое соединение</string>
     <string name="d_settings_proxy_tor">Tor (локальный демон, %1$s:%2$d)</string>
     <string name="d_settings_proxy_custom">Свой прокси SOCKS</string>
-    <string name="d_settings_proxy_tor_note">Требуется демон Tor на этом компьютере: браузер Tor (пока он запущен) и служба tor слушают на %1$s:%2$d.</string>
+    <string name="d_settings_proxy_tor_note">Требуется демон Tor на этом компьютере. Браузер Tor (пока он запущен) и служба tor принимают подключения на %1$s:%2$d.</string>
     <string name="d_status_proxy_set">Прокси задан: %1$s</string>
-
     <string name="d_settings_keyservers_title">Серверы ключей (порядок поиска)</string>
     <string name="d_keyservers_lookup">Поиск</string>
     <string name="d_keyservers_publish">Публикация</string>
@@ -37,59 +31,59 @@
     <string name="d_status_keyserver_added">Добавлен сервер ключей %1$s</string>
     <string name="d_settings_autorefresh">Автоматически обновлять ключи с серверов (каждые 12 часов, пока приложение запущено)</string>
 
-    <!-- Settings, Backup -->
-    <string name="d_settings_backup_export">Резервная копия связки ключей…</string>
-    <string name="d_settings_backup_restore">Восстановить из копии…</string>
+    <!-- ── Settings · Backup ───────────────────────────────────────────── -->
+    <string name="d_settings_backup_export">Создать резервную копию связки ключей…</string>
+    <string name="d_settings_backup_restore">Восстановить из резервной копии…</string>
     <string name="d_settings_backup_note">Формат .pgpony восстанавливается в PGPony для iOS и Android; резервные копии OpenKeychain тоже восстанавливаются.</string>
     <string name="d_settings_subtitle">Всё, что относится к PGPony на этом компьютере.</string>
     <string name="d_settings_network_note">Прокси, серверы ключей и автоматическое обновление ключей.</string>
     <string name="d_settings_appearance_note">Тема и язык. Оба применяются сразу.</string>
 
-    <!-- Settings, Password store -->
+    <!-- ── Settings · Password store ───────────────────────────────────── -->
     <string name="d_settings_pass_show_tab">Показывать вкладку «Хранилище паролей»</string>
-    <string name="d_settings_pass_note">Просматривает стандартное хранилище `pass`: папку с файлами .gpg и файлами получателей .gpg-id, и расшифровывает записи вашей связкой ключей, программным или аппаратным ключом. Только чтение: PGPony никогда не пишет в хранилище.</string>
+    <string name="d_settings_pass_note">Просматривает стандартное хранилище `pass` (папку с файлами .gpg и файлами получателей .gpg-id) и расшифровывает записи ключами из вашей связки, программными или аппаратными. Только чтение: PGPony никогда не пишет в хранилище.</string>
     <string name="d_settings_pass_default_location">Расположение по умолчанию:</string>
     <plurals name="d_settings_pass_status_configured">
-        <item quantity="one">Настроено хранилище (%1$d). Управляйте им на вкладке «Хранилище паролей».</item>
-        <item quantity="few">Настроено хранилищ: %1$d. Управляйте ими на вкладке «Хранилище паролей».</item>
-        <item quantity="many">Настроено хранилищ: %1$d. Управляйте ими на вкладке «Хранилище паролей».</item>
-        <item quantity="other">Настроено хранилищ: %1$d. Управляйте ими на вкладке «Хранилище паролей».</item>
+        <item quantity="one">Настроено %1$d хранилище. Управляйте им на вкладке «Хранилище паролей».</item>
+        <item quantity="few">Настроено %1$d хранилища. Управляйте ими на вкладке «Хранилище паролей».</item>
+        <item quantity="many">Настроено %1$d хранилищ. Управляйте ими на вкладке «Хранилище паролей».</item>
+        <item quantity="other">Настроено %1$d хранилища. Управляйте ими на вкладке «Хранилище паролей».</item>
     </plurals>
     <string name="d_settings_pass_status_exists">Эта папка существует. Добавьте её на вкладке «Хранилище паролей».</string>
     <string name="d_settings_pass_status_none">Здесь пока нет хранилища. Если задана переменная PASSWORD_STORE_DIR, она учитывается; иначе добавьте любую папку на вкладке «Хранилище паролей».</string>
 
-    <!-- Settings, Clipboard -->
+    <!-- ── Settings · Clipboard ────────────────────────────────────────── -->
     <string name="d_settings_clipboard_autoclear">Автоматически очищать скопированные секреты</string>
     <string name="d_settings_clipboard_seconds_label">Секунды</string>
-    <string name="d_settings_clipboard_note">От 5 до 600 секунд. Таймер очищает буфер обмена, только если в нём всё ещё то, что поместил туда PGPony: если вы скопировали что-то другое, буфер остаётся нетронутым. Учтите, что менеджер буфера обмена или служба синхронизации (KDE Klipper, облачный буфер Windows, Universal Clipboard в macOS) может хранить копию, до которой PGPony не дотянется.</string>
+    <string name="d_settings_clipboard_note">От 5 до 600 секунд. Таймер очищает буфер обмена, только если в нём всё ещё то, что поместил туда PGPony. Если вы скопировали что-то другое, буфер остаётся нетронутым. Учтите, что менеджер буфера обмена или служба синхронизации (KDE Klipper, облачный буфер обмена Windows, Universal Clipboard в macOS) может хранить копию, к которой у PGPony нет доступа.</string>
     <string name="d_status_clipboard_seconds">Буфер обмена очистится через %1$d с</string>
 
-    <!-- Settings, Appearance, Language -->
-    <string name="d_settings_language_system">Система (%1$s)</string>
+    <!-- ── Settings · Appearance · Language ────────────────────────────── -->
+    <string name="d_settings_language_system">Как в системе (%1$s)</string>
     <string name="d_settings_language_note">Всё окно переключается сразу, без перезапуска. Текст из ваших ключей или файлов показывается так, как он сохранён, и никогда не переводится.</string>
 
-    <!-- Settings, Storage -->
+    <!-- ── Settings · Storage ──────────────────────────────────────────── -->
     <string name="d_settings_section_storage">Хранилище данных</string>
     <string name="d_settings_storage_data_folder">Папка данных:</string>
-    <string name="d_settings_storage_note">Метаданные ключей хранятся в pgpony.db (та же схема Room, что и в PGPony для Android); материал ключей в ASCII-броне лежит в keys/, по одному файлу на половину ключа, с правами 0600. Секретные ключи остаются под своей защитой парольной фразой (S2K) в покое: хранилище не добавляет собственного шифрования.</string>
+    <string name="d_settings_storage_note">Метаданные ключей хранятся в pgpony.db (та же схема Room, что и в PGPony для Android); данные ключей в ASCII-броне лежат в keys/, по одному файлу на каждую половину ключа, с правами 0600. Закрытые ключи при хранении остаются под собственной защитой парольной фразой (S2K). Хранилище не добавляет своего шифрования.</string>
 
-    <!-- Settings, About -->
+    <!-- ── Settings · About ────────────────────────────────────────────── -->
     <string name="d_settings_about_version">PGPony Desktop %1$s</string>
-    <string name="d_settings_about_note">Тот же движок OpenPGP и схема Room, что и в PGPony для Android (вставлены как есть, не переписаны).</string>
+    <string name="d_settings_about_note">Тот же движок OpenPGP и схема Room, что и в PGPony для Android (код включён как есть, а не переписан).</string>
     <string name="d_about_title">О приложении PGPony</string>
     <string name="d_about_links">Ссылки</string>
 
-    <!-- Shared desktop buttons -->
+    <!-- ── Shared desktop buttons ──────────────────────────────────────── -->
     <string name="d_common_apply">Применить</string>
     <string name="d_common_add">Добавить</string>
     <string name="d_common_clear_now">Очистить сейчас</string>
     <string name="d_common_remove">Удалить</string>
 
-    <!-- Settings, Storage, desktop-only actions -->
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
     <string name="d_settings_storage_open_folder">Открыть папку</string>
     <string name="d_settings_storage_copy_path">Копировать путь</string>
 
-    <!-- Settings, About, links and diagnostics -->
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
     <string name="d_settings_about_repo">Исходный код на GitHub</string>
     <string name="d_settings_about_repo_note">Исходный код десктопной версии публикуется вместе с выпуском 1.0. Приложение для Android и общие криптоядра уже открыты.</string>
     <string name="d_settings_about_issues">Сообщить о проблеме</string>
@@ -97,108 +91,108 @@
     <string name="d_settings_about_runtime_label">Среда выполнения:</string>
     <string name="d_settings_about_copy_diagnostics">Копировать</string>
 
-    <!-- Settings, More from NorseHorse -->
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
     <string name="d_settings_section_apps">Ещё от NorseHorse</string>
     <string name="d_settings_apps_note">Остальные приложения того же разработчика. Ссылки открываются в браузере.</string>
     <string name="d_app_pgpony_desc">Одна связка ключей везде: один движок OpenPGP и один формат резервных копий, от телефона до компьютера.</string>
     <string name="d_app_carrierpony_desc">Сквозное шифрование сообщений и передача файлов поверх OpenPGP. Без учётной записи и номера телефона.</string>
-    <string name="d_app_agepony_desc">Шифрование файлов и отсоединённые подписи на основе age. Шифруйте на имя пользователя GitHub, подписывайте ключом безопасности.</string>
-    <string name="d_app_quorumpony_desc">Разделите секрет между резервными картами. Пороговое их число восстановит его; одна карта не раскрывает ничего.</string>
+    <string name="d_app_agepony_desc">Шифрование файлов и отсоединённые подписи на основе age. Шифруйте для пользователя GitHub по его имени, подписывайте ключом безопасности.</string>
+    <string name="d_app_quorumpony_desc">Разделите секрет между резервными картами. Нужное число карт восстанавливает его, а любая одна карта ничего не раскрывает.</string>
     <string name="d_app_relaypony_desc">Отправляйте файлы напрямую с одного устройства на другое по Wi-Fi. Сквозное шифрование, без сервера посередине.</string>
     <string name="d_app_burnpony_desc">Самоуничтожающиеся зашифрованные заметки: запечатываются на вашем устройстве и исчезают после прочтения.</string>
     <string name="d_app_vaultpony_desc">Зашифрованные хранилища на телефоне в формате контейнеров VeraCrypt, поэтому то же хранилище открывается и на компьютере.</string>
     <string name="d_app_passpony_desc">Клиент для хранилищ паролей pass и passage. Пароли остаются зашифрованными файлами в вашем собственном git-репозитории.</string>
     <string name="d_app_hashpony_desc">Вычисляйте и проверяйте хеши файлов, как sha256sum: файлы контрольных сумм, проверка папок и все распространённые алгоритмы.</string>
-    <string name="d_app_tappony_desc">Поднесите телефон к NFC-метке, и её ID и содержимое уйдут на ваш собственный сервер. Без аккаунта, без облака.</string>
+    <string name="d_app_tappony_desc">Поднесите телефон к NFC-метке, и её ID и содержимое уйдут на ваш собственный сервер. Без учётной записи, без облака.</string>
 
-    <!-- Status line -->
+    <!-- ── Status line ───────────────────────────────────── -->
     <string name="d_status_copied">Скопировано в буфер обмена.</string>
-    <string name="d_status_open_failed">Не удалось открыть %1$s; вместо этого адрес скопирован в буфер обмена.</string>
+    <string name="d_status_open_failed">Не удалось открыть %1$s. Вместо этого адрес скопирован в буфер обмена.</string>
 
-    <!-- Encrypt / Decrypt screen: tabs and file operations -->
+    <!-- ── Tabs and file operations ────────────────────────────────────── -->
     <string name="d_crypto_tab_files">Файлы</string>
     <string name="d_crypto_tab_message">Сообщение</string>
-    <string name="d_crypto_fileop_sign">Подписать (отсоединённо)</string>
-    <string name="d_crypto_fileop_verify">Проверить (отсоединённо)</string>
+    <string name="d_crypto_fileop_sign">Подписать (отсоединённая подпись)</string>
+    <string name="d_crypto_fileop_verify">Проверить (отсоединённая подпись)</string>
     <string name="d_crypto_err_generic">Операция не удалась</string>
 
-    <!-- Files pane -->
+    <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">Добавить файлы…</string>
     <string name="d_crypto_drop_hint">…или перетащите файлы в любое место окна</string>
     <string name="d_crypto_no_files">Файлы не выбраны.</string>
     <string name="d_crypto_no_files_title">Нет файлов в очереди</string>
     <string name="d_crypto_result_ok">ОК</string>
     <string name="d_crypto_result_failed">ОШИБКА</string>
-    <string name="d_crypto_signer_pass_label">Парольная фраза подписывающего ключа (пусто, если без защиты)</string>
-    <string name="d_crypto_err_composite_pass">Этот подписывающий ключ защищён парольной фразой. Введите её, чтобы подписать.</string>
-    <string name="d_crypto_err_composite_encrypt_sign">Составные ключи ML-DSA не могут подписывать при шифровании. Используйте вкладку «Подпись» или выберите классический подписывающий ключ.</string>
+    <string name="d_crypto_signer_pass_label">Парольная фраза ключа подписи (пусто, если нет защиты)</string>
+    <string name="d_crypto_err_composite_pass">Этот ключ подписи защищён парольной фразой. Введите её, чтобы подписать.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">Составные ключи ML-DSA не могут подписывать при шифровании. Используйте вкладку «Подписать» или выберите классический ключ подписи.</string>
     <string name="d_crypto_armor_gpg">ASCII-броня (.asc вместо двоичного .gpg)</string>
     <string name="d_crypto_armor_sig">ASCII-броня (.asc вместо двоичного .sig)</string>
     <string name="d_crypto_decrypt_pass_label">Парольная фраза ключа или сообщения</string>
     <string name="d_crypto_decrypt_files_note">Расшифрованные файлы восстанавливают исходное имя из сообщения, если оно есть, и никогда не перезаписывают существующие файлы.</string>
     <string name="d_crypto_sign_as_colon">Подписать как:</string>
     <string name="d_crypto_verify_files_hint">Выберите подпись .sig или .asc, рядом с которой лежит файл с содержимым (то же имя без расширения), либо ровно два файла: подпись и содержимое.</string>
-    <string name="d_crypto_err_no_pairing">Пара «подпись и содержимое» не найдена; см. подсказку выше</string>
+    <string name="d_crypto_err_no_pairing">Пара «подпись и содержимое» не найдена. См. подсказку выше.</string>
     <string name="d_crypto_err_no_signer">Нет пары ключей для подписи</string>
     <string name="d_crypto_files_done">Обработано файлов: %1$d из %2$d</string>
-    <string name="d_crypto_files_partial">Успешно: %1$d из %2$d; см. результаты по каждому файлу</string>
+    <string name="d_crypto_files_partial">Успешно: %1$d из %2$d. См. результаты по каждому файлу.</string>
     <string name="d_crypto_run_op">Выполнить: %1$s</string>
-    <string name="d_crypto_input_verify">Сообщение с открытой подписью или бронированная подпись</string>
+    <string name="d_crypto_input_verify">Сообщение с открытой подписью или подпись в ASCII-броне</string>
 
-    <!-- Encrypt tab -->
+    <!-- ── Encrypt tab ─────────────────────────────────────────────────── -->
     <string name="d_crypto_encrypt_with">Шифровать с помощью:</string>
     <string name="d_crypto_with_public_keys">Открытые ключи</string>
     <string name="d_crypto_attach_files">Прикрепить файлы…</string>
     <string name="d_crypto_clear_attachments">Убрать вложения</string>
-    <string name="d_crypto_bundle_note">Отправляется как набор PGP/MIME: тело плюс вложения (%1$d) в одном зашифрованном multipart/mixed.</string>
+    <string name="d_crypto_bundle_note">Отправляется как комплект PGP/MIME: текст и вложения (%1$d) в одном зашифрованном multipart/mixed.</string>
     <string name="d_crypto_err_card_or_recipient_load">Не удалось загрузить получателя или ключ карты</string>
     <string name="d_crypto_card_sign_encrypt_title">Подписать и зашифровать на %1$s</string>
     <string name="d_crypto_hardware_key">аппаратный ключ</string>
-    <string name="d_crypto_err_pubkey_missing">Не удалось загрузить открытый ключ для «%1$s»: сохранённый материал ключа отсутствует. Удалите эту запись из связки ключей и импортируйте открытый ключ заново.</string>
-    <string name="d_crypto_err_signer_load">Не удалось загрузить подписывающий ключ %1$s; ничего не зашифровано. (Снимите флажок «Подписать как», чтобы отправить без подписи.)</string>
+    <string name="d_crypto_err_pubkey_missing">Не удалось загрузить открытый ключ для «%1$s»: сохранённые данные ключа отсутствуют. Удалите эту запись из связки ключей и импортируйте открытый ключ заново.</string>
+    <string name="d_crypto_err_signer_load">Не удалось загрузить ключ подписи %1$s, поэтому ничего не зашифровано. (Снимите флажок «Подписать как», чтобы отправить без подписи.)</string>
     <string name="d_crypto_banner_encrypted">Зашифровано для получателей: %1$d</string>
     <string name="d_crypto_banner_encrypted_card">Зашифровано для получателей: %1$d, подписано на карте как %2$s</string>
     <string name="d_crypto_banner_encrypted_pass">Зашифровано парольной фразой</string>
     <string name="d_crypto_banner_signed_as">, подписано как %1$s (%2$s)</string>
     <string name="d_crypto_banner_unsigned">, БЕЗ ПОДПИСИ</string>
 
-    <!-- Banners: stems and fragments (each fragment keeps its own leading separator) -->
-    <string name="d_crypto_banner_bundle_suffix"> · набор с вложениями: %1$d</string>
+    <!-- ── Banners: stems and fragments ────────────────────────────────── -->
+    <string name="d_crypto_banner_bundle_suffix"> · комплект с вложениями: %1$d</string>
     <string name="d_crypto_banner_attach_suffix"> · вложений: %1$d</string>
-    <string name="d_crypto_banner_signer_suffix"> · %1$s</string>
-    <string name="d_crypto_banner_keyid_suffix"> (идентификатор ключа %1$s)</string>
+    <string name="d_crypto_banner_signer_suffix">: %1$s</string>
+    <string name="d_crypto_banner_keyid_suffix"> (ID ключа %1$s)</string>
 
-    <!-- Decrypt tab -->
-    <string name="d_crypto_decrypt_note">Принимает бронированное сообщение или полный .eml в формате PGP/MIME; наборы показывают вложения рядом с результатом.</string>
+    <!-- ── Decrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_decrypt_note">Принимает сообщение в ASCII-броне или полный .eml в формате PGP/MIME. Для комплектов вложения показываются рядом с результатом.</string>
     <string name="d_crypto_card_decrypt_title">Расшифровать на %1$s</string>
-    <string name="d_crypto_banner_decrypted_card_verified">Расшифровано на карте · подпись ПОДТВЕРЖДЕНА</string>
+    <string name="d_crypto_banner_decrypted_card_verified">Расшифровано на карте · подпись ПРОВЕРЕНА</string>
     <string name="d_crypto_banner_decrypted_card_unknown">Расшифровано на карте · подписавшего нет в вашей связке ключей</string>
     <string name="d_crypto_banner_decrypted_card_unsigned">Расшифровано на карте · без подписи</string>
-    <string name="d_crypto_banner_decrypted_verified">Расшифровано · подпись ПОДТВЕРЖДЕНА</string>
+    <string name="d_crypto_banner_decrypted_verified">Расшифровано · подпись ПРОВЕРЕНА</string>
     <string name="d_crypto_banner_decrypted_unknown">Расшифровано · подписано ключом, которого нет в вашей связке ключей</string>
     <string name="d_crypto_banner_decrypted_unsigned">Расшифровано · без подписи</string>
 
-    <!-- Sign tab -->
+    <!-- ── Sign tab ────────────────────────────────────────────────────── -->
     <string name="d_crypto_detached_toggle">Отсоединённая подпись (только подпись, текст остаётся отдельно)</string>
     <string name="d_crypto_clear_signed">Открытая подпись</string>
     <string name="d_crypto_err_card_pubkey">Не удалось загрузить открытый ключ карты</string>
     <string name="d_crypto_card_sign_title">Подписать на %1$s</string>
     <string name="d_crypto_banner_signed_card">%1$s на карте · %2$s</string>
     <string name="d_crypto_banner_signed">%1$s · %2$s</string>
-    <string name="d_crypto_err_signer_ring">Не удалось загрузить секретную связку подписывающего ключа</string>
+    <string name="d_crypto_err_signer_ring">Не удалось загрузить закрытый ключ для подписи</string>
 
-    <!-- Verify tab -->
+    <!-- ── Verify tab ──────────────────────────────────────────────────── -->
     <string name="d_crypto_verify_hint">Вставьте сообщение с открытой подписью в поле выше. Для отсоединённой подписи вставьте подпись выше, а исходный текст ниже.</string>
     <string name="d_crypto_detached_content_label">Исходный текст (только для проверки отсоединённой подписи)</string>
     <string name="d_crypto_err_detached_needs_text">Отсоединённая подпись: вставьте исходный текст во второе поле</string>
-    <string name="d_crypto_err_is_encrypted">Это зашифрованное сообщение; используйте вкладку «Расшифровать»</string>
+    <string name="d_crypto_err_is_encrypted">Это зашифрованное сообщение. Используйте вкладку «Расшифровать».</string>
     <string name="d_crypto_err_no_framing">Не найдено распознаваемого обрамления подписи PGP</string>
-    <string name="d_crypto_banner_verified">Подпись ПОДТВЕРЖДЕНА: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_verified">Подпись ПРОВЕРЕНА: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_invalid">Подпись НЕДЕЙСТВИТЕЛЬНА: содержимое не соответствует подписи</string>
-    <string name="d_crypto_banner_unknown_signer">Подписано ключом, которого нет в вашей связке ключей; импортируйте открытый ключ подписавшего для проверки</string>
-    <string name="d_crypto_banner_no_signature">В введённых данных подпись не найдена</string>
+    <string name="d_crypto_banner_unknown_signer">Подписано ключом, которого нет в вашей связке ключей. Импортируйте открытый ключ подписавшего, чтобы проверить подпись.</string>
+    <string name="d_crypto_banner_no_signature">Во введённых данных подпись не найдена</string>
 
-    <!-- Output pane -->
+    <!-- ── Output pane ─────────────────────────────────────────────────── -->
     <string name="d_crypto_output">Результат</string>
     <string name="d_crypto_attachment_meta">%1$s · %2$d байт</string>
     <string name="d_common_save_as">Сохранить…</string>
@@ -209,14 +203,14 @@
     <string name="d_crypto_cancelled">Отменено</string>
     <string name="d_crypto_no_signer_available">Нет доступной пары ключей</string>
 
-    <!-- Hardware-key batch prompts -->
+    <!-- ── Hardware-key batch prompts ──────────────────────────────────── -->
     <string name="d_crypto_card_sign_files">Подписать файлы (%1$d) на %2$s</string>
     <string name="d_crypto_card_sign_encrypt_files">Подписать и зашифровать файлы (%1$d) на %2$s</string>
     <string name="d_crypto_card_decrypt_files">Расшифровать файлы (%1$d) на %2$s</string>
 
-    <!-- Password Store screen: store bar -->
-    <string name="d_pass_store_unreadable">Не удаётся прочитать %1$s: перемещено, отключено или больше недоступно для чтения.</string>
-    <string name="d_pass_not_a_store">Это не читаемое хранилище паролей: %1$s</string>
+    <!-- ── Store bar ───────────────────────────────────────────────────── -->
+    <string name="d_pass_store_unreadable">Не удаётся прочитать %1$s: папка перемещена, отключена или больше недоступна для чтения.</string>
+    <string name="d_pass_not_a_store">Не является доступным для чтения хранилищем паролей: %1$s</string>
     <string name="d_pass_store_added">Хранилище паролей добавлено: %1$s</string>
     <string name="d_pass_choose_store">Выбрать хранилище</string>
     <string name="d_pass_add_store">Добавить хранилище…</string>
@@ -225,26 +219,26 @@
     <string name="d_pass_rescan">Пересканировать</string>
     <string name="d_pass_empty_title">Пока нет хранилища паролей</string>
     <string name="d_pass_select_entry_title">Ничего не выбрано</string>
-    <string name="d_pass_store_removed">%1$s удалено из PGPony (папка не тронута)</string>
+    <string name="d_pass_store_removed">Хранилище %1$s убрано из PGPony (сама папка не затронута)</string>
     <string name="d_pass_choose_folder">Выбрать папку хранилища паролей</string>
 
-    <!-- Browser pane -->
+    <!-- ── Browser pane ────────────────────────────────────────────────── -->
     <string name="d_pass_search_label">Поиск записей</string>
     <string name="d_pass_no_entries">Записей нет.</string>
     <plurals name="d_pass_match_count">
         <item quantity="one">%1$d совпадение</item>
         <item quantity="few">%1$d совпадения</item>
         <item quantity="many">%1$d совпадений</item>
-        <item quantity="other">%1$d совпадений</item>
+        <item quantity="other">%1$d совпадения</item>
     </plurals>
     <string name="d_pass_up">На папку вверх</string>
     <string name="d_pass_select_entry">Выберите запись, чтобы расшифровать её.</string>
-    <string name="d_pass_empty_intro">Укажите PGPony на хранилище `pass`: папку с файлами .gpg, зашифрованными OpenPGP, в раскладке, которую используют стандартные инструменты password-store.</string>
+    <string name="d_pass_empty_intro">Укажите PGPony хранилище `pass`: папку с файлами .gpg, зашифрованными OpenPGP, в структуре, которую используют стандартные инструменты password-store.</string>
     <string name="d_pass_empty_detail">Хранилище читается на месте, поэтому то, что его синхронизирует (git, Syncthing, Nextcloud), продолжает работать. PGPony только читает: он никогда ничего не пишет, не перемещает и не перешифровывает в папке. Записи расшифровываются по одной, когда вы их открываете; при просмотре дерева читаются только имена файлов.</string>
 
-    <!-- Entry pane -->
+    <!-- ── Entry pane ──────────────────────────────────────────────────── -->
     <string name="d_pass_entry_missing">Файл записи отсутствует или недоступен для чтения.</string>
-    <string name="d_pass_no_matching_key">Ни один ключ в вашей связке не может открыть эту запись. Импортируйте секретный ключ, для которого она зашифрована, или подключите аппаратный ключ, который его содержит.</string>
+    <string name="d_pass_no_matching_key">Ни один ключ в вашей связке не может открыть эту запись. Импортируйте закрытый ключ, для которого она зашифрована, или свяжите аппаратный ключ, на котором он хранится.</string>
     <string name="d_pass_decrypting">Расшифровка…</string>
     <string name="d_pass_card_entry">Эта запись зашифрована для аппаратного ключа.</string>
     <string name="d_pass_card_key_missing">Связанного ключа карты для этой записи нет в вашей связке ключей.</string>
@@ -254,34 +248,32 @@
     <string name="d_common_reveal">Показать</string>
     <string name="d_common_hide">Скрыть</string>
     <string name="d_pass_password_copied">Пароль скопирован</string>
-    <string name="d_pass_password_copied_clearing">Пароль скопирован; буфер обмена очистится через %1$d с</string>
+    <string name="d_pass_password_copied_clearing">Пароль скопирован. Буфер обмена очистится через %1$d с</string>
     <string name="d_pass_copy_password">Копировать пароль</string>
     <string name="d_pass_clipboard_countdown">Буфер обмена очистится через %1$d с</string>
     <string name="d_pass_fields">Поля</string>
-    <string name="d_pass_field_copied">%1$s скопировано</string>
+    <string name="d_pass_field_copied">Скопировано: %1$s</string>
     <string name="d_pass_copy_field">Копировать %1$s</string>
     <string name="d_pass_lock">Заблокировать</string>
     <string name="d_pass_relock_note">Блокируется автоматически через %1$d с.</string>
 
-    <!-- One-time codes -->
-    <string name="d_pass_otp_unparsable">PGPony не может создавать коды из этого URI: это не URI TOTP, или его секрет не является корректным base32. Используйте для этой записи приложение-аутентификатор.</string>
+    <!-- ── One-time codes ──────────────────────────────────────────────── -->
+    <string name="d_pass_otp_unparsable">PGPony не может создавать коды из этого URI. Это не URI TOTP, или его секрет не является корректной строкой base32. Используйте для этой записи приложение-аутентификатор.</string>
     <string name="d_pass_otp_uri_copied">URI otpauth скопирован</string>
     <string name="d_pass_otp_display_only">PGPony показывает этот URI настройки, но не создаёт коды на этом устройстве. Скопируйте его в приложение-аутентификатор.</string>
     <string name="d_pass_copy_uri">Копировать URI</string>
     <string name="d_pass_otp_no_provider">В этой JVM нет провайдера HMAC-%1$s, поэтому код здесь создать нельзя.</string>
     <string name="d_pass_code_copied">Код скопирован</string>
-    <string name="d_pass_code_copied_clearing">Код скопирован; буфер обмена очистится через %1$d с</string>
+    <string name="d_pass_code_copied_clearing">Код скопирован. Буфер обмена очистится через %1$d с</string>
     <string name="d_pass_copy_code">Копировать одноразовый код</string>
     <string name="d_pass_otp_rolls_in">сменится через %1$d с</string>
-    <string name="d_pass_otp_meta">%1$s · %2$s, %3$d цифр, %4$d с</string>
+    <string name="d_pass_otp_meta">%1$s: %2$s, %3$d цифр, %4$d с</string>
     <string name="d_pass_show_uri">Показать URI настройки</string>
     <string name="d_pass_hide_uri">Скрыть URI настройки</string>
     <string name="d_pass_copy_setup_uri">Копировать URI настройки</string>
-
-    <!-- Hardware Keys screen -->
     <string name="d_cards_subtitle">Смарт-карты OpenPGP по USB: YubiKey 5, Token2, Nitrokey 3 и подобные. Секреты хранятся на ключе и никогда не попадают на этот компьютер.</string>
 
-    <!-- Reader row -->
+    <!-- ── Reader row (USB PC/SC — the phone taps NFC instead) ─────────── -->
     <string name="d_cards_reader_label">Считыватель:</string>
     <string name="d_cards_no_reader">Считыватель не найден</string>
     <string name="d_cards_reader_with_card">%1$s · карта вставлена</string>
@@ -291,26 +283,26 @@
     <string name="d_cards_section_reader">Считыватель</string>
     <string name="d_cards_no_reader_title">Считыватель не обнаружен</string>
     <string name="d_cards_no_card_title">Карта ещё не прочитана</string>
-    <string name="d_cards_no_card_body">Вставьте аппаратный ключ и выберите «Прочитать карту». PGPony читает только открытые слоты карты; на неё ничего не записывается.</string>
+    <string name="d_cards_no_card_body">Вставьте аппаратный ключ и выберите «Прочитать карту». PGPony читает только открытые слоты карты. На неё ничего не записывается.</string>
 
-    <!-- Card info -->
+    <!-- ── Card info ──────────────────────────────────────────────────── -->
     <string name="d_cards_aid">AID %1$s</string>
-    <string name="d_cards_pin_tries">Осталось попыток PIN · пользователь: %1$d · админ: %2$d</string>
+    <string name="d_cards_pin_tries">Осталось попыток PIN: пользователь %1$d · администратор %2$d</string>
 
-    <!-- Pairing -->
-    <string name="d_cards_paired">Связано · запись связки ключей: %1$s</string>
+    <!-- ── Pairing ────────────────────────────────────────────────────── -->
+    <string name="d_cards_paired">Связано. Запись в связке ключей: %1$s</string>
     <string name="d_cards_pair">Связать со связкой ключей</string>
     <string name="d_cards_keygen_open">Создать ключи на карте…</string>
-    <string name="d_cards_pair_note">Связывание записывает карту в вашу связку ключей, чтобы на неё можно было адресовать сообщения, а расшифровка и подпись шли через оборудование. Если сертификат открытого ключа карты уже есть в вашей связке (импортируйте его или получите с сервера ключей), связывание присоединяется к этой записи, включая раскладки с первичным ключом вне карты.</string>
-    <string name="d_cards_keygen_done">Создано на карте и связано: %1$s. Экспортируйте и СДЕЛАЙТЕ РЕЗЕРВНУЮ КОПИЮ открытого ключа; секретные ключи не могут покинуть карту.</string>
+    <string name="d_cards_pair_note">Связывание записывает карту в вашу связку ключей, чтобы для неё можно было шифровать сообщения, а расшифровка и подпись выполнялись на самом устройстве. Если сертификат открытого ключа карты уже есть в вашей связке (импортируйте его или получите с сервера ключей), карта привязывается к этой записи, в том числе когда основной ключ хранится отдельно от карты.</string>
+    <string name="d_cards_keygen_done">Создано на карте и связано: %1$s. Экспортируйте открытый ключ и СОХРАНИТЕ ЕГО РЕЗЕРВНУЮ КОПИЮ: закрытые ключи не могут покинуть карту.</string>
 
-    <!-- Management buttons -->
+    <!-- ── Management buttons (ellipsis = opens a dialog) ──────────────── -->
     <string name="d_cards_change_pin_open">Сменить PIN…</string>
     <string name="d_cards_change_admin_open">Сменить админ-PIN…</string>
     <string name="d_cards_unblock_open">Разблокировать PIN…</string>
     <string name="d_cards_reset_open">Сброс к заводским настройкам…</string>
 
-    <!-- PIN cache -->
+    <!-- ── PIN cache ──────────────────────────────────────────────────── -->
     <string name="d_cards_pin_cache_title">Кэш PIN</string>
     <string name="d_cards_pin_cache_toggle">Запоминать пользовательский PIN после успешной операции</string>
     <string name="d_cards_pin_cache_keep_for">Хранить:</string>
@@ -318,82 +310,80 @@
     <string name="d_cards_pin_held_no_timer">PIN удерживается (без таймера)</string>
     <string name="d_cards_pin_cache_note">Хранится только в памяти, никогда не пишется на диск. Неверный PIN, выход из приложения или «Очистить сейчас» сбрасывают его. Админ-PIN не кэшируется никогда.</string>
 
-    <!-- Dialogs -->
+    <!-- ── Dialogs ────────────────────────────────────────────────────── -->
     <string name="d_cards_new_pin_min6">Новый PIN (мин. 6)</string>
     <string name="d_cards_new_admin_min8">Новый админ-PIN (мин. 8)</string>
     <string name="d_cards_new_user_pin_min6">Новый пользовательский PIN (мин. 6)</string>
-    <string name="d_cards_pin_retry_warning">Неверный ввод расходует попытки; после слишком многих карта блокируется.</string>
+    <string name="d_cards_pin_retry_warning">Неверный ввод расходует попытки. После слишком большого числа ошибок карта блокируется.</string>
     <string name="d_cards_reset_warning">Это СТИРАЕТ все ключи на карте и сбрасывает оба PIN к значениям по умолчанию (123456 / 12345678). Ключи, созданные на карте, восстановить нельзя. Отменить это действие невозможно.</string>
     <string name="d_cards_reset_type_prompt">Введите %1$s для подтверждения</string>
     <string name="d_cards_reset_confirm">Стереть карту</string>
-    <string name="d_cards_keygen_warning">Создаёт подписывающий ключ Ed25519 и шифрующий ключ Cv25519 НА карте. ПЕРЕЗАПИСЫВАЕТ слоты подписи и расшифровки карты. Закрытые ключи никогда не покидают оборудование и НЕ могут быть сохранены в резервной копии: потеряете карту, потеряете ключи.</string>
+    <string name="d_cards_keygen_warning">Создаёт ключ подписи Ed25519 и ключ шифрования Cv25519 НА карте. ПЕРЕЗАПИСЫВАЕТ слоты подписи и расшифровки карты. Закрытые ключи никогда не покидают устройство, и их НЕЛЬЗЯ сохранить в резервной копии. Потеряете карту, потеряете и ключи.</string>
     <string name="d_cards_expires_colon">Истекает:</string>
     <string name="d_cards_keygen_ack">Я понимаю, что это перезапишет ключи карты и их нельзя будет сохранить в резервной копии</string>
 
-    <!-- Shared desktop buttons (cont.) -->
+    <!-- ── Shared desktop buttons (cont.) ─────────────────────────────── -->
     <string name="d_common_working">Выполняется…</string>
-
-    <!-- Key detail dialog -->
     <string name="d_keydetail_no_user_id">(нет идентификатора пользователя)</string>
-    <string name="d_keydetail_badge_secret">СЕКРЕТНЫЙ</string>
+    <string name="d_keydetail_badge_secret">ЗАКРЫТЫЙ</string>
     <string name="d_keydetail_badge_card">КАРТА</string>
     <string name="d_keydetail_badge_expired">ИСТЁК</string>
 
-    <!-- Identity -->
+    <!-- ── Identity ────────────────────────────────────── -->
     <string name="d_keydetail_copy_fingerprint">Копировать отпечаток</string>
     <string name="d_keydetail_status_fingerprint_copied">Отпечаток скопирован</string>
-    <string name="d_keydetail_key_id">Идентификатор ключа</string>
-    <string name="d_keydetail_make_default_signing">Сделать подписывающим ключом по умолчанию</string>
+    <string name="d_keydetail_key_id">ID ключа</string>
+    <string name="d_keydetail_make_default_signing">Сделать ключом подписи по умолчанию</string>
 
-    <!-- Subkey list -->
+    <!-- ── Subkey list ─────────────────────────────────── -->
     <string name="d_keydetail_section_keys">Ключи (%1$d)</string>
     <string name="d_keydetail_subkey">Подключ</string>
     <string name="d_keydetail_subkey_meta">%1$s · Создан %2$s</string>
     <string name="d_keydetail_subkey_meta_expires">%1$s · Создан %2$s · Истекает %3$s</string>
 
-    <!-- Export row -->
+    <!-- ── Export row (short labels; Android's are phone-sized sentences) ─ -->
     <string name="d_keydetail_copy_public">Копировать открытый</string>
-    <string name="d_keydetail_export_public">Экспорт открытого…</string>
+    <string name="d_keydetail_export_public">Экспортировать открытый…</string>
     <string name="d_keydetail_show_qr">Показать QR…</string>
-    <string name="d_keydetail_export_secret">Экспорт секретного…</string>
-    <string name="d_keydetail_export_secret_gpg">Экспорт для GnuPG</string>
+    <string name="d_keydetail_export_secret">Экспортировать закрытый…</string>
+    <string name="d_keydetail_export_secret_gpg">Экспортировать для GnuPG</string>
     <string name="d_keydetail_status_pub_copied">Открытый ключ скопирован: %1$s</string>
     <string name="d_keydetail_err_no_public_armor">Открытый ключ в ASCII-броне не сохранён</string>
-    <string name="d_keydetail_secret_export_note">Экспортированные секретные ключи сохраняют защиту парольной фразой (S2K).</string>
+    <string name="d_keydetail_secret_export_note">Экспортированные закрытые ключи сохраняют защиту парольной фразой (S2K).</string>
 
-    <!-- Key servers -->
+    <!-- ── Key servers ─────────────────────────────────── -->
     <string name="d_keydetail_refresh_servers">Обновить с серверов ключей</string>
 
-    <!-- Danger zone + save dialog -->
+    <!-- ── Danger zone + save dialog ───────────────────── -->
     <string name="d_keydetail_danger_zone">Опасная зона</string>
     <string name="d_keydetail_save_dialog_title">Экспорт ключа</string>
     <string name="d_keydetail_status_exported">Экспортировано: %1$s</string>
     <string name="d_keydetail_status_nothing_to_export">Нечего экспортировать</string>
 
-    <!-- QR dialog -->
-    <string name="d_keydetail_qr_title">QR открытого ключа</string>
+    <!-- ── QR dialog ───────────────────────────────────── -->
+    <string name="d_keydetail_qr_title">QR-код открытого ключа</string>
     <string name="d_keydetail_qr_hint">Отсканируйте в PGPony на другом устройстве, чтобы импортировать %1$s.</string>
-    <string name="d_keydetail_qr_too_large">Этот ключ слишком велик для QR-кода; вместо этого экспортируйте файл .asc и поделитесь им.</string>
-    <string name="d_keydetail_qr_no_material">Нет материала открытого ключа для показа.</string>
+    <string name="d_keydetail_qr_too_large">Этот ключ слишком велик для QR-кода. Экспортируйте файл .asc и поделитесь им.</string>
+    <string name="d_keydetail_qr_no_material">Нет данных открытого ключа для показа.</string>
     <string name="d_keydetail_qr_save_png">Сохранить PNG…</string>
-    <string name="d_keydetail_status_qr_saved">QR сохранён: %1$s</string>
+    <string name="d_keydetail_status_qr_saved">QR-код сохранён: %1$s</string>
 
-    <!-- Expiration dialog -->
+    <!-- ── Expiration dialog ───────────────────────────── -->
     <string name="d_keydetail_expiry_never">Никогда не истекает</string>
     <string name="d_keydetail_expiry_date_label">Истекает (ГГГГ-ММ-ДД)</string>
     <string name="d_keydetail_expiry_note">Заново подписывает самосертификацию ключа и привязки подключей.</string>
 
-    <!-- Revoke dialog -->
+    <!-- ── Revoke dialog ──────────────────────────────── -->
     <string name="d_keydetail_revoke_title">Отозвать %1$s</string>
-    <string name="d_keydetail_revoke_warning">Отзыв помечает этот ключ как непригодный для новых подписей и шифрования. Прежние сообщения остаются расшифровываемыми. Отменить это невозможно.</string>
+    <string name="d_keydetail_revoke_warning">Отзыв помечает этот ключ как непригодный для новых подписей и шифрования. Прежние сообщения по-прежнему можно расшифровать. Отменить это невозможно.</string>
     <string name="d_keydetail_revoke_ack">Я понимаю, что это нельзя отменить</string>
 
-    <!-- Shared desktop buttons (cont.) -->
+    <!-- ── Shared desktop buttons (cont.) ───────────────── -->
     <string name="d_common_edit_ellipsis">Изменить…</string>
     <string name="d_common_add_ellipsis">Добавить…</string>
     <string name="d_common_rendering">Отрисовка…</string>
 
-    <!-- Keyring repository: import summary -->
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
     <plurals name="d_import_summary_blocks">
         <item quantity="one">%1$d блок: %2$s</item>
         <item quantity="few">%1$d блока: %2$s</item>
@@ -402,84 +392,94 @@
     </plurals>
     <plurals name="d_import_summary_added">
         <item quantity="one">%1$d добавлен</item>
+        <item quantity="few">%1$d добавлено</item>
+        <item quantity="many">%1$d добавлено</item>
         <item quantity="other">%1$d добавлено</item>
     </plurals>
     <plurals name="d_import_summary_upgraded">
-        <item quantity="one">, %1$d повышен до пары ключей</item>
-        <item quantity="other">, %1$d повышено до пар ключей</item>
+        <item quantity="one">, %1$d стал парой ключей</item>
+        <item quantity="few">, %1$d стали парами ключей</item>
+        <item quantity="many">, %1$d стали парами ключей</item>
+        <item quantity="other">, %1$d стали парами ключей</item>
     </plurals>
     <plurals name="d_import_summary_merged">
-        <item quantity="one">, %1$d обновлён новым материалом</item>
-        <item quantity="other">, %1$d обновлено новым материалом</item>
+        <item quantity="one">, %1$d получил новые данные</item>
+        <item quantity="few">, %1$d получили новые данные</item>
+        <item quantity="many">, %1$d получили новые данные</item>
+        <item quantity="other">, %1$d получили новые данные</item>
     </plurals>
     <plurals name="d_import_summary_already">
         <item quantity="one">, %1$d уже в связке ключей</item>
+        <item quantity="few">, %1$d уже в связке ключей</item>
+        <item quantity="many">, %1$d уже в связке ключей</item>
         <item quantity="other">, %1$d уже в связке ключей</item>
     </plurals>
     <plurals name="d_import_summary_failed">
-        <item quantity="one">, %1$d не удался</item>
-        <item quantity="other">, %1$d не удалось</item>
+        <item quantity="one">, %1$d с ошибкой</item>
+        <item quantity="few">, %1$d с ошибкой</item>
+        <item quantity="many">, %1$d с ошибкой</item>
+        <item quantity="other">, %1$d с ошибкой</item>
     </plurals>
 
-    <!-- Repository errors -->
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
     <string name="d_repo_err_no_card_keys">На этой карте не найдено ключей OpenPGP</string>
     <string name="d_repo_err_key_not_found">Ключ не найден: %1$s</string>
-    <string name="d_repo_err_revoke_public_only">Нельзя отозвать ключ, у которого есть только открытая часть: для подписи нужен закрытый ключ</string>
-    <string name="d_repo_err_secret_ring_load">Не удалось загрузить секретную связку ключей для %1$s</string>
-    <string name="d_repo_err_public_ring_load">Не удалось загрузить открытую связку ключей для %1$s</string>
-    <string name="d_repo_err_no_public_ring">Созданный ключ не дал открытой связки ключей</string>
+    <string name="d_repo_err_revoke_public_only">Нельзя отозвать ключ, у которого есть только открытая часть. Для подписи нужен закрытый ключ.</string>
+    <string name="d_repo_err_secret_ring_load">Не удалось загрузить связку закрытых ключей для %1$s</string>
+    <string name="d_repo_err_public_ring_load">Не удалось загрузить связку открытых ключей для %1$s</string>
+    <string name="d_repo_err_no_public_ring">Созданный ключ не дал связки открытых ключей</string>
     <string name="d_repo_err_card_row_missing">Запись созданного ключа карты не найдена после импорта</string>
-    <string name="d_repo_err_expiry_public_only">Нельзя изменить срок действия ключа, у которого есть только открытая часть: для повторной подписи нужен закрытый ключ.</string>
-    <string name="d_repo_err_expiry_card">Этот ключ находится на аппаратном ключе; смена его срока действия здесь пока не поддерживается.</string>
+    <string name="d_repo_err_expiry_public_only">Нельзя изменить срок действия ключа, у которого есть только открытая часть. Для повторной подписи нужен закрытый ключ.</string>
+    <string name="d_repo_err_expiry_card">Этот ключ хранится на аппаратном ключе. Изменение его срока действия здесь пока не поддерживается.</string>
 
-    <!-- Window shell: status line -->
+    <!-- ── Status line ── -->
     <string name="d_list_separator">, </string>
     <string name="d_status_migrated_legacy">Перенесена старая связка ключей: %1$s</string>
     <string name="d_status_autorefresh">Автообновление с серверов ключей: %1$s</string>
     <string name="d_status_import">Импорт: %1$s</string>
     <string name="d_status_generating">Создание ключа %1$s…</string>
-    <string name="d_status_generated">Создан %1$s: %2$s</string>
+    <string name="d_status_generated">Создан ключ %1$s: %2$s</string>
     <string name="d_status_generate_failed">Не удалось создать: %1$s</string>
     <string name="d_status_deleted">Удалено: %1$s</string>
-    <string name="d_status_trust_set">Уровень доверия установлен: %1$s · %2$s</string>
-    <string name="d_status_expiration_removed">Срок действия снят; ключ никогда не истекает</string>
+    <string name="d_status_trust_set">Установлен уровень доверия «%1$s»: %2$s</string>
+    <string name="d_status_expiration_removed">Срок действия снят. Ключ никогда не истекает.</string>
     <string name="d_status_expiration_updated">Срок действия обновлён</string>
     <string name="d_status_expiration_failed">Не удалось изменить срок действия: %1$s</string>
     <string name="d_status_revoked">Отозван %1$s (%2$s)</string>
     <string name="d_status_checking_servers">Проверка серверов ключей: %1$s…</string>
     <string name="d_status_refresh_not_published">Не опубликован ни на одном включённом сервере ключей</string>
-    <string name="d_status_refresh_also_merged"> (также добавлен новый материал)</string>
+    <string name="d_status_refresh_also_merged"> (также добавлены новые данные)</string>
     <string name="d_status_refresh_key_missing">Ключ не найден в связке ключей</string>
     <plurals name="d_status_files_dropped">
         <item quantity="one">%1$d файл добавлен</item>
         <item quantity="few">%1$d файла добавлено</item>
         <item quantity="many">%1$d файлов добавлено</item>
-        <item quantity="other">%1$d файлов добавлено</item>
+        <item quantity="other">%1$d файла добавлено</item>
     </plurals>
     <plurals name="d_status_autorefresh_revoked">
         <item quantity="one">%1$d ключ ОТОЗВАН на сервере</item>
         <item quantity="few">%1$d ключа ОТОЗВАНО на сервере</item>
         <item quantity="many">%1$d ключей ОТОЗВАНО на сервере</item>
-        <item quantity="other">%1$d ключей ОТОЗВАНО на сервере</item>
+        <item quantity="other">%1$d ключа ОТОЗВАНО на сервере</item>
     </plurals>
     <plurals name="d_status_autorefresh_updated">
         <item quantity="one">%1$d ключ обновлён</item>
         <item quantity="few">%1$d ключа обновлено</item>
         <item quantity="many">%1$d ключей обновлено</item>
-        <item quantity="other">%1$d ключей обновлено</item>
+        <item quantity="other">%1$d ключа обновлено</item>
     </plurals>
 
-    <!-- Tray + expiration notifications -->
+    <!-- ── Tray + expiration notifications ── -->
     <string name="d_tray_open">Открыть PGPony</string>
     <string name="d_tray_quit">Выйти из PGPony</string>
-    <string name="d_notif_key_expiring">PGPony · срок ключа истекает</string>
-    <string name="d_notif_key_expiration">PGPony · срок действия ключа</string>
+    <string name="d_notif_key_expiring">PGPony: срок действия ключа истекает</string>
+    <string name="d_notif_key_expiration">PGPony: срок действия ключа</string>
 
-    <!-- Menu bar. Mnemonics are letters present in the translated label. -->
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
     <string name="d_menu_file">Файл</string>
     <string name="d_menu_file_mnemonic">Ф</string>
     <string name="d_menu_goto_keyring">Перейти к связке ключей (импорт)</string>
-    <string name="d_menu_restore_backup">Восстановить из копии…</string>
+    <string name="d_menu_restore_backup">Восстановить из резервной копии…</string>
     <string name="d_menu_quit">Выйти</string>
     <string name="d_menu_keys">Ключи</string>
     <string name="d_menu_keys_mnemonic">К</string>
@@ -491,45 +491,37 @@
     <string name="d_menu_help_mnemonic">В</string>
     <string name="d_menu_about">О приложении PGPony</string>
     <string name="d_menu_encrypt_decrypt">Шифрование / Расшифровка</string>
-
-    <!-- Generate-key dialog hints -->
-    <string name="d_gen_no_passphrase_warning">Без парольной фразы: секретный ключ будет храниться на этом компьютере без защиты.</string>
-
-    <!-- Card dialog + PC/SC transport errors -->
+    <string name="d_gen_no_passphrase_warning">Без парольной фразы: закрытый ключ будет храниться на этом компьютере без защиты.</string>
     <string name="d_cards_choose_reader">Выбрать считыватель</string>
     <string name="d_cards_rescan">Пересканировать</string>
     <string name="d_cards_pin_pw1">PIN карты (PW1)</string>
-    <string name="d_cards_talking_touch">Обмен с аппаратным ключом… если у него есть подтверждение касанием, коснитесь сейчас.</string>
-    <string name="d_cards_pin_scope_note">PIN авторизует только эту одну операцию на самом ключе; секреты никогда не покидают оборудование.</string>
+    <string name="d_cards_talking_touch">Связь с аппаратным ключом… Если на нём есть подтверждение касанием, коснитесь его сейчас.</string>
+    <string name="d_cards_pin_scope_note">PIN авторизует только эту одну операцию на самом ключе; секреты никогда не покидают устройство.</string>
     <string name="d_common_run">Выполнить</string>
     <string name="d_card_err_unplugged">Аппаратный ключ был отключён во время операции</string>
     <string name="d_card_err_io">Ошибка ввода-вывода карты: %1$s</string>
     <string name="d_card_err_connect">Не удалось подключиться к карте в «%1$s»: %2$s</string>
     <string name="d_card_err_no_service">Служба смарт-карт недоступна</string>
-    <string name="d_card_err_pcscd_hint"> · установлен и запущен ли pcscd?</string>
+    <string name="d_card_err_pcscd_hint">. Установлен и запущен ли pcscd?</string>
     <string name="d_card_err_detail_suffix"> (%1$s)</string>
     <string name="d_card_err_reader_gone">Считыватель «%1$s» больше не подключён.</string>
-    <string name="d_card_err_no_card">В «%1$s» нет карты; вставьте или переподключите аппаратный ключ.</string>
+    <string name="d_card_err_no_card">В «%1$s» нет карты. Вставьте или переподключите аппаратный ключ.</string>
 
-    <!-- Key server refresh failures -->
+    <!-- ── Key server refresh failures ── -->
     <string name="d_refresh_err_no_servers">Не настроены серверы ключей с включённым поиском</string>
     <string name="d_refresh_err_server_prefix">%1$s: %2$s</string>
     <string name="d_refresh_err_parse">Не удалось разобрать ответ сервера ключей: %1$s</string>
-
-    <!-- Expiration reminders -->
-    <string name="d_expiry_headline_expired">Срок действия %1$s ИСТЁК</string>
-    <string name="d_expiry_headline_today">Срок действия %1$s истекает сегодня</string>
-    <string name="d_expiry_headline_tomorrow">Срок действия %1$s истекает завтра</string>
+    <string name="d_expiry_headline_expired">Срок действия ключа %1$s ИСТЁК</string>
+    <string name="d_expiry_headline_today">Срок действия ключа %1$s истекает сегодня</string>
+    <string name="d_expiry_headline_tomorrow">Срок действия ключа %1$s истекает завтра</string>
     <plurals name="d_expiry_headline_days">
-        <item quantity="one">Срок действия %2$s истекает через %1$d день</item>
-        <item quantity="few">Срок действия %2$s истекает через %1$d дня</item>
-        <item quantity="many">Срок действия %2$s истекает через %1$d дней</item>
-        <item quantity="other">Срок действия %2$s истекает через %1$d дней</item>
+        <item quantity="one">Срок действия ключа %2$s истекает через %1$d день</item>
+        <item quantity="few">Срок действия ключа %2$s истекает через %1$d дня</item>
+        <item quantity="many">Срок действия ключа %2$s истекает через %1$d дней</item>
+        <item quantity="other">Срок действия ключа %2$s истекает через %1$d дня</item>
     </plurals>
-
-    <!-- Backup service + backup dialogs -->
     <string name="d_backup_err_not_a_backup">Этот файл не является резервной копией PGPony</string>
-    <string name="d_backup_err_wrong_code">Этот код восстановления не открыл резервную копию</string>
+    <string name="d_backup_err_wrong_code">Этот код восстановления не подходит к резервной копии</string>
     <string name="d_backup_err_corrupt">Резервная копия повреждена: %1$s</string>
     <string name="d_backup_err_empty_keyring">Нет ключей для резервного копирования</string>
     <string name="d_backup_detail_unreadable_archive">нечитаемый архив</string>
@@ -537,76 +529,76 @@
     <string name="d_backup_detail_no_keys">в резервной копии ключей не найдено</string>
     <string name="d_backup_detail_integrity">проверка целостности не пройдена</string>
     <string name="d_restore_unreadable_block">нечитаемый блок ключа</string>
-
-    <!-- Restore summary clauses -->
     <plurals name="d_restore_summary_added">
         <item quantity="one">%1$d добавлен</item>
+        <item quantity="few">%1$d добавлено</item>
+        <item quantity="many">%1$d добавлено</item>
         <item quantity="other">%1$d добавлено</item>
     </plurals>
     <plurals name="d_restore_summary_upgraded">
-        <item quantity="one">, %1$d повышен до пары ключей</item>
-        <item quantity="other">, %1$d повышено до пар ключей</item>
+        <item quantity="one">, %1$d стал парой ключей</item>
+        <item quantity="few">, %1$d стали парами ключей</item>
+        <item quantity="many">, %1$d стали парами ключей</item>
+        <item quantity="other">, %1$d стали парами ключей</item>
     </plurals>
     <plurals name="d_restore_summary_updated">
         <item quantity="one">, %1$d обновлён</item>
+        <item quantity="few">, %1$d обновлено</item>
+        <item quantity="many">, %1$d обновлено</item>
         <item quantity="other">, %1$d обновлено</item>
     </plurals>
     <plurals name="d_restore_summary_unchanged">
         <item quantity="one">, %1$d уже актуален</item>
+        <item quantity="few">, %1$d уже актуальны</item>
+        <item quantity="many">, %1$d уже актуальны</item>
         <item quantity="other">, %1$d уже актуальны</item>
     </plurals>
     <plurals name="d_restore_summary_failed">
         <item quantity="one">, %1$d не восстановлен</item>
+        <item quantity="few">, %1$d не восстановлено</item>
+        <item quantity="many">, %1$d не восстановлено</item>
         <item quantity="other">, %1$d не восстановлено</item>
     </plurals>
-
-    <!-- Export/restore dialogs -->
     <string name="d_backup_export_title">Резервная копия связки ключей</string>
-    <string name="d_backup_export_intro">Всё содержимое вашей связки ключей; секретные ключи остаются под собственной защитой парольной фразой. Весь файл запечатан этим кодом восстановления:</string>
+    <string name="d_backup_export_intro">Всё содержимое вашей связки ключей. Закрытые ключи остаются под собственной защитой парольной фразой. Весь файл запечатан этим кодом восстановления:</string>
     <string name="d_backup_code_copied">Код восстановления скопирован</string>
-    <string name="d_backup_reenter_warning">Запишите его или сохраните в менеджере паролей: без него резервную копию открыть нельзя. Введите его повторно, чтобы продолжить:</string>
-    <string name="d_backup_save_action">Сохранить копию…</string>
+    <string name="d_backup_reenter_warning">Запишите его или сохраните в менеджере паролей. Без него резервную копию открыть нельзя. Введите его повторно, чтобы продолжить:</string>
+    <string name="d_backup_save_action">Сохранить резервную копию…</string>
     <string name="d_backup_saved_status">Резервная копия сохранена: %1$s</string>
     <string name="d_backup_failed">Не удалось создать резервную копию</string>
     <string name="d_backup_save_dialog_title">Сохранить резервную копию</string>
-    <string name="d_restore_title">Восстановление из копии</string>
-    <string name="d_restore_choose_file">Выбрать файл копии…</string>
+    <string name="d_restore_title">Восстановление из резервной копии</string>
+    <string name="d_restore_choose_file">Выбрать файл резервной копии…</string>
     <string name="d_restore_kind_pgpony">Резервная копия PGPony</string>
     <string name="d_restore_kind_okc">Резервная копия OpenKeychain</string>
-    <string name="d_restore_code_label_okc">Код копии (9×4 цифры)</string>
-    <string name="d_restore_note">Восстановление никогда не перезаписывает секретный ключ, который у вас уже есть.</string>
+    <string name="d_restore_code_label_okc">Код резервной копии (9×4 цифры)</string>
+    <string name="d_restore_note">Восстановление никогда не перезаписывает закрытый ключ, который у вас уже есть.</string>
     <string name="d_restore_done_status">Восстановлено: %1$s</string>
     <string name="d_restore_status">Восстановление: %1$s</string>
     <string name="d_restore_failed">Не удалось восстановить</string>
     <string name="d_restore_open_dialog_title">Выбрать резервную копию</string>
-
-    <!-- Key-server search -->
     <string name="d_search_servers_title">Поиск на серверах ключей</string>
     <string name="d_search_lookup_order">Порядок поиска: WKD (почтовый домен получателя) → ваши настроенные серверы → keys.openpgp.org.</string>
     <string name="d_search_none">Ключ не найден (WKD, настроенные серверы, keys.openpgp.org).</string>
     <string name="d_search_unparseable">(не удалось разобрать)</string>
     <string name="d_search_failed">Поиск не удался: %1$s</string>
     <string name="d_search_found_via">Найдено через %1$s</string>
-    <string name="d_search_trust_warning">При импорте ключ добавляется с уровнем доверия НЕИЗВЕСТНО; сверьте отпечаток с владельцем, прежде чем полагаться на ключ.</string>
+    <string name="d_search_trust_warning">При импорте ключ получает уровень доверия НЕИЗВЕСТНО. Сверьте отпечаток с владельцем, прежде чем полагаться на ключ.</string>
     <string name="d_search_again">Искать снова</string>
-    <string name="d_common_import">Импорт</string>
-
-    <!-- Publish -->
+    <string name="d_common_import">Импортировать</string>
     <string name="d_publish_title">Публикация открытого ключа</string>
-    <string name="d_publish_no_servers">Нет серверов с включённой публикацией; включите один в «Настройки → Сеть».</string>
+    <string name="d_publish_no_servers">Нет серверов с включённой публикацией. Включите хотя бы один в разделе «Настройки → Сеть».</string>
     <string name="d_publish_may_not_accept">Может не принимать ключи %1$s</string>
-    <string name="d_publish_warning">Загружается только ОТКРЫТЫЙ ключ. Серверы ключей это публичные постоянные каталоги; отменить публикацию трудно.</string>
+    <string name="d_publish_warning">Загружается только ОТКРЫТЫЙ ключ. Серверы ключей являются публичными постоянными каталогами, поэтому отменить публикацию трудно.</string>
     <string name="d_publish_in_progress">Публикация…</string>
     <string name="d_publish_outcome_ok">%1$s: опубликовано ✓</string>
-    <string name="d_publish_outcome_pending"> · письмо для подтверждения отправлено на %1$s (перейдите по ссылке в нём, чтобы вас можно было найти по адресу эл. почты)</string>
-    <string name="d_publish_outcome_rejected">%1$s: отклонено (HTTP %2$d); этот сервер, вероятно, не принимает ключи %3$s</string>
-    <string name="d_publish_outcome_failed">%1$s: сбой · %2$s</string>
-
-    <!-- Keyring screen -->
+    <string name="d_publish_outcome_pending">. Письмо для подтверждения отправлено на %1$s (перейдите по ссылке в нём, чтобы ключ можно было найти по адресу эл. почты)</string>
+    <string name="d_publish_outcome_rejected">%1$s: отклонено (HTTP %2$d). Этот сервер, вероятно, не принимает ключи %3$s.</string>
+    <string name="d_publish_outcome_failed">%1$s: сбой (%2$s)</string>
     <string name="d_keyring_search_servers">Искать на серверах ключей…</string>
-    <string name="d_keyring_paste_armor">Вставить ASCII-броню…</string>
+    <string name="d_keyring_paste_armor">Вставить блок в ASCII-броне…</string>
     <string name="d_keyring_import_file">Из файла…</string>
-    <string name="d_keyring_import_qr">Из изображения QR…</string>
+    <string name="d_keyring_import_qr">Из изображения с QR-кодом…</string>
     <string name="d_keyring_search_placeholder">Поиск по имени, эл. почте, отпечатку</string>
     <string name="d_keyring_sort_label">Сортировка: %1$s</string>
     <string name="d_keyring_sort_recent">Недавние</string>
@@ -619,30 +611,28 @@
     <string name="d_keyring_clear_search">Очистить поиск</string>
     <string name="d_keyring_err_no_public_armor_for">Для %1$s не сохранён открытый ключ в ASCII-броне</string>
     <string name="d_keyring_qr_none_found">В %1$s QR-код не найден</string>
-    <string name="d_keyring_qr_not_a_key">Этот QR не является ключом OpenPGP</string>
-    <string name="d_keyring_delete_secret_warning">\n\nЭто включает СЕКРЕТНЫЙ ключ. Без резервной копии сообщения, зашифрованные для него, станут нечитаемыми.</string>
+    <string name="d_keyring_qr_not_a_key">Этот QR-код не содержит ключ OpenPGP</string>
+    <string name="d_keyring_delete_secret_warning">\n\nВместе с ним удаляется и ЗАКРЫТЫЙ ключ. Без резервной копии сообщения, зашифрованные для него, станут нечитаемыми.</string>
     <string name="d_keyring_cd_copy_public">Копировать открытый ключ</string>
     <string name="d_keyring_cd_delete">Удалить ключ</string>
-    <string name="d_keyring_meta_line">Создан %1$s%2$s · Идентификатор ключа %3$s</string>
+    <string name="d_keyring_meta_line">Создан %1$s%2$s · ID ключа %3$s</string>
     <string name="d_keyring_meta_expires"> · Истекает %1$s</string>
     <string name="d_keyring_import_file_dialog">Импорт файла ключа</string>
-    <string name="d_keyring_qr_dialog">Выбрать изображение QR</string>
+    <string name="d_keyring_qr_dialog">Выбрать изображение с QR-кодом</string>
     <plurals name="d_keyring_key_count">
         <item quantity="one">%1$d ключ</item>
         <item quantity="few">%1$d ключа</item>
         <item quantity="many">%1$d ключей</item>
-        <item quantity="other">%1$d ключей</item>
+        <item quantity="other">%1$d ключа</item>
     </plurals>
     <plurals name="d_keyring_match_count">
         <item quantity="one">%1$d совпадение</item>
         <item quantity="few">%1$d совпадения</item>
         <item quantity="many">%1$d совпадений</item>
-        <item quantity="other">%1$d совпадений</item>
+        <item quantity="other">%1$d совпадения</item>
     </plurals>
-
-    <!-- File crypto outcomes -->
     <string name="d_file_err_recipient_ring">Не удалось загрузить связку получателя: %1$s</string>
-    <string name="d_file_err_signing_key">Не удалось загрузить подписывающий ключ: %1$s</string>
+    <string name="d_file_err_signing_key">Не удалось загрузить ключ подписи: %1$s</string>
     <string name="d_file_signed_suffix">, подписано</string>
     <string name="d_file_err_encrypt">Не удалось зашифровать</string>
     <string name="d_file_err_decrypt">Не удалось расшифровать</string>
@@ -653,52 +643,54 @@
     <string name="d_file_err_card_decrypt">Не удалось расшифровать на карте</string>
     <plurals name="d_file_encrypted_to">
         <item quantity="one">Зашифровано для %1$d получателя</item>
+        <item quantity="few">Зашифровано для %1$d получателей</item>
+        <item quantity="many">Зашифровано для %1$d получателей</item>
         <item quantity="other">Зашифровано для %1$d получателей</item>
     </plurals>
     <plurals name="d_file_encrypted_to_card">
         <item quantity="one">Зашифровано для %1$d получателя, подписано (аппаратный ключ)</item>
+        <item quantity="few">Зашифровано для %1$d получателей, подписано (аппаратный ключ)</item>
+        <item quantity="many">Зашифровано для %1$d получателей, подписано (аппаратный ключ)</item>
         <item quantity="other">Зашифровано для %1$d получателей, подписано (аппаратный ключ)</item>
     </plurals>
     <plurals name="d_file_decrypted_bundle">
-        <item quantity="one">Расшифрован набор → %1$d файл</item>
-        <item quantity="few">Расшифрован набор → %1$d файла</item>
-        <item quantity="many">Расшифрован набор → %1$d файлов</item>
-        <item quantity="other">Расшифрован набор → %1$d файлов</item>
+        <item quantity="one">Расшифрован комплект → %1$d файл</item>
+        <item quantity="few">Расшифрован комплект → %1$d файла</item>
+        <item quantity="many">Расшифрован комплект → %1$d файлов</item>
+        <item quantity="other">Расшифрован комплект → %1$d файла</item>
     </plurals>
     <plurals name="d_file_decrypted_bundle_card">
-        <item quantity="one">Расшифрован набор (аппаратный ключ) → %1$d файл</item>
-        <item quantity="few">Расшифрован набор (аппаратный ключ) → %1$d файла</item>
-        <item quantity="many">Расшифрован набор (аппаратный ключ) → %1$d файлов</item>
-        <item quantity="other">Расшифрован набор (аппаратный ключ) → %1$d файлов</item>
+        <item quantity="one">Расшифрован комплект (аппаратный ключ) → %1$d файл</item>
+        <item quantity="few">Расшифрован комплект (аппаратный ключ) → %1$d файла</item>
+        <item quantity="many">Расшифрован комплект (аппаратный ключ) → %1$d файлов</item>
+        <item quantity="other">Расшифрован комплект (аппаратный ключ) → %1$d файла</item>
     </plurals>
     <plurals name="d_file_decrypted_bytes">
         <item quantity="one">Расшифрован %1$d байт</item>
         <item quantity="few">Расшифровано %1$d байта</item>
         <item quantity="many">Расшифровано %1$d байт</item>
-        <item quantity="other">Расшифровано %1$d байт</item>
+        <item quantity="other">Расшифровано %1$d байта</item>
     </plurals>
     <plurals name="d_file_decrypted_bytes_card">
         <item quantity="one">Расшифрован %1$d байт (аппаратный ключ)</item>
         <item quantity="few">Расшифровано %1$d байта (аппаратный ключ)</item>
         <item quantity="many">Расшифровано %1$d байт (аппаратный ключ)</item>
-        <item quantity="other">Расшифровано %1$d байт (аппаратный ключ)</item>
+        <item quantity="other">Расшифровано %1$d байта (аппаратный ключ)</item>
     </plurals>
-
-    <!-- Signature note appended to a decrypt outcome (keeps its leading separator) -->
-    <string name="d_file_sig_verified"> · подпись ПОДТВЕРЖДЕНА</string>
+    <string name="d_file_sig_verified"> · подпись ПРОВЕРЕНА</string>
     <string name="d_file_sig_unheld"> · подписано ключом, которого нет у вас</string>
     <string name="d_file_sig_id_suffix"> (%1$s)</string>
 
-    <!-- Detached-signature verification outcomes -->
-    <string name="d_file_verify_ok">Подпись ПОДТВЕРЖДЕНА: %1$s &lt;%2$s&gt; · %3$s</string>
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">Подпись ПРОВЕРЕНА: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_file_verify_invalid">Подпись НЕДЕЙСТВИТЕЛЬНА: содержимое не соответствует подписи</string>
     <string name="d_file_verify_unknown_signer">Подписано ключом, которого нет в связке ключей</string>
     <string name="d_file_verify_unsigned">Подпись не найдена</string>
     <string name="d_file_err_verify">Не удалось проверить</string>
 
-    <!-- Settings, Updates -->
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
     <string name="d_settings_section_updates">Обновления</string>
-    <string name="d_settings_updates_note">По умолчанию выключено. Если включить, PGPony раз в день проверяет pgpony.app на наличие новой версии; ничего о вас или ваших ключах не отправляется, а настройка прокси соблюдается.</string>
+    <string name="d_settings_updates_note">По умолчанию выключено. Если включить, PGPony раз в день проверяет на pgpony.app, вышла ли новая версия. Никаких данных о вас или ваших ключах не отправляется, а настройка прокси соблюдается.</string>
     <string name="d_settings_updates_idle">Проверка ещё не выполнялась.</string>
     <string name="d_settings_updates_checking">Проверка…</string>
     <string name="d_settings_updates_current">У вас установлена последняя версия.</string>
@@ -708,73 +700,75 @@
     <string name="d_settings_updates_download">Скачать</string>
     <string name="d_settings_updates_auto">Проверять автоматически раз в день</string>
 
-    <!-- Cards, PC/SC diagnostics -->
+    <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
     <string name="d_cards_pcsc_error">PC/SC сообщил: %1$s</string>
 
-    <!-- Settings, SSH agent + agent unlock prompt -->
-    <string name="d_settings_section_ssh_agent">Агент SSH</string>
-    <string name="d_settings_ssh_agent_note">По умолчанию выключено. Если включить, PGPony предоставляет ssh ваши ключи аутентификации через локальный сокет, как ssh-agent, но на основе вашей связки ключей. Он не удерживает ключи между запросами, и для защищённого ключа пароль спрашивается каждый раз. В этом выпуске только macOS и Linux.</string>
-    <string name="d_settings_ssh_agent_windows">Агент SSH недоступен в Windows в этом выпуске: ssh на этой платформе ожидает именованный канал, который приложение пока не может предоставить.</string>
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH-агент</string>
+    <string name="d_settings_ssh_agent_note">По умолчанию выключено. Если включить, PGPony предоставляет ssh ваши ключи аутентификации через локальный сокет, как ssh-agent, но на основе вашей связки ключей. PGPony не хранит ключи между запросами, а парольная фраза защищённого ключа запрашивается каждый раз. В этом выпуске только macOS и Linux.</string>
+    <string name="d_settings_ssh_agent_windows">SSH-агент недоступен в Windows в этом выпуске. Команда ssh на этой платформе ожидает именованный канал, который приложение пока не может предоставить.</string>
     <string name="d_settings_ssh_agent_enable">Предоставлять ssh ключи аутентификации</string>
     <string name="d_settings_ssh_agent_error">Не удалось запустить агент: %1$s</string>
     <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
     <string name="d_settings_ssh_agent_copy">Копировать</string>
-    <string name="d_agent_unlock_title">Разблокировать подписывающий ключ</string>
+    <string name="d_agent_unlock_title">Разблокировать ключ подписи</string>
     <string name="d_agent_unlock_message">ssh запросил у PGPony подпись ключом %1$s, который защищён парольной фразой.</string>
     <string name="d_agent_unlock_field">Парольная фраза</string>
     <string name="d_agent_unlock_confirm">Разблокировать</string>
     <string name="d_agent_unlock_cancel">Отмена</string>
 
-    <!-- Files, folder encrypt / extract -->
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
     <plurals name="d_file_folder_encrypted">
         <item quantity="one">Папка зашифрована для %1$d получателя</item>
+        <item quantity="few">Папка зашифрована для %1$d получателей</item>
+        <item quantity="many">Папка зашифрована для %1$d получателей</item>
         <item quantity="other">Папка зашифрована для %1$d получателей</item>
     </plurals>
     <plurals name="d_file_folder_extracted">
         <item quantity="one">Извлечена папка → %1$d файл</item>
         <item quantity="few">Извлечена папка → %1$d файла</item>
         <item quantity="many">Извлечена папка → %1$d файлов</item>
-        <item quantity="other">Извлечена папка → %1$d файлов</item>
+        <item quantity="other">Извлечена папка → %1$d файла</item>
     </plurals>
 
-    <!-- Files, progress + cancel -->
+    <!-- ── Files · progress + cancel (D17) ── -->
     <string name="d_crypto_cancelling">Отмена…</string>
     <string name="d_crypto_progress_bytes">%1$s из %2$s</string>
     <string name="d_crypto_progress_bytes_indeterminate">Обработано: %1$s</string>
     <string name="d_file_cancelled">Отменено</string>
 
-    <!-- Settings, watch folders -->
-    <string name="d_settings_section_watch">Наблюдаемые папки</string>
-    <string name="d_settings_watch_note">По умолчанию выключено. Когда включено, PGPony наблюдает за указанными папками и шифрует каждый новый файл для выбранных получателей: только шифрование, только открытые ключи, чтобы правило, срабатывающее в ваше отсутствие, никогда не требовало парольной фразы или карты и могло в худшем случае только зашифровать. macOS, Linux и Windows.</string>
-    <string name="d_settings_watch_enable">Наблюдать за папками ниже</string>
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">Отслеживаемые папки</string>
+    <string name="d_settings_watch_note">По умолчанию выключено. Когда функция включена, PGPony отслеживает указанные вами папки и шифрует каждый новый файл для выбранных получателей. Используются только шифрование и только открытые ключи, поэтому правилу, которое срабатывает в ваше отсутствие, никогда не нужны парольная фраза или карта, и в худшем случае оно может лишь что-то зашифровать. macOS, Linux и Windows.</string>
+    <string name="d_settings_watch_enable">Отслеживать папки ниже</string>
     <string name="d_settings_watch_rules">Правила</string>
-    <string name="d_settings_watch_no_rules">Пока нет правил. Добавьте правило, чтобы наблюдать за папкой.</string>
-    <string name="d_settings_watch_rule_summary">получателей: %1$d → %2$s</string>
-    <string name="d_settings_watch_beside_source">рядом с исходником</string>
+    <string name="d_settings_watch_no_rules">Пока нет правил. Добавьте правило, чтобы отслеживать папку.</string>
+    <string name="d_settings_watch_rule_summary">Получателей: %1$d → %2$s</string>
+    <string name="d_settings_watch_beside_source">рядом с исходным файлом</string>
     <string name="d_settings_watch_rule_on">Вкл</string>
     <string name="d_settings_watch_deletes">удаляет оригинал</string>
     <string name="d_settings_watch_add_rule">Добавить правило</string>
     <string name="d_settings_watch_recent">Недавняя активность</string>
-    <string name="d_settings_watch_folder">Папка для наблюдения</string>
+    <string name="d_settings_watch_folder">Папка для отслеживания</string>
     <string name="d_settings_watch_browse">Обзор…</string>
     <string name="d_settings_watch_glob">Шаблон (glob, например *.pdf)</string>
     <string name="d_settings_watch_output">Папка вывода (необязательно)</string>
-    <string name="d_settings_watch_no_recipients">Нет пригодных получателей; сначала импортируйте открытый ключ.</string>
+    <string name="d_settings_watch_no_recipients">Нет пригодных получателей. Сначала импортируйте открытый ключ.</string>
     <string name="d_settings_watch_armor">Выводить в ASCII-броне (.asc)</string>
     <string name="d_settings_watch_delete_original">Удалять оригинал после шифрования</string>
     <string name="d_settings_watch_delete_warning">Оригинал удаляется без возможности отмены. Оставьте выключенным, если не уверены.</string>
-    <string name="d_watch_notif_encrypted">Наблюдаемая папка: зашифровано</string>
-    <string name="d_watch_notif_failed">Наблюдаемая папка: сбой</string>
-
+    <string name="d_watch_notif_encrypted">Отслеживаемая папка: зашифровано</string>
+    <string name="d_watch_notif_failed">Отслеживаемая папка: сбой</string>
     <string name="d_crypto_add_folder">Добавить папку…</string>
-    <!-- Cards, friendlier PC/SC diagnostics -->
+
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
     <string name="d_cards_pcsc_no_service">Служба смарт-карт не запущена.</string>
-    <string name="d_cards_pcsc_sharing">Считыватель использует другая программа; закройте её (например, GnuPG или OpenSC) и пересканируйте.</string>
+    <string name="d_cards_pcsc_sharing">Считыватель использует другая программа. Закройте её (например, GnuPG или OpenSC) и пересканируйте.</string>
     <string name="d_cards_pcsc_unknown">Служба считывателя сообщила: %1$s.</string>
     <string name="d_cards_pcsc_unknown_generic">Служба считывателя сообщила о проблеме.</string>
-
     <string name="d_cards_keygen_algo_label">Тип ключа</string>
-    <!-- Cards, move key to card -->
+
+    <!-- ── Cards · move key to card (D21) ── -->
     <string name="d_cards_move_open">Переместить ключ на карту…</string>
     <string name="d_cards_move_title">Перемещение ключа на карту</string>
     <string name="d_cards_move_warning">Это записывает существующий ключ на карту и перезаписывает слоты ключей карты. В отличие от ключа, созданного на карте, этот уже существовал вне карты, поэтому берегите резервную копию. PIN-коды карты не меняются.</string>
@@ -785,8 +779,7 @@
     <string name="d_cards_move_ack">Я понимаю, что это перезапишет слоты ключей карты</string>
     <string name="d_cards_move_confirm">Переместить на карту</string>
     <string name="d_cards_move_done">Перемещено на карту: %1$s</string>
-    <string name="d_cards_move_no_secret">Не удалось загрузить закрытый материал ключа.</string>
-
+    <string name="d_cards_move_no_secret">Не удалось загрузить закрытые данные ключа.</string>
     <string name="d_err_recipient_unusable">Нет ключа, для которого PGPony может зашифровать, поэтому ничего не зашифровано: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · подписано, ключ не проверен</string>
     <string name="d_file_sig_invalid"> · подпись НЕДЕЙСТВИТЕЛЬНА</string>
@@ -798,19 +791,18 @@
     <string name="d_edit_err_last_encryption_subkey">Это последний подключ шифрования этого ключа. Без него никто не сможет зашифровать для этого ключа.</string>
     <string name="d_edit_err_subkey_not_found">Подключа %1$s нет в этом ключе.</string>
     <string name="d_edit_err_primary_as_subkey">Основной ключ нельзя удалить или отозвать как подключ.</string>
-    <string name="d_settings_protect_destructive_subtitle">Перед удалением ключа, подключа или User ID, а также перед удалением всех данных нужно ввести DELETE. Включено по умолчанию.</string>
+    <string name="d_settings_protect_destructive_subtitle">Перед удалением ключа, подключа или идентификатора пользователя, а также перед удалением всех данных нужно ввести %1$s. Включено по умолчанию.</string>
     <string name="d_keyring_recently_deleted_button">Недавно удалённые (%1$d)</string>
     <string name="d_recycle_less_than_day">Осталось меньше суток</string>
-    <string name="d_status_moved_to_bin">%1$s перемещён в «Недавно удалённые»</string>
-    <string name="d_status_purged">%1$s уничтожен навсегда</string>
-    <string name="d_status_bin_emptied">«Недавно удалённые» очищено</string>
+    <string name="d_status_moved_to_bin">Перемещено в «Недавно удалённые»: %1$s</string>
+    <string name="d_status_purged">Безвозвратно уничтожено: %1$s</string>
+    <string name="d_status_bin_emptied">Список «Недавно удалённые» очищен</string>
     <plurals name="d_recycle_days_left">
         <item quantity="one">Остался %1$d день</item>
         <item quantity="few">Осталось %1$d дня</item>
         <item quantity="many">Осталось %1$d дней</item>
         <item quantity="other">Осталось %1$d дня</item>
     </plurals>
-    <!-- 3.0.0 stage 2b: Key Detail management, Clear All Data -->
     <string name="d_edit_err_v6_subkey_type">К ключу v6 можно добавить только подключи Ed25519 и X25519.</string>
     <string name="d_edit_err_v4_mlkem768_only">Ключ v4 принимает только постквантовый подключ ML-KEM-768. Для ML-KEM-1024 нужен ключ v6.</string>
     <string name="d_edit_err_pq_sign_needs_v6">Для постквантового подключа подписи нужен ключ v6.</string>
@@ -822,7 +814,7 @@
     <string name="d_keydetail_passphrase_off">Без парольной фразы. На этом компьютере файл ключа защищён только правами доступа к файлу, поэтому ключом может воспользоваться любой, кто может войти в вашу учётную запись.</string>
     <string name="d_keydetail_subkey_revoke_title">Отозвать подключ %1$s</string>
     <string name="d_keydetail_subkey_revoke_body">Отзыв публикует подпись, которая сообщает вашим корреспондентам, что этим подключом больше нельзя пользоваться, как только они обновят ваш ключ. Отменить это нельзя.</string>
-    <string name="d_settings_clear_ack1">Я понимаю, что все ключи уничтожаются сейчас, без периода восстановления.</string>
+    <string name="d_settings_clear_ack1">Я понимаю, что все ключи уничтожаются сразу, без возможности восстановления.</string>
     <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
     <string name="d_settings_clear_done_body">PGPony сейчас закроется. Следующий запуск начнётся с чистого листа.</string>
     <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
@@ -834,121 +826,112 @@
     <string name="d_status_subkey_added">Подключ добавлен</string>
     <string name="d_status_subkey_revoked">Подключ отозван</string>
     <string name="d_status_notations_saved">Нотации сохранены</string>
-    <!-- 3.0.0 stage 2c: Decrypt with, signing defaults -->
     <string name="d_crypto_decrypt_with_any">Любой из моих ключей</string>
-    <string name="d_crypto_signing_default_note">Подписывает ключом %1$s, ключом подписи по умолчанию для этого ключа. Введите парольную фразу этого ключа.</string>
-    <!-- 3.0.0 stage 3b: SSH agent -->
+    <string name="d_crypto_signing_default_note">Подпись от имени %1$s (ключ подписи по умолчанию для этого ключа). Введите парольную фразу этого ключа.</string>
     <string name="d_settings_ssh_agent_keys_note">Каждый ключ предоставляет свой самый новый подключ аутентификации, который не может также подписывать или сертифицировать: Ed25519, RSA или ECDSA на NIST P-256, P-384 или P-521, включая классический подключ на постквантовом ключе. Добавьте его в сведениях о ключе или при создании ключа. Ключи RSA по-прежнему отвечают на старый запрос SHA-1 ssh-rsa от серверов, которые его используют.</string>
-    <!-- 3.0.0 stage 3d: import preview and link import -->
     <string name="d_import_preview_title">Импорт ключа</string>
     <string name="d_import_preview_none">В этом тексте ключ не найден.</string>
     <string name="d_import_preview_meta">%1$s · %2$s</string>
     <string name="d_import_preview_in_keyring">Уже есть в вашей связке ключей. При импорте добавится только новое.</string>
     <string name="d_import_link_title">Импорт по ссылке</string>
     <string name="d_keyring_import_link">По ссылке…</string>
-    <!-- 3.0.0 stage 4a: encrypt surfaces, armor comment -->
     <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
     <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
     <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
     <string name="d_settings_section_armor_comment">Комментарий брони</string>
-    <string name="d_settings_armor_comment_note">Строка Comment в выводе с ASCII-бронёй. Действует для приложения, команды pgpony, шима подписи git и отслеживаемых папок.</string>
-    <!-- 3.0.0 stage 4b: session policy -->
+    <string name="d_settings_armor_comment_note">Строка Comment в выводе в ASCII-броне. Действует для приложения, команды pgpony, обёртки подписи git и отслеживаемых папок.</string>
     <string name="d_settings_section_session">Сеанс</string>
     <string name="d_settings_session_note">Сколько времени PGPony хранит в памяти парольную фразу ключа или PIN карты после ввода. Одна настройка действует для приложения, SSH-агента и подписи git через pgpony-gpg. На диск ничего не пишется, а при выходе из PGPony всё забывается.</string>
     <string name="d_session_until_screen_locks">До блокировки экрана</string>
     <string name="d_session_held_until_locked">Парольная фраза запомнена до блокировки экрана или до очистки.</string>
     <string name="d_session_lock_unsupported">PGPony не может определить блокировку экрана на этом компьютере, поэтому запомненные секреты хранятся до очистки или выхода из приложения.</string>
     <string name="d_session_pin_held">PIN карты запомнен.</string>
-    <string name="d_cards_pin_cache_follows">Хранится в течение сеанса, заданного в настройках: %1$s.</string>
+    <string name="d_cards_pin_cache_follows">Хранится столько, сколько задано для сеанса в настройках: %1$s.</string>
     <string name="d_crypto_pass_remembered">Запомнена на этот сеанс. Оставьте поле пустым, чтобы использовать её.</string>
     <string name="d_shim_unlock_message">git запросил у PGPony подпись ключом %1$s, который защищён парольной фразой.</string>
-
-    <!-- 3.0.0 stage 5b: GnuPG import -->
     <string name="d_gnupg_import_button">Из GnuPG…</string>
     <string name="d_gnupg_title">Импорт из GnuPG</string>
     <string name="d_gnupg_home">Каталог GnuPG: %1$s</string>
     <string name="d_gnupg_choose_folder">Выбрать папку…</string>
     <string name="d_gnupg_no_home">В этой папке нет связки ключей GnuPG. Выберите папку, в которой лежит pubring.kbx.</string>
-    <string name="d_gnupg_counts">Открытых ключей: %1$d, секретных ключей: %2$d</string>
+    <string name="d_gnupg_counts">Открытых ключей: %1$d, закрытых ключей: %2$d</string>
     <string name="d_gnupg_counts_public">Открытых ключей: %1$d</string>
     <string name="d_gnupg_gpg_found">Используется %1$s</string>
-    <string name="d_gnupg_gpg_missing">gpg не найден, поэтому секретные ключи прочитать нельзя. Открытые ключи и доверие всё равно можно импортировать.</string>
+    <string name="d_gnupg_gpg_missing">gpg не найден, поэтому закрытые ключи прочитать нельзя. Открытые ключи и доверие всё равно можно импортировать.</string>
     <string name="d_gnupg_sandboxed">PGPony работает в песочнице и не может запустить gpg. Открытые ключи и доверие всё равно можно импортировать.</string>
     <string name="d_gnupg_opt_trust">Перенести доверие (абсолютное и полное)</string>
-    <string name="d_gnupg_opt_secret">Импортировать секретные ключи (gpg запросит каждую парольную фразу)</string>
+    <string name="d_gnupg_opt_secret">Импортировать закрытые ключи (gpg запросит каждую парольную фразу)</string>
     <string name="d_gnupg_card_skipped">%1$s: ключ на смарт-карте, пропущен. Добавьте карту в разделе «Аппаратные ключи».</string>
-    <string name="d_gnupg_stub_skipped">%1$s: в этой связке нет секретного материала, пропущен.</string>
+    <string name="d_gnupg_stub_skipped">%1$s: в этой связке нет закрытых данных ключа, пропущен.</string>
     <string name="d_gnupg_secret_failed">%1$s: не удалось экспортировать (%2$s).</string>
     <string name="d_gnupg_secret_not_imported">%1$s: gpg экспортировал ключ, но импортировать его не удалось.</string>
     <string name="d_gnupg_import">Импортировать</string>
-    <string name="d_gnupg_done">%1$s. Доверие повышено у ключей: %2$d. Импортировано секретных ключей: %3$d.</string>
+    <string name="d_gnupg_done">%1$s. Доверие повышено у ключей: %2$d. Импортировано закрытых ключей: %3$d.</string>
     <string name="d_gnupg_readonly_note">GnuPG только читается и никогда не изменяется. Доверие в PGPony только повышается и никогда не понижается.</string>
-    <!-- 3.0.0 (5d-3): a signature or decryption with a weak key (RSA under 2048 bits, DSA, ElGamal). -->
     <string name="d_sig_weak_suffix"> · слабый ключ подписи (%1$s)</string>
     <string name="d_decrypt_weak_suffix"> · открыто слабым ключом (%1$s)</string>
-    <!-- 3.0.0 (F1): pair with another computer. -->
     <string name="d_pair_menu">Связать с другим компьютером…</string>
     <string name="d_pair_button">Связать с другим компьютером</string>
-    <string name="d_pair_title">Связь с другим компьютером</string>
+    <string name="d_pair_title">Связать с другим компьютером</string>
     <string name="d_pair_intro">Перенос ключей или полной резервной копии между двумя компьютерами в одной сети. Один компьютер ждёт, другой подключается, и вы сравниваете код на обоих экранах. После закрытия этого окна ничего не сохраняется.</string>
-    <string name="d_pair_host">Ждать другой компьютер</string>
+    <string name="d_pair_host">Ждать подключения другого компьютера</string>
     <string name="d_pair_join">Подключиться к другому компьютеру</string>
     <string name="d_pair_host_waiting">На другом компьютере выберите «Подключиться» и введите этот адрес:</string>
-    <string name="d_pair_host_closes">Это окно открыто до %1$s.</string>
+    <string name="d_pair_host_closes">Это окно останется открытым до %1$s.</string>
     <string name="d_pair_firewall">Если брандмауэр спросит, разрешите PGPony принимать подключения, пока это окно открыто.</string>
     <string name="d_pair_no_address">У этого компьютера нет сетевого адреса, доступного другому компьютеру.</string>
-    <string name="d_pair_join_intro">На другом компьютере выберите «Ждать», затем введите показанный там адрес.</string>
+    <string name="d_pair_join_intro">На другом компьютере выберите «Ждать подключения». Затем введите адрес, который он покажет.</string>
     <string name="d_pair_join_label">Адрес, показанный на другом компьютере</string>
-    <string name="d_pair_bad_address">Введите адрес и порт точно как показано, например 192.168.1.20:49152.</string>
+    <string name="d_pair_bad_address">Введите адрес и порт точно так, как показано, например 192.168.1.20:49152.</string>
     <string name="d_pair_connect">Подключиться</string>
-    <string name="d_pair_compare_body">Показывает ли другой компьютер тот же код? Если коды разные, между компьютерами может кто-то находиться. Выберите «Разные» и начните заново.</string>
-    <string name="d_pair_codes_match">Код совпадает</string>
-    <string name="d_pair_codes_differ">Разные</string>
+    <string name="d_pair_compare_body">Показывает ли другой компьютер тот же код? Если коды разные, между компьютерами может кто-то находиться. Выберите «Коды разные» и начните заново.</string>
+    <string name="d_pair_codes_match">Коды совпадают</string>
+    <string name="d_pair_codes_differ">Коды разные</string>
     <string name="d_pair_waiting_other">Ожидание другого компьютера…</string>
-    <string name="d_pair_paired_with">Связано с %1$s</string>
-    <string name="d_pair_other_computer">другим компьютером</string>
+    <string name="d_pair_paired_with">Связь установлена: %1$s</string>
+    <string name="d_pair_paired_unnamed">Связь с другим компьютером установлена</string>
     <string name="d_pair_send_heading">Отправить на другой компьютер</string>
     <string name="d_pair_group_keypairs">Пары ключей</string>
     <string name="d_pair_group_public">Открытые ключи</string>
     <string name="d_pair_group_backup">Всё</string>
     <string name="d_pair_item_backup">Полная резервная копия</string>
-    <string name="d_pair_transfer_pass_note">У некоторых выбранных пар ключей нет парольной фразы. Они передаются под защитой этой фразы для передачи, и на другом компьютере она понадобится, чтобы ими пользоваться.</string>
-    <string name="d_pair_transfer_pass">Фраза для передачи</string>
-    <string name="d_pair_transfer_pass_repeat">Повторите фразу для передачи</string>
+    <string name="d_pair_transfer_pass_note">У некоторых выбранных пар ключей нет парольной фразы. Они передаются под защитой этой парольной фразы для передачи, и на другом компьютере она понадобится, чтобы ими пользоваться.</string>
+    <string name="d_pair_transfer_pass">Парольная фраза для передачи</string>
+    <string name="d_pair_transfer_pass_repeat">Повторите парольную фразу для передачи</string>
     <string name="d_pair_send">Отправить</string>
-    <string name="d_pair_waiting_answer">Ожидание, пока другой компьютер примет…</string>
+    <string name="d_pair_waiting_answer">Ожидание подтверждения от другого компьютера…</string>
     <string name="d_pair_sending">Отправка: %1$s…</string>
     <string name="d_pair_receiving">Получение: %1$s, %2$d %%</string>
     <string name="d_pair_backup_code_tell">Сообщите этот код восстановления пользователю другого компьютера. Он нужен там, чтобы открыть резервную копию.</string>
     <string name="d_pair_incoming_heading">%1$s хочет отправить:</string>
+    <string name="d_pair_incoming_heading_unnamed">Другой компьютер хочет отправить:</string>
     <string name="d_pair_kind_keypair">%1$s (пара ключей)</string>
     <string name="d_pair_kind_public">%1$s (открытый ключ)</string>
     <string name="d_pair_backup_code_label">Код восстановления с другого компьютера</string>
     <string name="d_pair_accept">Принять выбранное</string>
     <string name="d_pair_decline">Отклонить</string>
-    <string name="d_pair_declined">Другой компьютер отказался.</string>
+    <string name="d_pair_declined">Другой компьютер отклонил передачу.</string>
     <string name="d_pair_result_ok">%1$s: %2$s</string>
     <string name="d_pair_result_failed">%1$s: не импортировано (%2$s)</string>
     <string name="d_pair_sent_ok">%1$s: получено другим компьютером</string>
     <string name="d_pair_end">Завершить сеанс</string>
-    <string name="d_pair_ended">Сеанс завершён. Его ключи стёрты.</string>
+    <string name="d_pair_ended">Сеанс завершён. Ключи сеанса стёрты.</string>
     <string name="d_pair_again">Начать заново</string>
     <string name="d_pair_fail_refused">Другой компьютер сообщил, что коды разные. Связь не установлена.</string>
     <string name="d_pair_fail_you_refused">Вы указали, что коды разные, поэтому связь не установлена. Если это неожиданно, убедитесь, что в вашей сети нет посторонних, и начните заново.</string>
-    <string name="d_pair_fail_handshake">Не удалось проверить связь. Ничего не связано, начните заново.</string>
+    <string name="d_pair_fail_handshake">Не удалось проверить связывание. Связь не установлена, начните заново.</string>
     <string name="d_pair_fail_timeout">Другой компьютер перестал отвечать.</string>
-    <string name="d_pair_fail_version">На другом компьютере PGPony с другим способом связи. Обновите оба и начните заново.</string>
-    <string name="d_pair_fail_protocol">С другой стороны не окно связи PGPony, или пришли неожиданные данные.</string>
+    <string name="d_pair_fail_version">На другом компьютере версия PGPony с другим способом связывания. Обновите PGPony на обоих компьютерах и начните заново.</string>
+    <string name="d_pair_fail_protocol">Другая сторона не является окном связывания PGPony или прислала неожиданные данные.</string>
     <string name="d_pair_fail_closed">Соединение потеряно.</string>
-    <string name="d_pair_err_window_expired">Окно связи закрылось до подключения другого компьютера.</string>
+    <string name="d_pair_err_window_expired">Окно связывания закрылось раньше, чем подключился другой компьютер.</string>
     <string name="d_pair_err_export">Не удалось экспортировать %1$s.</string>
-    <string name="d_pair_err_needs_passphrase">У %1$s нет парольной фразы. Введите фразу для передачи, чтобы отправить его.</string>
-    <string name="d_pair_err_too_large">%1$s слишком велик для отправки.</string>
+    <string name="d_pair_err_needs_passphrase">У %1$s нет парольной фразы. Введите парольную фразу для передачи, чтобы отправить его.</string>
+    <string name="d_pair_err_too_large">%1$s: слишком большой объём для отправки.</string>
     <string name="d_pair_err_import">Не удалось импортировать %1$s.</string>
     <string name="d_pair_err_backup_code">Введите код восстановления, показанный на другом компьютере.</string>
-    <!-- 3.0.0: the keyring's Import menu. -->
-    <string name="d_keyring_import_menu">Импорт</string>
+    <string name="d_keyring_import_menu">Импортировать</string>
     <string name="d_pair_other_addresses">Другие адреса (%1$d)</string>
     <string name="d_pair_other_addresses_hide">Скрыть другие адреса</string>
-    <string name="d_pair_other_addresses_note">Попробуйте их, если другой компьютер не может подключиться, например если это виртуальная машина на этом компьютере или другой сетевой адаптер.</string>
+    <string name="d_pair_other_addresses_note">Попробуйте их, если другой компьютер не может подключиться, например если это виртуальная машина на этом компьютере или он подключён через другой сетевой адаптер.</string>
 </resources>

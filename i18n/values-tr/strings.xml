@@ -1,0 +1,881 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PGPony Desktop: the desktop-owned string layer, Turkish.
+  Keys and order follow ../values/strings.xml; see its header for how the layers work.
+  A key missing here falls back to the English base.
+-->
+<resources>
+
+    <!-- ── Navigation rail ─────────────────────────────────────────────── -->
+    <string name="d_nav_crypto">Şifrele</string>
+    <string name="d_nav_cards">Donanım Anahtarları</string>
+
+    <!-- ── Settings · Network ──────────────────────────────────────────── -->
+    <string name="d_settings_section_network">Ağ</string>
+    <string name="d_settings_proxy_title">Proxy</string>
+    <string name="d_settings_proxy_off">Doğrudan bağlantı</string>
+    <string name="d_settings_proxy_tor">Tor (yerel hizmet, %1$s:%2$d)</string>
+    <string name="d_settings_proxy_custom">Özel SOCKS proxy</string>
+    <string name="d_settings_proxy_tor_note">Bu bilgisayarda çalışan bir Tor hizmeti gerekir. Tor Browser (açıkken) de tor hizmeti de %1$s:%2$d adresini dinler.</string>
+    <string name="d_status_proxy_set">Proxy ayarlandı: %1$s</string>
+    <string name="d_settings_keyservers_title">Anahtar sunucuları (arama sırası)</string>
+    <string name="d_keyservers_lookup">Arama</string>
+    <string name="d_keyservers_publish">Yayımlama</string>
+    <string name="d_keyservers_first_party"> · birinci taraf</string>
+    <string name="d_keyservers_remove">Sunucuyu kaldır</string>
+    <string name="d_keyservers_add">Sunucu ekle…</string>
+    <string name="d_keyservers_note">Arama, etkin sunucuları (WKD\'den sonra) sırayla sorgular; yayımlama ekranı, yayımlama için etkinleştirilmiş her sunucuyu sunar. keys.openpgp.org e-posta adreslerini doğrular ancak v6/PQC anahtarlarını reddedebilir; keys.pgpony.app, PGPony\'nin oluşturduğu her anahtar türünü kabul eder.</string>
+    <string name="d_keyservers_add_title">Anahtar sunucusu ekle</string>
+    <string name="d_keyservers_add_url_label">Temel URL (şema + ana makine, sonda eğik çizgi olmadan)</string>
+    <string name="d_keyservers_add_note">Sunucu, keys.openpgp.org VKS API\'sini desteklemelidir; VKS yoksa PGPony yayımlama için HKP\'ye (/pks/add) geri döner.</string>
+    <string name="d_status_keyserver_added">Anahtar sunucusu eklendi: %1$s</string>
+    <string name="d_settings_autorefresh">Anahtarları anahtar sunucularından otomatik olarak yenile (uygulama açıkken 12 saatte bir)</string>
+
+    <!-- ── Settings · Backup ───────────────────────────────────────────── -->
+    <string name="d_settings_backup_export">Anahtarlığı yedekle…</string>
+    <string name="d_settings_backup_restore">Yedeği geri yükle…</string>
+    <string name="d_settings_backup_note">.pgpony biçimindeki yedekler iOS ve Android için PGPony ile karşılıklı olarak geri yüklenebilir; OpenKeychain yedekleri de geri yüklenir.</string>
+    <string name="d_settings_subtitle">Bu bilgisayardaki PGPony için geçerli tüm ayarlar.</string>
+    <string name="d_settings_network_note">Proxy, anahtar sunucuları ve otomatik anahtar yenileme.</string>
+    <string name="d_settings_appearance_note">Tema ve dil. İkisi de hemen uygulanır.</string>
+
+    <!-- ── Settings · Password store ───────────────────────────────────── -->
+    <string name="d_settings_pass_show_tab">Parola Deposu sekmesini göster</string>
+    <string name="d_settings_pass_note">Standart bir `pass` deposuna (.gpg dosyaları ve .gpg-id alıcı dosyaları içeren bir klasör) göz atar ve kayıtların şifresini anahtarlığınızla, yazılım veya donanım anahtarıyla çözer. Salt okunur: PGPony depoya asla yazmaz.</string>
+    <string name="d_settings_pass_default_location">Varsayılan konum:</string>
+    <plurals name="d_settings_pass_status_configured">
+        <item quantity="one">%1$d depo yapılandırıldı. Parola Deposu sekmesinden yönetin.</item>
+        <item quantity="other">%1$d depo yapılandırıldı. Parola Deposu sekmesinden yönetin.</item>
+    </plurals>
+    <string name="d_settings_pass_status_exists">Bu klasör mevcut. Parola Deposu sekmesinden ekleyin.</string>
+    <string name="d_settings_pass_status_none">Burada henüz depo yok. PASSWORD_STORE_DIR ayarlıysa dikkate alınır; aksi hâlde Parola Deposu sekmesinden istediğiniz klasörü ekleyin.</string>
+
+    <!-- ── Settings · Clipboard ────────────────────────────────────────── -->
+    <string name="d_settings_clipboard_autoclear">Kopyalanan gizli bilgileri otomatik olarak temizle</string>
+    <string name="d_settings_clipboard_seconds_label">Saniye</string>
+    <string name="d_settings_clipboard_note">5 ile 600 saniye arası. Zamanlayıcı, panoyu yalnızca hâlâ PGPony\'nin koyduğu içeriği taşıyorsa temizler. Bu arada başka bir şey kopyaladıysanız panonuza dokunulmaz. Bir pano yöneticisinin veya eşitleme hizmetinin (KDE Klipper, Windows bulut panosu, macOS Evrensel Pano) PGPony\'nin erişemeyeceği bir kopya tutabileceğini unutmayın.</string>
+    <string name="d_status_clipboard_seconds">Pano %1$d sn sonra temizlenir</string>
+
+    <!-- ── Settings · Appearance · Language ────────────────────────────── -->
+    <string name="d_settings_language_system">Sistem (%1$s)</string>
+    <string name="d_settings_language_note">Yeniden başlatmaya gerek kalmadan tüm pencere hemen değişir. Anahtarlarınızdan veya dosyalarınızdan gelen metinler, kaydedildikleri gibi gösterilir ve asla çevrilmez.</string>
+
+    <!-- ── Settings · Storage ──────────────────────────────────────────── -->
+    <string name="d_settings_section_storage">Depolama</string>
+    <string name="d_settings_storage_data_folder">Veri klasörü:</string>
+    <string name="d_settings_storage_note">Anahtar meta verileri pgpony.db dosyasında (Android için PGPony ile aynı Room şeması) tutulur; zırhlı anahtar malzemesi keys/ altında, anahtarın her yarısı için bir dosya olarak 0600 izinleriyle saklanır. Gizli anahtarlar diskte de kendi parola ifadesi (S2K) korumasıyla kalır. Depo kendi başına ek bir şifreleme eklemez.</string>
+
+    <!-- ── Settings · About ────────────────────────────────────────────── -->
+    <string name="d_settings_about_version">PGPony Desktop %1$s</string>
+    <string name="d_settings_about_note">Android için PGPony ile aynı OpenPGP motoru ve Room şeması (yeniden yazılmadı, doğrudan dahil edildi).</string>
+    <string name="d_about_title">PGPony Hakkında</string>
+    <string name="d_about_links">Bağlantılar</string>
+
+    <!-- ── Shared desktop buttons ──────────────────────────────────────── -->
+    <string name="d_common_apply">Uygula</string>
+    <string name="d_common_add">Ekle</string>
+    <string name="d_common_clear_now">Şimdi temizle</string>
+    <string name="d_common_remove">Kaldır</string>
+
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
+    <string name="d_settings_storage_open_folder">Klasörü aç</string>
+    <string name="d_settings_storage_copy_path">Yolu kopyala</string>
+
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
+    <string name="d_settings_about_repo">GitHub\'daki kaynak kodu</string>
+    <string name="d_settings_about_repo_note">Masaüstü uygulamasının kaynak kodu 1.0 sürümüyle yayımlanır. Android uygulaması ve ortak kripto çekirdekleri zaten herkese açık.</string>
+    <string name="d_settings_about_issues">Sorun bildir</string>
+    <string name="d_settings_about_website">PGPony web sitesi</string>
+    <string name="d_settings_about_runtime_label">Çalışma ortamı:</string>
+    <string name="d_settings_about_copy_diagnostics">Kopyala</string>
+
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
+    <string name="d_settings_section_apps">NorseHorse\'tan Daha Fazlası</string>
+    <string name="d_settings_apps_note">Aynı geliştiricinin ailedeki diğer uygulamaları. Bağlantılar tarayıcınızda açılır.</string>
+    <string name="d_app_pgpony_desc">Her yerde aynı anahtarlık: telefondan masaüstüne tek bir OpenPGP motoru ve tek bir yedek biçimi.</string>
+    <string name="d_app_carrierpony_desc">OpenPGP üzerinden uçtan uca şifreli mesajlaşma ve dosya aktarımı. Hesap yok, telefon numarası yok.</string>
+    <string name="d_app_agepony_desc">age üzerine kurulu dosya şifreleme ve ayrık imzalama. Bir GitHub kullanıcı adına şifreleyin, bir güvenlik anahtarıyla imzalayın.</string>
+    <string name="d_app_quorumpony_desc">Bir sırrı yedek kartlara bölün. Belirlenen eşik sayısına ulaşan kartlar sırrı geri getirir; tek başına bir kart hiçbir şey açığa çıkarmaz.</string>
+    <string name="d_app_relaypony_desc">Dosyaları Wi-Fi üzerinden doğrudan bir cihazdan diğerine gönderin. Uçtan uca şifreli, arada sunucu yok.</string>
+    <string name="d_app_burnpony_desc">Kendini imha eden şifreli notlar: cihazınızda mühürlenir, okunduktan sonra yok olur.</string>
+    <string name="d_app_vaultpony_desc">Telefonunuzda VeraCrypt kapsayıcı biçiminde şifreli kasalar; aynı kasa bilgisayarınızda da açılır.</string>
+    <string name="d_app_passpony_desc">pass ve passage parola depoları için bir istemci. Parolalarınız, kendi git deponuzda şifreli dosyalar olarak kalır.</string>
+    <string name="d_app_hashpony_desc">Dosyaları sha256sum gibi özetleyin ve doğrulayın: sağlama toplamı dosyaları, klasör denetimleri ve tüm yaygın algoritmalar.</string>
+    <string name="d_app_tappony_desc">Bir NFC etiketine dokunun, kimliğini ve içeriğini kendi sunucunuza gönderin. Hesap yok, bulut yok.</string>
+
+    <!-- ── Status line ───────────────────────────────────── -->
+    <string name="d_status_copied">Panoya kopyalandı.</string>
+    <string name="d_status_open_failed">%1$s açılamadı. Bunun yerine panonuza kopyalandı.</string>
+
+    <!-- ── Tabs and file operations ────────────────────────────────────── -->
+    <string name="d_crypto_tab_files">Dosyalar</string>
+    <string name="d_crypto_tab_message">Mesaj</string>
+    <string name="d_crypto_fileop_sign">İmzala (ayrık)</string>
+    <string name="d_crypto_fileop_verify">Doğrula (ayrık)</string>
+    <string name="d_crypto_err_generic">İşlem başarısız oldu</string>
+
+    <!-- ── Files pane ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_add_files">Dosya ekle…</string>
+    <string name="d_crypto_drop_hint">…veya dosyaları pencerenin herhangi bir yerine bırakın</string>
+    <string name="d_crypto_no_files">Dosya seçilmedi.</string>
+    <string name="d_crypto_no_files_title">Sırada dosya yok</string>
+    <string name="d_crypto_result_ok">TAMAM</string>
+    <string name="d_crypto_result_failed">BAŞARISIZ</string>
+    <string name="d_crypto_signer_pass_label">İmzalayan anahtarın parola ifadesi (korumasızsa boş bırakın)</string>
+    <string name="d_crypto_err_composite_pass">Bu imzalama anahtarı parola ifadesiyle korunuyor. İmzalamak için parola ifadesini girin.</string>
+    <string name="d_crypto_err_composite_encrypt_sign">Bileşik ML-DSA anahtarları şifreleme sırasında imzalayamaz. İmzala sekmesini kullanın veya klasik bir imzalama anahtarı seçin.</string>
+    <string name="d_crypto_armor_gpg">ASCII zırh (ikili .gpg yerine .asc)</string>
+    <string name="d_crypto_armor_sig">ASCII zırh (ikili .sig yerine .asc)</string>
+    <string name="d_crypto_decrypt_pass_label">Anahtarın veya mesajın parola ifadesi</string>
+    <string name="d_crypto_decrypt_files_note">Şifresi çözülen dosyalar, mesajda varsa özgün adlarını geri alır ve mevcut dosyaların asla üzerine yazmaz.</string>
+    <string name="d_crypto_sign_as_colon">İmzalayan kimlik:</string>
+    <string name="d_crypto_verify_files_hint">İçerik dosyası yanında duran (uzantısız aynı ada sahip) bir .sig/.asc imzası seçin veya tam olarak iki dosya seçin: imza ve içerik.</string>
+    <string name="d_crypto_err_no_pairing">İmza ve içerik eşleşmesi bulunamadı. Yukarıdaki ipucuna bakın.</string>
+    <string name="d_crypto_err_no_signer">İmzalamak için anahtar çifti yok</string>
+    <string name="d_crypto_files_done">%1$d/%2$d dosya işlendi</string>
+    <string name="d_crypto_files_partial">%1$d/%2$d başarılı. Her dosyanın sonucuna bakın.</string>
+    <string name="d_crypto_run_op">Çalıştır: %1$s</string>
+    <string name="d_crypto_input_verify">Açık metin imzalı mesaj veya zırhlı imza</string>
+
+    <!-- ── Encrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_encrypt_with">Şifreleme yöntemi:</string>
+    <string name="d_crypto_with_public_keys">Açık anahtarlar</string>
+    <string name="d_crypto_attach_files">Dosya ekle…</string>
+    <string name="d_crypto_clear_attachments">Ekleri temizle</string>
+    <string name="d_crypto_bundle_note">PGP/MIME paketi olarak gönderilir: gövde + %1$d ek, tek bir şifreli multipart/mixed içinde.</string>
+    <string name="d_crypto_err_card_or_recipient_load">Bir alıcı veya kart anahtarı yüklenemedi</string>
+    <string name="d_crypto_card_sign_encrypt_title">%1$s ile imzala ve şifrele</string>
+    <string name="d_crypto_hardware_key">donanım anahtarı</string>
+    <string name="d_crypto_err_pubkey_missing">\"%1$s\" için açık anahtar yüklenemedi. Kayıtlı anahtar malzemesi eksik. Bu kaydı Anahtarlık\'tan kaldırın ve açık anahtarı yeniden içe aktarın.</string>
+    <string name="d_crypto_err_signer_load">%1$s imzalama anahtarı yüklenemedi, bu yüzden hiçbir şey şifrelenmedi. (İmzasız göndermek için İmzalayan kimlik seçeneğinin işaretini kaldırın.)</string>
+    <string name="d_crypto_banner_encrypted">%1$d alıcıya şifrelendi</string>
+    <string name="d_crypto_banner_encrypted_card">%1$d alıcıya şifrelendi, kartta imzalandı (imzalayan: %2$s)</string>
+    <string name="d_crypto_banner_encrypted_pass">Parola ifadesiyle şifrelendi</string>
+    <string name="d_crypto_banner_signed_as">, imzalayan: %1$s (%2$s)</string>
+    <string name="d_crypto_banner_unsigned">, İMZASIZ</string>
+
+    <!-- ── Banners: stems and fragments ────────────────────────────────── -->
+    <string name="d_crypto_banner_bundle_suffix"> · %1$d ekli paket</string>
+    <string name="d_crypto_banner_attach_suffix"> · %1$d ek</string>
+    <string name="d_crypto_banner_signer_suffix">: %1$s</string>
+    <string name="d_crypto_banner_keyid_suffix"> (anahtar kimliği %1$s)</string>
+
+    <!-- ── Decrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_decrypt_note">Zırhlı bir mesajı veya eksiksiz bir PGP/MIME .eml dosyasını kabul eder. Paketlerin ekleri çıktının yanında gösterilir.</string>
+    <string name="d_crypto_card_decrypt_title">%1$s ile şifre çöz</string>
+    <string name="d_crypto_banner_decrypted_card_verified">Şifresi kartta çözüldü · imza DOĞRULANDI</string>
+    <string name="d_crypto_banner_decrypted_card_unknown">Şifresi kartta çözüldü · imzalayan anahtarlığınızda yok</string>
+    <string name="d_crypto_banner_decrypted_card_unsigned">Şifresi kartta çözüldü · imza yok</string>
+    <string name="d_crypto_banner_decrypted_verified">Şifresi çözüldü · imza DOĞRULANDI</string>
+    <string name="d_crypto_banner_decrypted_unknown">Şifresi çözüldü · anahtarlığınızda olmayan bir anahtarla imzalanmış</string>
+    <string name="d_crypto_banner_decrypted_unsigned">Şifresi çözüldü · imza yok</string>
+
+    <!-- ── Sign tab ────────────────────────────────────────────────────── -->
+    <string name="d_crypto_detached_toggle">Ayrık imza (yalnızca imza, metin ayrı kalır)</string>
+    <string name="d_crypto_clear_signed">Açık metin imzalı</string>
+    <string name="d_crypto_err_card_pubkey">Kartın açık anahtarı yüklenemedi</string>
+    <string name="d_crypto_card_sign_title">%1$s ile imzala</string>
+    <string name="d_crypto_banner_signed_card">%1$s (kartta) · %2$s</string>
+    <string name="d_crypto_banner_signed">%1$s · %2$s</string>
+    <string name="d_crypto_err_signer_ring">İmzalayanın gizli anahtarlığı yüklenemedi</string>
+
+    <!-- ── Verify tab ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_verify_hint">Açık metin imzalı bir mesajı yukarıya yapıştırın. Ayrık imza için imzayı yukarıya, özgün metni aşağıya yapıştırın.</string>
+    <string name="d_crypto_detached_content_label">Özgün metin (yalnızca ayrık doğrulama için)</string>
+    <string name="d_crypto_err_detached_needs_text">Ayrık imza: özgün metni ikinci alana yapıştırın</string>
+    <string name="d_crypto_err_is_encrypted">Bu şifreli bir mesaj. Şifre Çöz sekmesini kullanın.</string>
+    <string name="d_crypto_err_no_framing">Tanınabilir bir PGP imza çerçevesi bulunamadı</string>
+    <string name="d_crypto_banner_verified">İmza DOĞRULANDI: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_invalid">İmza GEÇERSİZ: içerik imzayla eşleşmiyor</string>
+    <string name="d_crypto_banner_unknown_signer">Anahtarlığınızda olmayan bir anahtarla imzalanmış. Doğrulamak için imzalayanın açık anahtarını içe aktarın.</string>
+    <string name="d_crypto_banner_no_signature">Girdide imza bulunamadı</string>
+
+    <!-- ── Output pane ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_output">Çıktı</string>
+    <string name="d_crypto_attachment_meta">%1$s · %2$d bayt</string>
+    <string name="d_common_save_as">Kaydet…</string>
+    <string name="d_crypto_copy_output">Çıktıyı kopyala</string>
+    <string name="d_crypto_save_eml">.eml olarak kaydet…</string>
+    <string name="d_status_saved">Kaydedildi: %1$s</string>
+    <string name="d_status_saved_bytes">Kaydedildi: %1$s (%2$d bayt)</string>
+    <string name="d_crypto_cancelled">İptal edildi</string>
+    <string name="d_crypto_no_signer_available">Kullanılabilir anahtar çifti yok</string>
+
+    <!-- ── Hardware-key batch prompts ──────────────────────────────────── -->
+    <string name="d_crypto_card_sign_files">%1$d dosyayı %2$s ile imzala</string>
+    <string name="d_crypto_card_sign_encrypt_files">%1$d dosyayı %2$s ile imzala ve şifrele</string>
+    <string name="d_crypto_card_decrypt_files">%1$d dosyanın şifresini %2$s ile çöz</string>
+
+    <!-- ── Store bar ───────────────────────────────────────────────────── -->
+    <string name="d_pass_store_unreadable">%1$s okunamıyor. Taşınmış, bağlantısı kesilmiş veya artık okunamıyor olabilir.</string>
+    <string name="d_pass_not_a_store">Okunabilir bir parola deposu değil: %1$s</string>
+    <string name="d_pass_store_added">Parola deposu eklendi: %1$s</string>
+    <string name="d_pass_choose_store">Depo seç</string>
+    <string name="d_pass_add_store">Depo ekle…</string>
+    <string name="d_pass_store_title">Parola Deposu</string>
+    <string name="d_pass_use_default">~/.password-store kullan</string>
+    <string name="d_pass_rescan">Yeniden tara</string>
+    <string name="d_pass_empty_title">Henüz parola deposu yok</string>
+    <string name="d_pass_select_entry_title">Hiçbir şey seçilmedi</string>
+    <string name="d_pass_store_removed">%1$s PGPony\'den kaldırıldı (klasöre dokunulmadı)</string>
+    <string name="d_pass_choose_folder">Parola deposu klasörünü seç</string>
+
+    <!-- ── Browser pane ────────────────────────────────────────────────── -->
+    <string name="d_pass_search_label">Kayıtlarda ara</string>
+    <string name="d_pass_no_entries">Kayıt yok.</string>
+    <plurals name="d_pass_match_count">
+        <item quantity="one">%1$d eşleşme</item>
+        <item quantity="other">%1$d eşleşme</item>
+    </plurals>
+    <string name="d_pass_up">Bir üst klasör</string>
+    <string name="d_pass_select_entry">Şifresini çözmek için bir kayıt seçin.</string>
+    <string name="d_pass_empty_intro">PGPony\'ye bir `pass` deposu gösterin: standart password-store araçlarının kullandığı düzende, OpenPGP ile şifrelenmiş .gpg dosyalarından oluşan bir klasör.</string>
+    <string name="d_pass_empty_detail">Depo bulunduğu yerde okunur, bu yüzden onu eşitleyen ne varsa (git, Syncthing, Nextcloud) çalışmaya devam eder. PGPony yalnızca okur: klasördeki hiçbir şeyi yazmaz, taşımaz veya yeniden şifrelemez. Kayıtların şifresi, siz açtığınızda tek tek çözülür. Ağaçta gezinmek yalnızca dosya adlarını okur.</string>
+
+    <!-- ── Entry pane ──────────────────────────────────────────────────── -->
+    <string name="d_pass_entry_missing">Kayıt dosyası eksik veya okunamıyor.</string>
+    <string name="d_pass_no_matching_key">Anahtarlığınızdaki hiçbir anahtar bu kaydı açamıyor. Kaydın şifrelendiği gizli anahtarı içe aktarın veya onu taşıyan donanım anahtarını eşleştirin.</string>
+    <string name="d_pass_decrypting">Şifre çözülüyor…</string>
+    <string name="d_pass_card_entry">Bu kayıt bir donanım anahtarına şifrelenmiş.</string>
+    <string name="d_pass_card_key_missing">Bu kaydın eşleştirilmiş kart anahtarı anahtarlığınızda yok.</string>
+    <string name="d_pass_card_decrypt_title">%1$s kaydının şifresini %2$s ile çöz</string>
+    <string name="d_pass_card_failed">Donanım anahtarıyla şifre çözme başarısız oldu: %1$s</string>
+    <string name="d_pass_encrypted_to">Şifrelendiği anahtarlar: %1$s</string>
+    <string name="d_common_reveal">Göster</string>
+    <string name="d_common_hide">Gizle</string>
+    <string name="d_pass_password_copied">Parola kopyalandı</string>
+    <string name="d_pass_password_copied_clearing">Parola kopyalandı. Pano %1$d sn sonra temizlenecek</string>
+    <string name="d_pass_copy_password">Parolayı kopyala</string>
+    <string name="d_pass_clipboard_countdown">Pano %1$d sn sonra temizlenecek</string>
+    <string name="d_pass_fields">Alanlar</string>
+    <string name="d_pass_field_copied">Kopyalandı: %1$s</string>
+    <string name="d_pass_copy_field">Kopyala: %1$s</string>
+    <string name="d_pass_lock">Kilitle</string>
+    <string name="d_pass_relock_note">%1$d sn sonra kendiliğinden kilitlenir.</string>
+
+    <!-- ── One-time codes ──────────────────────────────────────────────── -->
+    <string name="d_pass_otp_unparsable">PGPony bu URI\'den kod üretemiyor. Bu bir TOTP URI\'si değil veya içindeki gizli değer geçerli bir base32 değil. Bu kayıt için kimlik doğrulama uygulamanızı kullanın.</string>
+    <string name="d_pass_otp_uri_copied">otpauth URI\'si kopyalandı</string>
+    <string name="d_pass_otp_display_only">PGPony bu kurulum URI\'sini gösterir ancak bu cihazda kod üretmez. URI\'yi bir kimlik doğrulama uygulamasına kopyalayın.</string>
+    <string name="d_pass_copy_uri">URI\'yi kopyala</string>
+    <string name="d_pass_otp_no_provider">Bu JVM\'de HMAC-%1$s sağlayıcısı yok, bu yüzden kod burada üretilemiyor.</string>
+    <string name="d_pass_code_copied">Kod kopyalandı</string>
+    <string name="d_pass_code_copied_clearing">Kod kopyalandı. Pano %1$d sn sonra temizlenecek</string>
+    <string name="d_pass_copy_code">Tek kullanımlık kodu kopyala</string>
+    <string name="d_pass_otp_rolls_in">%1$d sn sonra yenilenir</string>
+    <string name="d_pass_otp_meta">%1$s: %2$s, %3$d hane, %4$d sn</string>
+    <string name="d_pass_show_uri">Kurulum URI\'sini göster</string>
+    <string name="d_pass_hide_uri">Kurulum URI\'sini gizle</string>
+    <string name="d_pass_copy_setup_uri">Kurulum URI\'sini kopyala</string>
+    <string name="d_cards_subtitle">USB üzerinden OpenPGP akıllı kartları: YubiKey 5, Token2, Nitrokey 3 ve benzerleri. Gizli anahtarlar donanım anahtarında kalır ve bu bilgisayara hiç dokunmaz.</string>
+
+    <!-- ── Reader row (USB PC/SC — the phone taps NFC instead) ─────────── -->
+    <string name="d_cards_reader_label">Okuyucu:</string>
+    <string name="d_cards_no_reader">Okuyucu bulunamadı</string>
+    <string name="d_cards_reader_with_card">%1$s · kart takılı</string>
+    <string name="d_cards_read_card">Kartı oku</string>
+    <string name="d_cards_no_reader_detected">PC/SC okuyucu algılanmadı. Donanım anahtarını takın (kendi okuyucusu olarak görünür).</string>
+    <string name="d_cards_no_reader_linux">Linux\'ta pcscd\'yi kurup başlatın.</string>
+    <string name="d_cards_section_reader">Okuyucu</string>
+    <string name="d_cards_no_reader_title">Okuyucu algılanmadı</string>
+    <string name="d_cards_no_card_title">Henüz kart okunmadı</string>
+    <string name="d_cards_no_card_body">Donanım anahtarını takın ve Kartı oku düğmesine tıklayın. PGPony kartın yalnızca açık yuvalarını okur. Karta hiçbir şey yazılmaz.</string>
+
+    <!-- ── Card info ──────────────────────────────────────────────────── -->
+    <string name="d_cards_aid">AID %1$s</string>
+    <string name="d_cards_pin_tries">Kalan PIN deneme hakkı: kullanıcı %1$d · yönetici %2$d</string>
+
+    <!-- ── Pairing ────────────────────────────────────────────────────── -->
+    <string name="d_cards_paired">Eşleştirildi. Anahtarlık kaydı: %1$s</string>
+    <string name="d_cards_pair">Anahtarlıkla eşleştir</string>
+    <string name="d_cards_keygen_open">Kartta anahtar oluştur…</string>
+    <string name="d_cards_pair_note">Eşleştirme, kartı anahtarlığınıza kaydeder; böylece mesajlar karta şifrelenebilir, şifre çözme ve imzalama donanım üzerinden yapılır. Kartın açık anahtar sertifikası zaten anahtarlığınızdaysa (içe aktarın veya bir anahtar sunucusundan getirin), eşleştirme o kayda bağlanır; birincil anahtarı çevrimdışı tutulan düzenler de buna dahildir.</string>
+    <string name="d_cards_keygen_done">Kartta oluşturuldu ve eşleştirildi: %1$s. Açık anahtarı dışa aktarın ve YEDEKLEYİN; gizli anahtarlar karttan çıkamaz.</string>
+
+    <!-- ── Management buttons (ellipsis = opens a dialog) ──────────────── -->
+    <string name="d_cards_change_pin_open">PIN\'i değiştir…</string>
+    <string name="d_cards_change_admin_open">Yönetici PIN\'ini değiştir…</string>
+    <string name="d_cards_unblock_open">PIN blokesini kaldır…</string>
+    <string name="d_cards_reset_open">Fabrika ayarlarına sıfırla…</string>
+
+    <!-- ── PIN cache ──────────────────────────────────────────────────── -->
+    <string name="d_cards_pin_cache_title">PIN önbelleği</string>
+    <string name="d_cards_pin_cache_toggle">Başarılı bir işlemden sonra kullanıcı PIN\'ini hatırla</string>
+    <string name="d_cards_pin_cache_keep_for">Tutma süresi:</string>
+    <string name="d_cards_pin_cache_custom_seconds">%1$d sn</string>
+    <string name="d_cards_pin_held_no_timer">PIN tutuluyor (zamanlayıcı yok)</string>
+    <string name="d_cards_pin_cache_note">Yalnızca bellekte tutulur, asla diske yazılmaz. Yanlış bir PIN girmek, uygulamadan çıkmak veya Şimdi temizle düğmesi onu siler. Yönetici PIN\'i asla önbelleğe alınmaz.</string>
+
+    <!-- ── Dialogs ────────────────────────────────────────────────────── -->
+    <string name="d_cards_new_pin_min6">Yeni PIN (en az 6)</string>
+    <string name="d_cards_new_admin_min8">Yeni yönetici PIN\'i (en az 8)</string>
+    <string name="d_cards_new_user_pin_min6">Yeni kullanıcı PIN\'i (en az 6)</string>
+    <string name="d_cards_pin_retry_warning">Yanlış girişler deneme hakkını tüketir. Çok fazla yanlış girişten sonra kart bloke olur.</string>
+    <string name="d_cards_reset_warning">Bu işlem karttaki TÜM anahtarları SİLER ve iki PIN\'i de varsayılan değerlerine (123456 / 12345678) sıfırlar. Kartta oluşturulan anahtarlar kurtarılamaz. Bu işlem geri alınamaz.</string>
+    <string name="d_cards_reset_type_prompt">Onaylamak için şunu yazın: %1$s</string>
+    <string name="d_cards_reset_confirm">Kartı sil</string>
+    <string name="d_cards_keygen_warning">Kartın ÜZERİNDE bir Ed25519 imzalama anahtarı ve bir Cv25519 şifreleme anahtarı oluşturur. Kartın imza ve şifre çözme yuvalarının ÜZERİNE YAZAR. Gizli anahtarlar donanımdan asla çıkmaz ve YEDEKLENEMEZ. Kartı kaybederseniz anahtarları da kaybedersiniz.</string>
+    <string name="d_cards_expires_colon">Son kullanma tarihi:</string>
+    <string name="d_cards_keygen_ack">Bunun kartın anahtarlarının üzerine yazacağını ve anahtarların yedeklenemeyeceğini anlıyorum</string>
+
+    <!-- ── Shared desktop buttons (cont.) ─────────────────────────────── -->
+    <string name="d_common_working">İşleniyor…</string>
+    <string name="d_keydetail_no_user_id">(Kullanıcı Kimliği yok)</string>
+    <string name="d_keydetail_badge_secret">GİZLİ</string>
+    <string name="d_keydetail_badge_card">KART</string>
+    <string name="d_keydetail_badge_expired">SÜRESİ DOLDU</string>
+
+    <!-- ── Identity ────────────────────────────────────── -->
+    <string name="d_keydetail_copy_fingerprint">Parmak izini kopyala</string>
+    <string name="d_keydetail_status_fingerprint_copied">Parmak izi kopyalandı</string>
+    <string name="d_keydetail_key_id">Anahtar Kimliği</string>
+    <string name="d_keydetail_make_default_signing">Varsayılan imzalama anahtarı yap</string>
+
+    <!-- ── Subkey list ─────────────────────────────────── -->
+    <string name="d_keydetail_section_keys">Anahtarlar (%1$d)</string>
+    <string name="d_keydetail_subkey">Alt anahtar</string>
+    <string name="d_keydetail_subkey_meta">%1$s · Oluşturulma: %2$s</string>
+    <string name="d_keydetail_subkey_meta_expires">%1$s · Oluşturulma: %2$s · Son kullanma tarihi: %3$s</string>
+
+    <!-- ── Export row (short labels; Android's are phone-sized sentences) ─ -->
+    <string name="d_keydetail_copy_public">Açık anahtarı kopyala</string>
+    <string name="d_keydetail_export_public">Açık anahtarı dışa aktar…</string>
+    <string name="d_keydetail_show_qr">QR göster…</string>
+    <string name="d_keydetail_export_secret">Gizli anahtarı dışa aktar…</string>
+    <string name="d_keydetail_export_secret_gpg">GnuPG için dışa aktar</string>
+    <string name="d_keydetail_status_pub_copied">Açık anahtar kopyalandı: %1$s</string>
+    <string name="d_keydetail_err_no_public_armor">Kayıtlı zırhlı açık anahtar yok</string>
+    <string name="d_keydetail_secret_export_note">Dışa aktarılan gizli anahtarlar parola ifadesi (S2K) korumasını sürdürür.</string>
+
+    <!-- ── Key servers ─────────────────────────────────── -->
+    <string name="d_keydetail_refresh_servers">Anahtar sunucularından yenile</string>
+
+    <!-- ── Danger zone + save dialog ───────────────────── -->
+    <string name="d_keydetail_danger_zone">Tehlikeli bölge</string>
+    <string name="d_keydetail_save_dialog_title">Anahtarı dışa aktar</string>
+    <string name="d_keydetail_status_exported">Dışa aktarıldı: %1$s</string>
+    <string name="d_keydetail_status_nothing_to_export">Dışa aktarılacak bir şey yok</string>
+
+    <!-- ── QR dialog ───────────────────────────────────── -->
+    <string name="d_keydetail_qr_title">Açık anahtar QR kodu</string>
+    <string name="d_keydetail_qr_hint">%1$s anahtarını içe aktarmak için başka bir cihazda PGPony ile tarayın.</string>
+    <string name="d_keydetail_qr_too_large">Bu anahtar bir QR koduna sığmayacak kadar büyük. Bunun yerine .asc dosyasını dışa aktarıp onu paylaşın.</string>
+    <string name="d_keydetail_qr_no_material">Gösterilecek açık anahtar malzemesi yok.</string>
+    <string name="d_keydetail_qr_save_png">PNG olarak kaydet…</string>
+    <string name="d_keydetail_status_qr_saved">QR kaydedildi: %1$s</string>
+
+    <!-- ── Expiration dialog ───────────────────────────── -->
+    <string name="d_keydetail_expiry_never">Süresiz</string>
+    <string name="d_keydetail_expiry_date_label">Son kullanma tarihi (YYYY-AA-GG)</string>
+    <string name="d_keydetail_expiry_note">Anahtarın öz sertifikasını ve alt anahtar bağlamalarını yeniden imzalar.</string>
+
+    <!-- ── Revoke dialog ──────────────────────────────── -->
+    <string name="d_keydetail_revoke_title">%1$s anahtarını geçersiz kıl</string>
+    <string name="d_keydetail_revoke_warning">Geçersiz kılma, bu anahtarı yeni imzalar ve şifreleme için kullanılamaz olarak işaretler. Geçmiş mesajların şifresi yine çözülebilir. Bu işlem geri alınamaz.</string>
+    <string name="d_keydetail_revoke_ack">Bu işlemin geri alınamayacağını anlıyorum</string>
+
+    <!-- ── Shared desktop buttons (cont.) ───────────────── -->
+    <string name="d_common_edit_ellipsis">Düzenle…</string>
+    <string name="d_common_add_ellipsis">Ekle…</string>
+    <string name="d_common_rendering">Oluşturuluyor…</string>
+
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
+    <plurals name="d_import_summary_blocks">
+        <item quantity="one">%1$d blok: %2$s</item>
+        <item quantity="other">%1$d blok: %2$s</item>
+    </plurals>
+    <plurals name="d_import_summary_added">
+        <item quantity="one">%1$d eklendi</item>
+        <item quantity="other">%1$d eklendi</item>
+    </plurals>
+    <plurals name="d_import_summary_upgraded">
+        <item quantity="one">, %1$d anahtar çiftine yükseltildi</item>
+        <item quantity="other">, %1$d anahtar çiftine yükseltildi</item>
+    </plurals>
+    <plurals name="d_import_summary_merged">
+        <item quantity="one">, %1$d anahtara yeni malzeme eklendi</item>
+        <item quantity="other">, %1$d anahtara yeni malzeme eklendi</item>
+    </plurals>
+    <plurals name="d_import_summary_already">
+        <item quantity="one">, %1$d zaten anahtarlıkta</item>
+        <item quantity="other">, %1$d zaten anahtarlıkta</item>
+    </plurals>
+    <plurals name="d_import_summary_failed">
+        <item quantity="one">, %1$d başarısız</item>
+        <item quantity="other">, %1$d başarısız</item>
+    </plurals>
+
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
+    <string name="d_repo_err_no_card_keys">Bu kartta OpenPGP anahtarı bulunamadı</string>
+    <string name="d_repo_err_key_not_found">Anahtar bulunamadı: %1$s</string>
+    <string name="d_repo_err_revoke_public_only">Yalnızca açık anahtar içeren bir anahtar geçersiz kılınamaz. İmzalamak için gizli anahtar gerekir.</string>
+    <string name="d_repo_err_secret_ring_load">Gizli anahtarlık yüklenemedi: %1$s</string>
+    <string name="d_repo_err_public_ring_load">Açık anahtarlık yüklenemedi: %1$s</string>
+    <string name="d_repo_err_no_public_ring">Oluşturulan anahtar bir açık anahtarlık üretmedi</string>
+    <string name="d_repo_err_card_row_missing">Oluşturulan kart anahtarının kaydı içe aktarmadan sonra bulunamadı</string>
+    <string name="d_repo_err_expiry_public_only">Yalnızca açık anahtar içeren bir anahtarın son kullanma tarihi düzenlenemez. Yeniden imzalamak için gizli anahtar gerekir.</string>
+    <string name="d_repo_err_expiry_card">Bu anahtar bir donanım anahtarında bulunuyor. Son kullanma tarihini değiştirmek burada henüz desteklenmiyor.</string>
+
+    <!-- ── Status line ── -->
+    <string name="d_list_separator">, </string>
+    <string name="d_status_migrated_legacy">Eski anahtarlık taşındı: %1$s</string>
+    <string name="d_status_autorefresh">Anahtar sunucusundan otomatik yenileme: %1$s</string>
+    <string name="d_status_import">İçe aktarma: %1$s</string>
+    <string name="d_status_generating">%1$s anahtarı oluşturuluyor…</string>
+    <string name="d_status_generated">%1$s oluşturuldu: %2$s</string>
+    <string name="d_status_generate_failed">Oluşturma başarısız: %1$s</string>
+    <string name="d_status_deleted">Silindi: %1$s</string>
+    <string name="d_status_trust_set">Güven düzeyi %1$s olarak ayarlandı: %2$s</string>
+    <string name="d_status_expiration_removed">Son kullanma tarihi kaldırıldı. Anahtarın süresi dolmaz.</string>
+    <string name="d_status_expiration_updated">Son kullanma tarihi güncellendi</string>
+    <string name="d_status_expiration_failed">Son kullanma tarihi düzenlenemedi: %1$s</string>
+    <string name="d_status_revoked">Geçersiz kılındı: %1$s (%2$s)</string>
+    <string name="d_status_checking_servers">Anahtar sunucuları denetleniyor: %1$s…</string>
+    <string name="d_status_refresh_not_published">Etkin anahtar sunucularının hiçbirinde yayımlanmamış</string>
+    <string name="d_status_refresh_also_merged"> (yeni malzeme de birleştirildi)</string>
+    <string name="d_status_refresh_key_missing">Anahtar, anahtarlıkta bulunamadı</string>
+    <plurals name="d_status_files_dropped">
+        <item quantity="one">%1$d dosya bırakıldı</item>
+        <item quantity="other">%1$d dosya bırakıldı</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_revoked">
+        <item quantity="one">%1$d anahtar sunucuda GEÇERSİZ KILINDI</item>
+        <item quantity="other">%1$d anahtar sunucuda GEÇERSİZ KILINDI</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_updated">
+        <item quantity="one">%1$d anahtar güncellendi</item>
+        <item quantity="other">%1$d anahtar güncellendi</item>
+    </plurals>
+
+    <!-- ── Tray + expiration notifications ── -->
+    <string name="d_tray_open">PGPony\'yi aç</string>
+    <string name="d_tray_quit">PGPony\'den çık</string>
+    <string name="d_notif_key_expiring">PGPony: anahtarın süresi doluyor</string>
+    <string name="d_notif_key_expiration">PGPony: anahtarın son kullanma tarihi</string>
+
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
+    <string name="d_menu_file">Dosya</string>
+    <string name="d_menu_file_mnemonic">D</string>
+    <string name="d_menu_goto_keyring">Anahtarlık\'a git (içe aktarma)</string>
+    <string name="d_menu_restore_backup">Yedeği geri yükle…</string>
+    <string name="d_menu_quit">Çık</string>
+    <string name="d_menu_keys">Anahtarlar</string>
+    <string name="d_menu_keys_mnemonic">A</string>
+    <string name="d_menu_new_key">Yeni anahtar…</string>
+    <string name="d_menu_hardware_keys">Donanım anahtarları</string>
+    <string name="d_menu_message">Mesaj</string>
+    <string name="d_menu_message_mnemonic">M</string>
+    <string name="d_menu_help">Yardım</string>
+    <string name="d_menu_help_mnemonic">Y</string>
+    <string name="d_menu_about">PGPony Hakkında</string>
+    <string name="d_menu_encrypt_decrypt">Şifrele / Şifre Çöz</string>
+    <string name="d_gen_no_passphrase_warning">Parola ifadesi yok: gizli anahtar bu bilgisayarda korumasız olarak saklanacak.</string>
+    <string name="d_cards_choose_reader">Okuyucu seç</string>
+    <string name="d_cards_rescan">Yeniden tara</string>
+    <string name="d_cards_pin_pw1">Kart PIN\'i (PW1)</string>
+    <string name="d_cards_talking_touch">Donanım anahtarıyla iletişim kuruluyor… dokunma onayı açıksa şimdi anahtara dokunun.</string>
+    <string name="d_cards_pin_scope_note">PIN, donanım anahtarının kendisinde yalnızca bu işlemi yetkilendirir; gizli bilgiler donanımdan asla çıkmaz.</string>
+    <string name="d_common_run">Çalıştır</string>
+    <string name="d_card_err_unplugged">Donanım anahtarı işlemin ortasında çıkarıldı</string>
+    <string name="d_card_err_io">Kart G/Ç işlemi başarısız: %1$s</string>
+    <string name="d_card_err_connect">\"%1$s\" içindeki karta bağlanılamadı: %2$s</string>
+    <string name="d_card_err_no_service">Kullanılabilir akıllı kart hizmeti yok</string>
+    <string name="d_card_err_pcscd_hint">. pcscd kurulu ve çalışıyor mu?</string>
+    <string name="d_card_err_detail_suffix"> (%1$s)</string>
+    <string name="d_card_err_reader_gone">\"%1$s\" okuyucusu artık bağlı değil.</string>
+    <string name="d_card_err_no_card">\"%1$s\" içinde kart yok. Donanım anahtarınızı takın veya çıkarıp yeniden takın.</string>
+
+    <!-- ── Key server refresh failures ── -->
+    <string name="d_refresh_err_no_servers">Arama için etkinleştirilmiş anahtar sunucusu yapılandırılmamış</string>
+    <string name="d_refresh_err_server_prefix">%1$s: %2$s</string>
+    <string name="d_refresh_err_parse">Anahtar sunucusu yanıtı ayrıştırılamadı: %1$s</string>
+    <string name="d_expiry_headline_expired">%1$s anahtarının süresi DOLDU</string>
+    <string name="d_expiry_headline_today">%1$s anahtarının süresi bugün doluyor</string>
+    <string name="d_expiry_headline_tomorrow">%1$s anahtarının süresi yarın doluyor</string>
+    <plurals name="d_expiry_headline_days">
+        <item quantity="one">%2$s anahtarının süresi %1$d gün içinde doluyor</item>
+        <item quantity="other">%2$s anahtarının süresi %1$d gün içinde doluyor</item>
+    </plurals>
+    <string name="d_backup_err_not_a_backup">Bu dosya bir PGPony yedeği değil</string>
+    <string name="d_backup_err_wrong_code">Bu kurtarma kodu yedeğin kilidini açmadı</string>
+    <string name="d_backup_err_corrupt">Yedek hasarlı: %1$s</string>
+    <string name="d_backup_err_empty_keyring">Yedeklenecek anahtar yok</string>
+    <string name="d_backup_detail_unreadable_archive">okunamayan arşiv</string>
+    <string name="d_backup_detail_empty_archive">boş arşiv</string>
+    <string name="d_backup_detail_no_keys">yedekte anahtar bulunamadı</string>
+    <string name="d_backup_detail_integrity">bütünlük denetimi başarısız</string>
+    <string name="d_restore_unreadable_block">okunamayan anahtar bloğu</string>
+    <plurals name="d_restore_summary_added">
+        <item quantity="one">%1$d eklendi</item>
+        <item quantity="other">%1$d eklendi</item>
+    </plurals>
+    <plurals name="d_restore_summary_upgraded">
+        <item quantity="one">, %1$d anahtar çiftine yükseltildi</item>
+        <item quantity="other">, %1$d anahtar çiftine yükseltildi</item>
+    </plurals>
+    <plurals name="d_restore_summary_updated">
+        <item quantity="one">, %1$d güncellendi</item>
+        <item quantity="other">, %1$d güncellendi</item>
+    </plurals>
+    <plurals name="d_restore_summary_unchanged">
+        <item quantity="one">, %1$d zaten güncel</item>
+        <item quantity="other">, %1$d zaten güncel</item>
+    </plurals>
+    <plurals name="d_restore_summary_failed">
+        <item quantity="one">, %1$d geri yüklenemedi</item>
+        <item quantity="other">, %1$d geri yüklenemedi</item>
+    </plurals>
+    <string name="d_backup_export_title">Anahtarlığı yedekle</string>
+    <string name="d_backup_export_intro">Anahtarlığınızdaki her şey. Gizli anahtarlar kendi parola ifadesi korumalarını sürdürür. Dosyanın tamamı şu kurtarma koduyla mühürlenir:</string>
+    <string name="d_backup_code_copied">Kurtarma kodu kopyalandı</string>
+    <string name="d_backup_reenter_warning">Kodu bir yere yazın veya bir parola yöneticisinde saklayın. Kod olmadan yedek açılamaz. Devam etmek için kodu yeniden girin:</string>
+    <string name="d_backup_save_action">Yedeği kaydet…</string>
+    <string name="d_backup_saved_status">Yedek kaydedildi: %1$s</string>
+    <string name="d_backup_failed">Yedekleme başarısız</string>
+    <string name="d_backup_save_dialog_title">Yedeği kaydet</string>
+    <string name="d_restore_title">Yedeği geri yükle</string>
+    <string name="d_restore_choose_file">Yedek dosyası seç…</string>
+    <string name="d_restore_kind_pgpony">PGPony yedeği</string>
+    <string name="d_restore_kind_okc">OpenKeychain yedeği</string>
+    <string name="d_restore_code_label_okc">Yedek kodu (9×4 hane)</string>
+    <string name="d_restore_note">Geri yükleme, zaten sahip olduğunuz bir gizli anahtarın asla üzerine yazmaz.</string>
+    <string name="d_restore_done_status">Geri yüklendi: %1$s</string>
+    <string name="d_restore_status">Geri yükleme: %1$s</string>
+    <string name="d_restore_failed">Geri yükleme başarısız</string>
+    <string name="d_restore_open_dialog_title">Yedek seç</string>
+    <string name="d_search_servers_title">Anahtar sunucularında ara</string>
+    <string name="d_search_lookup_order">Arama sırası: WKD (alıcının kendi e-posta alan adı) → yapılandırdığınız sunucular → keys.openpgp.org.</string>
+    <string name="d_search_none">Anahtar bulunamadı (WKD, yapılandırılmış sunucular, keys.openpgp.org).</string>
+    <string name="d_search_unparseable">(ayrıştırılamadı)</string>
+    <string name="d_search_failed">Arama başarısız: %1$s</string>
+    <string name="d_search_found_via">%1$s üzerinden bulundu</string>
+    <string name="d_search_trust_warning">İçe aktarılan anahtar BİLİNMEYEN güven düzeyiyle eklenir. Anahtara güvenmeden önce parmak izini sahibiyle doğrulayın.</string>
+    <string name="d_search_again">Yeniden ara</string>
+    <string name="d_common_import">İçe aktar</string>
+    <string name="d_publish_title">Açık anahtarı yayımla</string>
+    <string name="d_publish_no_servers">Yayımlama için etkinleştirilmiş sunucu yok. Ayarlar → Ağ bölümünden birini etkinleştirin.</string>
+    <string name="d_publish_may_not_accept">%1$s anahtarlarını kabul etmeyebilir</string>
+    <string name="d_publish_warning">Yalnızca AÇIK anahtar yüklenir. Anahtar sunucuları herkese açık ve kalıcı dizinlerdir, bu yüzden yayımlamayı geri almak zordur.</string>
+    <string name="d_publish_in_progress">Yayımlanıyor…</string>
+    <string name="d_publish_outcome_ok">%1$s: yayımlandı ✓</string>
+    <string name="d_publish_outcome_pending">. Doğrulama e-postası %1$s adresine gönderildi (e-postayla aranabilir olmak için oradaki bağlantıya tıklayın)</string>
+    <string name="d_publish_outcome_rejected">%1$s: reddedildi (HTTP %2$d). Bu sunucu büyük olasılıkla %3$s anahtarlarını kabul etmiyor.</string>
+    <string name="d_publish_outcome_failed">%1$s: başarısız (%2$s)</string>
+    <string name="d_keyring_search_servers">Anahtar sunucularında ara…</string>
+    <string name="d_keyring_paste_armor">Zırhlı metni yapıştır…</string>
+    <string name="d_keyring_import_file">Dosyadan…</string>
+    <string name="d_keyring_import_qr">QR görüntüsünden…</string>
+    <string name="d_keyring_search_placeholder">Ad, e-posta veya parmak izi ara</string>
+    <string name="d_keyring_sort_label">Sıralama: %1$s</string>
+    <string name="d_keyring_sort_recent">En yeni</string>
+    <string name="d_keyring_sort_name">Ad</string>
+    <string name="d_keyring_sort_algorithm">Algoritma</string>
+    <string name="d_keyring_empty_title">Henüz anahtar yok</string>
+    <string name="d_keyring_empty_body">Bir anahtar çifti oluşturun, bir anahtar dosyası (.asc, .gpg) içe aktarın veya zırhlı bir blok yapıştırın.</string>
+    <string name="d_keyring_no_matches_title">Eşleşme yok</string>
+    <string name="d_keyring_no_matches_body">Anahtarlığınızda \"%1$s\" ile eşleşen bir şey yok. Ad, e-posta adresi veya parmak izinin herhangi bir bölümüyle arayın.</string>
+    <string name="d_keyring_clear_search">Aramayı temizle</string>
+    <string name="d_keyring_err_no_public_armor_for">%1$s için kayıtlı zırhlı açık anahtar yok</string>
+    <string name="d_keyring_qr_none_found">%1$s içinde QR kodu bulunamadı</string>
+    <string name="d_keyring_qr_not_a_key">Bu QR kodu bir OpenPGP anahtarı değil</string>
+    <string name="d_keyring_delete_secret_warning">\n\nBuna GİZLİ anahtar da dahildir. Yedeğiniz yoksa bu anahtara şifrelenmiş mesajlar okunamaz hâle gelir.</string>
+    <string name="d_keyring_cd_copy_public">Açık anahtarı kopyala</string>
+    <string name="d_keyring_cd_delete">Anahtarı sil</string>
+    <string name="d_keyring_meta_line">Oluşturulma: %1$s%2$s · Anahtar Kimliği: %3$s</string>
+    <string name="d_keyring_meta_expires"> · Son kullanma tarihi: %1$s</string>
+    <string name="d_keyring_import_file_dialog">Anahtar dosyasını içe aktar</string>
+    <string name="d_keyring_qr_dialog">QR görüntüsü seç</string>
+    <plurals name="d_keyring_key_count">
+        <item quantity="one">%1$d anahtar</item>
+        <item quantity="other">%1$d anahtar</item>
+    </plurals>
+    <plurals name="d_keyring_match_count">
+        <item quantity="one">%1$d eşleşme</item>
+        <item quantity="other">%1$d eşleşme</item>
+    </plurals>
+    <string name="d_file_err_recipient_ring">Alıcı anahtarlığı yüklenemedi: %1$s</string>
+    <string name="d_file_err_signing_key">İmzalama anahtarı yüklenemedi: %1$s</string>
+    <string name="d_file_signed_suffix">, imzalandı</string>
+    <string name="d_file_err_encrypt">Şifreleme başarısız</string>
+    <string name="d_file_err_decrypt">Şifre çözme başarısız</string>
+    <string name="d_file_sig_written">Ayrık imza yazıldı</string>
+    <string name="d_file_sig_written_card">Ayrık imza yazıldı (donanım anahtarı)</string>
+    <string name="d_file_err_sign">İmzalama başarısız</string>
+    <string name="d_file_err_card_sign">Kartla imzalama başarısız</string>
+    <string name="d_file_err_card_decrypt">Kartla şifre çözme başarısız</string>
+    <plurals name="d_file_encrypted_to">
+        <item quantity="one">%1$d alıcıya şifrelendi</item>
+        <item quantity="other">%1$d alıcıya şifrelendi</item>
+    </plurals>
+    <plurals name="d_file_encrypted_to_card">
+        <item quantity="one">%1$d alıcıya şifrelendi, imzalandı (donanım anahtarı)</item>
+        <item quantity="other">%1$d alıcıya şifrelendi, imzalandı (donanım anahtarı)</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle">
+        <item quantity="one">Paketin şifresi çözüldü → %1$d dosya</item>
+        <item quantity="other">Paketin şifresi çözüldü → %1$d dosya</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle_card">
+        <item quantity="one">Paketin şifresi çözüldü (donanım anahtarı) → %1$d dosya</item>
+        <item quantity="other">Paketin şifresi çözüldü (donanım anahtarı) → %1$d dosya</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes">
+        <item quantity="one">Şifresi çözüldü: %1$d bayt</item>
+        <item quantity="other">Şifresi çözüldü: %1$d bayt</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes_card">
+        <item quantity="one">Şifresi çözüldü: %1$d bayt (donanım anahtarı)</item>
+        <item quantity="other">Şifresi çözüldü: %1$d bayt (donanım anahtarı)</item>
+    </plurals>
+    <string name="d_file_sig_verified"> · imza DOĞRULANDI</string>
+    <string name="d_file_sig_unheld"> · anahtarlıkta olmayan bir anahtarla imzalanmış</string>
+    <string name="d_file_sig_id_suffix"> (%1$s)</string>
+
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">İmza DOĞRULANDI: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_file_verify_invalid">İmza GEÇERSİZ: içerik imzayla eşleşmiyor</string>
+    <string name="d_file_verify_unknown_signer">Anahtarlıkta olmayan bir anahtarla imzalanmış</string>
+    <string name="d_file_verify_unsigned">İmza bulunamadı</string>
+    <string name="d_file_err_verify">Doğrulama başarısız</string>
+
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
+    <string name="d_settings_section_updates">Güncellemeler</string>
+    <string name="d_settings_updates_note">Varsayılan olarak kapalıdır. Açtığınızda PGPony, daha yeni bir sürüm için pgpony.app adresini günde bir kez denetler. Sizinle veya anahtarlarınızla ilgili hiçbir şey gönderilmez ve proxy ayarınıza uyulur.</string>
+    <string name="d_settings_updates_idle">Henüz denetlenmedi.</string>
+    <string name="d_settings_updates_checking">Denetleniyor…</string>
+    <string name="d_settings_updates_current">En son sürümü kullanıyorsunuz.</string>
+    <string name="d_settings_updates_available">%1$s sürümü mevcut.</string>
+    <string name="d_settings_updates_failed">pgpony.app adresine ulaşılamadı.</string>
+    <string name="d_settings_updates_check_now">Şimdi denetle</string>
+    <string name="d_settings_updates_download">İndir</string>
+    <string name="d_settings_updates_auto">Günde bir kez otomatik olarak denetle</string>
+
+    <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
+    <string name="d_cards_pcsc_error">PC/SC bildirimi: %1$s</string>
+
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH aracısı</string>
+    <string name="d_settings_ssh_agent_note">Varsayılan olarak kapalıdır. Açtığınızda PGPony, kimlik doğrulama anahtarlarınızı yerel bir soket üzerinden ssh\'ye sunar; ssh-agent gibi çalışır ama anahtarlığınıza dayanır. Anahtarları istekler arasında tutmaz ve korumalı bir anahtarın parola ifadesi her seferinde sorulur. Bu sürümde yalnızca macOS ve Linux\'ta çalışır.</string>
+    <string name="d_settings_ssh_agent_windows">SSH aracısı bu sürümde Windows\'ta kullanılamıyor. Platformun ssh istemcisi, uygulamanın henüz sunamadığı adlandırılmış bir kanal (named pipe) bekliyor.</string>
+    <string name="d_settings_ssh_agent_enable">Kimlik doğrulama anahtarlarını ssh\'ye sun</string>
+    <string name="d_settings_ssh_agent_error">Aracı başlatılamadı: %1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">Kopyala</string>
+    <string name="d_agent_unlock_title">İmzalama anahtarının kilidini aç</string>
+    <string name="d_agent_unlock_message">ssh, PGPony\'den %1$s ile imzalamasını istedi. Bu anahtar parola ifadesiyle korunuyor.</string>
+    <string name="d_agent_unlock_field">Parola ifadesi</string>
+    <string name="d_agent_unlock_confirm">Kilidi aç</string>
+    <string name="d_agent_unlock_cancel">İptal</string>
+
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="one">Klasör %1$d alıcıya şifrelendi</item>
+        <item quantity="other">Klasör %1$d alıcıya şifrelendi</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="one">Klasör çıkarıldı → %1$d dosya</item>
+        <item quantity="other">Klasör çıkarıldı → %1$d dosya</item>
+    </plurals>
+
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">İptal ediliyor…</string>
+    <string name="d_crypto_progress_bytes">%1$s / %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">%1$s işlendi</string>
+    <string name="d_file_cancelled">İptal edildi</string>
+
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">İzlenen klasörler</string>
+    <string name="d_settings_watch_note">Varsayılan olarak kapalıdır. Açıkken PGPony belirttiğiniz klasörleri izler ve her yeni dosyayı seçtiğiniz alıcılara şifreler. Yalnızca şifreler ve yalnızca açık anahtarları kullanır; bu yüzden siz yokken çalışan bir kural hiçbir zaman parola ifadesine veya karta ihtiyaç duymaz ve en kötü ihtimalle yalnızca şifreleme yapabilir. macOS, Linux ve Windows\'ta çalışır.</string>
+    <string name="d_settings_watch_enable">Aşağıdaki klasörleri izle</string>
+    <string name="d_settings_watch_rules">Kurallar</string>
+    <string name="d_settings_watch_no_rules">Henüz kural yok. Bir klasörü izlemek için kural ekleyin.</string>
+    <string name="d_settings_watch_rule_summary">%1$d alıcı → %2$s</string>
+    <string name="d_settings_watch_beside_source">kaynağın yanına</string>
+    <string name="d_settings_watch_rule_on">Açık</string>
+    <string name="d_settings_watch_deletes">özgün dosyayı siler</string>
+    <string name="d_settings_watch_add_rule">Kural ekle</string>
+    <string name="d_settings_watch_recent">Son etkinlikler</string>
+    <string name="d_settings_watch_folder">İzlenecek klasör</string>
+    <string name="d_settings_watch_browse">Gözat…</string>
+    <string name="d_settings_watch_glob">Eşleşme (glob, ör. *.pdf)</string>
+    <string name="d_settings_watch_output">Çıktı klasörü (isteğe bağlı)</string>
+    <string name="d_settings_watch_no_recipients">Kullanılabilir alıcı yok. Önce bir açık anahtar içe aktarın.</string>
+    <string name="d_settings_watch_armor">Çıktıya ASCII zırh uygula (.asc)</string>
+    <string name="d_settings_watch_delete_original">Şifrelemeden sonra özgün dosyayı sil</string>
+    <string name="d_settings_watch_delete_warning">Özgün dosya geri alınamayacak şekilde kaldırılır. Emin değilseniz kapalı bırakın.</string>
+    <string name="d_watch_notif_encrypted">İzlenen klasör: şifrelendi</string>
+    <string name="d_watch_notif_failed">İzlenen klasör: başarısız</string>
+    <string name="d_crypto_add_folder">Klasör ekle…</string>
+
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">Akıllı kart hizmeti çalışmıyor.</string>
+    <string name="d_cards_pcsc_sharing">Okuyucuyu başka bir program kullanıyor. O programı (örneğin GnuPG veya OpenSC) kapatıp yeniden tarayın.</string>
+    <string name="d_cards_pcsc_unknown">Okuyucu hizmetinin bildirimi: %1$s.</string>
+    <string name="d_cards_pcsc_unknown_generic">Okuyucu hizmeti bir sorun bildirdi.</string>
+    <string name="d_cards_keygen_algo_label">Anahtar türü</string>
+
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">Anahtarı karta taşı…</string>
+    <string name="d_cards_move_title">Bir anahtarı karta taşı</string>
+    <string name="d_cards_move_warning">Bu işlem mevcut bir anahtarı karta yazar ve kartın anahtar yuvalarının üzerine yazar. Kartta oluşturulan bir anahtarın aksine bu anahtar kartın dışında zaten vardı, bu yüzden yedeğinizi güvende tutun. Kartın PIN\'leri değişmez.</string>
+    <string name="d_cards_move_pick_key">Taşınacak anahtar</string>
+    <string name="d_cards_move_no_candidates">Anahtarlığınızda gizli anahtarı olan bir RSA anahtar çifti yok. Önce bir tane oluşturun veya içe aktarın.</string>
+    <string name="d_cards_move_passphrase">Anahtarın parola ifadesi (yoksa boş bırakın)</string>
+    <string name="d_cards_move_format">İçe aktarma biçimi</string>
+    <string name="d_cards_move_ack">Bunun kartın anahtar yuvalarının üzerine yazacağını anlıyorum</string>
+    <string name="d_cards_move_confirm">Karta taşı</string>
+    <string name="d_cards_move_done">Karta taşındı: %1$s</string>
+    <string name="d_cards_move_no_secret">Anahtarın gizli malzemesi yüklenemedi.</string>
+    <string name="d_err_recipient_unusable">PGPony\'nin şifreleyebileceği bir anahtar yok, bu yüzden hiçbir şey şifrelenmedi: %1$s</string>
+    <string name="d_file_sig_unconfirmed"> · imzalı, anahtar doğrulanmadı</string>
+    <string name="d_file_sig_invalid"> · imza GEÇERSİZ</string>
+    <string name="d_file_err_composite_too_large">ML-DSA imzalama dosyanın tamamını belleğe okur ve 512 MB ile sınırlıdır. Daha küçük bir dosya imzalayın veya klasik bir imzalama anahtarı seçin.</string>
+    <string name="d_file_verify_ok_unconfirmed">İmzalı, anahtar doğrulanmadı: %1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">Şifresi çözüldü · imzalı, anahtar doğrulanmadı</string>
+    <string name="d_edit_err_public_only">Bu işlem gizli anahtarı gerektiriyor, ancak anahtarlığınızda yalnızca açık anahtar var.</string>
+    <string name="d_edit_err_card">Bu anahtar bir donanım anahtarında bulunuyor, bu yüzden buradan düzenlenemez.</string>
+    <string name="d_edit_err_last_encryption_subkey">Bu, anahtarın son şifreleme alt anahtarı. O olmadan kimse bu anahtara şifreleme yapamaz.</string>
+    <string name="d_edit_err_subkey_not_found">%1$s alt anahtarı bu anahtarda yok.</string>
+    <string name="d_edit_err_primary_as_subkey">Birincil anahtar, alt anahtar olarak kaldırılamaz veya geçersiz kılınamaz.</string>
+    <string name="d_settings_protect_destructive_subtitle">Bir anahtar silinmeden, bir alt anahtar veya Kullanıcı Kimliği kaldırılmadan ya da tüm veriler temizlenmeden önce %1$s yazmanızı ister. Varsayılan olarak açıktır.</string>
+    <string name="d_keyring_recently_deleted_button">Son Silinenler (%1$d)</string>
+    <string name="d_recycle_less_than_day">Bir günden az kaldı</string>
+    <string name="d_status_moved_to_bin">%1$s Son Silinenler\'e taşındı</string>
+    <string name="d_status_purged">Kalıcı olarak yok edildi: %1$s</string>
+    <string name="d_status_bin_emptied">Son Silinenler boşaltıldı</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="one">%1$d gün kaldı</item>
+        <item quantity="other">%1$d gün kaldı</item>
+    </plurals>
+    <string name="d_edit_err_v6_subkey_type">Bir v6 anahtarına yalnızca Ed25519 ve X25519 alt anahtarları eklenebilir.</string>
+    <string name="d_edit_err_v4_mlkem768_only">Bir v4 anahtarı yalnızca ML-KEM-768 kuantum sonrası alt anahtarını alabilir. ML-KEM-1024 için v6 anahtarı gerekir.</string>
+    <string name="d_edit_err_pq_sign_needs_v6">Kuantum sonrası bir imzalama alt anahtarı için v6 anahtarı gerekir.</string>
+    <string name="d_keydetail_decrypt_with">Bu anahtarla şifre çöz</string>
+    <string name="d_keydetail_last_backed_up">Son yedekleme</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">Parola ifadesi</string>
+    <string name="d_keydetail_passphrase_on">Parola ifadesiyle korunuyor.</string>
+    <string name="d_keydetail_passphrase_off">Parola ifadesi yok. Bu bilgisayarda anahtar dosyası yalnızca dosya izinleriyle korunuyor; hesabınızı kullanabilen herkes anahtarı da kullanabilir.</string>
+    <string name="d_keydetail_subkey_revoke_title">%1$s alt anahtarını geçersiz kıl</string>
+    <string name="d_keydetail_subkey_revoke_body">Geçersiz kılma, yazıştığınız kişilere anahtarınızı yenilediklerinde bu alt anahtarı kullanmayı bırakmalarını bildiren bir imza yayımlar. Bu işlem geri alınamaz.</string>
+    <string name="d_settings_clear_ack1">Tüm anahtarların, kurtarma süresi tanınmadan hemen yok edileceğini anlıyorum.</string>
+    <string name="d_settings_clear_countdown">%1$s (%2$d)</string>
+    <string name="d_settings_clear_done_body">PGPony şimdi kapanacak. Bir sonraki açılışta sıfırdan başlar.</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">Ayrıca kaldırılanlar: tüm PGPony ayarları (anahtar sunucuları, ağ, SSH aracısı, izlenen klasörler, parola deposu), izleme kuralları ve önbellekteki kart PIN\'i. Parola deposu klasörünüze ve başka yerlere kaydettiğiniz dosyalara dokunulmaz.</string>
+    <string name="d_status_userid_added">Kullanıcı Kimliği eklendi</string>
+    <string name="d_status_userid_revoked">Kullanıcı Kimliği geçersiz kılındı</string>
+    <string name="d_status_userid_removed">Kullanıcı Kimliği kaldırıldı</string>
+    <string name="d_status_primary_userid">Birincil Kullanıcı Kimliği değiştirildi</string>
+    <string name="d_status_subkey_added">Alt anahtar eklendi</string>
+    <string name="d_status_subkey_revoked">Alt anahtar geçersiz kılındı</string>
+    <string name="d_status_notations_saved">Notasyonlar kaydedildi</string>
+    <string name="d_crypto_decrypt_with_any">Anahtarlarımdan herhangi biri</string>
+    <string name="d_crypto_signing_default_note">Bu anahtarın varsayılan imzalama ayarı olan %1$s ile imzalar. O anahtarın parola ifadesini girin.</string>
+    <string name="d_settings_ssh_agent_keys_note">Her anahtar, imzalama veya sertifikalama da yapamayan en yeni kimlik doğrulama alt anahtarını sunar: Ed25519, RSA veya NIST P-256, P-384 ya da P-521 üzerinde ECDSA; kuantum sonrası bir anahtardaki klasik alt anahtar da buna dahildir. Anahtar Ayrıntıları\'ndan veya anahtar oluştururken bir tane ekleyin. RSA anahtarları, isteyen sunuculara eski SHA-1 ssh-rsa isteğiyle de yanıt verir.</string>
+    <string name="d_import_preview_title">Anahtarı içe aktar</string>
+    <string name="d_import_preview_none">Bu metinde anahtar bulunamadı.</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">Zaten anahtarlığınızda. İçe aktarmak yeni olan her şeyi ekler.</string>
+    <string name="d_import_link_title">Bağlantıdan içe aktar</string>
+    <string name="d_keyring_import_link">Bağlantıdan…</string>
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">Zırh yorumu</string>
+    <string name="d_settings_armor_comment_note">ASCII zırhlı çıktıdaki Comment satırı. Uygulama, pgpony komutu, git imzalama ara katmanı ve izlenen klasörler için geçerlidir.</string>
+    <string name="d_settings_section_session">Oturum</string>
+    <string name="d_settings_session_note">PGPony\'nin bir anahtar parola ifadesini veya kart PIN\'ini girdikten sonra bellekte ne kadar tutacağı. Tek bir ayar uygulamayı, SSH aracısını ve pgpony-gpg üzerinden git imzalamayı kapsar. Diske hiçbir şey yazılmaz ve PGPony\'den çıktığınızda her şey unutulur.</string>
+    <string name="d_session_until_screen_locks">Ekran kilitlenene kadar</string>
+    <string name="d_session_held_until_locked">Parola ifadesi, ekran kilitlenene veya siz temizleyene kadar hatırlanıyor.</string>
+    <string name="d_session_lock_unsupported">PGPony bu bilgisayarda ekran kilidini algılayamıyor, bu yüzden tutulan gizli bilgiler siz temizleyene veya PGPony\'den çıkana kadar kalır.</string>
+    <string name="d_session_pin_held">Kart PIN\'i hatırlanıyor.</string>
+    <string name="d_cards_pin_cache_follows">Ayarlar\'daki oturum süresi boyunca tutulur: %1$s.</string>
+    <string name="d_crypto_pass_remembered">Bu oturum için hatırlanıyor. Kullanmak için boş bırakın.</string>
+    <string name="d_shim_unlock_message">git, PGPony\'den %1$s ile imzalamasını istedi. Bu anahtar parola ifadesiyle korunuyor.</string>
+    <string name="d_gnupg_import_button">GnuPG\'den…</string>
+    <string name="d_gnupg_title">GnuPG\'den içe aktar</string>
+    <string name="d_gnupg_home">GnuPG ana klasörü: %1$s</string>
+    <string name="d_gnupg_choose_folder">Klasör seç…</string>
+    <string name="d_gnupg_no_home">Bu klasörde GnuPG anahtarlığı bulunamadı. pubring.kbx dosyasını içeren klasörü seçin.</string>
+    <string name="d_gnupg_counts">%1$d açık anahtar, %2$d gizli anahtar</string>
+    <string name="d_gnupg_counts_public">%1$d açık anahtar</string>
+    <string name="d_gnupg_gpg_found">Kullanılan: %1$s</string>
+    <string name="d_gnupg_gpg_missing">gpg bulunamadı, bu yüzden gizli anahtarlar okunamıyor. Açık anahtarlar ve güven düzeyleri yine de içe aktarılabilir.</string>
+    <string name="d_gnupg_sandboxed">PGPony bir korumalı alanda (sandbox) çalışıyor ve gpg\'yi çalıştıramıyor. Açık anahtarlar ve güven düzeyleri yine de içe aktarılabilir.</string>
+    <string name="d_gnupg_opt_trust">Güven düzeylerini aktar (mutlak ve tam)</string>
+    <string name="d_gnupg_opt_secret">Gizli anahtarları içe aktar (gpg her birinin parola ifadesini sorar)</string>
+    <string name="d_gnupg_card_skipped">%1$s: akıllı kartta, atlandı. Bunun yerine kartı Donanım Anahtarları bölümünden ekleyin.</string>
+    <string name="d_gnupg_stub_skipped">%1$s: bu anahtarlıkta gizli malzeme yok, atlandı.</string>
+    <string name="d_gnupg_secret_failed">%1$s: dışa aktarılamadı (%2$s).</string>
+    <string name="d_gnupg_secret_not_imported">%1$s: gpg dışa aktardı ancak içe aktarılamadı.</string>
+    <string name="d_gnupg_import">İçe aktar</string>
+    <string name="d_gnupg_done">%1$s. %2$d anahtarın güven düzeyi yükseltildi. İçe aktarılan gizli anahtar: %3$d.</string>
+    <string name="d_gnupg_readonly_note">GnuPG yalnızca okunur, asla değiştirilmez. PGPony\'deki güven düzeyleri yalnızca yükseltilir, asla düşürülmez.</string>
+    <string name="d_sig_weak_suffix"> · zayıf imzalama anahtarı (%1$s)</string>
+    <string name="d_decrypt_weak_suffix"> · zayıf bir anahtarla açıldı (%1$s)</string>
+    <string name="d_pair_menu">Başka bir bilgisayarla eşleştir…</string>
+    <string name="d_pair_button">Başka bir bilgisayarla eşleştir</string>
+    <string name="d_pair_title">Başka bir bilgisayarla eşleştir</string>
+    <string name="d_pair_intro">Aynı ağdaki iki bilgisayar arasında anahtarları veya tam bir yedeği taşıyın. Bilgisayarlardan biri bekler, diğeri bağlanır ve iki ekrandaki kodu karşılaştırırsınız. Bu pencereyi kapattıktan sonra hiçbir şey saklanmaz.</string>
+    <string name="d_pair_host">Diğer bilgisayarı bekle</string>
+    <string name="d_pair_join">Diğer bilgisayara bağlan</string>
+    <string name="d_pair_host_waiting">Diğer bilgisayarda \"Diğer bilgisayara bağlan\" seçeneğini seçin ve şu adresi yazın:</string>
+    <string name="d_pair_host_closes">Bu pencere %1$s saatine kadar açık kalır.</string>
+    <string name="d_pair_firewall">Güvenlik duvarınız sorarsa bu pencere açıkken PGPony\'nin bağlantı kabul etmesine izin verin.</string>
+    <string name="d_pair_no_address">Bu bilgisayarın, başka bir bilgisayarın ulaşabileceği bir ağ adresi yok.</string>
+    <string name="d_pair_join_intro">Diğer bilgisayarda \"Diğer bilgisayarı bekle\" seçeneğini seçin. Ardından orada gösterilen adresi yazın.</string>
+    <string name="d_pair_join_label">Diğer bilgisayarda gösterilen adres</string>
+    <string name="d_pair_bad_address">Adresi ve bağlantı noktasını tam olarak gösterildiği gibi yazın, örneğin 192.168.1.20:49152.</string>
+    <string name="d_pair_connect">Bağlan</string>
+    <string name="d_pair_compare_body">Diğer bilgisayar da aynı kodu gösteriyor mu? Kodlar farklıysa iki bilgisayarın arasına biri girmiş olabilir. Farklı düğmesine tıklayıp baştan başlayın.</string>
+    <string name="d_pair_codes_match">Kodlar aynı</string>
+    <string name="d_pair_codes_differ">Farklı</string>
+    <string name="d_pair_waiting_other">Diğer bilgisayar bekleniyor…</string>
+    <string name="d_pair_paired_with">%1$s ile eşleştirildi</string>
+    <string name="d_pair_paired_unnamed">Diğer bilgisayarla eşleştirildi</string>
+    <string name="d_pair_send_heading">Diğer bilgisayara gönder</string>
+    <string name="d_pair_group_keypairs">Anahtar çiftleri</string>
+    <string name="d_pair_group_public">Açık anahtarlar</string>
+    <string name="d_pair_group_backup">Her şey</string>
+    <string name="d_pair_item_backup">Tam yedek</string>
+    <string name="d_pair_transfer_pass_note">Seçtiğiniz anahtar çiftlerinden bazılarının parola ifadesi yok. Bunlar bu aktarım parola ifadesiyle korunarak gönderilir ve diğer bilgisayarın onları kullanmak için bu parola ifadesine ihtiyacı olur.</string>
+    <string name="d_pair_transfer_pass">Aktarım parola ifadesi</string>
+    <string name="d_pair_transfer_pass_repeat">Aktarım parola ifadesini tekrarla</string>
+    <string name="d_pair_send">Gönder</string>
+    <string name="d_pair_waiting_answer">Diğer bilgisayarın kabul etmesi bekleniyor…</string>
+    <string name="d_pair_sending">Gönderiliyor: %1$s…</string>
+    <string name="d_pair_receiving">Alınıyor: %1$s, %%%2$d</string>
+    <string name="d_pair_backup_code_tell">Bu kurtarma kodunu diğer bilgisayarın kullanıcısına söyleyin. Yedeği orada açmak için bu kod gerekir.</string>
+    <string name="d_pair_incoming_heading">%1$s şunları göndermek istiyor:</string>
+    <string name="d_pair_incoming_heading_unnamed">Diğer bilgisayar şunları göndermek istiyor:</string>
+    <string name="d_pair_kind_keypair">%1$s (anahtar çifti)</string>
+    <string name="d_pair_kind_public">%1$s (açık anahtar)</string>
+    <string name="d_pair_backup_code_label">Diğer bilgisayarda gösterilen kurtarma kodu</string>
+    <string name="d_pair_accept">Seçilenleri kabul et</string>
+    <string name="d_pair_decline">Reddet</string>
+    <string name="d_pair_declined">Diğer bilgisayar reddetti.</string>
+    <string name="d_pair_result_ok">%1$s: %2$s</string>
+    <string name="d_pair_result_failed">%1$s: içe aktarılamadı (%2$s)</string>
+    <string name="d_pair_sent_ok">%1$s: diğer bilgisayar tarafından alındı</string>
+    <string name="d_pair_end">Oturumu sonlandır</string>
+    <string name="d_pair_ended">Oturum sona erdi. Oturum anahtarları silindi.</string>
+    <string name="d_pair_again">Baştan başla</string>
+    <string name="d_pair_fail_refused">Diğer bilgisayar kodların farklı olduğunu bildirdi. Hiçbir şey eşleştirilmedi.</string>
+    <string name="d_pair_fail_you_refused">Kodların farklı olduğunu belirttiniz, bu yüzden hiçbir şey eşleştirilmedi. Bunu beklemiyorsanız ağınızda başka kimsenin olmadığından emin olun ve baştan başlayın.</string>
+    <string name="d_pair_fail_handshake">Eşleştirme doğrulanamadı. Hiçbir şey eşleştirilmedi; baştan başlayın.</string>
+    <string name="d_pair_fail_timeout">Diğer bilgisayar yanıt vermeyi bıraktı.</string>
+    <string name="d_pair_fail_version">Diğer bilgisayardaki PGPony farklı bir eşleştirme yöntemi kullanıyor. İkisini de güncelleyip baştan başlayın.</string>
+    <string name="d_pair_fail_protocol">Karşı taraf bir PGPony eşleştirme penceresi değil veya beklenmeyen bir şey gönderdi.</string>
+    <string name="d_pair_fail_closed">Bağlantı koptu.</string>
+    <string name="d_pair_err_window_expired">Eşleştirme penceresi, başka bir bilgisayar bağlanmadan önce kapandı.</string>
+    <string name="d_pair_err_export">%1$s dışa aktarılamadı.</string>
+    <string name="d_pair_err_needs_passphrase">%1$s için parola ifadesi yok. Göndermek için bir aktarım parola ifadesi girin.</string>
+    <string name="d_pair_err_too_large">%1$s gönderilemeyecek kadar büyük.</string>
+    <string name="d_pair_err_import">%1$s içe aktarılamadı.</string>
+    <string name="d_pair_err_backup_code">Diğer bilgisayarda gösterilen kurtarma kodunu girin.</string>
+    <string name="d_keyring_import_menu">İçe aktar</string>
+    <string name="d_pair_other_addresses">Diğer adresler (%1$d)</string>
+    <string name="d_pair_other_addresses_hide">Diğer adresleri gizle</string>
+    <string name="d_pair_other_addresses_note">Diğer bilgisayar bağlanamıyorsa bunları deneyin; örneğin bu bilgisayardaki bir sanal makineyse veya başka bir ağ bağdaştırıcısındaysa.</string>
+</resources>

@@ -53,11 +53,12 @@ LAYERS = [
 ]
 
 # The locale set both layers ship. "values" is the English base.
-LOCALE_DIRS = ["values", "values-de", "values-es", "values-fr", "values-ja", "values-pt-rBR", "values-ru"]
+LOCALE_DIRS = ["values", "values-de", "values-es", "values-fr", "values-ja", "values-ko", "values-pt-rBR", "values-ru",
+               "values-tr", "values-uk", "values-b+zh+Hans"]
 
 # Locales with a single CLDR plural category: `one` is not a missing translation there, it is a
 # form the language does not have. Everything else must translate both items of every plural.
-NO_PLURAL_DISTINCTION = {"values-ja"}
+NO_PLURAL_DISTINCTION = {"values-ja", "values-ko", "values-b+zh+Hans"}
 
 # %1$s, %2$d, %s, %d, %1$.2f ... — java.util.Formatter, which is also Android's syntax.
 PLACEHOLDER = re.compile(r"%(?:(\d+)\$)?([-#+ 0,(]*)(\d+)?(?:\.(\d+))?([a-zA-Z])")

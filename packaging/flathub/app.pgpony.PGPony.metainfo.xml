@@ -3,6 +3,16 @@
   <id>app.pgpony.PGPony</id>
   <name>PGPony</name>
   <summary>OpenPGP encryption, signing and key management</summary>
+  <summary xml:lang="de">OpenPGP-Verschlüsselung, Signaturen und Schlüsselverwaltung</summary>
+  <summary xml:lang="es">Cifrado, firma y gestión de claves con OpenPGP</summary>
+  <summary xml:lang="fr">Chiffrement, signature et gestion de clés OpenPGP</summary>
+  <summary xml:lang="ja">OpenPGP による暗号化、署名、鍵管理</summary>
+  <summary xml:lang="ko">OpenPGP 암호화, 서명, 키 관리</summary>
+  <summary xml:lang="pt_BR">Criptografia, assinatura e gerenciamento de chaves OpenPGP</summary>
+  <summary xml:lang="ru">Шифрование, подпись и управление ключами OpenPGP</summary>
+  <summary xml:lang="tr">OpenPGP ile şifreleme, imzalama ve anahtar yönetimi</summary>
+  <summary xml:lang="uk">Шифрування, підписування й керування ключами OpenPGP</summary>
+  <summary xml:lang="zh_CN">OpenPGP 加密、签名和密钥管理</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>Apache-2.0</project_license>
@@ -17,21 +27,131 @@
       and keeps a keyring of your own keys and your contacts' public keys, in software or on an
       OpenPGP smart card.
     </p>
+    <p xml:lang="de">PGPony verschlüsselt, entschlüsselt, signiert und verifiziert Dateien, Ordner und Nachrichten mit OpenPGP und führt einen Schlüsselbund mit deinen eigenen Schlüsseln und den öffentlichen Schlüsseln deiner Kontakte, in Software oder auf einer OpenPGP-Smartcard.</p>
+    <p xml:lang="es">PGPony cifra, descifra, firma y verifica archivos, carpetas y mensajes con OpenPGP, y mantiene un llavero con tus propias claves y las claves públicas de tus contactos, ya sea en software o en una tarjeta inteligente OpenPGP.</p>
+    <p xml:lang="fr">PGPony chiffre, déchiffre, signe et vérifie des fichiers, des dossiers et des messages avec OpenPGP, et tient un trousseau de vos propres clés et des clés publiques de vos contacts, sous forme logicielle ou sur une carte à puce OpenPGP.</p>
+    <p xml:lang="ja">PGPony は OpenPGP を使って、ファイル、フォルダー、メッセージの暗号化、復号、署名、検証を行います。自分の鍵と連絡先の公開鍵を鍵束で管理でき、鍵はソフトウェアとして保存することも、OpenPGP スマートカードに入れておくこともできます。</p>
+    <p xml:lang="ko">PGPony는 OpenPGP로 파일, 폴더, 메시지를 암호화, 복호화, 서명, 검증하고, 내 키와 연락처의 공개 키를 하나의 키링에 보관합니다. 키는 소프트웨어로 두거나 OpenPGP 스마트 카드에 둘 수 있습니다.</p>
+    <p xml:lang="pt_BR">O PGPony criptografa, descriptografa, assina e verifica arquivos, pastas e mensagens com OpenPGP, e mantém um chaveiro com as suas chaves e as chaves públicas dos seus contatos, em software ou em um smart card OpenPGP.</p>
+    <p xml:lang="ru">PGPony шифрует, расшифровывает, подписывает и проверяет файлы, папки и сообщения с помощью OpenPGP и хранит связку ключей с вашими собственными ключами и открытыми ключами ваших контактов, программными или на смарт-карте OpenPGP.</p>
+    <p xml:lang="tr">PGPony, dosyaları, klasörleri ve mesajları OpenPGP ile şifreler, şifrelerini çözer, imzalar ve doğrular. Kendi anahtarlarınızı ve kişilerinizin açık anahtarlarını, yazılımda veya bir OpenPGP akıllı kartında, tek bir anahtarlıkta tutar.</p>
+    <p xml:lang="uk">PGPony шифрує, розшифровує, підписує й перевіряє файли, папки та повідомлення за допомогою OpenPGP і зберігає зв’язку ключів із вашими власними ключами та відкритими ключами ваших контактів, програмно або на смарт-картці OpenPGP.</p>
+    <p xml:lang="zh_CN">PGPony 使用 OpenPGP 对文件、文件夹和消息进行加密、解密、签名和验证，并在一个密钥环中保管你自己的密钥和联系人的公钥，密钥可以存放在软件中，也可以存放在 OpenPGP 智能卡上。</p>
     <p>It supports:</p>
+    <p xml:lang="de">Unterstützt werden:</p>
+    <p xml:lang="es">Incluye:</p>
+    <p xml:lang="fr">Il prend en charge :</p>
+    <p xml:lang="ja">主な機能:</p>
+    <p xml:lang="ko">지원 기능:</p>
+    <p xml:lang="pt_BR">Recursos:</p>
+    <p xml:lang="ru">Возможности:</p>
+    <p xml:lang="tr">Desteklenenler:</p>
+    <p xml:lang="uk">Можливості:</p>
+    <p xml:lang="zh_CN">它支持：</p>
     <ul>
       <li>Modern OpenPGP (RFC 9580 v6 keys) alongside classic v4 keys</li>
+      <li xml:lang="de">Modernes OpenPGP (v6-Schlüssel nach RFC 9580) neben klassischen v4-Schlüsseln</li>
+      <li xml:lang="es">OpenPGP moderno (claves v6 de RFC 9580) junto a las claves v4 clásicas</li>
+      <li xml:lang="fr">OpenPGP moderne (clés v6 de la RFC 9580) aux côtés des clés v4 classiques</li>
+      <li xml:lang="ja">従来の v4 鍵に加えて、最新の OpenPGP（RFC 9580 の v6 鍵）に対応</li>
+      <li xml:lang="ko">기존 v4 키와 함께 최신 OpenPGP(RFC 9580 v6 키) 지원</li>
+      <li xml:lang="pt_BR">OpenPGP moderno (chaves v6 do RFC 9580) junto com as chaves v4 clássicas</li>
+      <li xml:lang="ru">Современный OpenPGP (ключи v6 по RFC 9580) наряду с классическими ключами v4</li>
+      <li xml:lang="tr">Klasik v4 anahtarlarının yanında modern OpenPGP (RFC 9580 v6 anahtarları)</li>
+      <li xml:lang="uk">Сучасний OpenPGP (ключі v6 за RFC 9580) поряд із класичними ключами v4</li>
+      <li xml:lang="zh_CN">现代 OpenPGP（RFC 9580 v6 密钥），同时兼容传统 v4 密钥</li>
       <li>Post-quantum keys: ML-KEM encryption and composite ML-DSA signatures (RFC 9980)</li>
+      <li xml:lang="de">Post-Quanten-Schlüssel: ML-KEM-Verschlüsselung und Composite-ML-DSA-Signaturen (RFC 9980)</li>
+      <li xml:lang="es">Claves poscuánticas: cifrado ML-KEM y firmas compuestas ML-DSA (RFC 9980)</li>
+      <li xml:lang="fr">Clés post-quantiques : chiffrement ML-KEM et signatures composites ML-DSA (RFC 9980)</li>
+      <li xml:lang="ja">耐量子鍵: ML-KEM による暗号化と複合 ML-DSA 署名（RFC 9980）</li>
+      <li xml:lang="ko">양자 내성 키: ML-KEM 암호화와 복합 ML-DSA 서명(RFC 9980)</li>
+      <li xml:lang="pt_BR">Chaves pós-quânticas: criptografia ML-KEM e assinaturas compostas ML-DSA (RFC 9980)</li>
+      <li xml:lang="ru">Постквантовые ключи: шифрование ML-KEM и составные подписи ML-DSA (RFC 9980)</li>
+      <li xml:lang="tr">Kuantum sonrası anahtarlar: ML-KEM şifreleme ve bileşik ML-DSA imzaları (RFC 9980)</li>
+      <li xml:lang="uk">Постквантові ключі: шифрування ML-KEM і композитні підписи ML-DSA (RFC 9980)</li>
+      <li xml:lang="zh_CN">后量子密钥：ML-KEM 加密和复合 ML-DSA 签名（RFC 9980）</li>
       <li>Hardware keys over PC/SC, including on-card key generation and moving keys to a card</li>
+      <li xml:lang="de">Hardware-Schlüssel über PC/SC, einschließlich Schlüsselerzeugung auf der Karte und Übertragen vorhandener Schlüssel auf eine Karte</li>
+      <li xml:lang="es">Llaves de hardware por PC/SC, con generación de claves en la tarjeta y traslado de claves a una tarjeta</li>
+      <li xml:lang="fr">Clés matérielles via PC/SC, avec génération de clés sur la carte et déplacement de clés vers une carte</li>
+      <li xml:lang="ja">PC/SC 経由のハードウェアキーに対応。カード上での鍵の生成や、カードへの鍵の移動も可能</li>
+      <li xml:lang="ko">PC/SC를 통한 하드웨어 키 지원, 카드에서 키 생성과 카드로 키 옮기기 포함</li>
+      <li xml:lang="pt_BR">Chaves de hardware via PC/SC, incluindo a geração de chaves no próprio cartão e a transferência de chaves para um cartão</li>
+      <li xml:lang="ru">Аппаратные ключи через PC/SC, включая создание ключей на карте и перенос ключей на карту</li>
+      <li xml:lang="tr">Kartta anahtar oluşturma ve anahtarları karta taşıma dahil, PC/SC üzerinden donanım anahtarları</li>
+      <li xml:lang="uk">Апаратні ключі через PC/SC, зокрема створення ключів на картці й перенесення ключів на картку</li>
+      <li xml:lang="zh_CN">通过 PC/SC 使用硬件密钥，包括在卡上生成密钥以及将密钥移到卡上</li>
       <li>An ssh-agent and a git commit-signing shim served from the keyring</li>
+      <li xml:lang="de">Ein ssh-agent und ein Shim zum Signieren von git-Commits, beide direkt aus dem Schlüsselbund</li>
+      <li xml:lang="es">Un ssh-agent y un adaptador para firmar commits de git, ambos servidos desde el llavero</li>
+      <li xml:lang="fr">Un ssh-agent et un shim de signature des commits git, alimentés par le trousseau</li>
+      <li xml:lang="ja">鍵束の鍵を使う ssh-agent と、git のコミット署名用シム</li>
+      <li xml:lang="ko">키링을 기반으로 동작하는 ssh-agent와 git 커밋 서명 shim</li>
+      <li xml:lang="pt_BR">Um ssh-agent e um shim de assinatura de commits do git que usam o seu chaveiro</li>
+      <li xml:lang="ru">ssh-agent и обёртка для подписи коммитов git, работающие прямо со связкой ключей</li>
+      <li xml:lang="tr">Anahtarlıktan hizmet veren bir ssh-agent ve git commit imzalama ara katmanı</li>
+      <li xml:lang="uk">ssh-agent і прошарок для підписування комітів git, що працюють зі зв’язкою ключів</li>
+      <li xml:lang="zh_CN">由密钥环提供的 ssh-agent 和 git 提交签名辅助程序</li>
       <li>Folder encryption, large files streamed with progress, and watch folders</li>
+      <li xml:lang="de">Ordnerverschlüsselung, große Dateien im Streaming mit Fortschrittsanzeige und überwachte Ordner</li>
+      <li xml:lang="es">Cifrado de carpetas, archivos grandes procesados por partes con indicador de progreso y carpetas vigiladas</li>
+      <li xml:lang="fr">Chiffrement de dossiers, gros fichiers traités en flux avec suivi de la progression, et dossiers surveillés</li>
+      <li xml:lang="ja">フォルダーの暗号化、進捗を表示しながらの大きなファイルのストリーミング処理、監視フォルダー</li>
+      <li xml:lang="ko">폴더 암호화, 진행 상황을 보여 주는 대용량 파일 스트리밍 처리, 감시 폴더</li>
+      <li xml:lang="pt_BR">Criptografia de pastas, arquivos grandes processados em fluxo com indicador de progresso e pastas monitoradas</li>
+      <li xml:lang="ru">Шифрование папок, потоковая обработка больших файлов с индикатором прогресса и отслеживаемые папки</li>
+      <li xml:lang="tr">Klasör şifreleme, ilerleme göstergesiyle akış hâlinde işlenen büyük dosyalar ve izlenen klasörler</li>
+      <li xml:lang="uk">Шифрування папок, потокова обробка великих файлів із показом прогресу та відстежувані папки</li>
+      <li xml:lang="zh_CN">文件夹加密、带进度显示的大文件流式处理，以及监视文件夹</li>
       <li>Keyserver, WKD and VKS lookup, with an optional Tor or SOCKS5 proxy</li>
+      <li xml:lang="de">Suche über Schlüsselserver, WKD und VKS, optional über einen Tor- oder SOCKS5-Proxy</li>
+      <li xml:lang="es">Búsqueda en servidores de claves, WKD y VKS, con proxy Tor o SOCKS5 opcional</li>
+      <li xml:lang="fr">Recherche sur les serveurs de clés, par WKD et par VKS, avec un proxy Tor ou SOCKS5 facultatif</li>
+      <li xml:lang="ja">鍵サーバー、WKD、VKS での鍵の検索。Tor または SOCKS5 プロキシも利用可能</li>
+      <li xml:lang="ko">키 서버, WKD, VKS 조회와 선택적인 Tor 또는 SOCKS5 프록시</li>
+      <li xml:lang="pt_BR">Busca em servidores de chaves, WKD e VKS, com proxy Tor ou SOCKS5 opcional</li>
+      <li xml:lang="ru">Поиск ключей на серверах ключей, через WKD и VKS, с необязательным прокси Tor или SOCKS5</li>
+      <li xml:lang="tr">İsteğe bağlı Tor veya SOCKS5 proxy ile anahtar sunucusu, WKD ve VKS araması</li>
+      <li xml:lang="uk">Пошук ключів через сервери ключів, WKD і VKS, з необов’язковим проксі Tor або SOCKS5</li>
+      <li xml:lang="zh_CN">通过密钥服务器、WKD 和 VKS 查找密钥，可选用 Tor 或 SOCKS5 代理</li>
       <li>Importing public keys and trust from an existing GnuPG keyring</li>
+      <li xml:lang="de">Import öffentlicher Schlüssel und Vertrauensstufen aus einem vorhandenen GnuPG-Schlüsselbund</li>
+      <li xml:lang="es">Importación de claves públicas y de la confianza desde un llavero de GnuPG existente</li>
+      <li xml:lang="fr">Importation des clés publiques et de la confiance depuis un trousseau GnuPG existant</li>
+      <li xml:lang="ja">既存の GnuPG 鍵束から公開鍵と信頼レベルをインポート</li>
+      <li xml:lang="ko">기존 GnuPG 키링에서 공개 키와 신뢰 가져오기</li>
+      <li xml:lang="pt_BR">Importação de chaves públicas e de níveis de confiança de um chaveiro GnuPG existente</li>
+      <li xml:lang="ru">Импорт открытых ключей и уровней доверия из существующей связки ключей GnuPG</li>
+      <li xml:lang="tr">Mevcut bir GnuPG anahtarlığından açık anahtarları ve güven düzeylerini içe aktarma</li>
+      <li xml:lang="uk">Імпорт відкритих ключів і довіри з наявної зв’язки ключів GnuPG</li>
+      <li xml:lang="zh_CN">从现有 GnuPG 密钥环导入公钥和信任设置</li>
       <li>A Stateless OpenPGP (SOP) command line for scripts and interoperability testing</li>
+      <li xml:lang="de">Eine Kommandozeile für Stateless OpenPGP (SOP) für Skripte und Interoperabilitätstests</li>
+      <li xml:lang="es">Una línea de comandos Stateless OpenPGP (SOP) para scripts y pruebas de interoperabilidad</li>
+      <li xml:lang="fr">Une ligne de commande Stateless OpenPGP (SOP) pour les scripts et les tests d'interopérabilité</li>
+      <li xml:lang="ja">スクリプトや相互運用性テストに使える Stateless OpenPGP（SOP）コマンドライン</li>
+      <li xml:lang="ko">스크립트와 상호 운용성 테스트를 위한 Stateless OpenPGP(SOP) 명령줄</li>
+      <li xml:lang="pt_BR">Uma interface de linha de comando Stateless OpenPGP (SOP) para scripts e testes de interoperabilidade</li>
+      <li xml:lang="ru">Командная строка Stateless OpenPGP (SOP) для скриптов и проверки совместимости</li>
+      <li xml:lang="tr">Betikler ve birlikte çalışabilirlik testleri için Stateless OpenPGP (SOP) komut satırı</li>
+      <li xml:lang="uk">Командний рядок Stateless OpenPGP (SOP) для скриптів і перевірки сумісності</li>
+      <li xml:lang="zh_CN">无状态 OpenPGP（SOP）命令行，便于编写脚本和进行互操作性测试</li>
     </ul>
     <p>
       Nothing leaves your computer by default: the features that use the network are off until
       you use them or turn them on, and there is no telemetry.
     </p>
+    <p xml:lang="de">Standardmäßig verlässt nichts deinen Computer: Die Funktionen, die das Netzwerk nutzen, bleiben aus, bis du sie verwendest oder einschaltest, und es gibt keine Telemetrie.</p>
+    <p xml:lang="es">De forma predeterminada, nada sale de tu ordenador: las funciones que usan la red están desactivadas hasta que las usas o las activas, y no hay telemetría.</p>
+    <p xml:lang="fr">Par défaut, rien ne quitte votre ordinateur : les fonctions qui utilisent le réseau restent désactivées tant que vous ne les utilisez pas ou ne les activez pas, et il n'y a aucune télémétrie.</p>
+    <p xml:lang="ja">既定では、何もこのコンピューターの外に送信されません。ネットワークを使う機能は、使用するかオンにするまで無効のままです。テレメトリーもありません。</p>
+    <p xml:lang="ko">기본적으로 컴퓨터 밖으로 나가는 것은 없습니다. 네트워크를 쓰는 기능은 직접 사용하거나 켜기 전까지 꺼져 있으며, 원격 측정도 없습니다.</p>
+    <p xml:lang="pt_BR">Por padrão, nada sai do seu computador: os recursos que usam a rede ficam desativados até você usá-los ou ativá-los, e não há telemetria.</p>
+    <p xml:lang="ru">По умолчанию ничего не покидает ваш компьютер: сетевые функции выключены, пока вы сами ими не воспользуетесь или не включите их, а телеметрии нет.</p>
+    <p xml:lang="tr">Varsayılan olarak hiçbir şey bilgisayarınızdan çıkmaz: ağı kullanan özellikler siz kullanana veya açana kadar kapalıdır ve hiçbir telemetri yoktur.</p>
+    <p xml:lang="uk">За замовчуванням ніщо не залишає ваш комп’ютер: функції, що використовують мережу, вимкнені, доки ви ними не скористаєтеся або не ввімкнете їх, і жодної телеметрії немає.</p>
+    <p xml:lang="zh_CN">默认情况下，任何数据都不会离开你的电脑：需要联网的功能在你使用或开启之前一直处于关闭状态，并且没有任何遥测。</p>
   </description>
 
   <launchable type="desktop-id">app.pgpony.PGPony.desktop</launchable>
@@ -70,10 +190,30 @@
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/norsehorse-dev/PGPonyDesktop/main/docs/screenshots/keyring.png</image>
       <caption>Your keys and your contacts' keys in one keyring</caption>
+      <caption xml:lang="de">Deine Schlüssel und die Schlüssel deiner Kontakte in einem Schlüsselbund</caption>
+      <caption xml:lang="es">Tus claves y las de tus contactos en un solo llavero</caption>
+      <caption xml:lang="fr">Vos clés et celles de vos contacts dans un seul trousseau</caption>
+      <caption xml:lang="ja">自分の鍵と連絡先の鍵を 1 つの鍵束で管理</caption>
+      <caption xml:lang="ko">내 키와 연락처의 키를 하나의 키링에</caption>
+      <caption xml:lang="pt_BR">As suas chaves e as dos seus contatos em um único chaveiro</caption>
+      <caption xml:lang="ru">Ваши ключи и ключи ваших контактов в одной связке</caption>
+      <caption xml:lang="tr">Sizin ve kişilerinizin anahtarları tek bir anahtarlıkta</caption>
+      <caption xml:lang="uk">Ваші ключі та ключі ваших контактів в одній зв’язці ключів</caption>
+      <caption xml:lang="zh_CN">你的密钥和联系人的密钥都在同一个密钥环中</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/norsehorse-dev/PGPonyDesktop/main/docs/screenshots/crypto.png</image>
       <caption>Encrypt, decrypt, sign and verify on one screen</caption>
+      <caption xml:lang="de">Verschlüsseln, entschlüsseln, signieren und verifizieren auf einem Bildschirm</caption>
+      <caption xml:lang="es">Cifra, descifra, firma y verifica en una sola pantalla</caption>
+      <caption xml:lang="fr">Chiffrer, déchiffrer, signer et vérifier sur un seul écran</caption>
+      <caption xml:lang="ja">暗号化、復号、署名、検証を 1 つの画面で</caption>
+      <caption xml:lang="ko">한 화면에서 암호화, 복호화, 서명, 검증</caption>
+      <caption xml:lang="pt_BR">Criptografe, descriptografe, assine e verifique em uma única tela</caption>
+      <caption xml:lang="ru">Шифрование, расшифровка, подпись и проверка на одном экране</caption>
+      <caption xml:lang="tr">Tek ekranda şifreleyin, şifre çözün, imzalayın ve doğrulayın</caption>
+      <caption xml:lang="uk">Шифрування, розшифрування, підписування й перевірка на одному екрані</caption>
+      <caption xml:lang="zh_CN">在同一个界面中加密、解密、签名和验证</caption>
     </screenshot>
   </screenshots>
 

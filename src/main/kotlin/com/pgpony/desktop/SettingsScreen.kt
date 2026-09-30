@@ -291,7 +291,9 @@ private fun KeysSection(state: DesktopState) {
         Column {
             Text(tr("settings_protect_destructive_title"), style = MaterialTheme.typography.bodyMedium)
             Text(
-                tr("d_settings_protect_destructive_subtitle"),
+                // The word comes from the same string the confirm field checks, so the hint
+                // can never name a word the dialog does not accept.
+                tr("d_settings_protect_destructive_subtitle", DestructiveGuard.word()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

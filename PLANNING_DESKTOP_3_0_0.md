@@ -411,6 +411,20 @@ backup restored on a third). Next: the self-test pass between the Mac, the Windo
 then the translation pass. The 59 new strings are translated so the desktop layer stays complete;
 the pass reviews them with the rest.
 
+Translation pass (2026-09-30): desktop now ships ten languages, adding Korean, Turkish,
+Ukrainian and Simplified Chinese to match the mobile apps. The English desktop strings lost their
+em and en dashes first (76 strings), then every language was reviewed or translated against the
+final English by one agent and re-read by a second, independent one, with the Android strings of
+the same language as the glossary. Main findings in the existing six: mixed formal and informal
+address (German, Spanish), terms that had drifted from Android, a few real mistranslations
+("first-party" as "proprietary" in French and Japanese), and Russian plurals missing few/many in
+the import and restore summaries. Two code fixes came out of it: the "type DELETE" hint now takes
+the confirm word from the same string the dialog checks (it named DELETE while the dialog wanted
+the translated word), and the pairing dialog has whole sentences for a peer without a name. The
+store listing and launcher entry are translated too. Per-language change logs are kept outside
+the repository. Android's Korean still lacks 4 strings the desktop uses (expired-key blocks and
+the allow-expired setting); they show in English until the Android file has them.
+
 ### F2. A Stateless OpenPGP (SOP) CLI and the public interop suite (M)
 Android 4.7.0 item 11 (#64) plans a SOP wrapper so PGPony can join the sequoia-pgp OpenPGP
 interoperability test suite. Desktop is the natural home: it is already a JVM CLI on Linux,

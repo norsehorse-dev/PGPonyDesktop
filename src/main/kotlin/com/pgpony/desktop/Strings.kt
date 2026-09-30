@@ -58,9 +58,10 @@ object I18n {
 
     /**
      * The languages that have a complete translation. English is the base and always present;
-     * the other six are the locales Android ships. Order is the picker's order.
+     * the others are the locales the mobile apps ship (3.0.0 adds Korean, Turkish, Ukrainian and
+     * Simplified Chinese). Order is the picker's order.
      */
-    val SUPPORTED = listOf("en", "de", "es", "fr", "ja", "pt-BR", "ru")
+    val SUPPORTED = listOf("en", "de", "es", "fr", "ja", "ko", "pt-BR", "ru", "tr", "uk", "zh-Hans")
 
     /** Endonyms — a language picker that names languages in a language you can't read is a joke. */
     val DISPLAY_NAMES = mapOf(
@@ -69,8 +70,12 @@ object I18n {
         "es" to "Español",
         "fr" to "Français",
         "ja" to "日本語",
+        "ko" to "한국어",
         "pt-BR" to "Português (Brasil)",
-        "ru" to "Русский"
+        "ru" to "Русский",
+        "tr" to "Türkçe",
+        "uk" to "Українська",
+        "zh-Hans" to "简体中文"
     )
 
     /** Test hook — a scratch node instead of the real one. */
@@ -130,6 +135,10 @@ object I18n {
         return when {
             lang == "pt" && country == "BR" -> "pt-BR"
             lang == "pt" -> "en"
+            // Simplified Chinese only: Traditional (Hant, or Taiwan, Hong Kong, Macau) is not
+            // translated and gets English rather than the wrong script.
+            lang == "zh" && (default.script == "Hant" || country in setOf("TW", "HK", "MO")) -> "en"
+            lang == "zh" -> "zh-Hans"
             lang in SUPPORTED -> lang
             else -> "en"
         }
@@ -164,14 +173,15 @@ object I18n {
         val mod10 = (n % 10).toInt()
         val mod100 = (n % 100).toInt()
         return when (localeOf(tag).language) {
-            "ja" -> "other"
+            "ja", "ko", "zh" -> "other"
             "fr", "pt" -> if (n < 2) "one" else "other"
-            "ru" -> when {
+            // Ukrainian has the same integer rule as Russian.
+            "ru", "uk" -> when {
                 mod10 == 1 && mod100 != 11 -> "one"
                 mod10 in 2..4 && mod100 !in 12..14 -> "few"
                 else -> "many"
             }
-            // en, de, es — also the rule the English base files are written against.
+            // en, de, es, tr: also the rule the English base files are written against.
             else -> if (n == 1L) "one" else "other"
         }
     }
@@ -185,6 +195,7 @@ object I18n {
     private fun dirFor(tag: String): String = when (tag) {
         "en" -> "values"
         "pt-BR" -> "values-pt-rBR"
+        "zh-Hans" -> "values-b+zh+Hans"
         else -> "values-$tag"
     }
 

@@ -1,0 +1,853 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PGPony Desktop: the desktop-owned string layer, Simplified Chinese.
+  Keys and order follow ../values/strings.xml; see its header for how the layers work.
+  A key missing here falls back to the English base.
+-->
+<resources>
+
+    <!-- ── Navigation rail ─────────────────────────────────────────────── -->
+    <string name="d_nav_crypto">加密</string>
+    <string name="d_nav_cards">硬件密钥</string>
+
+    <!-- ── Settings · Network ──────────────────────────────────────────── -->
+    <string name="d_settings_section_network">网络</string>
+    <string name="d_settings_proxy_title">代理</string>
+    <string name="d_settings_proxy_off">直接连接</string>
+    <string name="d_settings_proxy_tor">Tor（本地守护进程，%1$s:%2$d）</string>
+    <string name="d_settings_proxy_custom">自定义 SOCKS 代理</string>
+    <string name="d_settings_proxy_tor_note">需要在本机运行 Tor 守护进程。Tor Browser（运行期间）或 tor 服务都会监听 %1$s:%2$d。</string>
+    <string name="d_status_proxy_set">已设置代理：%1$s</string>
+    <string name="d_settings_keyservers_title">密钥服务器（查找顺序）</string>
+    <string name="d_keyservers_lookup">查找</string>
+    <string name="d_keyservers_publish">发布</string>
+    <string name="d_keyservers_first_party"> · 官方</string>
+    <string name="d_keyservers_remove">移除服务器</string>
+    <string name="d_keyservers_add">添加服务器…</string>
+    <string name="d_keyservers_note">查找时按顺序查询已启用的服务器（在 WKD 之后）；发布时会提交到每个已启用发布的服务器。keys.openpgp.org 会验证邮箱，但可能拒绝 v6/PQC 密钥；keys.pgpony.app 接受 PGPony 生成的所有密钥类型。</string>
+    <string name="d_keyservers_add_title">添加密钥服务器</string>
+    <string name="d_keyservers_add_url_label">基础 URL（协议 + 主机名，末尾不加斜杠）</string>
+    <string name="d_keyservers_add_note">服务器应支持 keys.openpgp.org 的 VKS API；如果不支持 VKS，PGPony 会改用 HKP（/pks/add）进行发布。</string>
+    <string name="d_status_keyserver_added">已添加密钥服务器 %1$s</string>
+    <string name="d_settings_autorefresh">自动从密钥服务器刷新密钥（运行期间每 12 小时一次）</string>
+
+    <!-- ── Settings · Backup ───────────────────────────────────────────── -->
+    <string name="d_settings_backup_export">备份密钥环…</string>
+    <string name="d_settings_backup_restore">恢复备份…</string>
+    <string name="d_settings_backup_note">.pgpony 格式可与 iOS 版和 Android 版 PGPony 互相恢复；OpenKeychain 备份也可以恢复。</string>
+    <string name="d_settings_subtitle">适用于此电脑上 PGPony 的所有设置。</string>
+    <string name="d_settings_network_note">代理、密钥服务器和自动刷新密钥。</string>
+    <string name="d_settings_appearance_note">主题和语言。更改后立即生效。</string>
+
+    <!-- ── Settings · Password store ───────────────────────────────────── -->
+    <string name="d_settings_pass_show_tab">显示「密码库」标签页</string>
+    <string name="d_settings_pass_note">浏览标准的 `pass` 密码库（一个包含 .gpg 文件和 .gpg-id 收件人文件的文件夹），并使用你的密钥环中的软件密钥或硬件密钥解密条目。只读：PGPony 从不写入密码库。</string>
+    <string name="d_settings_pass_default_location">默认位置：</string>
+    <plurals name="d_settings_pass_status_configured">
+        <item quantity="other">已配置 %1$d 个密码库。请在「密码库」标签页中管理。</item>
+    </plurals>
+    <string name="d_settings_pass_status_exists">此文件夹已存在。请在「密码库」标签页中添加。</string>
+    <string name="d_settings_pass_status_none">这里还没有密码库。如果你设置了 PASSWORD_STORE_DIR，会优先使用它；否则可以在「密码库」标签页中添加任意文件夹。</string>
+
+    <!-- ── Settings · Clipboard ────────────────────────────────────────── -->
+    <string name="d_settings_clipboard_autoclear">自动清除复制的机密内容</string>
+    <string name="d_settings_clipboard_seconds_label">秒数</string>
+    <string name="d_settings_clipboard_note">5 到 600 秒。只有当剪贴板中仍是 PGPony 放入的内容时，计时器才会清除它。如果你之后复制了其他内容，剪贴板不会被改动。注意：剪贴板管理器或同步服务（KDE Klipper、Windows 云剪贴板、macOS 通用剪贴板）可能会保留一份 PGPony 无法清除的副本。</string>
+    <string name="d_status_clipboard_seconds">剪贴板将在 %1$d 秒后清除</string>
+
+    <!-- ── Settings · Appearance · Language ────────────────────────────── -->
+    <string name="d_settings_language_system">跟随系统（%1$s）</string>
+    <string name="d_settings_language_note">整个窗口立即切换，无需重启。来自你的密钥或文件的文本按原样显示，不会被翻译。</string>
+
+    <!-- ── Settings · Storage ──────────────────────────────────────────── -->
+    <string name="d_settings_section_storage">存储</string>
+    <string name="d_settings_storage_data_folder">数据文件夹：</string>
+    <string name="d_settings_storage_note">密钥元数据保存在 pgpony.db 中（与 Android 版 PGPony 使用相同的 Room 架构）；ASCII 封装的密钥材料保存在 keys/ 下，每个公钥或私钥部分一个文件，权限为 0600。私钥在存储时仍由各自的口令（S2K）保护。此存储本身不额外加密。</string>
+
+    <!-- ── Settings · About ────────────────────────────────────────────── -->
+    <string name="d_settings_about_version">PGPony Desktop %1$s</string>
+    <string name="d_settings_about_note">与 Android 版 PGPony 使用相同的 OpenPGP 引擎和 Room 架构（直接引入，而非重写）。</string>
+    <string name="d_about_title">关于 PGPony</string>
+    <string name="d_about_links">链接</string>
+
+    <!-- ── Shared desktop buttons ──────────────────────────────────────── -->
+    <string name="d_common_apply">应用</string>
+    <string name="d_common_add">添加</string>
+    <string name="d_common_clear_now">立即清除</string>
+    <string name="d_common_remove">移除</string>
+
+    <!-- ── Settings · Storage · desktop-only actions ──────────────── -->
+    <string name="d_settings_storage_open_folder">打开文件夹</string>
+    <string name="d_settings_storage_copy_path">复制路径</string>
+
+    <!-- ── Settings · About · links and diagnostics ───────────────── -->
+    <string name="d_settings_about_repo">GitHub 上的源代码</string>
+    <string name="d_settings_about_repo_note">桌面版源代码将随 1.0 版本一同公开。Android 应用和共享的加密核心已经公开。</string>
+    <string name="d_settings_about_issues">报告问题</string>
+    <string name="d_settings_about_website">PGPony 网站</string>
+    <string name="d_settings_about_runtime_label">运行时：</string>
+    <string name="d_settings_about_copy_diagnostics">复制</string>
+
+    <!-- ── Settings · More from NorseHorse ───────────────────── -->
+    <string name="d_settings_section_apps">NorseHorse 的更多应用</string>
+    <string name="d_settings_apps_note">同一开发者的其他应用。链接会在你的浏览器中打开。</string>
+    <string name="d_app_pgpony_desc">处处都是同一个密钥环：一个 OpenPGP 引擎、一种备份格式，从手机到桌面。</string>
+    <string name="d_app_carrierpony_desc">基于 OpenPGP 的端到端加密消息和文件传输。无需账号，无需手机号。</string>
+    <string name="d_app_agepony_desc">基于 age 的文件加密和分离签名。可以加密给 GitHub 用户名，用安全密钥签名。</string>
+    <string name="d_app_quorumpony_desc">将一个机密拆分到多张备份卡上。凑齐规定数量即可恢复；单独任何一张都不会泄露任何信息。</string>
+    <string name="d_app_relaypony_desc">通过 Wi-Fi 将文件从一台设备直接发送到另一台设备。端到端加密，中间没有服务器。</string>
+    <string name="d_app_burnpony_desc">阅后即焚的加密笔记，在你的设备上封存，读取后即消失。</string>
+    <string name="d_app_vaultpony_desc">手机上的加密保险库，采用 VeraCrypt 容器格式，同一个保险库也能在电脑上打开。</string>
+    <string name="d_app_passpony_desc">pass 和 passage 密码库的客户端。你的密码始终是你自己 git 仓库中的加密文件。</string>
+    <string name="d_app_hashpony_desc">像 sha256sum 一样计算和校验文件哈希，支持校验和文件、文件夹检查和所有常用算法。</string>
+    <string name="d_app_tappony_desc">轻触 NFC 标签，将其 ID 和内容发送到你自己的服务器。无需账号，不经云端。</string>
+
+    <!-- ── Status line ───────────────────────────────────── -->
+    <string name="d_status_copied">已复制到剪贴板。</string>
+    <string name="d_status_open_failed">无法打开 %1$s。已改为复制到剪贴板。</string>
+
+    <!-- ── Tabs and file operations ────────────────────────────────────── -->
+    <string name="d_crypto_tab_files">文件</string>
+    <string name="d_crypto_tab_message">消息</string>
+    <string name="d_crypto_fileop_sign">签名（分离）</string>
+    <string name="d_crypto_fileop_verify">验证（分离）</string>
+    <string name="d_crypto_err_generic">操作失败</string>
+
+    <!-- ── Files pane ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_add_files">添加文件…</string>
+    <string name="d_crypto_drop_hint">…或将文件拖放到窗口任意位置</string>
+    <string name="d_crypto_no_files">未选择文件。</string>
+    <string name="d_crypto_no_files_title">队列中没有文件</string>
+    <string name="d_crypto_result_ok">成功</string>
+    <string name="d_crypto_result_failed">失败</string>
+    <string name="d_crypto_signer_pass_label">签名者口令（无保护则留空）</string>
+    <string name="d_crypto_err_composite_pass">此签名密钥受口令保护。请输入其口令以签名。</string>
+    <string name="d_crypto_err_composite_encrypt_sign">复合 ML-DSA 密钥无法在加密的同时签名。请使用「签名」标签页，或选择一个传统签名密钥。</string>
+    <string name="d_crypto_armor_gpg">ASCII 封装（.asc，而非二进制 .gpg）</string>
+    <string name="d_crypto_armor_sig">ASCII 封装（.asc，而非二进制 .sig）</string>
+    <string name="d_crypto_decrypt_pass_label">密钥或消息口令</string>
+    <string name="d_crypto_decrypt_files_note">如果消息中带有原始文件名，解密后的文件会恢复该名称，且从不覆盖已有文件。</string>
+    <string name="d_crypto_sign_as_colon">以此身份签名：</string>
+    <string name="d_crypto_verify_files_hint">选择一个 .sig/.asc 签名文件，其内容文件位于同一目录（同名但无该扩展名）；或者正好选择两个文件：签名和内容。</string>
+    <string name="d_crypto_err_no_pairing">未找到签名与内容的对应关系。请参阅上方提示。</string>
+    <string name="d_crypto_err_no_signer">没有可用于签名的密钥对</string>
+    <string name="d_crypto_files_done">已处理 %1$d/%2$d 个文件</string>
+    <string name="d_crypto_files_partial">%1$d/%2$d 个成功。请查看各文件的结果。</string>
+    <string name="d_crypto_run_op">执行%1$s</string>
+    <string name="d_crypto_input_verify">明文签名消息或 ASCII 封装的签名</string>
+
+    <!-- ── Encrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_encrypt_with">加密方式：</string>
+    <string name="d_crypto_with_public_keys">公钥</string>
+    <string name="d_crypto_attach_files">附加文件…</string>
+    <string name="d_crypto_clear_attachments">清除附件</string>
+    <string name="d_crypto_bundle_note">以 PGP/MIME 文件包发送：正文 + %1$d 个附件，封装在一个加密的 multipart/mixed 中。</string>
+    <string name="d_crypto_err_card_or_recipient_load">收件人或卡上的密钥加载失败</string>
+    <string name="d_crypto_card_sign_encrypt_title">在 %1$s 上签名并加密</string>
+    <string name="d_crypto_hardware_key">硬件密钥</string>
+    <string name="d_crypto_err_pubkey_missing">无法加载「%1$s」的公钥。其存储的密钥材料已缺失。请从密钥环中移除该条目，然后重新导入公钥。</string>
+    <string name="d_crypto_err_signer_load">无法加载签名密钥 %1$s，因此未加密任何内容。（取消勾选「以此身份签名」即可发送未签名的消息。）</string>
+    <string name="d_crypto_banner_encrypted">已加密给 %1$d 个收件人</string>
+    <string name="d_crypto_banner_encrypted_card">已加密给 %1$d 个收件人，并以 %2$s 在卡上签名</string>
+    <string name="d_crypto_banner_encrypted_pass">已使用口令加密</string>
+    <string name="d_crypto_banner_signed_as">，以 %1$s（%2$s）签名</string>
+    <string name="d_crypto_banner_unsigned">，未签名</string>
+
+    <!-- ── Banners: stems and fragments ────────────────────────────────── -->
+    <string name="d_crypto_banner_bundle_suffix"> · 包含 %1$d 个附件的文件包</string>
+    <string name="d_crypto_banner_attach_suffix"> · %1$d 个附件</string>
+    <string name="d_crypto_banner_signer_suffix">：%1$s</string>
+    <string name="d_crypto_banner_keyid_suffix">（密钥 ID %1$s）</string>
+
+    <!-- ── Decrypt tab ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_decrypt_note">接受 ASCII 封装的消息或完整的 PGP/MIME .eml 文件。文件包的附件会显示在输出旁边。</string>
+    <string name="d_crypto_card_decrypt_title">在 %1$s 上解密</string>
+    <string name="d_crypto_banner_decrypted_card_verified">已在卡上解密 · 签名已验证</string>
+    <string name="d_crypto_banner_decrypted_card_unknown">已在卡上解密 · 签名者不在你的密钥环中</string>
+    <string name="d_crypto_banner_decrypted_card_unsigned">已在卡上解密 · 无签名</string>
+    <string name="d_crypto_banner_decrypted_verified">已解密 · 签名已验证</string>
+    <string name="d_crypto_banner_decrypted_unknown">已解密 · 由不在你密钥环中的密钥签名</string>
+    <string name="d_crypto_banner_decrypted_unsigned">已解密 · 无签名</string>
+
+    <!-- ── Sign tab ────────────────────────────────────────────────────── -->
+    <string name="d_crypto_detached_toggle">分离签名（只生成签名，文本单独保留）</string>
+    <string name="d_crypto_clear_signed">明文签名</string>
+    <string name="d_crypto_err_card_pubkey">无法加载卡的公钥</string>
+    <string name="d_crypto_card_sign_title">在 %1$s 上签名</string>
+    <string name="d_crypto_banner_signed_card">%1$s（在卡上） · %2$s</string>
+    <string name="d_crypto_banner_signed">%1$s · %2$s</string>
+    <string name="d_crypto_err_signer_ring">签名者的私钥环加载失败</string>
+
+    <!-- ── Verify tab ──────────────────────────────────────────────────── -->
+    <string name="d_crypto_verify_hint">在上方粘贴明文签名消息。如果是分离签名，请在上方粘贴签名，在下方粘贴原始文本。</string>
+    <string name="d_crypto_detached_content_label">原始文本（仅用于分离签名验证）</string>
+    <string name="d_crypto_err_detached_needs_text">分离签名：请在第二个输入框中粘贴原始文本</string>
+    <string name="d_crypto_err_is_encrypted">这是一条加密消息。请使用「解密」标签页。</string>
+    <string name="d_crypto_err_no_framing">未找到可识别的 PGP 签名结构</string>
+    <string name="d_crypto_banner_verified">签名已验证：%1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_invalid">签名无效：内容与签名不匹配</string>
+    <string name="d_crypto_banner_unknown_signer">由不在你密钥环中的密钥签名。请导入签名者的公钥以进行验证。</string>
+    <string name="d_crypto_banner_no_signature">输入中未找到签名</string>
+
+    <!-- ── Output pane ─────────────────────────────────────────────────── -->
+    <string name="d_crypto_output">输出</string>
+    <string name="d_crypto_attachment_meta">%1$s · %2$d 字节</string>
+    <string name="d_common_save_as">存储…</string>
+    <string name="d_crypto_copy_output">复制输出</string>
+    <string name="d_crypto_save_eml">存储 .eml…</string>
+    <string name="d_status_saved">已存储 %1$s</string>
+    <string name="d_status_saved_bytes">已存储 %1$s（%2$d 字节）</string>
+    <string name="d_crypto_cancelled">已取消</string>
+    <string name="d_crypto_no_signer_available">没有可用的密钥对</string>
+
+    <!-- ── Hardware-key batch prompts ──────────────────────────────────── -->
+    <string name="d_crypto_card_sign_files">在 %2$s 上签名 %1$d 个文件</string>
+    <string name="d_crypto_card_sign_encrypt_files">在 %2$s 上签名并加密 %1$d 个文件</string>
+    <string name="d_crypto_card_decrypt_files">在 %2$s 上解密 %1$d 个文件</string>
+
+    <!-- ── Store bar ───────────────────────────────────────────────────── -->
+    <string name="d_pass_store_unreadable">无法读取 %1$s。它已被移动、卸载，或已不可读取。</string>
+    <string name="d_pass_not_a_store">不是可读取的密码库：%1$s</string>
+    <string name="d_pass_store_added">已添加密码库：%1$s</string>
+    <string name="d_pass_choose_store">选择密码库</string>
+    <string name="d_pass_add_store">添加密码库…</string>
+    <string name="d_pass_store_title">密码库</string>
+    <string name="d_pass_use_default">使用 ~/.password-store</string>
+    <string name="d_pass_rescan">重新扫描</string>
+    <string name="d_pass_empty_title">还没有密码库</string>
+    <string name="d_pass_select_entry_title">未选择任何内容</string>
+    <string name="d_pass_store_removed">已从 PGPony 中移除 %1$s（文件夹本身未被改动）</string>
+    <string name="d_pass_choose_folder">选择密码库文件夹</string>
+
+    <!-- ── Browser pane ────────────────────────────────────────────────── -->
+    <string name="d_pass_search_label">搜索条目</string>
+    <string name="d_pass_no_entries">没有条目。</string>
+    <plurals name="d_pass_match_count">
+        <item quantity="other">%1$d 个匹配项</item>
+    </plurals>
+    <string name="d_pass_up">上一级文件夹</string>
+    <string name="d_pass_select_entry">选择一个条目以解密。</string>
+    <string name="d_pass_empty_intro">为 PGPony 指定一个 `pass` 密码库：一个包含 OpenPGP 加密 .gpg 文件的文件夹，即标准 password-store 工具使用的布局。</string>
+    <string name="d_pass_empty_detail">密码库会被原地读取，因此负责同步它的工具（git、Syncthing、Nextcloud）可以照常工作。PGPony 只读取：从不写入、移动或重新加密文件夹中的任何内容。条目在你打开时才逐个解密。浏览目录树时只读取文件名。</string>
+
+    <!-- ── Entry pane ──────────────────────────────────────────────────── -->
+    <string name="d_pass_entry_missing">条目文件缺失或无法读取。</string>
+    <string name="d_pass_no_matching_key">你的密钥环中没有能打开此条目的密钥。请导入此条目所加密给的私钥，或配对持有该私钥的硬件密钥。</string>
+    <string name="d_pass_decrypting">正在解密…</string>
+    <string name="d_pass_card_entry">此条目是加密给硬件密钥的。</string>
+    <string name="d_pass_card_key_missing">此条目对应的已配对卡密钥不在你的密钥环中。</string>
+    <string name="d_pass_card_decrypt_title">在 %2$s 上解密 %1$s</string>
+    <string name="d_pass_card_failed">硬件密钥解密失败：%1$s</string>
+    <string name="d_pass_encrypted_to">加密给：%1$s</string>
+    <string name="d_common_reveal">显示</string>
+    <string name="d_common_hide">隐藏</string>
+    <string name="d_pass_password_copied">密码已复制</string>
+    <string name="d_pass_password_copied_clearing">密码已复制。剪贴板将在 %1$d 秒后清除</string>
+    <string name="d_pass_copy_password">复制密码</string>
+    <string name="d_pass_clipboard_countdown">剪贴板将在 %1$d 秒后清除</string>
+    <string name="d_pass_fields">字段</string>
+    <string name="d_pass_field_copied">%1$s 已复制</string>
+    <string name="d_pass_copy_field">复制 %1$s</string>
+    <string name="d_pass_lock">锁定</string>
+    <string name="d_pass_relock_note">%1$d 秒后自动锁定。</string>
+
+    <!-- ── One-time codes ──────────────────────────────────────────────── -->
+    <string name="d_pass_otp_unparsable">PGPony 无法根据此 URI 生成验证码。它不是 TOTP URI，或其中的 secret 参数不是有效的 base32 编码。请使用你的身份验证器应用来处理此条目。</string>
+    <string name="d_pass_otp_uri_copied">otpauth URI 已复制</string>
+    <string name="d_pass_otp_display_only">PGPony 会显示此设置 URI，但不会在此设备上生成验证码。请将它复制到身份验证器应用中。</string>
+    <string name="d_pass_copy_uri">复制 URI</string>
+    <string name="d_pass_otp_no_provider">此 JVM 没有 HMAC-%1$s 提供程序，因此无法在此生成验证码。</string>
+    <string name="d_pass_code_copied">验证码已复制</string>
+    <string name="d_pass_code_copied_clearing">验证码已复制。剪贴板将在 %1$d 秒后清除</string>
+    <string name="d_pass_copy_code">复制一次性验证码</string>
+    <string name="d_pass_otp_rolls_in">%1$d 秒后更新</string>
+    <string name="d_pass_otp_meta">%1$s：%2$s，%3$d 位，%4$d 秒</string>
+    <string name="d_pass_show_uri">显示设置 URI</string>
+    <string name="d_pass_hide_uri">隐藏设置 URI</string>
+    <string name="d_pass_copy_setup_uri">复制设置 URI</string>
+    <string name="d_cards_subtitle">通过 USB 连接的 OpenPGP 智能卡：YubiKey 5、Token2、Nitrokey 3 等。机密保存在密钥上，从不接触这台电脑。</string>
+
+    <!-- ── Reader row (USB PC/SC — the phone taps NFC instead) ─────────── -->
+    <string name="d_cards_reader_label">读卡器：</string>
+    <string name="d_cards_no_reader">未找到读卡器</string>
+    <string name="d_cards_reader_with_card">%1$s · 已插入卡</string>
+    <string name="d_cards_read_card">读取卡</string>
+    <string name="d_cards_no_reader_detected">未检测到 PC/SC 读卡器。请插入密钥（它会作为独立的读卡器被识别）。</string>
+    <string name="d_cards_no_reader_linux">在 Linux 上，请安装并启动 pcscd。</string>
+    <string name="d_cards_section_reader">读卡器</string>
+    <string name="d_cards_no_reader_title">未检测到读卡器</string>
+    <string name="d_cards_no_card_title">尚未读取卡</string>
+    <string name="d_cards_no_card_body">插入硬件密钥并选择「读取卡」。PGPony 只读取卡的公开插槽，不会向其写入任何内容。</string>
+
+    <!-- ── Card info ──────────────────────────────────────────────────── -->
+    <string name="d_cards_aid">AID %1$s</string>
+    <string name="d_cards_pin_tries">PIN 剩余尝试次数：用户 %1$d · 管理员 %2$d</string>
+
+    <!-- ── Pairing ────────────────────────────────────────────────────── -->
+    <string name="d_cards_paired">已配对。密钥环条目：%1$s</string>
+    <string name="d_cards_pair">与密钥环配对</string>
+    <string name="d_cards_keygen_open">在卡上生成密钥…</string>
+    <string name="d_cards_pair_note">配对会把此卡记录到你的密钥环中，这样消息就可以加密给它，解密和签名也会通过硬件完成。如果卡的公钥证书已在你的密钥环中（导入它或从密钥服务器获取），配对会关联到该条目，包括主钥离线的密钥布局。</string>
+    <string name="d_cards_keygen_done">已在卡上生成并配对：%1$s。请导出并备份公钥；私钥无法离开此卡。</string>
+
+    <!-- ── Management buttons (ellipsis = opens a dialog) ──────────────── -->
+    <string name="d_cards_change_pin_open">修改 PIN…</string>
+    <string name="d_cards_change_admin_open">修改管理员 PIN…</string>
+    <string name="d_cards_unblock_open">解锁 PIN…</string>
+    <string name="d_cards_reset_open">恢复出厂设置…</string>
+
+    <!-- ── PIN cache ──────────────────────────────────────────────────── -->
+    <string name="d_cards_pin_cache_title">PIN 缓存</string>
+    <string name="d_cards_pin_cache_toggle">操作成功后记住用户 PIN</string>
+    <string name="d_cards_pin_cache_keep_for">保留时长：</string>
+    <string name="d_cards_pin_cache_custom_seconds">%1$d 秒</string>
+    <string name="d_cards_pin_held_no_timer">PIN 已保留（不限时）</string>
+    <string name="d_cards_pin_cache_note">仅保存在内存中，从不写入磁盘。输错 PIN、退出应用或点击「立即清除」都会将其丢弃。管理员 PIN 从不缓存。</string>
+
+    <!-- ── Dialogs ────────────────────────────────────────────────────── -->
+    <string name="d_cards_new_pin_min6">新 PIN（至少 6 位）</string>
+    <string name="d_cards_new_admin_min8">新管理员 PIN（至少 8 位）</string>
+    <string name="d_cards_new_user_pin_min6">新用户 PIN（至少 6 位）</string>
+    <string name="d_cards_pin_retry_warning">输错会消耗重试次数。错误次数过多后卡会被锁定。</string>
+    <string name="d_cards_reset_warning">此操作将清除卡上的所有密钥，并将两个 PIN 恢复为默认值（123456 / 12345678）。在卡上生成的密钥将无法恢复。此操作无法撤销。</string>
+    <string name="d_cards_reset_type_prompt">输入 %1$s 以确认</string>
+    <string name="d_cards_reset_confirm">清空卡</string>
+    <string name="d_cards_keygen_warning">将在卡上生成一个 Ed25519 签名密钥和一个 Cv25519 加密密钥。这会覆盖卡的签名和解密插槽。私钥永远不会离开硬件，并且无法备份。卡丢了，密钥也就没了。</string>
+    <string name="d_cards_expires_colon">过期时间：</string>
+    <string name="d_cards_keygen_ack">我了解这会覆盖卡上的密钥，并且这些密钥无法备份</string>
+
+    <!-- ── Shared desktop buttons (cont.) ─────────────────────────────── -->
+    <string name="d_common_working">正在处理…</string>
+    <string name="d_keydetail_no_user_id">（无用户 ID）</string>
+    <string name="d_keydetail_badge_secret">私钥</string>
+    <string name="d_keydetail_badge_card">卡</string>
+    <string name="d_keydetail_badge_expired">已过期</string>
+
+    <!-- ── Identity ────────────────────────────────────── -->
+    <string name="d_keydetail_copy_fingerprint">复制指纹</string>
+    <string name="d_keydetail_status_fingerprint_copied">指纹已复制</string>
+    <string name="d_keydetail_key_id">密钥 ID</string>
+    <string name="d_keydetail_make_default_signing">设为默认签名密钥</string>
+
+    <!-- ── Subkey list ─────────────────────────────────── -->
+    <string name="d_keydetail_section_keys">密钥（%1$d）</string>
+    <string name="d_keydetail_subkey">子钥</string>
+    <string name="d_keydetail_subkey_meta">%1$s · 创建于 %2$s</string>
+    <string name="d_keydetail_subkey_meta_expires">%1$s · 创建于 %2$s · %3$s 过期</string>
+
+    <!-- ── Export row (short labels; Android's are phone-sized sentences) ─ -->
+    <string name="d_keydetail_copy_public">复制公钥</string>
+    <string name="d_keydetail_export_public">导出公钥…</string>
+    <string name="d_keydetail_show_qr">显示二维码…</string>
+    <string name="d_keydetail_export_secret">导出私钥…</string>
+    <string name="d_keydetail_export_secret_gpg">导出为 GnuPG 格式</string>
+    <string name="d_keydetail_status_pub_copied">公钥已复制：%1$s</string>
+    <string name="d_keydetail_err_no_public_armor">未存储 ASCII 封装的公钥</string>
+    <string name="d_keydetail_secret_export_note">导出的私钥仍保留其口令（S2K）保护。</string>
+
+    <!-- ── Key servers ─────────────────────────────────── -->
+    <string name="d_keydetail_refresh_servers">从密钥服务器刷新</string>
+
+    <!-- ── Danger zone + save dialog ───────────────────── -->
+    <string name="d_keydetail_danger_zone">危险操作</string>
+    <string name="d_keydetail_save_dialog_title">导出密钥</string>
+    <string name="d_keydetail_status_exported">已导出 %1$s</string>
+    <string name="d_keydetail_status_nothing_to_export">没有可导出的内容</string>
+
+    <!-- ── QR dialog ───────────────────────────────────── -->
+    <string name="d_keydetail_qr_title">公钥二维码</string>
+    <string name="d_keydetail_qr_hint">在另一台设备上用 PGPony 扫描，即可导入 %1$s。</string>
+    <string name="d_keydetail_qr_too_large">此密钥太大，无法放入二维码。请导出 .asc 文件并共享该文件。</string>
+    <string name="d_keydetail_qr_no_material">没有可显示的公钥材料。</string>
+    <string name="d_keydetail_qr_save_png">存储 PNG…</string>
+    <string name="d_keydetail_status_qr_saved">二维码已存储：%1$s</string>
+
+    <!-- ── Expiration dialog ───────────────────────────── -->
+    <string name="d_keydetail_expiry_never">永不过期</string>
+    <string name="d_keydetail_expiry_date_label">过期日期（YYYY-MM-DD）</string>
+    <string name="d_keydetail_expiry_note">这会重新签署密钥的自认证签名和子钥绑定签名。</string>
+
+    <!-- ── Revoke dialog ──────────────────────────────── -->
+    <string name="d_keydetail_revoke_title">吊销 %1$s</string>
+    <string name="d_keydetail_revoke_warning">吊销会将此密钥标记为不可再用于新的签名和加密。以往的消息仍可解密。此操作无法撤销。</string>
+    <string name="d_keydetail_revoke_ack">我了解此操作无法撤销</string>
+
+    <!-- ── Shared desktop buttons (cont.) ───────────────── -->
+    <string name="d_common_edit_ellipsis">编辑…</string>
+    <string name="d_common_add_ellipsis">添加…</string>
+    <string name="d_common_rendering">正在渲染…</string>
+
+    <!-- ── Import summary; each clause carries its own leading separator ── -->
+    <plurals name="d_import_summary_blocks">
+        <item quantity="other">%1$d 个数据块：%2$s</item>
+    </plurals>
+    <plurals name="d_import_summary_added">
+        <item quantity="other">已添加 %1$d 个</item>
+    </plurals>
+    <plurals name="d_import_summary_upgraded">
+        <item quantity="other">，%1$d 个已升级为密钥对</item>
+    </plurals>
+    <plurals name="d_import_summary_merged">
+        <item quantity="other">，%1$d 个合并了新内容</item>
+    </plurals>
+    <plurals name="d_import_summary_already">
+        <item quantity="other">，%1$d 个已在密钥环中</item>
+    </plurals>
+    <plurals name="d_import_summary_failed">
+        <item quantity="other">，%1$d 个失败</item>
+    </plurals>
+
+    <!-- ── Repository errors (surfaced verbatim via Throwable.message) ── -->
+    <string name="d_repo_err_no_card_keys">此卡上未找到 OpenPGP 密钥</string>
+    <string name="d_repo_err_key_not_found">未找到密钥：%1$s</string>
+    <string name="d_repo_err_revoke_public_only">无法吊销仅含公钥的密钥。签署吊销需要私钥。</string>
+    <string name="d_repo_err_secret_ring_load">无法加载 %1$s 的私钥环</string>
+    <string name="d_repo_err_public_ring_load">无法加载 %1$s 的公钥环</string>
+    <string name="d_repo_err_no_public_ring">生成的密钥没有产生公钥环</string>
+    <string name="d_repo_err_card_row_missing">导入后未找到生成的卡密钥条目</string>
+    <string name="d_repo_err_expiry_public_only">无法修改仅含公钥的密钥的有效期。重新签署需要私钥。</string>
+    <string name="d_repo_err_expiry_card">此密钥位于硬件密钥上。这里暂不支持修改其有效期。</string>
+
+    <!-- ── Status line ── -->
+    <string name="d_list_separator">、</string>
+    <string name="d_status_migrated_legacy">已迁移旧版密钥环：%1$s</string>
+    <string name="d_status_autorefresh">密钥服务器自动刷新：%1$s</string>
+    <string name="d_status_import">导入：%1$s</string>
+    <string name="d_status_generating">正在生成 %1$s 密钥…</string>
+    <string name="d_status_generated">已生成 %1$s：%2$s</string>
+    <string name="d_status_generate_failed">生成失败：%1$s</string>
+    <string name="d_status_deleted">已删除 %1$s</string>
+    <string name="d_status_trust_set">信任级别已设为「%1$s」：%2$s</string>
+    <string name="d_status_expiration_removed">已移除有效期。密钥永不过期。</string>
+    <string name="d_status_expiration_updated">有效期已更新</string>
+    <string name="d_status_expiration_failed">修改有效期失败：%1$s</string>
+    <string name="d_status_revoked">已吊销 %1$s（%2$s）</string>
+    <string name="d_status_checking_servers">正在检查密钥服务器：%1$s…</string>
+    <string name="d_status_refresh_not_published">未在任何已启用的密钥服务器上发布</string>
+    <string name="d_status_refresh_also_merged">（也合并了新内容）</string>
+    <string name="d_status_refresh_key_missing">密钥环中未找到该密钥</string>
+    <plurals name="d_status_files_dropped">
+        <item quantity="other">已拖入 %1$d 个文件</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_revoked">
+        <item quantity="other">%1$d 个密钥已在服务器上被吊销</item>
+    </plurals>
+    <plurals name="d_status_autorefresh_updated">
+        <item quantity="other">%1$d 个密钥已更新</item>
+    </plurals>
+
+    <!-- ── Tray + expiration notifications ── -->
+    <string name="d_tray_open">打开 PGPony</string>
+    <string name="d_tray_quit">退出 PGPony</string>
+    <string name="d_notif_key_expiring">PGPony：密钥即将过期</string>
+    <string name="d_notif_key_expiration">PGPony：密钥过期</string>
+
+    <!-- ── Menu bar. Mnemonics are keys too: 'F' does not appear in 'Datei'. ── -->
+    <string name="d_menu_file">文件</string>
+    <string name="d_menu_file_mnemonic">F</string>
+    <string name="d_menu_goto_keyring">前往密钥环（导入）</string>
+    <string name="d_menu_restore_backup">恢复备份…</string>
+    <string name="d_menu_quit">退出</string>
+    <string name="d_menu_keys">密钥</string>
+    <string name="d_menu_keys_mnemonic">K</string>
+    <string name="d_menu_new_key">新建密钥…</string>
+    <string name="d_menu_hardware_keys">硬件密钥</string>
+    <string name="d_menu_message">消息</string>
+    <string name="d_menu_message_mnemonic">M</string>
+    <string name="d_menu_help">帮助</string>
+    <string name="d_menu_help_mnemonic">H</string>
+    <string name="d_menu_about">关于 PGPony</string>
+    <string name="d_menu_encrypt_decrypt">加密/解密</string>
+    <string name="d_gen_no_passphrase_warning">未设置口令：私钥将以未受保护的形式存储在此电脑上。</string>
+    <string name="d_cards_choose_reader">选择读卡器</string>
+    <string name="d_cards_rescan">重新扫描</string>
+    <string name="d_cards_pin_pw1">卡 PIN（PW1）</string>
+    <string name="d_cards_talking_touch">正在与硬件密钥通信…如果它需要触摸确认，请现在轻触它。</string>
+    <string name="d_cards_pin_scope_note">此 PIN 仅在密钥上授权本次操作；机密永远不会离开硬件。</string>
+    <string name="d_common_run">执行</string>
+    <string name="d_card_err_unplugged">操作过程中硬件密钥被拔出</string>
+    <string name="d_card_err_io">卡 I/O 失败：%1$s</string>
+    <string name="d_card_err_connect">无法连接到「%1$s」中的卡：%2$s</string>
+    <string name="d_card_err_no_service">没有可用的智能卡服务</string>
+    <string name="d_card_err_pcscd_hint">。pcscd 是否已安装并正在运行？</string>
+    <string name="d_card_err_detail_suffix">（%1$s）</string>
+    <string name="d_card_err_reader_gone">读卡器「%1$s」已断开连接。</string>
+    <string name="d_card_err_no_card">「%1$s」中没有卡。请插入或重新插拔你的硬件密钥。</string>
+
+    <!-- ── Key server refresh failures ── -->
+    <string name="d_refresh_err_no_servers">未配置已启用查找的密钥服务器</string>
+    <string name="d_refresh_err_server_prefix">%1$s：%2$s</string>
+    <string name="d_refresh_err_parse">无法解析密钥服务器的响应：%1$s</string>
+    <string name="d_expiry_headline_expired">%1$s 已过期</string>
+    <string name="d_expiry_headline_today">%1$s 将于今天过期</string>
+    <string name="d_expiry_headline_tomorrow">%1$s 将于明天过期</string>
+    <plurals name="d_expiry_headline_days">
+        <item quantity="other">%2$s 将在 %1$d 天后过期</item>
+    </plurals>
+    <string name="d_backup_err_not_a_backup">此文件不是 PGPony 备份</string>
+    <string name="d_backup_err_wrong_code">该恢复代码未能解锁此备份</string>
+    <string name="d_backup_err_corrupt">备份已损坏：%1$s</string>
+    <string name="d_backup_err_empty_keyring">没有可备份的密钥</string>
+    <string name="d_backup_detail_unreadable_archive">归档无法读取</string>
+    <string name="d_backup_detail_empty_archive">归档为空</string>
+    <string name="d_backup_detail_no_keys">备份中未找到密钥</string>
+    <string name="d_backup_detail_integrity">完整性校验失败</string>
+    <string name="d_restore_unreadable_block">密钥块无法读取</string>
+    <plurals name="d_restore_summary_added">
+        <item quantity="other">已添加 %1$d 个</item>
+    </plurals>
+    <plurals name="d_restore_summary_upgraded">
+        <item quantity="other">，%1$d 个已升级为密钥对</item>
+    </plurals>
+    <plurals name="d_restore_summary_updated">
+        <item quantity="other">，%1$d 个已更新</item>
+    </plurals>
+    <plurals name="d_restore_summary_unchanged">
+        <item quantity="other">，%1$d 个已是最新</item>
+    </plurals>
+    <plurals name="d_restore_summary_failed">
+        <item quantity="other">，%1$d 个无法恢复</item>
+    </plurals>
+    <string name="d_backup_export_title">备份密钥环</string>
+    <string name="d_backup_export_intro">包含你密钥环中的所有内容。私钥仍由各自的口令保护。整个文件使用以下恢复代码加密封存：</string>
+    <string name="d_backup_code_copied">恢复代码已复制</string>
+    <string name="d_backup_reenter_warning">请把它写下来，或保存到密码管理器中。没有它就无法打开备份。重新输入以继续：</string>
+    <string name="d_backup_save_action">存储备份…</string>
+    <string name="d_backup_saved_status">备份已存储：%1$s</string>
+    <string name="d_backup_failed">备份失败</string>
+    <string name="d_backup_save_dialog_title">存储备份</string>
+    <string name="d_restore_title">恢复备份</string>
+    <string name="d_restore_choose_file">选择备份文件…</string>
+    <string name="d_restore_kind_pgpony">PGPony 备份</string>
+    <string name="d_restore_kind_okc">OpenKeychain 备份</string>
+    <string name="d_restore_code_label_okc">备份代码（9×4 位数字）</string>
+    <string name="d_restore_note">恢复操作从不覆盖你已持有的私钥。</string>
+    <string name="d_restore_done_status">已恢复：%1$s</string>
+    <string name="d_restore_status">恢复：%1$s</string>
+    <string name="d_restore_failed">恢复失败</string>
+    <string name="d_restore_open_dialog_title">选择备份</string>
+    <string name="d_search_servers_title">搜索密钥服务器</string>
+    <string name="d_search_lookup_order">查找顺序：WKD（收件人自己的邮件域名）→ 你配置的服务器 → keys.openpgp.org。</string>
+    <string name="d_search_none">未找到密钥（WKD、已配置的服务器、keys.openpgp.org）。</string>
+    <string name="d_search_unparseable">（无法解析）</string>
+    <string name="d_search_failed">搜索失败：%1$s</string>
+    <string name="d_search_found_via">通过 %1$s 找到</string>
+    <string name="d_search_trust_warning">导入后该密钥的信任级别为「未知」。在依赖它之前，请与其所有者核对指纹。</string>
+    <string name="d_search_again">重新搜索</string>
+    <string name="d_common_import">导入</string>
+    <string name="d_publish_title">发布公钥</string>
+    <string name="d_publish_no_servers">没有已启用发布的服务器。请在「设置 → 网络」中启用一个。</string>
+    <string name="d_publish_may_not_accept">可能不接受 %1$s 密钥</string>
+    <string name="d_publish_warning">只会上传公钥。密钥服务器是公开、永久的目录，发布后很难撤回。</string>
+    <string name="d_publish_in_progress">正在发布…</string>
+    <string name="d_publish_outcome_ok">%1$s：已发布 ✓</string>
+    <string name="d_publish_outcome_pending">。验证邮件已发送至 %1$s（点击邮件中的链接后，即可通过邮箱搜索到该密钥）</string>
+    <string name="d_publish_outcome_rejected">%1$s：被拒绝（HTTP %2$d）。此服务器可能不接受 %3$s 密钥。</string>
+    <string name="d_publish_outcome_failed">%1$s：失败（%2$s）</string>
+    <string name="d_keyring_search_servers">搜索密钥服务器…</string>
+    <string name="d_keyring_paste_armor">粘贴 ASCII 封装文本…</string>
+    <string name="d_keyring_import_file">从文件导入…</string>
+    <string name="d_keyring_import_qr">从二维码图片导入…</string>
+    <string name="d_keyring_search_placeholder">搜索姓名、邮箱、指纹</string>
+    <string name="d_keyring_sort_label">排序：%1$s</string>
+    <string name="d_keyring_sort_recent">最近</string>
+    <string name="d_keyring_sort_name">名称</string>
+    <string name="d_keyring_sort_algorithm">算法</string>
+    <string name="d_keyring_empty_title">还没有密钥</string>
+    <string name="d_keyring_empty_body">生成一个密钥对、导入密钥文件（.asc、.gpg），或粘贴一段 ASCII 封装的文本。</string>
+    <string name="d_keyring_no_matches_title">没有匹配项</string>
+    <string name="d_keyring_no_matches_body">你的密钥环中没有与「%1$s」匹配的内容。可以按姓名、邮箱地址或指纹的任意部分搜索。</string>
+    <string name="d_keyring_clear_search">清除搜索</string>
+    <string name="d_keyring_err_no_public_armor_for">未存储 %1$s 的 ASCII 封装公钥</string>
+    <string name="d_keyring_qr_none_found">在 %1$s 中未找到二维码</string>
+    <string name="d_keyring_qr_not_a_key">该二维码不是 OpenPGP 密钥</string>
+    <string name="d_keyring_delete_secret_warning">\n\n其中包括私钥。如果没有备份，加密给它的消息将无法再读取。</string>
+    <string name="d_keyring_cd_copy_public">复制公钥</string>
+    <string name="d_keyring_cd_delete">删除密钥</string>
+    <string name="d_keyring_meta_line">创建于 %1$s%2$s · 密钥 ID %3$s</string>
+    <string name="d_keyring_meta_expires"> · %1$s 过期</string>
+    <string name="d_keyring_import_file_dialog">导入密钥文件</string>
+    <string name="d_keyring_qr_dialog">选择二维码图片</string>
+    <plurals name="d_keyring_key_count">
+        <item quantity="other">%1$d 个密钥</item>
+    </plurals>
+    <plurals name="d_keyring_match_count">
+        <item quantity="other">%1$d 个匹配项</item>
+    </plurals>
+    <string name="d_file_err_recipient_ring">收件人密钥环加载失败：%1$s</string>
+    <string name="d_file_err_signing_key">无法加载签名密钥：%1$s</string>
+    <string name="d_file_signed_suffix">，已签名</string>
+    <string name="d_file_err_encrypt">加密失败</string>
+    <string name="d_file_err_decrypt">解密失败</string>
+    <string name="d_file_sig_written">已写入分离签名</string>
+    <string name="d_file_sig_written_card">已写入分离签名（硬件密钥）</string>
+    <string name="d_file_err_sign">签名失败</string>
+    <string name="d_file_err_card_sign">卡签名失败</string>
+    <string name="d_file_err_card_decrypt">卡解密失败</string>
+    <plurals name="d_file_encrypted_to">
+        <item quantity="other">已加密给 %1$d 个收件人</item>
+    </plurals>
+    <plurals name="d_file_encrypted_to_card">
+        <item quantity="other">已加密给 %1$d 个收件人，已签名（硬件密钥）</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle">
+        <item quantity="other">已解密文件包 → %1$d 个文件</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bundle_card">
+        <item quantity="other">已解密文件包（硬件密钥）→ %1$d 个文件</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes">
+        <item quantity="other">已解密 %1$d 字节</item>
+    </plurals>
+    <plurals name="d_file_decrypted_bytes_card">
+        <item quantity="other">已解密 %1$d 字节（硬件密钥）</item>
+    </plurals>
+    <string name="d_file_sig_verified"> · 签名已验证</string>
+    <string name="d_file_sig_unheld"> · 由不在密钥环中的密钥签名</string>
+    <string name="d_file_sig_id_suffix">（%1$s）</string>
+
+    <!-- ── Detached-signature verification outcomes. ── -->
+    <string name="d_file_verify_ok">签名已验证：%1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_file_verify_invalid">签名无效：内容与签名不匹配</string>
+    <string name="d_file_verify_unknown_signer">由不在密钥环中的密钥签名</string>
+    <string name="d_file_verify_unsigned">未找到签名</string>
+    <string name="d_file_err_verify">验证失败</string>
+
+    <!-- ── Settings · Updates (D13) ─────────────────────────────────────── -->
+    <string name="d_settings_section_updates">更新</string>
+    <string name="d_settings_updates_note">默认关闭。开启后，PGPony 每天会检查一次 pgpony.app 上是否有新版本。不会发送任何关于你或你的密钥的信息，并会遵循你的代理设置。</string>
+    <string name="d_settings_updates_idle">尚未检查。</string>
+    <string name="d_settings_updates_checking">正在检查…</string>
+    <string name="d_settings_updates_current">你正在使用最新版本。</string>
+    <string name="d_settings_updates_available">有新版本 %1$s 可用。</string>
+    <string name="d_settings_updates_failed">无法连接 pgpony.app。</string>
+    <string name="d_settings_updates_check_now">立即检查</string>
+    <string name="d_settings_updates_download">下载</string>
+    <string name="d_settings_updates_auto">每天自动检查一次</string>
+
+    <!-- ── Cards · PC/SC diagnostics (1.0.1) ───────────────────────────── -->
+    <string name="d_cards_pcsc_error">PC/SC 报告：%1$s</string>
+
+    <!-- ── Settings · SSH agent (D15) + agent unlock prompt ── -->
+    <string name="d_settings_section_ssh_agent">SSH 代理</string>
+    <string name="d_settings_ssh_agent_note">默认关闭。开启后，PGPony 会通过本地套接字向 ssh 提供你的身份验证密钥，功能类似 ssh-agent，但由你的密钥环支持。它不会在两次请求之间保留密钥，受保护的密钥每次都会询问口令。此版本仅支持 macOS 和 Linux。</string>
+    <string name="d_settings_ssh_agent_windows">此版本在 Windows 上不提供 SSH 代理。该平台的 ssh 需要一个命名管道，而应用目前还无法提供。</string>
+    <string name="d_settings_ssh_agent_enable">向 ssh 提供身份验证密钥</string>
+    <string name="d_settings_ssh_agent_error">无法启动代理：%1$s</string>
+    <string name="d_settings_ssh_agent_socket">SSH_AUTH_SOCK</string>
+    <string name="d_settings_ssh_agent_copy">复制</string>
+    <string name="d_agent_unlock_title">解锁签名密钥</string>
+    <string name="d_agent_unlock_message">ssh 请求 PGPony 使用 %1$s 签名，该密钥受口令保护。</string>
+    <string name="d_agent_unlock_field">口令</string>
+    <string name="d_agent_unlock_confirm">解锁</string>
+    <string name="d_agent_unlock_cancel">取消</string>
+
+    <!-- ── Files · folder encrypt / extract (D16) ── -->
+    <plurals name="d_file_folder_encrypted">
+        <item quantity="other">文件夹已加密给 %1$d 个收件人</item>
+    </plurals>
+    <plurals name="d_file_folder_extracted">
+        <item quantity="other">已解压文件夹 → %1$d 个文件</item>
+    </plurals>
+
+    <!-- ── Files · progress + cancel (D17) ── -->
+    <string name="d_crypto_cancelling">正在取消…</string>
+    <string name="d_crypto_progress_bytes">%1$s / %2$s</string>
+    <string name="d_crypto_progress_bytes_indeterminate">已处理 %1$s</string>
+    <string name="d_file_cancelled">已取消</string>
+
+    <!-- ── Settings · watch folders (D18) ── -->
+    <string name="d_settings_section_watch">监视文件夹</string>
+    <string name="d_settings_watch_note">默认关闭。开启后，PGPony 会监视你指定的文件夹，并将每个新文件加密给你选择的收件人。它只做加密，且只使用公钥，因此在你不在时运行的规则永远不需要口令或卡，最坏情况也只是加密文件。支持 macOS、Linux 和 Windows。</string>
+    <string name="d_settings_watch_enable">监视以下文件夹</string>
+    <string name="d_settings_watch_rules">规则</string>
+    <string name="d_settings_watch_no_rules">还没有规则。添加一条规则来监视文件夹。</string>
+    <string name="d_settings_watch_rule_summary">%1$d 个收件人 → %2$s</string>
+    <string name="d_settings_watch_beside_source">源文件旁边</string>
+    <string name="d_settings_watch_rule_on">开启</string>
+    <string name="d_settings_watch_deletes">删除原文件</string>
+    <string name="d_settings_watch_add_rule">添加规则</string>
+    <string name="d_settings_watch_recent">最近活动</string>
+    <string name="d_settings_watch_folder">要监视的文件夹</string>
+    <string name="d_settings_watch_browse">浏览…</string>
+    <string name="d_settings_watch_glob">匹配（glob，例如 *.pdf）</string>
+    <string name="d_settings_watch_output">输出文件夹（可选）</string>
+    <string name="d_settings_watch_no_recipients">没有可用的收件人。请先导入一个公钥。</string>
+    <string name="d_settings_watch_armor">以 ASCII 封装输出（.asc）</string>
+    <string name="d_settings_watch_delete_original">加密后删除原文件</string>
+    <string name="d_settings_watch_delete_warning">原文件会被删除，且无法撤销。除非你确定，否则请保持关闭。</string>
+    <string name="d_watch_notif_encrypted">监视文件夹：已加密</string>
+    <string name="d_watch_notif_failed">监视文件夹：失败</string>
+    <string name="d_crypto_add_folder">添加文件夹…</string>
+
+    <!-- ── Cards · friendlier PC/SC diagnostics (D19) ── -->
+    <string name="d_cards_pcsc_no_service">智能卡服务未运行。</string>
+    <string name="d_cards_pcsc_sharing">另一个程序正在使用读卡器。请关闭该程序（例如 GnuPG 或 OpenSC），然后重新扫描。</string>
+    <string name="d_cards_pcsc_unknown">读卡器服务报告：%1$s。</string>
+    <string name="d_cards_pcsc_unknown_generic">读卡器服务报告了一个问题。</string>
+    <string name="d_cards_keygen_algo_label">密钥类型</string>
+
+    <!-- ── Cards · move key to card (D21) ── -->
+    <string name="d_cards_move_open">将密钥移到卡上…</string>
+    <string name="d_cards_move_title">将密钥移到卡上</string>
+    <string name="d_cards_move_warning">此操作会将一个现有密钥写入卡中，并覆盖卡的密钥插槽。与在卡上生成的密钥不同，这个密钥之前就存在于卡外，所以请妥善保管你的备份。卡的 PIN 保持不变。</string>
+    <string name="d_cards_move_pick_key">要移动的密钥</string>
+    <string name="d_cards_move_no_candidates">你的密钥环中没有带私钥的 RSA 密钥对。请先生成或导入一个。</string>
+    <string name="d_cards_move_passphrase">密钥口令（没有则留空）</string>
+    <string name="d_cards_move_format">导入格式</string>
+    <string name="d_cards_move_ack">我了解这会覆盖卡的密钥插槽</string>
+    <string name="d_cards_move_confirm">移到卡上</string>
+    <string name="d_cards_move_done">已移到卡上：%1$s</string>
+    <string name="d_cards_move_no_secret">无法加载该密钥的私钥材料。</string>
+    <string name="d_err_recipient_unusable">没有 PGPony 可以加密给的密钥，因此未加密任何内容：%1$s</string>
+    <string name="d_file_sig_unconfirmed"> · 已签名，密钥未经验证</string>
+    <string name="d_file_sig_invalid"> · 签名无效</string>
+    <string name="d_file_err_composite_too_large">ML-DSA 签名需要将整个文件读入内存，上限为 512 MB。请签名较小的文件，或选择一个传统签名密钥。</string>
+    <string name="d_file_verify_ok_unconfirmed">已签名，密钥未经验证：%1$s &lt;%2$s&gt; · %3$s</string>
+    <string name="d_crypto_banner_decrypted_unconfirmed">已解密 · 已签名，密钥未经验证</string>
+    <string name="d_edit_err_public_only">此操作需要私钥，而你的密钥环中只有公钥。</string>
+    <string name="d_edit_err_card">此密钥位于硬件密钥上，因此无法在这里编辑。</string>
+    <string name="d_edit_err_last_encryption_subkey">这是该密钥的最后一个加密子钥。没有它，任何人都无法再加密给此密钥。</string>
+    <string name="d_edit_err_subkey_not_found">子钥 %1$s 不在此密钥上。</string>
+    <string name="d_edit_err_primary_as_subkey">主钥不能作为子钥被移除或吊销。</string>
+    <string name="d_settings_protect_destructive_subtitle">在删除密钥、移除子钥或用户 ID、清除所有数据之前，要求你输入「%1$s」。默认开启。</string>
+    <string name="d_keyring_recently_deleted_button">最近删除（%1$d）</string>
+    <string name="d_recycle_less_than_day">剩余不到一天</string>
+    <string name="d_status_moved_to_bin">已将 %1$s 移到「最近删除」</string>
+    <string name="d_status_purged">已永久销毁 %1$s</string>
+    <string name="d_status_bin_emptied">已清空「最近删除」</string>
+    <plurals name="d_recycle_days_left">
+        <item quantity="other">剩余 %1$d 天</item>
+    </plurals>
+    <string name="d_edit_err_v6_subkey_type">v6 密钥只能添加 Ed25519 和 X25519 子钥。</string>
+    <string name="d_edit_err_v4_mlkem768_only">v4 密钥只能添加 ML-KEM-768 后量子子钥。ML-KEM-1024 需要 v6 密钥。</string>
+    <string name="d_edit_err_pq_sign_needs_v6">后量子签名子钥需要 v6 密钥。</string>
+    <string name="d_keydetail_decrypt_with">使用此密钥解密</string>
+    <string name="d_keydetail_last_backed_up">上次备份</string>
+    <string name="d_keydetail_notation_row">%1$s = %2$s</string>
+    <string name="d_keydetail_section_passphrase">口令</string>
+    <string name="d_keydetail_passphrase_on">受口令保护。</string>
+    <string name="d_keydetail_passphrase_off">未设置口令。在此电脑上，密钥文件仅受文件权限保护，因此任何能使用你账户的人都能使用此密钥。</string>
+    <string name="d_keydetail_subkey_revoke_title">吊销子钥 %1$s</string>
+    <string name="d_keydetail_subkey_revoke_body">吊销会发布一个签名，通知你的通信对象在刷新你的密钥后停止使用此子钥。此操作无法撤销。</string>
+    <string name="d_settings_clear_ack1">我了解所有密钥都会立即销毁，没有恢复期。</string>
+    <string name="d_settings_clear_countdown">%1$s（%2$d）</string>
+    <string name="d_settings_clear_done_body">PGPony 即将关闭。下次启动时将从头开始。</string>
+    <string name="d_settings_clear_key_row">• %1$s · %2$s</string>
+    <string name="d_settings_clear_scope_note">同时移除：所有 PGPony 设置（密钥服务器、网络、SSH 代理、监视文件夹、密码库）、监视规则和缓存的卡 PIN。你的密码库文件夹以及你保存在其他位置的文件不受影响。</string>
+    <string name="d_status_userid_added">已添加用户 ID</string>
+    <string name="d_status_userid_revoked">已吊销用户 ID</string>
+    <string name="d_status_userid_removed">已移除用户 ID</string>
+    <string name="d_status_primary_userid">已更改主要用户 ID</string>
+    <string name="d_status_subkey_added">已添加子钥</string>
+    <string name="d_status_subkey_revoked">已吊销子钥</string>
+    <string name="d_status_notations_saved">注记已存储</string>
+    <string name="d_crypto_decrypt_with_any">我的任意密钥</string>
+    <string name="d_crypto_signing_default_note">将以 %1$s 签名，这是此密钥的默认签名设置。请输入该密钥的口令。</string>
+    <string name="d_settings_ssh_agent_keys_note">每个密钥会提供其最新的、不能同时用于签名或认证的身份验证子钥：Ed25519、RSA，或基于 NIST P-256、P-384、P-521 的 ECDSA，也包括后量子密钥上的传统子钥。可以在「密钥详情」中或生成密钥时添加。对于仍会发出旧版 SHA-1 ssh-rsa 请求的服务器，RSA 密钥依然会响应。</string>
+    <string name="d_import_preview_title">导入密钥</string>
+    <string name="d_import_preview_none">在该文本中未找到密钥。</string>
+    <string name="d_import_preview_meta">%1$s · %2$s</string>
+    <string name="d_import_preview_in_keyring">已在你的密钥环中。导入时会添加其中的新内容。</string>
+    <string name="d_import_link_title">从链接导入</string>
+    <string name="d_keyring_import_link">从链接导入…</string>
+    <string name="d_crypto_recipient_secondary">%1$s · %2$s</string>
+    <string name="d_crypto_subkey_option">%1$s · %2$s · %3$s</string>
+    <string name="d_crypto_subkey_option_auto">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="d_settings_section_armor_comment">封装注释</string>
+    <string name="d_settings_armor_comment_note">ASCII 封装输出中的 Comment 行。它适用于应用本身、pgpony 命令、git 签名辅助程序和监视文件夹。</string>
+    <string name="d_settings_section_session">会话</string>
+    <string name="d_settings_session_note">输入密钥口令或卡 PIN 后，PGPony 在内存中保留它们的时长。这一项设置同时适用于应用、SSH 代理和通过 pgpony-gpg 进行的 git 签名。不会写入磁盘，退出 PGPony 后会忘记所有内容。</string>
+    <string name="d_session_until_screen_locks">直到屏幕锁定</string>
+    <string name="d_session_held_until_locked">口令会保留到屏幕锁定或你手动清除为止。</string>
+    <string name="d_session_lock_unsupported">PGPony 无法检测此电脑的屏幕锁定，因此已保留的机密会一直留在内存中，直到你清除或退出。</string>
+    <string name="d_session_pin_held">已记住卡 PIN。</string>
+    <string name="d_cards_pin_cache_follows">按「设置」中的会话时长保留：%1$s。</string>
+    <string name="d_crypto_pass_remembered">已在本次会话中记住。留空即可使用。</string>
+    <string name="d_shim_unlock_message">git 请求 PGPony 使用 %1$s 签名，该密钥受口令保护。</string>
+    <string name="d_gnupg_import_button">从 GnuPG 导入…</string>
+    <string name="d_gnupg_title">从 GnuPG 导入</string>
+    <string name="d_gnupg_home">GnuPG 主目录：%1$s</string>
+    <string name="d_gnupg_choose_folder">选择文件夹…</string>
+    <string name="d_gnupg_no_home">此文件夹中未找到 GnuPG 密钥环。请选择包含 pubring.kbx 的文件夹。</string>
+    <string name="d_gnupg_counts">%1$d 个公钥，%2$d 个私钥</string>
+    <string name="d_gnupg_counts_public">%1$d 个公钥</string>
+    <string name="d_gnupg_gpg_found">使用 %1$s</string>
+    <string name="d_gnupg_gpg_missing">未找到 gpg，因此无法读取私钥。公钥和信任设置仍可导入。</string>
+    <string name="d_gnupg_sandboxed">PGPony 正在沙盒中运行，无法执行 gpg。公钥和信任设置仍可导入。</string>
+    <string name="d_gnupg_opt_trust">沿用信任设置（绝对信任和完全信任）</string>
+    <string name="d_gnupg_opt_secret">导入私钥（gpg 会逐个询问口令）</string>
+    <string name="d_gnupg_card_skipped">%1$s：位于智能卡上，已跳过。请改为在「硬件密钥」中添加该卡。</string>
+    <string name="d_gnupg_stub_skipped">%1$s：此密钥环中没有私钥材料，已跳过。</string>
+    <string name="d_gnupg_secret_failed">%1$s：无法导出（%2$s）。</string>
+    <string name="d_gnupg_secret_not_imported">%1$s：gpg 已将其导出，但无法导入。</string>
+    <string name="d_gnupg_import">导入</string>
+    <string name="d_gnupg_done">%1$s。已提升 %2$d 个密钥的信任级别。已导入私钥：%3$d 个。</string>
+    <string name="d_gnupg_readonly_note">只读取 GnuPG，从不修改它。PGPony 中的信任级别只会提升，从不降低。</string>
+    <string name="d_sig_weak_suffix"> · 弱签名密钥（%1$s）</string>
+    <string name="d_decrypt_weak_suffix"> · 使用弱密钥打开（%1$s）</string>
+    <string name="d_pair_menu">与另一台电脑配对…</string>
+    <string name="d_pair_button">与另一台电脑配对</string>
+    <string name="d_pair_title">与另一台电脑配对</string>
+    <string name="d_pair_intro">在同一网络中的两台电脑之间传送密钥或完整备份。一台电脑等待，另一台连接，然后你在两个屏幕上核对同一个代码。关闭此窗口后不会保留任何内容。</string>
+    <string name="d_pair_host">等待另一台电脑连接</string>
+    <string name="d_pair_join">连接到另一台电脑</string>
+    <string name="d_pair_host_waiting">在另一台电脑上选择「连接」，然后输入此地址：</string>
+    <string name="d_pair_host_closes">此窗口将保持打开，直到 %1$s。</string>
+    <string name="d_pair_firewall">如果防火墙询问，请允许 PGPony 在此窗口打开期间接受连接。</string>
+    <string name="d_pair_no_address">这台电脑没有其他电脑可以访问的网络地址。</string>
+    <string name="d_pair_join_intro">在另一台电脑上选择「等待」，然后输入它显示的地址。</string>
+    <string name="d_pair_join_label">另一台电脑上显示的地址</string>
+    <string name="d_pair_bad_address">请按显示的内容准确输入地址和端口，例如 192.168.1.20:49152。</string>
+    <string name="d_pair_connect">连接</string>
+    <string name="d_pair_compare_body">另一台电脑是否显示相同的代码？如果代码不同，可能有人在两台电脑之间拦截。请选择「不同」并重新开始。</string>
+    <string name="d_pair_codes_match">代码相同</string>
+    <string name="d_pair_codes_differ">不同</string>
+    <string name="d_pair_waiting_other">正在等待另一台电脑…</string>
+    <string name="d_pair_paired_with">已与 %1$s 配对</string>
+    <string name="d_pair_paired_unnamed">已与另一台电脑配对</string>
+    <string name="d_pair_send_heading">发送到另一台电脑</string>
+    <string name="d_pair_group_keypairs">密钥对</string>
+    <string name="d_pair_group_public">公钥</string>
+    <string name="d_pair_group_backup">全部内容</string>
+    <string name="d_pair_item_backup">完整备份</string>
+    <string name="d_pair_transfer_pass_note">你选择的部分密钥对没有口令。它们将在传输时由此传输口令保护，另一台电脑需要它才能使用这些密钥对。</string>
+    <string name="d_pair_transfer_pass">传输口令</string>
+    <string name="d_pair_transfer_pass_repeat">再次输入传输口令</string>
+    <string name="d_pair_send">发送</string>
+    <string name="d_pair_waiting_answer">正在等待另一台电脑接受…</string>
+    <string name="d_pair_sending">正在发送 %1$s…</string>
+    <string name="d_pair_receiving">正在接收 %1$s：%2$d%%</string>
+    <string name="d_pair_backup_code_tell">请把此恢复代码告诉另一台电脑的使用者。在那台电脑上打开备份时需要它。</string>
+    <string name="d_pair_incoming_heading">%1$s 想要发送：</string>
+    <string name="d_pair_incoming_heading_unnamed">另一台电脑想要发送：</string>
+    <string name="d_pair_kind_keypair">%1$s（密钥对）</string>
+    <string name="d_pair_kind_public">%1$s（公钥）</string>
+    <string name="d_pair_backup_code_label">另一台电脑上显示的恢复代码</string>
+    <string name="d_pair_accept">接受所选项</string>
+    <string name="d_pair_decline">拒绝</string>
+    <string name="d_pair_declined">另一台电脑已拒绝。</string>
+    <string name="d_pair_result_ok">%1$s：%2$s</string>
+    <string name="d_pair_result_failed">%1$s：未导入（%2$s）</string>
+    <string name="d_pair_sent_ok">%1$s：另一台电脑已接收</string>
+    <string name="d_pair_end">结束会话</string>
+    <string name="d_pair_ended">会话已结束，本次会话的密钥已清除。</string>
+    <string name="d_pair_again">重新开始</string>
+    <string name="d_pair_fail_refused">另一台电脑表示代码不同。未进行任何配对。</string>
+    <string name="d_pair_fail_you_refused">你表示代码不同，因此未进行任何配对。如果这出乎你的意料，请确认你的网络中没有其他人，然后重新开始。</string>
+    <string name="d_pair_fail_handshake">无法验证此次配对。未进行任何配对；请重新开始。</string>
+    <string name="d_pair_fail_timeout">另一台电脑已停止响应。</string>
+    <string name="d_pair_fail_version">另一台电脑上的 PGPony 使用不同的配对方式。请将两边都更新后重新开始。</string>
+    <string name="d_pair_fail_protocol">对方不是 PGPony 配对窗口，或者发送了意外的内容。</string>
+    <string name="d_pair_fail_closed">连接已断开。</string>
+    <string name="d_pair_err_window_expired">在另一台电脑连接之前，配对窗口已关闭。</string>
+    <string name="d_pair_err_export">无法导出 %1$s。</string>
+    <string name="d_pair_err_needs_passphrase">%1$s 没有口令。请输入传输口令后再发送。</string>
+    <string name="d_pair_err_too_large">%1$s 太大，无法发送。</string>
+    <string name="d_pair_err_import">无法导入 %1$s。</string>
+    <string name="d_pair_err_backup_code">请输入另一台电脑上显示的恢复代码。</string>
+    <string name="d_keyring_import_menu">导入</string>
+    <string name="d_pair_other_addresses">其他地址（%1$d）</string>
+    <string name="d_pair_other_addresses_hide">隐藏其他地址</string>
+    <string name="d_pair_other_addresses_note">如果另一台电脑无法连接，请尝试这些地址，例如当它是这台电脑上的虚拟机，或位于另一个网络适配器上时。</string>
+</resources>
