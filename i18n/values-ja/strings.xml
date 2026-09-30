@@ -795,6 +795,9 @@
     <string name="d_pair_host_waiting">もう一方のコンピューターで「接続」を選び、このアドレスを入力してください:</string>
     <string name="d_pair_host_closes">このウィンドウは %1$s まで開いたままです。</string>
     <string name="d_pair_firewall">ファイアウォールの確認が表示されたら、このウィンドウが開いている間 PGPony が接続を受け付けることを許可してください。</string>
+    <string name="d_pair_copy_invite">招待をコピー</string>
+    <string name="d_pair_invite_note">アドレスを入力する代わりに、相手側でこの QR コードをスキャンするか、招待を貼り付けることもできます。どちらの方法でも、このコンピューターにつながったことが確認されます。</string>
+    <string name="d_pair_bad_invite">この招待を読み取れません。全体がコピーされているか確認するか、代わりにアドレスを入力してください。</string>
     <string name="d_pair_no_address">このコンピューターには、ほかのコンピューターから到達できるネットワークアドレスがありません。</string>
     <string name="d_pair_join_intro">もう一方のコンピューターで「待つ」を選び、表示されたアドレスを入力してください。</string>
     <string name="d_pair_join_label">もう一方のコンピューターに表示されたアドレス</string>

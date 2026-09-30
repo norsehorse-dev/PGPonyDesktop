@@ -411,6 +411,21 @@ backup restored on a third). Next: the self-test pass between the Mac, the Windo
 then the translation pass. The 59 new strings are translated so the desktop layer stays complete;
 the pass reviews them with the rest.
 
+F1 for phones (2026-09-30, after the translation pass): set up so a later Android and iOS
+update can pair with 3.0.0 as shipped. The protocol core moved upstream to PGPonyAndroid as
+`com.pgpony.android.pair` with its spec (`docs/PAIRING_PROTOCOL.md` there) and comes back through
+`sync-vendor.sh` into `vendor/app-pair/`, like the engine; it now carries the few PonyDirect wire
+pieces it used, so `vendor/ponydirect/` is gone. Protocol additions while nothing has shipped:
+INFO lists the item kinds a side can import (`accepts`, so a phone can join before it restores
+backups), and the invite in section 8 is fully specified (IP literals only, canonical hash
+spelling, up to 8 addresses). The host screen now shows the invite as a QR code with a Copy
+invite button, and the join field takes a pasted invite as well as an address; either way the
+joiner checks the host key before the codes are compared. Three new strings, translated.
+New vectors: every byte of one whole session (`v1-session.json`) and 32 invite cases
+(`v1-invites.json`), both checked against an independent Python implementation. The Swift twin is
+`Packages/PGPonyPair` in the iOS app, tested against the same files. Open for when phones ship:
+the dialog says "the other computer" throughout, which should become "the other device".
+
 Translation pass (2026-09-30): desktop now ships ten languages, adding Korean, Turkish,
 Ukrainian and Simplified Chinese to match the mobile apps. The English desktop strings lost their
 em and en dashes first (76 strings), then every language was reviewed or translated against the

@@ -29,19 +29,22 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   of an upstream one with no call-site change. Refreshed by `tools/sync-strings.sh`, NOT by
   `sync-vendor.sh`. A placeholder or parity finding in this tree is an UPSTREAM bug — fix it in
   PGPonyAndroid and re-sync.
-- `ponydirect/` = the main sources of PonyDirect-Kotlin (github.com/norsehorse-dev/PonyDirect-Kotlin,
-  Apache-2.0), the transport under F1 pairing: its framing, constant-time compare and the LAN
-  identify handshake, which the pairing protocol uses as its key confirmation
-  (docs/F1_PAIRING_PROTOCOL.md). Not from PGPonyAndroid and not refreshed by `sync-vendor.sh`:
-  `tools/sync-ponydirect.sh` copies it from a PonyDirect-Kotlin checkout. The WAN, ARQ and stream
-  files compile but are unused in 3.0.0. Synced 2026-09-30 from commit d694cbb. A fix to these
-  files lands in PonyDirect-Kotlin (and its Swift twin) first, never here.
+- `app-pair/` = the `pair/` tree (3.0.0 F1): the pairing protocol shared with Android and iOS
+  (handshake, key confirmation, sealed session, invite QR), pure JVM, plus a copy of
+  PGPonyAndroid's `docs/PAIRING_PROTOCOL.md`. Its tests (`pair/`) sync into `app-crypto-tests/` and
+  its vectors (`pairing/`) arrive with `app-test-resources/`. Until 2026-09-30 this code lived in
+  `src/…/com/pgpony/pair` on top of a vendored copy of PonyDirect-Kotlin; the package now carries
+  the few PonyDirect wire pieces it uses (framing, identify tags), pinned by the vectors, so
+  `vendor/ponydirect/` and `tools/sync-ponydirect.sh` are gone.
 - `app-crypto-tests/` = the crypto unit-test suite (+ `data/PGPKeyEntityKeyIdTest.kt`,
   `backup/BackupCodecTest.kt`) and `app-test-resources/` = its fixtures (rfc9580 vectors, pqc
   interop artifacts). Synced D5/D6; compiled into the desktop `test` source set, gates
   (`-DrunInterop`, `-DiosSecPass`) preserved.
 
-Last sync: 2026-09-27 (desktop 3.0.0, stage 3). All trees, delete-and-recopy, from the
+Last sync: 2026-09-30 (desktop 3.0.0, F1 for phones): the pair tree added. Every other tree was
+byte-identical to the PGPonyAndroid working tree before it, so the sync changed nothing else.
+
+Previous sync: 2026-09-27 (desktop 3.0.0, stage 3). All trees, delete-and-recopy, from the
 PGPonyAndroid working tree at commit b19b82e on main: the v4.6.1 tag (versionCode 461) plus two
 recorded 4.7.0 changes. `git diff v4.6.1` over the synced trees shows only these:
 1. The settings seam: `data/settings/KeyValueSettings.kt` (new) and the four stores moved onto it

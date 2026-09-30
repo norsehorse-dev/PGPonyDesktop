@@ -823,6 +823,9 @@
     <string name="d_pair_host_waiting">Wähle auf dem anderen Computer „Verbinden“ und gib diese Adresse ein:</string>
     <string name="d_pair_host_closes">Dieses Fenster bleibt bis %1$s geöffnet.</string>
     <string name="d_pair_firewall">Wenn deine Firewall nachfragt, erlaube PGPony, Verbindungen anzunehmen, solange dieses Fenster geöffnet ist.</string>
+    <string name="d_pair_copy_invite">Einladung kopieren</string>
+    <string name="d_pair_invite_note">Statt die Adresse einzutippen, kann die andere Seite diesen QR-Code scannen oder die Einladung einfügen. Beides prüft zusätzlich, dass sie diesen Computer erreicht hat.</string>
+    <string name="d_pair_bad_invite">Diese Einladung kann nicht gelesen werden. Prüfe, ob sie vollständig kopiert wurde, oder gib stattdessen die Adresse ein.</string>
     <string name="d_pair_no_address">Dieser Computer hat keine Netzwerkadresse, die ein anderer Computer erreichen kann.</string>
     <string name="d_pair_join_intro">Wähle auf dem anderen Computer „Warten“. Gib dann die dort angezeigte Adresse ein.</string>
     <string name="d_pair_join_label">Auf dem anderen Computer angezeigte Adresse</string>

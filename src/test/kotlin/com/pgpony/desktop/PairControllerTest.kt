@@ -6,11 +6,11 @@
 package com.pgpony.desktop
 
 import com.pgpony.android.crypto.KeyAlgorithm
-import com.pgpony.pair.PairAnswer
-import com.pgpony.pair.PairItem
-import com.pgpony.pair.PairMessage
-import com.pgpony.pair.PairOffer
-import com.pgpony.pair.PairSession
+import com.pgpony.android.pair.PairAnswer
+import com.pgpony.android.pair.PairItem
+import com.pgpony.android.pair.PairMessage
+import com.pgpony.android.pair.PairOffer
+import com.pgpony.android.pair.PairSession
 import kotlinx.coroutines.runBlocking
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -130,5 +130,36 @@ class PairControllerTest {
         assertTrue(host.get(10, TimeUnit.SECONDS).isFailure)
         assertFailsWith<java.io.IOException> { java.net.Socket(InetAddress.getLoopbackAddress(), port).close() }
         window.close()
+    }
+
+    @Test
+    fun aPastedInviteChecksTheHostKey() {
+        // What the host screen would copy, pointed at loopback: the join takes the key check.
+        for (right in listOf(true, false)) {
+            val window = PairController.HostWindow()
+            val key = if (right) window.hostKey.public else com.pgpony.android.pair.PairCrypto.keyPair().public
+            val invite = com.pgpony.android.pair.PairInvite.forHostKey(
+                key, listOf(com.pgpony.android.pair.PairInvite.Address("127.0.0.1", window.port))
+            )
+            val target = PairController.target(invite.toUri())
+            assertNotNull(target)
+            assertContentEquals(invite.hostKeyHash, target.hostKeyHash)
+            val host = CompletableFuture.supplyAsync({ runCatching { window.accept() } }, threads)
+            val controller = PairController(keyring("invite"), DesktopKeyEdits(keyring("invite-edits")))
+            if (right) {
+                val joiner = controller.join(target)
+                assertEquals(host.get(10, TimeUnit.SECONDS).getOrThrow().code, joiner.code)
+                joiner.reject()
+            } else {
+                val e = assertFailsWith<com.pgpony.android.pair.PairException> { controller.join(target) }
+                assertEquals(com.pgpony.android.pair.PairFailure.HANDSHAKE, e.failure)
+                assertTrue(host.get(10, TimeUnit.SECONDS).isFailure)
+            }
+            window.close()
+        }
+        // A typed address still works; something that starts like an invite but is not one does not.
+        assertNull(PairController.target("192.168.1.20:49152")!!.hostKeyHash)
+        assertNull(PairController.target("pgpony-pair:1?a=192.168.1.20:49152"))
+        assertTrue(PairController.looksLikeInvite(" PGPONY-PAIR:2?x"))
     }
 }

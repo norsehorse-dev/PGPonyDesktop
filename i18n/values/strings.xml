@@ -953,6 +953,9 @@
     <string name="d_pair_host_waiting">On the other computer, choose Connect and type this address:</string>
     <string name="d_pair_host_closes">This window stays open until %1$s.</string>
     <string name="d_pair_firewall">If your firewall asks, allow PGPony to accept connections while this window is open.</string>
+    <string name="d_pair_copy_invite">Copy invite</string>
+    <string name="d_pair_invite_note">Instead of typing the address, the other side can scan this QR code or paste the invite. Either one also checks that it reached this computer.</string>
+    <string name="d_pair_bad_invite">This invite cannot be read. Check that it was copied whole, or type the address instead.</string>
     <string name="d_pair_no_address">This computer has no network address another computer can reach.</string>
     <string name="d_pair_join_intro">On the other computer, choose Wait. Then type the address it shows.</string>
     <string name="d_pair_join_label">Address shown on the other computer</string>

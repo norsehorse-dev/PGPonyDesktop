@@ -823,6 +823,9 @@
     <string name="d_pair_host_waiting">Sur l\'autre ordinateur, choisissez « Se connecter » et saisissez cette adresse :</string>
     <string name="d_pair_host_closes">Cette fenêtre reste ouverte jusqu\'à %1$s.</string>
     <string name="d_pair_firewall">Si votre pare-feu le demande, autorisez PGPony à accepter des connexions tant que cette fenêtre est ouverte.</string>
+    <string name="d_pair_copy_invite">Copier l\'invitation</string>
+    <string name="d_pair_invite_note">Au lieu de saisir l\'adresse, l\'autre appareil peut scanner ce code QR ou coller l\'invitation. Dans les deux cas, il vérifie aussi qu\'il a bien joint cet ordinateur.</string>
+    <string name="d_pair_bad_invite">Impossible de lire cette invitation. Vérifiez qu\'elle a été copiée en entier, ou saisissez plutôt l\'adresse.</string>
     <string name="d_pair_no_address">Cet ordinateur n\'a aucune adresse réseau joignable par un autre ordinateur.</string>
     <string name="d_pair_join_intro">Sur l\'autre ordinateur, choisissez « Attendre ». Saisissez ensuite l\'adresse qu\'il affiche.</string>
     <string name="d_pair_join_label">Adresse affichée sur l\'autre ordinateur</string>

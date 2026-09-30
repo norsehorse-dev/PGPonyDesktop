@@ -795,6 +795,9 @@
     <string name="d_pair_host_waiting">在另一台电脑上选择「连接」，然后输入此地址：</string>
     <string name="d_pair_host_closes">此窗口将保持打开，直到 %1$s。</string>
     <string name="d_pair_firewall">如果防火墙询问，请允许 PGPony 在此窗口打开期间接受连接。</string>
+    <string name="d_pair_copy_invite">复制邀请</string>
+    <string name="d_pair_invite_note">对方也可以扫描此二维码或粘贴邀请，而不必输入地址。这两种方式还会核实连接到的正是这台电脑。</string>
+    <string name="d_pair_bad_invite">无法读取此邀请。请检查是否完整复制，或改为输入地址。</string>
     <string name="d_pair_no_address">这台电脑没有其他电脑可以访问的网络地址。</string>
     <string name="d_pair_join_intro">在另一台电脑上选择「等待」，然后输入它显示的地址。</string>
     <string name="d_pair_join_label">另一台电脑上显示的地址</string>

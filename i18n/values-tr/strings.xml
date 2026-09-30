@@ -823,6 +823,9 @@
     <string name="d_pair_host_waiting">Diğer bilgisayarda \"Diğer bilgisayara bağlan\" seçeneğini seçin ve şu adresi yazın:</string>
     <string name="d_pair_host_closes">Bu pencere %1$s saatine kadar açık kalır.</string>
     <string name="d_pair_firewall">Güvenlik duvarınız sorarsa bu pencere açıkken PGPony\'nin bağlantı kabul etmesine izin verin.</string>
+    <string name="d_pair_copy_invite">Daveti kopyala</string>
+    <string name="d_pair_invite_note">Adresi yazmak yerine karşı taraf bu QR kodunu tarayabilir veya daveti yapıştırabilir. İkisi de bu bilgisayara ulaşıldığını ayrıca doğrular.</string>
+    <string name="d_pair_bad_invite">Bu davet okunamıyor. Tamamının kopyalandığını kontrol edin veya bunun yerine adresi yazın.</string>
     <string name="d_pair_no_address">Bu bilgisayarın, başka bir bilgisayarın ulaşabileceği bir ağ adresi yok.</string>
     <string name="d_pair_join_intro">Diğer bilgisayarda \"Diğer bilgisayarı bekle\" seçeneğini seçin. Ardından orada gösterilen adresi yazın.</string>
     <string name="d_pair_join_label">Diğer bilgisayarda gösterilen adres</string>

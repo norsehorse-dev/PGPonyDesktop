@@ -2,17 +2,20 @@
 // PGPony Desktop 3.0.0, F1: "Pair with another computer". One computer waits, the other
 // connects to the address it shows, both users compare a six-digit code, and then either side
 // can send public keys, key pairs or a full backup; the receiver picks what to take. Nothing is
-// remembered: closing the dialog ends the session and wipes its keys. The protocol is in
-// docs/F1_PAIRING_PROTOCOL.md; PairController holds the logic this dialog drives.
+// remembered: closing the dialog ends the session and wipes its keys. The protocol is
+// docs/PAIRING_PROTOCOL.md in PGPonyAndroid (vendor/app-pair); PairController holds the logic
+// this dialog drives.
 
 package com.pgpony.desktop
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,21 +36,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.pgpony.pair.PairAnswer
-import com.pgpony.pair.PairAttempt
-import com.pgpony.pair.PairException
-import com.pgpony.pair.PairFailure
-import com.pgpony.pair.PairInfo
-import com.pgpony.pair.PairItem
-import com.pgpony.pair.PairMessage
-import com.pgpony.pair.PairOffer
-import com.pgpony.pair.PairResult
-import com.pgpony.pair.PairSession
+import com.pgpony.android.pair.PairAnswer
+import com.pgpony.android.pair.PairAttempt
+import com.pgpony.android.pair.PairException
+import com.pgpony.android.pair.PairFailure
+import com.pgpony.android.pair.PairInfo
+import com.pgpony.android.pair.PairItem
+import com.pgpony.android.pair.PairMessage
+import com.pgpony.android.pair.PairOffer
+import com.pgpony.android.pair.PairResult
+import com.pgpony.android.pair.PairSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -227,6 +231,18 @@ private fun HostingPane(window: PairController.HostWindow) {
             }
         }
     }
+    // The invite: a phone scans it, another computer can paste it. Either way the joiner also
+    // checks this window's key before the codes are compared.
+    val invite = remember(window) { window.invite() }
+    val qr = remember(invite) {
+        invite?.let { QrCode.encodeToPng(it.toUri(), 360) }?.let { org.jetbrains.skia.Image.makeFromEncoded(it).toComposeImageBitmap() }
+    }
+    if (invite != null && qr != null) {
+        Spacer(Modifier.height(8.dp))
+        Image(bitmap = qr, contentDescription = tr("d_pair_invite_note"), modifier = Modifier.size(180.dp))
+        Text(tr("d_pair_invite_note"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = { DesktopClipboard.copy(invite.toUri(), secret = false) }) { Text(tr("d_pair_copy_invite")) }
+    }
     Spacer(Modifier.height(8.dp))
     Text(tr("d_pair_host_closes", closesAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(4.dp))
@@ -251,20 +267,20 @@ private fun JoiningPane(controller: PairController, onAttempt: (PairAttempt) -> 
         enabled = !working,
         modifier = Modifier.fillMaxWidth()
     )
-    if (bad) Text(tr("d_pair_bad_address"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    if (bad) Text(if (PairController.looksLikeInvite(text)) tr("d_pair_bad_invite") else tr("d_pair_bad_address"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     TextButton(enabled = !working, onClick = { clipboardText()?.let { text = it; bad = false } }) { Text(tr("common_button_paste")) }
     Spacer(Modifier.height(8.dp))
     OutlinedButton(enabled = !working && text.isNotBlank(), onClick = {
         working = true
         scope.launch {
-            val address = withContext(Dispatchers.IO) { PairController.parse(text) }
-            if (address == null) {
+            val target = withContext(Dispatchers.IO) { PairController.target(text) }
+            if (target == null) {
                 bad = true
                 working = false
                 return@launch
             }
             try {
-                onAttempt(withContext(Dispatchers.IO) { controller.join(address) })
+                onAttempt(withContext(Dispatchers.IO) { controller.join(target) })
             } catch (e: Exception) {
                 onError(e)
             } finally {
@@ -298,6 +314,8 @@ private class Incoming(val offer: PairOffer)
 private fun SessionPane(state: DesktopState, controller: PairController, session: PairSession, onEnded: () -> Unit) {
     val scope = rememberCoroutineScope()
     var peerName by remember { mutableStateOf<String?>(null) }
+    // What the other side can import (its INFO); nothing is offered that it cannot take.
+    var peerInfo by remember { mutableStateOf<PairInfo?>(null) }
     val log = remember { mutableStateListOf<String>() }
     var incoming by remember { mutableStateOf<Incoming?>(null) }
     var outgoing by remember { mutableStateOf<PairController.Prepared?>(null) }
@@ -310,7 +328,10 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
 
     fun onMessage(m: PairMessage) {
         when (m) {
-            is PairMessage.Info -> peerName = m.info.name.takeIf { it.isNotBlank() }
+            is PairMessage.Info -> {
+                peerName = m.info.name.takeIf { it.isNotBlank() }
+                peerInfo = m.info
+            }
             is PairMessage.Offer -> incoming = Incoming(m.offer)
             is PairMessage.Answer -> {
                 val prepared = outgoing ?: return
@@ -364,7 +385,9 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
     // The reader: one thread for the session, handing each message to the UI.
     LaunchedEffect(session) {
         withContext(Dispatchers.IO) {
-            session.sendInfo(PairInfo(runCatching { InetAddress.getLocalHost().hostName }.getOrDefault(""), "PGPony Desktop ${AppVersion.VERSION}"))
+            session.sendInfo(
+                PairInfo(runCatching { InetAddress.getLocalHost().hostName }.getOrDefault(""), "PGPony Desktop ${AppVersion.VERSION}", PairItem.KINDS)
+            )
         }
         try {
             while (true) {
@@ -416,7 +439,7 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
             Text(it, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(8.dp))
         }
-        SendPane(controller) { prepared ->
+        SendPane(controller, peerInfo) { prepared ->
             outgoing = prepared
             scope.launch { runCatching { withContext(Dispatchers.IO) { session.sendOffer(PairOffer(prepared.items)) } }.onFailure { log += pairFailureMessage(it) } }
         }
@@ -429,7 +452,7 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
 }
 
 @Composable
-private fun SendPane(controller: PairController, onPrepared: (PairController.Prepared) -> Unit) {
+private fun SendPane(controller: PairController, peer: PairInfo?, onPrepared: (PairController.Prepared) -> Unit) {
     val scope = rememberCoroutineScope()
     var candidates by remember { mutableStateOf<List<PairController.Outgoing>>(emptyList()) }
     val picked = remember { mutableStateListOf<PairController.Outgoing>() }
@@ -444,9 +467,17 @@ private fun SendPane(controller: PairController, onPrepared: (PairController.Pre
 
     Text(tr("d_pair_send_heading"), style = MaterialTheme.typography.titleSmall)
     Spacer(Modifier.height(4.dp))
-    OutgoingGroup(tr("d_pair_group_keypairs"), candidates.filterIsInstance<PairController.Outgoing.KeyPair>(), picked, !working)
-    OutgoingGroup(tr("d_pair_group_public"), candidates.filterIsInstance<PairController.Outgoing.PublicKey>(), picked, !working)
-    OutgoingGroup(tr("d_pair_group_backup"), candidates.filter { it is PairController.Outgoing.Backup }, picked, !working)
+    // A side that has not said what it takes (no INFO yet, or an INFO without accepts) takes all three.
+    fun takes(kind: String) = peer?.takes(kind) ?: true
+    if (takes(PairItem.KEY_PAIR)) {
+        OutgoingGroup(tr("d_pair_group_keypairs"), candidates.filterIsInstance<PairController.Outgoing.KeyPair>(), picked, !working)
+    }
+    if (takes(PairItem.PUBLIC_KEY)) {
+        OutgoingGroup(tr("d_pair_group_public"), candidates.filterIsInstance<PairController.Outgoing.PublicKey>(), picked, !working)
+    }
+    if (takes(PairItem.BACKUP)) {
+        OutgoingGroup(tr("d_pair_group_backup"), candidates.filter { it is PairController.Outgoing.Backup }, picked, !working)
+    }
     if (needsPass) {
         Spacer(Modifier.height(8.dp))
         Text(tr("d_pair_transfer_pass_note"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -496,9 +527,11 @@ private fun OutgoingGroup(
 private fun IncomingPane(
     offer: PairOffer, from: String?, backupCode: String, onBackupCode: (String) -> Unit, onAnswer: (List<Int>) -> Unit
 ) {
-    val chosen = remember(offer) { mutableStateListOf<Int>().apply { addAll(offer.items.map { it.id }) } }
+    // An item of a kind this version does not know is not shown, so it can never be accepted.
+    val items = remember(offer) { offer.items.filter { it.kind in PairItem.KINDS } }
+    val chosen = remember(offer) { mutableStateListOf<Int>().apply { addAll(items.map { it.id }) } }
     Text(from?.let { tr("d_pair_incoming_heading", it) } ?: tr("d_pair_incoming_heading_unnamed"), style = MaterialTheme.typography.titleSmall)
-    offer.items.forEach { item ->
+    items.forEach { item ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = item.id in chosen, onCheckedChange = { if (it) chosen += item.id else chosen -= item.id })
             Text(
@@ -511,7 +544,7 @@ private fun IncomingPane(
             )
         }
     }
-    val wantsBackup = offer.items.any { it.kind == PairItem.BACKUP && it.id in chosen }
+    val wantsBackup = items.any { it.kind == PairItem.BACKUP && it.id in chosen }
     if (wantsBackup) {
         Spacer(Modifier.height(4.dp))
         OutlinedTextField(

@@ -1,5 +1,5 @@
 {
-  "description": "PGPony pairing protocol v1 (docs/F1_PAIRING_PROTOCOL.md): one attempt with fixed X25519 secrets and nonces. Byte strings are lowercase hex; the sealed messages are the ENVELOPE payloads (seq || ciphertext || tag).",
+  "description": "PGPony pairing protocol v1 (docs/PAIRING_PROTOCOL.md): one attempt with fixed X25519 secrets and nonces. Byte strings are lowercase hex; the sealed messages are the ENVELOPE payloads (seq || ciphertext || tag).",
   "sk_J": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
   "sk_H": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
   "pk_J": "07a37cbc142093c8b755dc1b10e86cb426374ad16aa853ed0bdfc0b2b86d1c7c",

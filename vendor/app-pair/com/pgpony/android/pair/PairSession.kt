@@ -1,11 +1,10 @@
 // PairSession.kt
-// PGPony Desktop 3.0.0, F1: phase 3 of the pairing protocol (docs/F1_PAIRING_PROTOCOL.md,
-// section 5): sealed messages inside PonyDirect ENVELOPE frames, and the offer and item
-// messages that move keys and backups. The session keys live only here and are wiped on close.
+// Phase 3 of the pairing protocol (docs/PAIRING_PROTOCOL.md, section 5): sealed messages inside
+// ENVELOPE frames, and the offer and item messages that move keys and backups. The session keys
+// live only here and are wiped on close.
 
-package com.pgpony.pair
+package com.pgpony.android.pair
 
-import com.ponydirect.PonyDirectWire
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -56,12 +55,26 @@ data class PairItem(
     }
 }
 
-data class PairInfo(val name: String, val app: String) {
-    fun toJson() = buildJsonObject { put("name", name); put("app", app) }
+/**
+ * The INFO message (section 5). [accepts] lists the item kinds this side can import; null
+ * (the member left out) means all three. A sender offers nothing the receiver does not accept.
+ */
+data class PairInfo(val name: String, val app: String, val accepts: Set<String>? = null) {
+    fun toJson() = buildJsonObject {
+        put("name", name); put("app", app)
+        if (accepts != null) {
+            val ordered = PairItem.KINDS.filter { it in accepts } + accepts.filter { it !in PairItem.KINDS }.sorted()
+            put("accepts", JsonArray(ordered.map { JsonPrimitive(it) }))
+        }
+    }
+
+    /** Whether the side that sent this INFO can import items of [kind]. */
+    fun takes(kind: String): Boolean = accepts?.contains(kind) ?: (kind in PairItem.KINDS)
 
     companion object {
         fun fromJson(o: JsonObject) = PairInfo(
-            o["name"]?.jsonPrimitive?.contentOrNull ?: "", o["app"]?.jsonPrimitive?.contentOrNull ?: ""
+            o["name"]?.jsonPrimitive?.contentOrNull ?: "", o["app"]?.jsonPrimitive?.contentOrNull ?: "",
+            (o["accepts"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.toSet()
         )
     }
 }
@@ -142,7 +155,7 @@ class PairSession internal constructor(
         val plaintext = byteArrayOf(type) + body
         require(plaintext.size <= MAX_PLAINTEXT)
         try {
-            wire.writeFrame(PonyDirectWire.ENVELOPE, PairCrypto.seal(sendKey, sendSeq++, plaintext))
+            wire.writeFrame(PairFrames.ENVELOPE, PairCrypto.seal(sendKey, sendSeq++, plaintext))
         } catch (e: Exception) {
             close()
             throw PairProtocol.wrap(e)
@@ -152,7 +165,7 @@ class PairSession internal constructor(
     private fun receiveRaw(): Pair<Byte, ByteArray> {
         try {
             val (type, payload) = wire.readFrame()
-            if (type != PonyDirectWire.ENVELOPE) throw PairException(PairFailure.PROTOCOL, "unexpected frame")
+            if (type != PairFrames.ENVELOPE) throw PairException(PairFailure.PROTOCOL, "unexpected frame")
             val plaintext = PairCrypto.open(receiveKey, receiveSeq++, payload)
             if (plaintext.isEmpty() || plaintext.size > MAX_PLAINTEXT) throw PairException(PairFailure.PROTOCOL, "bad message")
             return plaintext[0] to plaintext.copyOfRange(1, plaintext.size)
@@ -255,7 +268,7 @@ class PairSession internal constructor(
                 ITEM_END -> {
                     val bytes = buf.toByteArray()
                     if (bytes.size != size || body.size != 36 ||
-                        !PonyDirectWire.constantTimeEquals(PairCrypto.sha256(bytes), body.copyOfRange(4, 36))
+                        !PairFrames.constantTimeEquals(PairCrypto.sha256(bytes), body.copyOfRange(4, 36))
                     ) protocolError("item damaged in transit")
                     return bytes
                 }

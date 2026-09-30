@@ -823,6 +823,9 @@
     <string name="d_pair_host_waiting">No outro computador, escolha Conectar e digite este endereço:</string>
     <string name="d_pair_host_closes">Esta janela fica aberta até %1$s.</string>
     <string name="d_pair_firewall">Se o firewall perguntar, permita que o PGPony aceite conexões enquanto esta janela estiver aberta.</string>
+    <string name="d_pair_copy_invite">Copiar convite</string>
+    <string name="d_pair_invite_note">Em vez de digitar o endereço, o outro lado pode escanear este código QR ou colar o convite. As duas opções também verificam que a conexão chegou a este computador.</string>
+    <string name="d_pair_bad_invite">Não foi possível ler este convite. Verifique se ele foi copiado por inteiro ou digite o endereço.</string>
     <string name="d_pair_no_address">Este computador não tem nenhum endereço de rede que outro computador possa alcançar.</string>
     <string name="d_pair_join_intro">No outro computador, escolha Aguardar. Depois digite o endereço que ele mostra.</string>
     <string name="d_pair_join_label">Endereço mostrado no outro computador</string>

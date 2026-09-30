@@ -795,6 +795,9 @@
     <string name="d_pair_host_waiting">다른 컴퓨터에서 “다른 컴퓨터에 연결”을 선택하고 이 주소를 입력하세요:</string>
     <string name="d_pair_host_closes">이 창은 %1$s까지 열려 있습니다.</string>
     <string name="d_pair_firewall">방화벽이 묻는다면, 이 창이 열려 있는 동안 PGPony가 연결을 받을 수 있도록 허용하세요.</string>
+    <string name="d_pair_copy_invite">초대 복사</string>
+    <string name="d_pair_invite_note">주소를 입력하는 대신 상대 쪽에서 이 QR 코드를 스캔하거나 초대를 붙여 넣을 수 있습니다. 어느 방법이든 이 컴퓨터에 연결되었는지도 함께 확인합니다.</string>
+    <string name="d_pair_bad_invite">이 초대를 읽을 수 없습니다. 전체가 복사되었는지 확인하거나 대신 주소를 입력하세요.</string>
     <string name="d_pair_no_address">이 컴퓨터에는 다른 컴퓨터가 접속할 수 있는 네트워크 주소가 없습니다.</string>
     <string name="d_pair_join_intro">다른 컴퓨터에서 “다른 컴퓨터 기다리기”를 선택하세요. 그런 다음 그 컴퓨터에 표시된 주소를 입력하세요.</string>
     <string name="d_pair_join_label">다른 컴퓨터에 표시된 주소</string>

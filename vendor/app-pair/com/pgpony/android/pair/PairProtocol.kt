@@ -1,18 +1,15 @@
 // PairProtocol.kt
-// PGPony Desktop 3.0.0, F1: the pairing handshake and key confirmation
-// (docs/F1_PAIRING_PROTOCOL.md, sections 3 and 4) over one blocking stream pair.
+// The pairing handshake and key confirmation (docs/PAIRING_PROTOCOL.md, sections 3 and 4) over
+// one blocking stream pair.
 //
 // Usage, on each side: PairProtocol.host(...) or PairProtocol.join(...) runs phase 1 and returns
 // a PairAttempt holding the comparison code. The UI shows the code; the user's answer is
 // confirm() (phase 2, returns the session) or reject(). Meanwhile the attempt already watches for
 // the other side's answer, so a refusal over there reaches peerRefused without waiting for this
-// user.
+// user. Every call blocks: run them off the main thread (Dispatchers.IO on Android).
 
-package com.pgpony.pair
+package com.pgpony.android.pair
 
-import com.ponydirect.PonyDirectWire
-import java.io.DataInputStream
-import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -32,39 +29,6 @@ enum class PairFailure(val abortReason: Int) {
 class PairException(val failure: PairFailure, message: String) : IOException(message)
 
 enum class PairRole { HOST, JOINER }
-
-/** The framed byte stream both phases run over. */
-internal class PairWire(input: InputStream, private val output: OutputStream, private val onClose: () -> Unit) {
-    private val input = DataInputStream(input)
-
-    fun writeRaw(bytes: ByteArray) {
-        output.write(bytes)
-        output.flush()
-    }
-
-    fun writeFrame(type: Byte, payload: ByteArray) = writeRaw(PonyDirectWire.frame(type, payload))
-
-    fun readExact(n: Int): ByteArray = try {
-        ByteArray(n).also { input.readFully(it) }
-    } catch (e: EOFException) {
-        throw PairException(PairFailure.CLOSED, "the other side closed the connection")
-    }
-
-    /** One frame whose type byte was already read. */
-    fun readFrameAfterType(type: Byte): Pair<Byte, ByteArray> {
-        val len = readExact(4).fold(0L) { acc, b -> (acc shl 8) or (b.toLong() and 0xFF) }
-        if (len > MAX_FRAME) throw PairException(PairFailure.PROTOCOL, "frame too long")
-        return type to readExact(len.toInt())
-    }
-
-    fun readFrame(): Pair<Byte, ByteArray> = readFrameAfterType(readExact(1)[0])
-
-    fun close() = runCatching { onClose() }.let { }
-
-    companion object {
-        const val MAX_FRAME = 1_048_576L + 65_536L
-    }
-}
 
 object PairProtocol {
 
@@ -89,6 +53,12 @@ object PairProtocol {
     fun host(
         input: InputStream, output: OutputStream, setTimeout: (Int) -> Unit, close: () -> Unit,
         keyPair: PairCrypto.KeyPair = PairCrypto.keyPair()
+    ): PairAttempt = hostWith(input, output, setTimeout, close, keyPair, PairRandom.SECURE)
+
+    /** [host] with its randomness supplied: the published session transcript only. */
+    internal fun hostWith(
+        input: InputStream, output: OutputStream, setTimeout: (Int) -> Unit, close: () -> Unit,
+        keyPair: PairCrypto.KeyPair, random: PairRandom
     ): PairAttempt {
         val wire = PairWire(input, output, close)
         try {
@@ -101,11 +71,11 @@ object PairProtocol {
                 throw PairException(PairFailure.VERSION, "the other side speaks pairing version ${join[0]}")
             }
             val pkJ = join.copyOfRange(1, 33)
-            val nH = PairCrypto.randomBytes(32)
+            val nH = random.bytes(32)
             wire.writeFrame(ACCEPT, keyPair.public + PairCrypto.commit(nH, keyPair.public, pkJ))
             val nJ = expect(wire, NONCE_J, 32)
             wire.writeFrame(NONCE_H, nH)
-            return finish(PairRole.HOST, wire, keyPair, pkJ, keyPair.public, nJ, nH, setTimeout)
+            return finish(PairRole.HOST, wire, keyPair, pkJ, keyPair.public, nJ, nH, setTimeout, random)
         } catch (e: Exception) {
             keyPair.wipe()
             wire.close()
@@ -117,9 +87,15 @@ object PairProtocol {
     fun join(
         input: InputStream, output: OutputStream, setTimeout: (Int) -> Unit, close: () -> Unit,
         expectedHostKeyHash: ByteArray? = null
+    ): PairAttempt = joinWith(input, output, setTimeout, close, expectedHostKeyHash, PairRandom.SECURE)
+
+    /** [join] with its randomness supplied: the published session transcript only. */
+    internal fun joinWith(
+        input: InputStream, output: OutputStream, setTimeout: (Int) -> Unit, close: () -> Unit,
+        expectedHostKeyHash: ByteArray?, random: PairRandom
     ): PairAttempt {
         val wire = PairWire(input, output, close)
-        val keyPair = PairCrypto.keyPair()
+        val keyPair = PairCrypto.keyPair(random.bytes(32))
         try {
             setTimeout(FRAME_TIMEOUT_MS)
             wire.writeRaw(MAGIC)
@@ -129,19 +105,19 @@ object PairProtocol {
             val pkH = accept.copyOfRange(0, 32)
             val commit = accept.copyOfRange(32, 64)
             if (expectedHostKeyHash != null &&
-                !PonyDirectWire.constantTimeEquals(PairCrypto.sha256(pkH).copyOf(expectedHostKeyHash.size), expectedHostKeyHash)
+                !PairFrames.constantTimeEquals(PairCrypto.sha256(pkH).copyOf(expectedHostKeyHash.size), expectedHostKeyHash)
             ) {
                 abort(wire, PairFailure.HANDSHAKE)
                 throw PairException(PairFailure.HANDSHAKE, "the host key does not match the QR code")
             }
-            val nJ = PairCrypto.randomBytes(32)
+            val nJ = random.bytes(32)
             wire.writeFrame(NONCE_J, nJ)
             val nH = expect(wire, NONCE_H, 32)
-            if (!PonyDirectWire.constantTimeEquals(PairCrypto.commit(nH, pkH, keyPair.public), commit)) {
+            if (!PairFrames.constantTimeEquals(PairCrypto.commit(nH, pkH, keyPair.public), commit)) {
                 abort(wire, PairFailure.HANDSHAKE)
                 throw PairException(PairFailure.HANDSHAKE, "the host changed its nonce")
             }
-            return finish(PairRole.JOINER, wire, keyPair, keyPair.public, pkH, nJ, nH, setTimeout)
+            return finish(PairRole.JOINER, wire, keyPair, keyPair.public, pkH, nJ, nH, setTimeout, random)
         } catch (e: Exception) {
             keyPair.wipe()
             wire.close()
@@ -151,7 +127,7 @@ object PairProtocol {
 
     private fun finish(
         role: PairRole, wire: PairWire, own: PairCrypto.KeyPair, pkJ: ByteArray, pkH: ByteArray,
-        nJ: ByteArray, nH: ByteArray, setTimeout: (Int) -> Unit
+        nJ: ByteArray, nH: ByteArray, setTimeout: (Int) -> Unit, random: PairRandom
     ): PairAttempt {
         val peer = if (role == PairRole.HOST) pkJ else pkH
         val z = PairCrypto.agree(own.secret, peer)
@@ -164,7 +140,7 @@ object PairProtocol {
         val keys = PairCrypto.derive(z, t)
         z.fill(0)
         setTimeout(CONFIRM_TIMEOUT_MS)
-        return PairAttempt(role, wire, keys, PairCrypto.code(t))
+        return PairAttempt(role, wire, keys, PairCrypto.code(t), random)
     }
 
     private fun expect(wire: PairWire, type: Byte, size: Int): ByteArray {
@@ -198,7 +174,8 @@ class PairAttempt internal constructor(
     val role: PairRole,
     private val wire: PairWire,
     private val keys: PairCrypto.Keys,
-    val code: String
+    val code: String,
+    private val random: PairRandom
 ) {
     /** The other side's answer: its phase 2 frame, read as soon as it arrives. */
     private val peerAnswer: CompletableFuture<Pair<Byte, ByteArray>> = CompletableFuture.supplyAsync({
@@ -249,40 +226,40 @@ class PairAttempt internal constructor(
             if (role == PairRole.JOINER) {
                 // A refusal may already be here; it explains a failed write better than the write.
                 refusalSoFar()?.let { throw it }
-                val dialerNonce = PonyDirectWire.randomBytes(16)
+                val dialerNonce = random.bytes(16)
                 try {
-                    wire.writeRaw(PonyDirectWire.MAGIC)
-                    wire.writeFrame(PonyDirectWire.HELLO, dialerNonce + PonyDirectWire.identifyTag(keys.pairKey, dialerNonce))
+                    wire.writeRaw(PairFrames.PDR1)
+                    wire.writeFrame(PairFrames.HELLO, dialerNonce + PairFrames.identifyTag(keys.pairKey, dialerNonce))
                 } catch (e: IOException) {
                     throw refusalSoFar(waitMs = 2_000) ?: e
                 }
                 val frame = peerFrame()
                 refusedBy(frame)?.let { throw it }
-                if (frame.first != PonyDirectWire.HELLO_ACK || frame.second.size != 48) {
+                if (frame.first != PairFrames.HELLO_ACK || frame.second.size != 48) {
                     throw PairException(PairFailure.HANDSHAKE, "the codes did not match")
                 }
                 val listenerNonce = frame.second.copyOfRange(0, 16)
-                val expected = PonyDirectWire.identifyAckTag(keys.pairKey, dialerNonce, listenerNonce)
-                if (!PonyDirectWire.constantTimeEquals(expected, frame.second.copyOfRange(16, 48))) {
+                val expected = PairFrames.identifyAckTag(keys.pairKey, dialerNonce, listenerNonce)
+                if (!PairFrames.constantTimeEquals(expected, frame.second.copyOfRange(16, 48))) {
                     throw PairException(PairFailure.HANDSHAKE, "the codes did not match")
                 }
             } else {
                 val frame = peerFrame()
                 refusedBy(frame)?.let { throw it }
-                val ok = frame.first == PonyDirectWire.HELLO && frame.second.size == 48 &&
-                    PonyDirectWire.constantTimeEquals(
-                        PonyDirectWire.identifyTag(keys.pairKey, frame.second.copyOfRange(0, 16)),
+                val ok = frame.first == PairFrames.HELLO && frame.second.size == 48 &&
+                    PairFrames.constantTimeEquals(
+                        PairFrames.identifyTag(keys.pairKey, frame.second.copyOfRange(0, 16)),
                         frame.second.copyOfRange(16, 48)
                     )
-                wire.writeRaw(PonyDirectWire.MAGIC)
+                wire.writeRaw(PairFrames.PDR1)
                 if (!ok) {
-                    wire.writeFrame(PonyDirectWire.NO_MATCH, PonyDirectWire.randomBytes(48))
+                    wire.writeFrame(PairFrames.NO_MATCH, random.bytes(48))
                     throw PairException(PairFailure.HANDSHAKE, "the codes did not match")
                 }
-                val listenerNonce = PonyDirectWire.randomBytes(16)
+                val listenerNonce = random.bytes(16)
                 wire.writeFrame(
-                    PonyDirectWire.HELLO_ACK,
-                    listenerNonce + PonyDirectWire.identifyAckTag(keys.pairKey, frame.second.copyOfRange(0, 16), listenerNonce)
+                    PairFrames.HELLO_ACK,
+                    listenerNonce + PairFrames.identifyAckTag(keys.pairKey, frame.second.copyOfRange(0, 16), listenerNonce)
                 )
             }
             val send = if (role == PairRole.HOST) keys.hostToJoiner else keys.joinerToHost

@@ -1,16 +1,21 @@
 // PairController.kt
 // PGPony Desktop 3.0.0, F1 (pair with another computer): everything between the pairing
-// protocol (com.pgpony.pair, docs/F1_PAIRING_PROTOCOL.md) and the dialog. It opens and joins
+// protocol (com.pgpony.android.pair, vendored from PGPonyAndroid with its docs/PAIRING_PROTOCOL.md)
+// and the dialog. It opens and joins
 // pairing windows, turns the user's picks into offered items, and imports what arrives through
 // the same code a file import or a backup restore uses. No Compose here, so it can be tested.
 
 package com.pgpony.desktop
 
 import com.pgpony.android.backup.CrockfordBase32
-import com.pgpony.pair.PairAttempt
-import com.pgpony.pair.PairCrypto
-import com.pgpony.pair.PairItem
-import com.pgpony.pair.PairProtocol
+import com.pgpony.android.pair.PairAttempt
+import com.pgpony.android.pair.PairCrypto
+import com.pgpony.android.pair.PairException
+import com.pgpony.android.pair.PairFailure
+import com.pgpony.android.pair.PairInvite
+import com.pgpony.android.pair.PairItem
+import com.pgpony.android.pair.PairProtocol
+import com.pgpony.android.pair.PairSession
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -80,7 +85,7 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
                     Triple(PairItem.BACKUP, null, DesktopBackupService(repo).exportBackup(code.canonical))
                 }
             }
-            if (bytes.size > com.pgpony.pair.PairSession.MAX_ITEM_BYTES) throw PairPrepareException(tr("d_pair_err_too_large", o.name))
+            if (bytes.size > PairSession.MAX_ITEM_BYTES) throw PairPrepareException(tr("d_pair_err_too_large", o.name))
             items += PairItem(id, kind, o.name, fingerprint, bytes.size.toLong())
             payloads[id] = bytes
         }
@@ -105,7 +110,7 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
     }
 
     companion object {
-        /** How long a pairing window stays open (docs/F1_PAIRING_PROTOCOL.md, section 1). */
+        /** How long a pairing window stays open (docs/PAIRING_PROTOCOL.md, section 1). */
         const val WINDOW_MS = 10 * 60 * 1000
 
         /** The addresses another computer on this network can reach, IPv4 first. */
@@ -148,6 +153,21 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
             if (address is Inet4Address) "${address.hostAddress}:$port"
             else "[${address.hostAddress.substringBefore('%')}]:$port"
 
+        /**
+         * What the join field holds: a pasted invite (docs/PAIRING_PROTOCOL.md, section 8), whose
+         * host key hash the join then checks, or a typed address. Null when it is neither.
+         */
+        fun target(text: String): JoinTarget? {
+            PairInvite.parse(text)?.let { invite ->
+                return JoinTarget(invite.addresses.map { it.socketAddress() }, invite.hostKeyHash)
+            }
+            if (looksLikeInvite(text)) return null
+            return parse(text)?.let { JoinTarget(listOf(it), null) }
+        }
+
+        /** Starts like an invite, so a failed [target] should say the invite is unreadable. */
+        fun looksLikeInvite(text: String): Boolean = text.trim().startsWith("pgpony-pair:", ignoreCase = true)
+
         /** Reads what the user typed on the joining computer; null when it is not an address. */
         fun parse(text: String): InetSocketAddress? {
             val t = text.trim()
@@ -172,6 +192,17 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
         val port: Int get() = server.localPort
         val openedAt = System.currentTimeMillis()
 
+        /**
+         * The invite the host screen shows as a QR code and offers to copy: the primary address
+         * first, then the others, and the hash of this window's key. Null with no address.
+         */
+        fun invite(): PairInvite? {
+            val (primary, others) = hostAddresses()
+            val list = (listOfNotNull(primary) + others).mapNotNull { PairInvite.parseAddress(display(it, port)) }
+            if (list.isEmpty()) return null
+            return PairInvite.forHostKey(hostKey.public, list.take(PairInvite.MAX_ADDRESSES))
+        }
+
         /** The primary address and the others, formatted with this window's port. */
         fun addresses(): Pair<String?, List<String>> {
             val (primary, others) = hostAddresses()
@@ -183,7 +214,7 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
             val socket = try {
                 server.accept()
             } catch (e: SocketTimeoutException) {
-                throw com.pgpony.pair.PairException(com.pgpony.pair.PairFailure.TIMEOUT, tr("d_pair_err_window_expired"))
+                throw PairException(PairFailure.TIMEOUT, tr("d_pair_err_window_expired"))
             } finally {
                 runCatching { server.close() }
             }
@@ -196,12 +227,34 @@ class PairController(private val repo: DesktopKeyRepository, private val edits: 
         }
     }
 
+    /** Where a join connects: one typed address, or an invite's addresses and host key hash. */
+    class JoinTarget(val addresses: List<InetSocketAddress>, val hostKeyHash: ByteArray?)
+
     /** Connects to a host window at [address] and runs phase 1. */
-    fun join(address: InetSocketAddress): PairAttempt {
-        val socket = Socket()
-        socket.connect(address, 10_000)
-        socket.tcpNoDelay = true
-        return PairProtocol.join(socket.getInputStream(), socket.getOutputStream(), { socket.soTimeout = it }, { socket.close() })
+    fun join(address: InetSocketAddress): PairAttempt = join(JoinTarget(listOf(address), null))
+
+    /**
+     * Connects to the first of [target]'s addresses that answers and runs phase 1, checking the
+     * host key against the invite's hash when there is one.
+     */
+    fun join(target: JoinTarget): PairAttempt {
+        val timeout = if (target.addresses.size > 1) PairInvite.CONNECT_TIMEOUT_MS else 10_000
+        var last: Exception? = null
+        for (address in target.addresses) {
+            val socket = Socket()
+            try {
+                socket.connect(address, timeout)
+            } catch (e: Exception) {
+                runCatching { socket.close() }
+                last = e
+                continue
+            }
+            socket.tcpNoDelay = true
+            return PairProtocol.join(
+                socket.getInputStream(), socket.getOutputStream(), { socket.soTimeout = it }, { socket.close() }, target.hostKeyHash
+            )
+        }
+        throw last ?: PairException(PairFailure.CLOSED, "no address to connect to")
     }
 }
 

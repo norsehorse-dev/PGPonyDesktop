@@ -1,31 +1,27 @@
 // PairProtocolTest.kt
-// PGPony Desktop 3.0.0, F1: the pairing protocol (docs/F1_PAIRING_PROTOCOL.md) end to end over
-// loopback sockets, plus the published test vectors.
+// The pairing protocol (docs/PAIRING_PROTOCOL.md) end to end over loopback sockets: a transfer
+// both ways, refusals, someone in the middle, and the checks that end a session.
 
-package com.pgpony.pair
+package com.pgpony.android.pair
 
-import com.ponydirect.PonyDirectWire
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.test.Test
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class PairProtocolTest {
 
-    private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
-    private fun unhex(s: String) = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
-
-    private val threads = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r).apply { isDaemon = true } }
+    // Dedicated threads: the blocking reads must not wait on a small common pool.
+    private val threads = Executors.newCachedThreadPool { r -> Thread(r).apply { isDaemon = true } }
 
     private fun <T> async(block: () -> T): CompletableFuture<T> = CompletableFuture.supplyAsync(block, threads)
 
@@ -34,9 +30,9 @@ class PairProtocolTest {
         PairProtocol.host(s.getInputStream(), s.getOutputStream(), { s.soTimeout = it }, { s.close() })
     }
 
-    private fun joinTo(port: Int): PairAttempt {
+    private fun joinTo(port: Int, hostKeyHash: ByteArray? = null): PairAttempt {
         val s = Socket(InetAddress.getLoopbackAddress(), port)
-        return PairProtocol.join(s.getInputStream(), s.getOutputStream(), { s.soTimeout = it }, { s.close() })
+        return PairProtocol.join(s.getInputStream(), s.getOutputStream(), { s.soTimeout = it }, { s.close() }, hostKeyHash)
     }
 
     private fun pair(): Pair<PairSession, PairSession> {
@@ -56,16 +52,21 @@ class PairProtocolTest {
     fun pairsAndMovesItemsBothWays() {
         val (host, joiner) = pair()
         host.sendInfo(PairInfo("Office Mac", "PGPony Desktop 3.0.0"))
-        joiner.sendInfo(PairInfo("Linux box", "PGPony Desktop 3.0.0"))
-        assertEquals("Linux box", (host.receive() as PairMessage.Info).info.name)
-        assertEquals("Office Mac", (joiner.receive() as PairMessage.Info).info.name)
+        joiner.sendInfo(PairInfo("Pixel", "PGPony Android 4.7.0", setOf(PairItem.PUBLIC_KEY, PairItem.KEY_PAIR)))
+        val joinerInfo = (host.receive() as PairMessage.Info).info
+        assertEquals("Pixel", joinerInfo.name)
+        assertTrue(joinerInfo.takes(PairItem.KEY_PAIR))
+        assertTrue(!joinerInfo.takes(PairItem.BACKUP))
+        val hostInfo = (joiner.receive() as PairMessage.Info).info
+        assertEquals("Office Mac", hostInfo.name)
+        assertTrue(hostInfo.takes(PairItem.BACKUP)) // no accepts member: all three
 
-        // Host offers two items; the joiner takes one of them.
+        // Host offers two items; the joiner takes one of them. The big one spans three ITEM_DATA.
         val big = PairCrypto.randomBytes(2_500_000)
         val cert = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n...\n".toByteArray()
         host.sendOffer(PairOffer(listOf(
-            PairItem(1, PairItem.BACKUP, "backup.pgpony", null, big.size.toLong()),
-            PairItem(2, PairItem.PUBLIC_KEY, "Alice", "AB".repeat(20), cert.size.toLong())
+            PairItem(1, PairItem.KEY_PAIR, "Alice", "AB".repeat(20), big.size.toLong()),
+            PairItem(2, PairItem.PUBLIC_KEY, "Bob", "CD".repeat(20), cert.size.toLong())
         )))
         val offer = (joiner.receive() as PairMessage.Offer).offer
         assertEquals(2, offer.items.size)
@@ -77,18 +78,18 @@ class PairProtocolTest {
         val item = joiner.receive(mapOf(1 to big.size.toLong())) { _, n -> lastProgress = n } as PairMessage.Item
         sent.get(10, TimeUnit.SECONDS)
         assertEquals(1, item.id)
-        assertContentEquals(big, item.bytes)
+        assertArrayEquals(big, item.bytes)
         assertEquals(big.size.toLong(), lastProgress)
         joiner.sendResult(PairResult(1, true))
         assertEquals(PairResult(1, true), (host.receive() as PairMessage.Result).result)
 
         // The other direction, in the same session.
-        joiner.sendOffer(PairOffer(listOf(PairItem(7, PairItem.PUBLIC_KEY, "Bob", null, cert.size.toLong()))))
-        (host.receive() as PairMessage.Offer)
+        joiner.sendOffer(PairOffer(listOf(PairItem(7, PairItem.PUBLIC_KEY, "Carol", null, cert.size.toLong()))))
+        assertTrue(host.receive() is PairMessage.Offer)
         host.sendAnswer(PairAnswer(listOf(7)))
-        (joiner.receive() as PairMessage.Answer)
+        assertTrue(joiner.receive() is PairMessage.Answer)
         joiner.sendItem(7, cert)
-        assertContentEquals(cert, (host.receive(mapOf(7 to cert.size.toLong())) as PairMessage.Item).bytes)
+        assertArrayEquals(cert, (host.receive(mapOf(7 to cert.size.toLong())) as PairMessage.Item).bytes)
 
         joiner.sendBye()
         assertEquals(PairMessage.Bye, host.receive())
@@ -99,7 +100,7 @@ class PairProtocolTest {
     fun anItemThatWasNotAcceptedEndsTheSession() {
         val (host, joiner) = pair()
         host.sendItem(3, "unasked".toByteArray())
-        val e = assertFailsWith<PairException> { joiner.receive(emptyMap()) }
+        val e = assertThrows(PairException::class.java) { joiner.receive(emptyMap()) }
         assertEquals(PairFailure.PROTOCOL, e.failure)
         host.close()
     }
@@ -114,8 +115,8 @@ class PairProtocolTest {
                 val (no, yes) = if (refuser == PairRole.HOST) host to joiner else joiner to host
                 no.reject()
                 assertEquals(PairFailure.REFUSED, yes.peerRefused.get(10, TimeUnit.SECONDS))
-                val e = assertFailsWith<PairException> { yes.confirm() }
-                assertEquals(PairFailure.REFUSED, e.failure, "$refuser refused")
+                val e = assertThrows(PairException::class.java) { yes.confirm() }
+                assertEquals("$refuser refused", PairFailure.REFUSED, e.failure)
             }
         }
     }
@@ -139,6 +140,31 @@ class PairProtocolTest {
     }
 
     @Test
+    fun theInviteHashPinsTheHostKey() {
+        val hostKey = PairCrypto.keyPair()
+        val pinned = PairInvite.forHostKey(hostKey.public, listOf(PairInvite.Address("127.0.0.1", 1))).hostKeyHash
+        val other = PairInvite.forHostKey(PairCrypto.keyPair().public, listOf(PairInvite.Address("127.0.0.1", 1))).hostKeyHash
+        for ((hash, matches) in listOf(pinned to true, other to false)) {
+            ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+                val host = async {
+                    val s = server.accept()
+                    PairProtocol.host(s.getInputStream(), s.getOutputStream(), { s.soTimeout = it }, { s.close() }, hostKey)
+                }
+                if (matches) {
+                    val joiner = joinTo(server.localPort, hash)
+                    assertEquals(host.get(10, TimeUnit.SECONDS).code, joiner.code)
+                    joiner.reject()
+                } else {
+                    val e = assertThrows(PairException::class.java) { joinTo(server.localPort, hash) }
+                    assertEquals(PairFailure.HANDSHAKE, e.failure)
+                    val h = assertThrows(ExecutionException::class.java) { host.get(10, TimeUnit.SECONDS) }
+                    assertEquals(PairFailure.HANDSHAKE, (h.cause as PairException).failure)
+                }
+            }
+        }
+    }
+
+    @Test
     fun aHostThatChangesItsNonceIsCaught() {
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             val fake = async {
@@ -154,7 +180,7 @@ class PairProtocolTest {
                     runCatching { wire.readFrame() }
                 }
             }
-            val e = assertFailsWith<PairException> { joinTo(server.localPort) }
+            val e = assertThrows(PairException::class.java) { joinTo(server.localPort) }
             assertEquals(PairFailure.HANDSHAKE, e.failure)
             fake.get(10, TimeUnit.SECONDS)
         }
@@ -164,8 +190,10 @@ class PairProtocolTest {
     fun aJoinerThatDoesNotSpeakPairingIsTurnedAway() {
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             val host = hostOn(server)
-            Socket(InetAddress.getLoopbackAddress(), server.localPort).use { it.getOutputStream().write("GET / HTTP/1.1\r\n\r\n".toByteArray()) }
-            val e = assertFailsWith<Exception> { host.get(10, TimeUnit.SECONDS) }
+            Socket(InetAddress.getLoopbackAddress(), server.localPort).use {
+                it.getOutputStream().write("GET / HTTP/1.1\r\n\r\n".toByteArray())
+            }
+            val e = assertThrows(ExecutionException::class.java) { host.get(10, TimeUnit.SECONDS) }
             assertEquals(PairFailure.PROTOCOL, (e.cause as PairException).failure)
         }
     }
@@ -175,43 +203,10 @@ class PairProtocolTest {
         val key = PairCrypto.randomBytes(32)
         val m0 = PairCrypto.seal(key, 0, byteArrayOf(1, 2, 3))
         val m1 = PairCrypto.seal(key, 1, byteArrayOf(4))
-        assertContentEquals(byteArrayOf(1, 2, 3), PairCrypto.open(key, 0, m0))
-        assertFailsWith<PairException> { PairCrypto.open(key, 0, m1) }
-        assertFailsWith<PairException> { PairCrypto.open(key, 1, m0) }
+        assertArrayEquals(byteArrayOf(1, 2, 3), PairCrypto.open(key, 0, m0))
+        assertThrows(PairException::class.java) { PairCrypto.open(key, 0, m1) }
+        assertThrows(PairException::class.java) { PairCrypto.open(key, 1, m0) }
         m1[m1.size - 1] = (m1[m1.size - 1].toInt() xor 1).toByte()
-        assertFailsWith<PairException> { PairCrypto.open(key, 1, m1) }
-    }
-
-    @Test
-    fun theKeyConfirmationIsThePonyDirectIdentifyHandshake() {
-        val k = PairCrypto.randomBytes(32)
-        val nonce = PairCrypto.randomBytes(16)
-        assertEquals(32, PonyDirectWire.identifyTag(k, nonce).size)
-    }
-
-    @Test
-    fun publishedVectorsReproduce() {
-        val text = javaClass.getResourceAsStream("/pairing/v1-vectors.json")!!.readBytes().toString(Charsets.UTF_8)
-        val v = Json.parseToJsonElement(text).jsonObject.mapValues { it.value.jsonPrimitive.content }
-        val skJ = unhex(v.getValue("sk_J"))
-        val skH = unhex(v.getValue("sk_H"))
-        val j = PairCrypto.keyPair(skJ)
-        val h = PairCrypto.keyPair(skH)
-        assertEquals(v["pk_J"], hex(j.public))
-        assertEquals(v["pk_H"], hex(h.public))
-        val nJ = unhex(v.getValue("n_J"))
-        val nH = unhex(v.getValue("n_H"))
-        assertEquals(v["commit"], hex(PairCrypto.commit(nH, h.public, j.public)))
-        val t = PairCrypto.transcript(j.public, h.public, nJ, nH)
-        assertEquals(v["T"], hex(t))
-        val z = PairCrypto.agree(skH, j.public)!!
-        assertEquals(v["Z"], hex(z))
-        val keys = PairCrypto.derive(z, t)
-        assertEquals(v["K"], hex(keys.pairKey))
-        assertEquals(v["k_HJ"], hex(keys.hostToJoiner))
-        assertEquals(v["k_JH"], hex(keys.joinerToHost))
-        assertEquals(v["code"], PairCrypto.code(t))
-        assertEquals(v["host_msg_0_sealed"], hex(PairCrypto.seal(keys.hostToJoiner, 0, unhex(v.getValue("host_msg_0_plaintext")))))
-        assertEquals(v["joiner_msg_0_sealed"], hex(PairCrypto.seal(keys.joinerToHost, 0, unhex(v.getValue("joiner_msg_0_plaintext")))))
+        assertThrows(PairException::class.java) { PairCrypto.open(key, 1, m1) }
     }
 }

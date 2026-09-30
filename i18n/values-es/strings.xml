@@ -823,6 +823,9 @@
     <string name="d_pair_host_waiting">En el otro ordenador, elige Conectar y escribe esta dirección:</string>
     <string name="d_pair_host_closes">Esta ventana permanece abierta hasta las %1$s.</string>
     <string name="d_pair_firewall">Si el cortafuegos lo pregunta, permite que PGPony acepte conexiones mientras esta ventana esté abierta.</string>
+    <string name="d_pair_copy_invite">Copiar invitación</string>
+    <string name="d_pair_invite_note">En lugar de escribir la dirección, el otro lado puede escanear este código QR o pegar la invitación. Cualquiera de las dos opciones comprueba además que ha llegado a este ordenador.</string>
+    <string name="d_pair_bad_invite">No se puede leer esta invitación. Comprueba que se copió entera o escribe la dirección.</string>
     <string name="d_pair_no_address">Este ordenador no tiene ninguna dirección de red que otro ordenador pueda alcanzar.</string>
     <string name="d_pair_join_intro">En el otro ordenador, elige Esperar. Luego escribe la dirección que muestra.</string>
     <string name="d_pair_join_label">Dirección que muestra el otro ordenador</string>

@@ -1,10 +1,9 @@
 // PairCrypto.kt
-// PGPony Desktop 3.0.0, F1: the key exchange and derivations of the pairing protocol
-// (docs/F1_PAIRING_PROTOCOL.md, sections 3 and 5). Pure JVM: X25519 from Bouncy Castle's
-// lightweight API and everything else from javax.crypto, so the same file can move upstream to
-// Android unchanged when phone pairing arrives.
+// The key exchange and derivations of the pairing protocol (docs/PAIRING_PROTOCOL.md, sections
+// 3 and 5). X25519 from Bouncy Castle's lightweight API and everything else from javax.crypto,
+// which Android and the desktop JVM both provide.
 
-package com.pgpony.pair
+package com.pgpony.android.pair
 
 import org.bouncycastle.math.ec.rfc7748.X25519
 import java.security.MessageDigest
