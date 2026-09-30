@@ -391,6 +391,26 @@ audited on its own, and it already runs in CarrierPony.
   goes into the next review's scope.
 - Flatpak: listening on the LAN works with `--share=network`, which the manifest already has.
 
+Decided (2026-09-30): two computers authenticate by comparing a six-digit code on both screens
+(numeric comparison with a commitment, no PAKE, so iOS needs nothing CryptoKit lacks), and a
+pairing lasts one session: nothing is stored and no listener runs outside an open window. The
+protocol is `docs/F1_PAIRING_PROTOCOL.md`, with test vectors checked against a second,
+independent implementation.
+
+F1 status (2026-09-30): desktop to desktop is built. The protocol core (`com.pgpony.pair`, pure
+JVM so it can move upstream when Android pairs) runs the handshake, the key confirmation (the
+PonyDirect identify handshake, from PonyDirect-Kotlin vendored under `vendor/ponydirect`) and
+the sealed session. Keys > Pair with another computer, and a button on the keyring, open the
+dialog: one computer waits and shows its address, the other types it, both compare the code, and
+either side can then offer public keys, key pairs (a key without a passphrase travels under a
+transfer passphrase and the stored key is untouched) or a full backup (under a fresh recovery
+code shown on the sending screen); the receiver picks and everything imports through the normal
+import and restore code. Tests: PairProtocolTest (loopback pairing, refusals, a relay in the
+middle, a tampered nonce, ordering, the vectors) and PairControllerTest (two keyrings, a
+backup restored on a third). Next: the self-test pass between the Mac, the Windows VM and Linux,
+then the translation pass. The 59 new strings are translated so the desktop layer stays complete;
+the pass reviews them with the rest.
+
 ### F2. A Stateless OpenPGP (SOP) CLI and the public interop suite (M)
 Android 4.7.0 item 11 (#64) plans a SOP wrapper so PGPony can join the sequoia-pgp OpenPGP
 interoperability test suite. Desktop is the natural home: it is already a JVM CLI on Linux,

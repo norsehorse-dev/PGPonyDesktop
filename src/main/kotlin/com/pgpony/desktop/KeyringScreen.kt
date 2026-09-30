@@ -78,6 +78,7 @@ fun KeyringScreen(state: DesktopState) {
     var showQrImport by remember { mutableStateOf(false) }
     var showLinkImport by remember { mutableStateOf(false) }
     var showGnupgImport by remember { mutableStateOf(false) }
+    var showPair by remember { mutableStateOf(false) }
     // 3.0.0 (plan 6.5, 6.6): pasted, QR and linked keys are previewed before anything is stored.
     var preview by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var detailKey by remember { mutableStateOf<PGPKeyEntity?>(null) }
@@ -98,6 +99,7 @@ fun KeyringScreen(state: DesktopState) {
     // D9 — the menu bar's "New key…" opens the generator here.
     androidx.compose.runtime.LaunchedEffect(state.uiRequest) {
         if (state.uiRequest == UiRequest.NEW_KEY) { showGenerate = true; state.consumeUiRequest() }
+        if (state.uiRequest == UiRequest.PAIR) { showPair = true; state.consumeUiRequest() }
     }
 
     // D2c — client-side search + sort over the Room rows. Manual drag-reorder (the Android
@@ -133,6 +135,7 @@ fun KeyringScreen(state: DesktopState) {
             OutlinedButton(onClick = { showFilePicker = true }) { Text(tr("d_keyring_import_file")) }
             OutlinedButton(onClick = { showQrImport = true }) { Text(tr("d_keyring_import_qr")) }
             OutlinedButton(onClick = { showGnupgImport = true }) { Text(tr("d_gnupg_import_button")) }
+            OutlinedButton(onClick = { showPair = true }) { Text(tr("d_pair_button")) }
             if (state.deletedKeys.isNotEmpty()) {
                 OutlinedButton(onClick = { showRecentlyDeleted = true }) {
                     Text(tr("d_keyring_recently_deleted_button", state.deletedKeys.size))
@@ -276,6 +279,11 @@ fun KeyringScreen(state: DesktopState) {
     // 3.0.0 (stage 5b): public keys, trust and, through gpg, secret keys from a GnuPG home.
     if (showGnupgImport) {
         GnupgImportDialog(state) { showGnupgImport = false }
+    }
+
+    // 3.0.0 (F1): pair with another computer and move keys or a backup across.
+    if (showPair) {
+        PairDialog(state) { showPair = false }
     }
 
     val qrDialogTitle = tr("d_keyring_qr_dialog")

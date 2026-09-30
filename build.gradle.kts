@@ -45,6 +45,7 @@ sourceSets {
             srcDir("vendor/app-data")                       // D2a — entities, DAOs, PGPDatabase
             srcDir("vendor/app-backup")                     // D6 — Crockford + strict-ustar codecs
             srcDir("vendor/app-network")                    // D4 — keyserver/WKD/VKS stack
+            srcDir("vendor/ponydirect")                     // 3.0.0 F1: PonyDirect-Kotlin, verbatim (tools/sync-ponydirect.sh)
             exclude("**/backup/BackupService.kt")           // app-coupled (KeyRepository, org.json,
                                                             //   Android settings) — desktop twin:
                                                             //   DesktopBackupService

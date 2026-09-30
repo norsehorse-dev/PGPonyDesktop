@@ -203,6 +203,26 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
         stampLocalEdit(fingerprint)
     }
 
+    /**
+     * 3.0.0 (F1, pairing): the armored secret key to hand to another PGPony, never unprotected.
+     * A key with a passphrase goes as stored. A key without one is protected under
+     * [transferPassphrase] in memory, the same re-protection [changePassphrase] does, and nothing
+     * is written: the stored key stays as it was. Returns null for a key without a passphrase
+     * when no transfer passphrase is given.
+     */
+    fun transferArmor(fingerprint: String, transferPassphrase: String?): String? {
+        val stored = repo.exportArmoredPrivateKey(fingerprint) ?: return null
+        if (isPassphraseProtected(fingerprint)) return stored
+        val newChars = transferPassphrase?.takeIf { it.isNotEmpty() }?.toCharArray() ?: return null
+        val raw = repo.rawSecretBytes(fingerprint) ?: return null
+        return if (CompositeKeyFacade.isCompositePrimary(raw)) {
+            armorPrivate(CompositeKeyFacade.reprotect(raw, null, newChars))
+        } else {
+            val changed = crypto.changePassphrase(secretRing(fingerprint), "", transferPassphrase)
+            armorPrivate(V4Algo35Carry.carry(raw, changed.encoded) { body -> V4Algo35Carry.reprotectBody(body, null, newChars) })
+        }
+    }
+
     fun isPassphraseProtected(fingerprint: String): Boolean {
         val raw = repo.rawSecretBytes(fingerprint) ?: return false
         if (CompositeKeyFacade.isCompositePrimary(raw)) return CompositeKeyFacade.isProtected(raw)

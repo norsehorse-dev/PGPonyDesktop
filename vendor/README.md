@@ -25,6 +25,13 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   of an upstream one with no call-site change. Refreshed by `tools/sync-strings.sh`, NOT by
   `sync-vendor.sh`. A placeholder or parity finding in this tree is an UPSTREAM bug — fix it in
   PGPonyAndroid and re-sync.
+- `ponydirect/` = the main sources of PonyDirect-Kotlin (github.com/norsehorse-dev/PonyDirect-Kotlin,
+  Apache-2.0), the transport under F1 pairing: its framing, constant-time compare and the LAN
+  identify handshake, which the pairing protocol uses as its key confirmation
+  (docs/F1_PAIRING_PROTOCOL.md). Not from PGPonyAndroid and not refreshed by `sync-vendor.sh`:
+  `tools/sync-ponydirect.sh` copies it from a PonyDirect-Kotlin checkout. The WAN, ARQ and stream
+  files compile but are unused in 3.0.0. Synced 2026-09-30 from commit d694cbb. A fix to these
+  files lands in PonyDirect-Kotlin (and its Swift twin) first, never here.
 - `app-crypto-tests/` = the crypto unit-test suite (+ `data/PGPKeyEntityKeyIdTest.kt`,
   `backup/BackupCodecTest.kt`) and `app-test-resources/` = its fixtures (rfc9580 vectors, pqc
   interop artifacts). Synced D5/D6; compiled into the desktop `test` source set, gates

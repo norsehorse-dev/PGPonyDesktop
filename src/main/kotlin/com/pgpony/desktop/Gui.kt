@@ -510,7 +510,7 @@ private const val STALE_AFTER_MS = 24 * 60 * 60 * 1000L
 private const val EXPIRY_SCAN_TICK_MS = 24 * 60 * 60 * 1000L
 
 /** D9 — menu-bar requests a screen fulfills by opening a dialog. */
-enum class UiRequest { NEW_KEY, RESTORE }
+enum class UiRequest { NEW_KEY, RESTORE, PAIR }
 
 /** Where Key Detail sends the Crypto screen: a recipient to preselect, or a key to decrypt with. */
 data class CryptoPreset(val encryptTo: String? = null, val decryptWith: String? = null)
@@ -707,6 +707,7 @@ private fun guiApplication() = application {
             Menu(tr("d_menu_keys"), mnemonic = tr("d_menu_keys_mnemonic").firstOrNull() ?: 'K') {
                 Item(tr("main_tab_keyring"), shortcut = shortcut(Key.One)) { state.destination = Destination.Keyring }
                 Item(tr("d_menu_new_key"), shortcut = shortcut(Key.N)) { state.destination = Destination.Keyring; state.uiRequest = UiRequest.NEW_KEY }
+                Item(tr("d_pair_menu")) { state.destination = Destination.Keyring; state.uiRequest = UiRequest.PAIR }
                 Item(tr("d_menu_hardware_keys"), shortcut = shortcut(Key.Three)) { state.destination = Destination.Cards }
                 Item(
                     tr("d_pass_store_title"),
