@@ -234,10 +234,13 @@ class PairAttempt internal constructor(
             PairException(f, if (f == PairFailure.REFUSED) "the other side said the codes do not match" else "the other side ended the pairing")
         } else null
 
-    private fun refusalSoFar(waitMs: Long = 0): PairException? = try {
-        refusedBy(if (waitMs == 0L) peerAnswer.getNow(null) ?: return null else peerAnswer.get(waitMs, TimeUnit.MILLISECONDS))
-    } catch (e: Exception) {
-        null
+    private fun refusalSoFar(waitMs: Long = 0): PairException? {
+        val frame = try {
+            if (waitMs == 0L) peerAnswer.getNow(null) else peerAnswer.get(waitMs, TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            null
+        } ?: return null
+        return refusedBy(frame)
     }
 
     /** This user says the codes match: phase 2. Returns the session or throws. */
