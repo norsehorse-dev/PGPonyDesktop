@@ -105,7 +105,8 @@ internal class SopIo(private val env: (String) -> String?) {
         designator.startsWith("@") -> throw SopException(SopExit.UNSUPPORTED_SPECIAL_PREFIX, "unsupported designator $designator")
         else -> {
             val p = Path.of(designator)
-            if (!Files.isRegularFile(p)) throw SopException(SopExit.MISSING_INPUT, "no such file: $designator")
+            // Not only regular files: `<(...)` hands over a pipe such as /dev/fd/63.
+            if (!Files.exists(p) || Files.isDirectory(p)) throw SopException(SopExit.MISSING_INPUT, "no such file: $designator")
             Files.readAllBytes(p)
         }
     }
@@ -217,7 +218,8 @@ object Sop {
         "draft-koch-eddsa-for-openpgp-00" to ("v4 Ed25519 with Cv25519 encryption, PGPony's default" to com.pgpony.android.crypto.KeyAlgorithm.ED25519_CV25519),
         "rfc9580" to ("v6 Ed25519 with X25519 encryption" to com.pgpony.android.crypto.KeyAlgorithm.V6_ED25519),
         "draft-ietf-openpgp-pqc" to ("v6 ML-DSA-65+Ed25519 with ML-KEM-768+X25519 encryption" to com.pgpony.android.crypto.KeyAlgorithm.MLDSA65_ED25519_V6),
-        "rfc4880" to ("v4 RSA 3072" to com.pgpony.android.crypto.KeyAlgorithm.RSA_3072)
+        // 3.0.0 (5d): RSA 4096, which PGPony generates; it has never generated RSA 3072.
+        "rfc4880" to ("v4 RSA 4096" to com.pgpony.android.crypto.KeyAlgorithm.RSA_4096)
     )
 
     internal val ENCRYPT_PROFILES = linkedMapOf(

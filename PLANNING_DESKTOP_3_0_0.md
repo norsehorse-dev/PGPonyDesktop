@@ -488,8 +488,8 @@ the weak-key warning on Android's own screens (the engine fields are there; Andr
 5d-4 status (2026-09-29): done, desktop SOP layer (new SopCleartext; SopCrypto, EncryptOps, Sop)
 plus three engine fixes upstream (PGPCryptoService, CardDecryptService). Cleartext signed
 messages are read strictly: text before the BEGIN line or after the END line, and any header but
-Hash, make the message malformed; the text comes back exactly as signed, line endings and final
-newline included, and the signed octets follow RFC 9580 7.2. inline-sign and encrypt take
+Hash, make the message malformed; the text comes back as signed, line endings kept, and the
+signed octets follow RFC 9580 7.2. inline-sign and encrypt take
 several signing keys, and encrypt takes text-mode signing: the signatures are made one by one and
 the signed message (one-pass packets in signer order, literal data, signatures in reverse) is
 encrypted as it stands through a new presignedInline parameter. The rfc9580 encrypt profile gives
@@ -504,6 +504,21 @@ Open: an inline text-mode signature from pgpony-sop keeps the text as given (LF 
 a 'u' literal packet; Sequoia verifies it, GnuPG reports it BAD because it expects the literal to
 carry CRLF. Detached and cleartext text signatures verify in both. Changing it means SOP hands
 back CRLF text after a round trip.
+
+Second suite run (2026-09-30, same suite commit and sqop, current main built on the Debian VM):
+1129 pass, 18 fail, 554 neutral, 50 unknown, 4 unsupported, against 933 pass and 180 fail in the
+first run. The 50 unknowns were one cleartext bug: the line ending in front of the signature was
+handed back as part of the text, and the writer left no separator after a text that ends in a
+line ending, so another reader lost it. Fixed after the run (SopCleartext): that ending is the
+framework's, trailing spaces and tabs are not handed back since they are not signed, and 78 of the
+79 affected checks now recover the expected text; the one left is a vector mangled to CRLF whose
+expected text is LF, which contradicts the CRLF round trip. Nine of the fails were the rfc4880
+generate-key profile asking the engine for RSA 3072, which it has never generated; the profile is
+now RSA 4096. Also fixed: input files can be pipes, so `<(...)` works. The nine fails left are all
+known: SEIPDv2 production for v4 recipients (3, deferred to the iOS check), 2 GiB Argon2 on a VM
+too small for it (3, passes on a machine with the memory), the v3 PKESK before SEIPDv2 kept on
+purpose (1), unclamped Cv25519 (1, Sequoia fails it too), and a cleartext message with bare CR
+characters (1, Sequoia fails it too). generate-key without a User ID stays unsupported.
 
 Decided (2026-09-29):
 - RSA under 2048 bits, DSA and ElGamal become read-only: no encrypting to them and no signing

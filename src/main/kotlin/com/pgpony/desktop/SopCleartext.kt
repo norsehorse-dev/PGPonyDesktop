@@ -4,11 +4,15 @@
 //
 // The shared ClearSignedParser turns CRLF into LF and drops the line ending in front of the
 // signature, and the canonicalizer then dropped one more line ending; a message whose text
-// ends in a blank line, or any v6 message from another implementation, did not verify, and
-// inline-verify handed back the text without its final line ending. This reader keeps the
-// text exactly as it stands between the header and the signature (dash escapes removed), so
-// the output is what was signed, and builds the signed octets from it: every line with its
-// trailing spaces and tabs removed, joined with CRLF, without the last line ending.
+// ends in a blank line, or any v6 message from another implementation, did not verify. This
+// reader takes the text between the header and the signature (dash escapes removed) and builds
+// the signed octets from it: every line with its trailing spaces and tabs removed, joined with
+// CRLF. The line ending in front of the BEGIN PGP SIGNATURE line belongs to the framework, not
+// the text (RFC 9580 7.1), so neither the signed octets nor the output include it.
+//
+// The output is the signed text: each line with its trailing spaces and tabs removed (they are
+// not signed, so handing them back would pass off unauthenticated bytes as signed) and with the
+// line ending it had, so CRLF text comes back as CRLF.
 //
 // It is strict where the interop suite says to be: text before the BEGIN line or after the
 // END line, and a header other than Hash (SaltedHash and Charset are tolerated), make the
@@ -70,16 +74,17 @@ internal object SopCleartext {
             val key = line.content.substringBefore(':', "").trim().lowercase()
             if (key !in ALLOWED_HEADERS) bad("unexpected header")
         }
-        val body = ArrayList<String>()
-        val text = StringBuilder()
+        val body = ArrayList<Line>()
         while (true) {
             val line = all.getOrNull(i) ?: bad("no signature")
             i++
             if (line.content.trimEnd() == BEGIN_SIGNATURE) break
             val content = if (line.content.startsWith("- ")) line.content.substring(2) else line.content
-            body.add(content)
-            text.append(content).append(line.ending)
+            body.add(Line(content.trimEnd(' ', '\t'), line.ending))
         }
+        // The last line ending before the signature is the framework's, not the text's.
+        val text = StringBuilder()
+        body.forEachIndexed { k, l -> text.append(l.content); if (k < body.lastIndex) text.append(l.ending) }
         val sig = StringBuilder(BEGIN_SIGNATURE).append('\n')
         while (true) {
             val line = all.getOrNull(i) ?: bad("no end of signature")
@@ -93,7 +98,7 @@ internal object SopCleartext {
         }
         return Parsed(
             text = text.toString().toByteArray(Charsets.UTF_8),
-            signed = signedOctets(body),
+            signed = signedOctets(body.map { it.content }),
             signatureBlock = sig.toString().toByteArray(Charsets.UTF_8)
         )
     }
@@ -101,9 +106,12 @@ internal object SopCleartext {
     private fun signedOctets(lines: List<String>): ByteArray =
         lines.joinToString("\r\n") { it.trimEnd(' ', '\t') }.toByteArray(Charsets.UTF_8)
 
-    /** The octets a signature over [text] must cover when [text] is sent as cleartext. */
+    /**
+     * The octets a signature over [text] must cover when [text] is sent as cleartext. A text that
+     * ends in a line ending has an empty last line, which [write] keeps with a separator.
+     */
     fun signedOctetsOf(text: ByteArray): ByteArray {
-        val content = lines(String(text, Charsets.UTF_8)).map { it.content }
+        val content = String(text, Charsets.UTF_8).split('\n').map { it.removeSuffix("\r") }
         return signedOctets(content)
     }
 
@@ -120,12 +128,13 @@ internal object SopCleartext {
         }
         out.append('\n')
         val body = lines(String(text, Charsets.UTF_8))
-        // The text keeps its own line endings, so a reader hands back exactly what was signed;
-        // a last line without one gets "\n" before the signature block.
+        // The text keeps its own line endings, then one more line ending separates it from the
+        // signature block (RFC 9580 7.1), so a text that ends in a line ending keeps it.
         for (line in body) {
             if (line.content.startsWith("-")) out.append("- ")
-            out.append(line.content).append(line.ending.ifEmpty { "\n" })
+            out.append(line.content).append(line.ending)
         }
+        out.append('\n')
         val block = SopArmor.output(packets.fold(ByteArray(0)) { acc, b -> acc + b }, SopArmor.SIGNATURE, false)
         return out.toString().toByteArray(Charsets.UTF_8) + block
     }

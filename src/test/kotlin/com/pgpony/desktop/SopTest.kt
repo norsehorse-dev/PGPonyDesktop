@@ -185,14 +185,16 @@ class SopTest {
             party("Pqc", "draft-ietf-openpgp-pqc")
         )
         // CRLF and LF lines, a line starting with a dash, trailing spaces: the text comes back
-        // exactly as it went in.
+        // as it went in, except that a cleartext signature does not cover trailing spaces, so
+        // those are not handed back.
         val text = "First line  \r\n- dashed\nlast line\n".toByteArray()
+        val clearText = "First line\r\n- dashed\nlast line\n".toByteArray()
         for (mode in listOf("binary", "text", "clearsigned")) {
             val signed = ok(sop("inline-sign", "--as=$mode", *signers.map { it.key }.toTypedArray(), input = text)).out
             for (s in signers) {
                 val ver = dir.resolve("inline-$mode-${s.cert.hashCode()}").toString()
                 val out = ok(sop("inline-verify", "--verifications-out=$ver", s.cert, input = signed)).out
-                assertContentEquals(text, out, "$mode, verified with ${s.cert}")
+                assertContentEquals(if (mode == "clearsigned") clearText else text, out, "$mode, verified with ${s.cert}")
                 assertEquals(1, lines(ver).size, "$mode: one verification per matching cert")
             }
         }
@@ -203,7 +205,19 @@ class SopTest {
         val p = party("Clear", "rfc9580")
         val clear = String(ok(sop("inline-sign", "--as=clearsigned", p.key, input = message)).out)
         assertContentEquals(message, SopCleartext.parse(clear.toByteArray()).text)
-        assertContentEquals("Hello, interop.\r\nSecond line.".toByteArray(), SopCleartext.signedOctetsOf(message))
+        assertContentEquals("Hello, interop.\r\nSecond line.\r\n".toByteArray(), SopCleartext.signedOctetsOf(message))
+
+        // The line ending in front of the signature belongs to the framework: a text that ends
+        // in a line ending is followed by an empty line, and one that does not is not.
+        val sigBlock = clear.substring(clear.indexOf("-----BEGIN PGP SIGNATURE-----"))
+        val framed = "-----BEGIN PGP SIGNED MESSAGE-----\n\ntest\r\nmessage\r\n\n$sigBlock"
+        val parsed = SopCleartext.parse(framed.toByteArray())
+        assertContentEquals("test\r\nmessage\r\n".toByteArray(), parsed.text)
+        assertContentEquals("test\r\nmessage\r\n".toByteArray(), parsed.signed)
+        for (t in listOf("Hello World :)", "test\nmessage\n", "a\r\nb\n\n")) {
+            val w = String(SopCleartext.write(t.toByteArray(), emptyList()))
+            assertContentEquals(t.toByteArray(), SopCleartext.parse(w.toByteArray()).text, t)
+        }
 
         val header = "-----BEGIN PGP SIGNED MESSAGE-----\n"
         val bad = listOf(
