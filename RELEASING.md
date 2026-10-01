@@ -1,6 +1,7 @@
 # Releasing PGPony Desktop
 
-Each release ships eight artifacts — a signed and notarized **`.dmg`** (macOS, arm64), an
+Each release ships nine artifacts: two signed and notarized **`.dmg`**s (macOS, Apple silicon and
+Intel), an
 **`.msi`** (Windows, x64), and six for Linux: a **`.deb`**, a portable **`.tar.gz`** and an
 **`.AppImage`**, each for both **x86_64** and **ARM64** — plus a detached `.asc` for every one of
 them and a signed `SHA256SUMS` covering the lot. Arch Linux is served separately by the
@@ -14,7 +15,7 @@ architecture suffix, so links published before 1.0.3 keep working.
 | Where | What |
 | --- | --- |
 | **CI**, on a tag push | the six Linux artifacts + the `.msi`, into a **draft** release |
-| **Your Mac** | the `.dmg`, notarization, every PGP signature, and publishing the draft |
+| **Your Mac** | both `.dmg`s (the Intel one under Rosetta 2), notarization, every PGP signature, and publishing the draft |
 
 **This repository holds no secrets.** The Developer ID certificate never reaches a hosted
 runner, and neither does the PGP release key — which, for an OpenPGP application signing its own
@@ -107,7 +108,32 @@ spctl -a -t exec -vv /tmp/pgponydmg/PGPony.app
 hdiutil detach /tmp/pgponydmg
 ```
 
-That must print `accepted` and `source=Notarized Developer ID`.
+That must print `accepted` and `source=Notarized Developer ID`. Then move it out of `build/`,
+because the Intel build below starts with `clean`:
+
+```sh
+mkdir -p ~/pgpony-release
+cp build/compose/binaries/main/dmg/PGPony-*.dmg ~/pgpony-release/PGPony-macOS.dmg
+```
+
+### The Intel dmg
+
+Built on the same Mac under Rosetta 2, by running the same Gradle build on an x86_64 JDK 17.
+Everything Compose picks per machine (the Skiko natives, the bundled runtime, the launcher)
+follows the JDK's architecture. One-time setup: Rosetta 2, and an x86_64 JDK 17 (the Temurin
+17 macOS x64 `.tar.gz`) unpacked outside the repository, for example under `~/jdks`.
+
+```sh
+source ~/.pgpony-release-env
+X64_JDK=~/jdks/jdk-17-x64/Contents/Home packaging/macos/build-intel-dmg.sh notarizeDmg -Pcompose.desktop.mac.notarization.teamID="$NOTARIZATION_TEAM_ID"
+xcrun stapler validate ~/pgpony-release/PGPony-macOS-intel.dmg
+```
+
+The script refuses a JDK that is not x86_64, and after the build it mounts the dmg and fails if
+any native file in the app is not x86_64 or the bundled Skiko runtime is not `macos-x64`. It
+leaves the result in `~/pgpony-release/PGPony-macOS-intel.dmg`. Run the same `spctl` check on
+it as above. The x86_64 app runs on the Apple silicon Mac through Rosetta, which is the smoke
+test available here; nobody has run it on Intel hardware before the first release.
 
 ## 4. Assemble, sign, publish
 
@@ -117,11 +143,11 @@ covers the exact bytes that ship.
 ```sh
 mkdir -p ~/pgpony-release && cd ~/pgpony-release
 gh release download v1.0.3 --repo norsehorse-dev/PGPonyDesktop --dir .
-cp /Users/kevinstewart/Apps/PGPonyDesktop/build/compose/binaries/main/dmg/PGPony-*.dmg \
-   PGPony-macOS.dmg
+# PGPony-macOS.dmg and PGPony-macOS-intel.dmg are already here from section 3.
 
 FILES=(
   PGPony-macOS.dmg
+  PGPony-macOS-intel.dmg
   PGPony-linux.deb
   PGPony-linux-x86_64.tar.gz
   PGPony-x86_64.AppImage
@@ -178,7 +204,24 @@ bundled Java runtime and the native launcher come from whichever JDK did the bui
 
 What this cannot catch is a poisoned library on Maven Central or the Gradle plugin portal: both
 builds download the same one. Gradle dependency verification (`gradle/verification-metadata.xml`)
-is what closes that, and it is not in this repository yet.
+is what closes that: every artifact the build downloads is pinned there by sha256, so a changed
+library fails the build on both machines instead of shipping.
+
+### Dependency verification
+
+Regenerate the metadata after changing any dependency or plugin version, then review the diff:
+
+```sh
+rm gradle/verification-metadata.xml
+./gradlew --write-verification-metadata sha256 build createDistributable
+./gradlew -PallPlatforms --write-verification-metadata sha256 resolveRuntimeClasspath
+```
+
+The first run covers everything this Mac's build resolves, KSP's processor and Compose's
+runtime check included (a `help` run resolves almost none of it). The second adds the Compose
+and Skiko natives for the platforms this Mac does not build for: Linux, Windows and Intel Mac.
+Without it CI fails verification on those. Checksums only, no signature keys, so the offline
+Flatpak build verifies the same way with nothing to download.
 
 The x86_64 artifacts are built by the same matrix steps as the aarch64 ones, and the `.msi` only
 on CI's Windows runner, so neither has an independent rebuild here yet.
@@ -203,13 +246,13 @@ filename made of all three names joined, and every command in this block then fa
 that looks like the files are missing. An array expands to separate words in zsh.
 
 The explicit `-u` is not decoration either: a bare `gpg --detach-sign` failed with "no default
-secret key" during the 1.0.1 cycle. Nine signatures now, not four — check the `gpg --verify`
-loop printed nine `Good signature` lines before going any further.
+secret key" during the 1.0.1 cycle. Ten signatures now, not four — check the `gpg --verify`
+loop printed ten `Good signature` lines before going any further.
 
 Verify before publishing, not after. A signature that does not check out is worse than none.
 
 ```sh
-gh release upload v1.0.3 PGPony-macOS.dmg *.asc SHA256SUMS \
+gh release upload v1.0.3 PGPony-macOS.dmg PGPony-macOS-intel.dmg *.asc SHA256SUMS \
   --repo norsehorse-dev/PGPonyDesktop
 gh release edit v1.0.3 --draft=false --latest --repo norsehorse-dev/PGPonyDesktop
 ```
@@ -292,7 +335,8 @@ Site:
       `track-click.php`'s allowlist must agree — a value accepted by the allowlist but missing
       from the ENUM throws on INSERT and the click is lost, not degraded
 - [ ] every download link on `/desktop` files the right value in the daily click report:
-      `desktop_macos`, `desktop_linux`, `desktop_linux_arm`, `desktop_linux_tar`,
+      `desktop_macos`, `desktop_macos_intel` (new in 3.0.0: the ENUM and the allowlist both
+      need it), `desktop_linux`, `desktop_linux_arm`, `desktop_linux_tar`,
       `desktop_linux_appimage`, `desktop_aur`, `desktop_windows`, `desktop_sig`. The arm64 `.deb`
       is the one to check by hand: its rule must be tested before the generic `.deb` rule, and
       reversed it files ARM downloads as x86_64 with nothing in the data marking the ambiguity

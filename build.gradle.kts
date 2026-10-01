@@ -118,6 +118,26 @@ dependencies {
 
     testImplementation(kotlin("test-junit"))
     testImplementation("junit:junit:4.13.2")
+
+    // Verification metadata only (RELEASING.md, "Dependency verification"). -PallPlatforms puts
+    // every desktop platform's Compose runtime on the classpath, so one run of
+    // --write-verification-metadata on the Mac also lists what the Linux, Windows and Intel Mac
+    // builds download. Never set for a build that ships.
+    if (providers.gradleProperty("allPlatforms").isPresent) {
+        implementation(compose.desktop.macos_arm64)
+        implementation(compose.desktop.macos_x64)
+        implementation(compose.desktop.linux_x64)
+        implementation(compose.desktop.linux_arm64)
+        implementation(compose.desktop.windows_x64)
+    }
+}
+
+// Downloads every runtime dependency without building anything. With -PallPlatforms and
+// --write-verification-metadata it is how the other platforms' natives get into the metadata.
+tasks.register("resolveRuntimeClasspath") {
+    val classpath: FileCollection = configurations.runtimeClasspath.get()
+    inputs.files(classpath)
+    doLast { println("${classpath.files.size} runtime files resolved") }
 }
 
 // D11 — the two string layers. BOTH trees contain a `values/strings.xml`, so they cannot be
@@ -202,8 +222,10 @@ compose.desktop {
                 bundleID = "app.pgpony.desktop"
                 // Both read out of the D13 build's own Info.plist rather than assumed: jpackage
                 // otherwise writes the literal string "Unknown" for LSApplicationCategoryType, and
-                // defaults LSMinimumSystemVersion to 10.13 — dishonest for an arm64-only dmg, since
-                // no Apple-silicon Mac has ever run anything older than macOS 11.
+                // defaults LSMinimumSystemVersion to 10.13, which nothing here was ever tested on.
+                // 11.0 is the floor for the Apple silicon dmg (no Apple silicon Mac ran anything
+                // older) and is kept for the Intel dmg too (packaging/macos/build-intel-dmg.sh),
+                // since an Intel build on an older macOS has never been tried.
                 appCategory = "public.app-category.utilities"
                 minimumSystemVersion = "11.0"
                 // D12 — the three installer icons, all regenerated from the single 1024px iOS

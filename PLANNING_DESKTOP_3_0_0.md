@@ -483,6 +483,13 @@ the user picks through the file portal, public keys only, and says so.
 ## 13. Release mechanics deltas
 
 - `AppVersion.VERSION` and `packageVersion` move to 3.0.0 together (VersionDriftTest).
+- Intel Mac dmg (added 2026-10-01, a user request): built on the Apple silicon Mac under Rosetta
+  2 with an x86_64 JDK 17 (`packaging/macos/build-intel-dmg.sh`, RELEASING.md section 3), signed
+  and notarized like the arm64 one, shipped as `PGPony-macOS-intel.dmg`. No Intel hardware to
+  test on; the script checks every native file is x86_64 and the app is smoke-tested under
+  Rosetta. Site: a `desktop_macos_intel` download link and click value.
+- Dependency verification: `gradle/verification-metadata.xml`, sha256 for every artifact on
+  every platform (RELEASING.md, "Dependency verification").
 - Upgrade gate: a populated 2.1.3 install upgrades to 3.0.0 on macOS, Windows and Linux with every
   key, note, trust level, watch rule and pass-store setting intact.
 - Release notes drafted per the writing-style rules and pasted inline for review before anything
