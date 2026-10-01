@@ -219,6 +219,7 @@
 
   <!-- One entry per release, newest first (RELEASING.md, section 8). -->
   <releases>
+    <release version="3.0.0" date="2026-10-01"/>
     <release version="2.1.3" date="2026-08-31"/>
   </releases>
 </component>
