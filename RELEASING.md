@@ -212,10 +212,17 @@ library fails the build on both machines instead of shipping.
 Regenerate the metadata after changing any dependency or plugin version, then review the diff:
 
 ```sh
+export GRADLE_USER_HOME=$(mktemp -d)
 rm gradle/verification-metadata.xml
 ./gradlew --write-verification-metadata sha256 build createDistributable
 ./gradlew -PallPlatforms --write-verification-metadata sha256 resolveRuntimeClasspath
+unset GRADLE_USER_HOME
 ```
+
+The empty Gradle home is not optional. With a warm cache Gradle skips some of the poms it reads
+on a cold one (it already knows which version wins), so metadata written from your usual cache
+can miss files that CI, starting cold, does fetch and then refuses. That is how the first 3.0.0
+CI run failed on `kotlinx-coroutines-bom-1.8.0.pom`.
 
 The first run covers everything this Mac's build resolves, KSP's processor and Compose's
 runtime check included (a `help` run resolves almost none of it). The second adds the Compose
