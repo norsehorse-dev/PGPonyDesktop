@@ -164,7 +164,7 @@ object UpdateCheck {
      * call on every launch, which is exactly how it is wired.
      */
     suspend fun checkIfDue(now: Long = System.currentTimeMillis()) {
-        // 3.0.0 (5c): Flathub delivers the Flatpak's updates; it never checks pgpony.app.
+        // 3.0.0 (5c): the Flatpak's repository delivers its updates; it never checks pgpony.app.
         if (Flatpak.active) return
         if (!autoEnabled) return
         if (now - lastCheckMs() < INTERVAL_MS) return

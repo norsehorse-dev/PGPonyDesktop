@@ -39,9 +39,6 @@ rules (no AI attribution, command blocks with only runnable commands) apply thro
 9. **AUR last** (§7): bump `packaging/aur/PKGBUILD` and `.SRCINFO`, push to the AUR repo's
    **master** branch. Last because the PKGBUILD 404s while the release is a draft.
    `pcsclite` is a hard dependency there.
-10. **Flathub after that** (`RELEASING.md` §8): the metainfo release entry goes in before the
-    tag; after it, a pull request to `flathub/app.pgpony.PGPony` moves the git source to the
-    new tag and commit. A Claude session drafts both; the Linux build and the PR are done by hand.
 
 ## What a Claude session can and cannot do (learned on 1.1.0)
 

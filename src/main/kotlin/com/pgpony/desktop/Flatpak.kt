@@ -17,8 +17,8 @@
 // Main calls apply() before any other code runs. A property already set on the command line is
 // left alone.
 //
-// Everything else that differs under Flatpak is decided where it happens: no update check (Flathub
-// delivers updates), and GnuPG import without gpg (GnupgImport.sandboxed).
+// Everything else that differs under Flatpak is decided where it happens: no update check (the Flatpak's
+// repository delivers updates), and GnuPG import without gpg (GnupgImport.sandboxed).
 
 package com.pgpony.desktop
 

@@ -345,7 +345,7 @@ published between stages; 3.0.0 goes to production once, after stage 6.
 | 2 | Section 3: recycle bin, destructive safety, passphrase, identities, subkeys, notations, fallback, signing defaults, backup stamp, list polish | The Key Detail cluster; shares one screen and one repository surface |
 | 3 | Sections 4, 5, 6: keygen roster, SSH keys for the agent, key servers, import from link | Keygen needs stage 2's subkey code; SSH needs keygen |
 | 4 | Sections 7 and 8 | UX and hardening close out parity |
-| 5 | F2 (SOP CLI), F3 (GnuPG import), and the Flathub build (section 13a) | Bounded work; SOP interop fixes feed back into the engine before F1 builds on it; Flathub needs the final feature list to settle its sandbox holes |
+| 5 | F2 (SOP CLI), F3 (GnuPG import), and a Flatpak build | Bounded work; SOP interop fixes feed back into the engine before F1 builds on it |
 | 6 | F1 (pairing), then the full translation pass and the section 13 release gate | Largest and newest surface last; strings frozen once, after every feature |
 
 All three features ship inside 3.0.0 (decided, Q1 and Q2). F2 has no UI and can be built in
@@ -360,8 +360,7 @@ Progress: stage 1 (2.1 to 2.11) is green on the Mac; see `docs/phases/PHASE_D22_
 Stage 2 (2a, 2b, 2c) is green; see `docs/phases/PHASE_D23_NOTES.md`. Stage 3 (3a to 3d) is
 green; see `docs/phases/PHASE_D24_NOTES.md`. Stage 4: 4a (subkey selector, post-quantum weak
 link, armor comment), 4b (session policy), 4c (zip, animated QR) and 4d (hardening) are
-green. Stage 5: 5a (pgpony-sop), 5b (GnuPG import) and 5c (Flathub build) are green; the Flathub
-submission waits for the 3.0.0 tag. The SOP interop run is done and adds a checkpoint, 5d
+green. Stage 5: 5a (pgpony-sop), 5b (GnuPG import) and 5c (Flatpak build) are green. The SOP interop run is done and adds a checkpoint, 5d
 (engine fixes from the run, PGPonyAndroid first), before stage 6.
 See `docs/phases/PHASE_D26_NOTES.md`. See `docs/phases/PHASE_D25_NOTES.md`.
 Stage 6: F1 pairing, the translation pass and the phone groundwork are done, and the stage 6
@@ -494,8 +493,7 @@ the user picks through the file portal, public keys only, and says so.
   key, note, trust level, watch rule and pass-store setting intact.
 - Release notes drafted per the writing-style rules and pasted inline for review before anything
   is published. The CHANGELOG-style summary covers 2.1.3 to 3.0.0.
-- desktop.json, winget, AUR as in RELEASING.md, plus Flathub (13a, decided Q8).
-- RELEASING.md and CLAUDE_RELEASE.md gain a Flathub step (metainfo release entry, manifest bump).
+- desktop.json, winget, AUR as in RELEASING.md.
 
 ### 5d. Engine fixes from the SOP interop run (L)
 The interop suite (Sequoia's OpenPGP interoperability test suite, `pgpony-sop` against `sqop`)
@@ -599,28 +597,6 @@ Decided (2026-09-29):
   lists (AES-128 is always allowed), and SEIPDv2 when every recipient advertises it, once PGPony
   iOS is confirmed to read SEIPDv2.
 
-### 13a. Flathub (L)
-The groundwork exists: `FLATHUB_PLAN.md`, and an unbuilt manifest, metainfo, desktop entry and
-launcher in `packaging/flathub/` (uncommitted). 3.0.0 finishes it:
-
-- Offline Gradle build: generate `gradle-sources.json` and build with `--offline` inside
-  flatpak-builder. This is the path Flathub reviewers expect; the prebuilt-jlink fallback is not
-  used.
-- Build and test on a Linux machine: UI opens, a card is seen through `--socket=pcsc`, encrypt and
-  decrypt round-trip, the file portal works, the offline switch and proxy hold.
-- Sandbox answers per feature: the ssh-agent socket on a host-visible path (`xdg-run/pgpony`)
-  with a real host `ssh` connecting, or shipped disabled on Flatpak with the reason stated; the git
-  shim through a documented `flatpak run --command=pgpony-gpg` wrapper, with stdin and the status
-  fd confirmed to survive; context menus out of scope on Flatpak; clipboard sentinel verified on
-  Wayland before it is claimed; F1 and F3 as noted in section 12.
-- App ID `app.pgpony.PGPony`, backed in review by ownership of pgpony.app (5c: the ID reverses
-  the domain it is verified against, so `org.pgpony` would have needed pgpony.org).
-- Submit to flathub/flathub, answer review, add the badge to the README and the download page.
-
-Flathub review runs on Flathub's schedule, not ours. 3.0.0 does not wait for it (decided, Q11):
-the release goes out on GitHub, winget, AUR and the site, and Flathub follows when review passes.
-The section 13 release gate covers the Flatpak build itself, not Flathub acceptance.
-
 ## 14. Test matrix delta
 
 | Area | Case | Expected |
@@ -686,10 +662,10 @@ Resolved (2026-09-26):
 - Q5. No release candidates. Self-tested per stage, then straight to production.
 - Q6. Move the settings seam upstream (2.2), on Android 4.7.0 main.
 - Q7. Desktop stays out of the external review's scope.
-- Q8. Flathub is part of 3.0.0 (13a).
+- Q8. Withdrawn (2026-10-01).
 - Q9. CLI signs and warns on stderr when a composite signature goes to a v4-only recipient.
 - Q10. Keep SHA-1 `ssh-rsa` agent signatures for old servers.
-- Q11. 3.0.0 does not wait for Flathub review; Flathub follows when accepted.
+- Q11. Withdrawn (2026-10-01).
 
 Resolved (2026-10-01), from the pre-release review: Q12 to Q16 and Q18 kept as built (Q18 done:
 tools pinned, verification metadata committed). Q17: the onion mirror defaults to off on desktop
