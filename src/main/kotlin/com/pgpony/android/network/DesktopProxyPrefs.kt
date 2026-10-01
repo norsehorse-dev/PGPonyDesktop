@@ -76,7 +76,8 @@ object ProxyPrefs {
         }
     }
 
-    fun onionMirror(context: PGPonyApp): Boolean = prefs().getBoolean(KEY_ONION_MIRROR, true)
+    // Off unless turned on, as on Android (ProxyPrefs.onionMirror explains why).
+    fun onionMirror(context: PGPonyApp): Boolean = prefs().getBoolean(KEY_ONION_MIRROR, false)
 
     fun setMode(context: PGPonyApp, mode: String) = prefs().put(KEY_MODE, mode)
 

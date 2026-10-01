@@ -180,10 +180,15 @@ class KeyServerDirectoryTest {
         val clearnet = "https://${ProxyPrefs.PGPONY_CLEARNET_HOST}"
         val thirdParty = "https://keys.openpgp.org"
 
-        // Proxy off → never rewritten (mirror defaults true but requires an active proxy).
+        // Proxy off: never rewritten.
         assertEquals(clearnet, ProxyPrefs.effectiveBaseUrl(app, clearnet))
 
+        // Proxied, mirror never set: off by default, so the https host is kept.
         ProxyPrefs.setMode(app, ProxyPrefs.MODE_ORBOT)
+        assertEquals(false, ProxyPrefs.onionMirror(app))
+        assertEquals(clearnet, ProxyPrefs.effectiveBaseUrl(app, clearnet), "mirror off by default")
+
+        ProxyPrefs.setOnionMirror(app, true)
         assertEquals(ProxyPrefs.PGPONY_ONION_BASE, ProxyPrefs.effectiveBaseUrl(app, clearnet))
         assertEquals(thirdParty, ProxyPrefs.effectiveBaseUrl(app, thirdParty), "third-party untouched")
 

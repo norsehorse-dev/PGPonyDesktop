@@ -691,7 +691,10 @@ Resolved (2026-09-26):
 - Q10. Keep SHA-1 `ssh-rsa` agent signatures for old servers.
 - Q11. 3.0.0 does not wait for Flathub review; Flathub follows when accepted.
 
-Open (2026-10-01), from the pre-release review:
+Resolved (2026-10-01), from the pre-release review: Q12 to Q16 and Q18 kept as built (Q18 done:
+tools pinned, verification metadata committed). Q17: the onion mirror defaults to off on desktop
+and Android (an explicit choice is kept; backups without the field restore it off).
+The questions as they were asked:
 - Q12. Git signing with protected keys is opt-in (Settings > Git signing). Keep it off by default?
 - Q13. "Until the screen locks" falls back to 1 minute where no lock has been seen. Acceptable?
 - Q14. Automatic key refresh is off for new installs, unchanged for existing ones. Keep?
