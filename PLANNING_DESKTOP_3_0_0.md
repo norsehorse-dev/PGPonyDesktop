@@ -364,6 +364,12 @@ green. Stage 5: 5a (pgpony-sop), 5b (GnuPG import) and 5c (Flathub build) are gr
 submission waits for the 3.0.0 tag. The SOP interop run is done and adds a checkpoint, 5d
 (engine fixes from the run, PGPonyAndroid first), before stage 6.
 See `docs/phases/PHASE_D26_NOTES.md`. See `docs/phases/PHASE_D25_NOTES.md`.
+Stage 6: F1 pairing, the translation pass and the phone groundwork are done, and the stage 6
+self-test pass on the Mac, the Windows VM and Linux came back good (2026-09-30), including
+pairing across machines, the four new languages with CJK text on Linux and Windows, and Cyrillic
+mnemonics. Left: the section 14 matrix, the upgrade gate and the release mechanics (section 13).
+Version moved to 3.0.0 (Config.kt and build.gradle.kts) so the upgrade gate installs the real
+3.0.0 packages over 2.1.3.
 
 ## 12. Features (decided: all three, inside 3.0.0)
 
@@ -619,6 +625,14 @@ The section 13 release gate covers the Flatpak build itself, not Flathub accepta
 | Session | Policy 1 minute: decrypt in GUI, sign via shim after 2 minutes | Prompted again |
 | QR | Animated QR of an ML-DSA-87 key scanned by PGPony Android | Imports, same fingerprint |
 | Zip | Zip-wrapped output decrypted by gpg after unzip, and by PGPony directly | Both work |
+| Pairing | Mac hosts, Linux VM joins by typed address; then Windows VM hosts, Mac joins by pasted invite | Same code on both screens; a key pair, a public key and a backup arrive and import |
+| Pairing | Answer Different on one side, then on the other, in two new windows | Both screens end the attempt at once; nothing is imported |
+| Pairing | Paste an invite whose host key does not match (copy from one window, open a second) | Refused before the codes are compared |
+| Pairing | Send a key pair with no passphrase | Asks for a transfer passphrase; arrives protected by it; the sender's stored key unchanged |
+| SOP | `pgpony-sop version --extended`, then generate-key, sign, verify, encrypt and decrypt round trips on each OS | Exit 0, round trips agree; an unsupported subcommand exits 69 |
+| GnuPG | Import from a GPG Suite home on the Mac with gpg, and from a copy of the home with no gpg on PATH | Public keys, trust and the protected secret key arrive; without gpg, public keys and trust only, with the note |
+| Languages | Switch to each of the ten languages | Every screen translated, no clipped CJK text, Settings shows the endonyms |
+| Upgrade | Populated 2.1.3 install, then the 3.0.0 installer, on macOS, Windows and Linux | Every key, note, trust level, watch rule and pass-store setting intact; schema v12 |
 
 ## 15. Risks
 

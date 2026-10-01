@@ -152,3 +152,25 @@ VM, the pcsc-lite extras are cleaned out (nothing but the app's own metainfo is 
 README's test matrix passed (encrypt and decrypt, file chooser, ML-DSA sign and verify, GnuPG
 import note, watch folders, host ssh through the agent socket, SOP from the host). Left for the
 release: the metainfo release entry, the git source pinned to the tag, and the submission.
+
+## Updates since D26 (2026-09-30)
+
+Some of the notes above were written before the interop runs and are superseded:
+
+- **rfc4880 profile**: generate-key makes RSA 4096, not RSA 3072. The engine has never generated
+  RSA 3072; nine checks in the second suite run failed on it until the profile changed.
+- **Suite runs**: done twice against `sqop` (planning section 5d). First run 933 pass and 180 fail;
+  second run 1129 pass and 18 fail, with the nine fails left all known. The engine fixes landed
+  upstream first (5d-1 to 5d-3) and the SOP-layer ones here (5d-4). Asking the suite maintainers
+  to add PGPony to the public runs is still to do.
+- **Now supported** (5d-4): cleartext signed messages (inline-sign `--as clearsigned`,
+  inline-verify of them), several signing keys for inline-sign and encrypt, text-mode signing
+  inside encrypt, and the `rfc9580` encrypt profile for passwords (SKESKv6 with Argon2 and
+  SEIPDv2). Input files can be pipes, so `<(...)` works.
+- **Still unsupported**: session keys, more than one password, generate-key without a User ID,
+  armor `--label`, and the subcommands outside the list above.
+- **Open**: an inline text-mode signature from pgpony-sop keeps LF line endings in a `u` literal
+  packet; Sequoia verifies it and GnuPG reports it BAD. Detached and cleartext text signatures
+  verify in both. Undecided whether SOP should hand back CRLF text instead.
+- **Launcher warning**: the "pure virtual method called" line at launch (JDK-8289195) is still
+  the JDK 17 jpackage launcher; exit codes are unaffected.
