@@ -1,4 +1,0 @@
-#!/bin/sh
-# PGPony's Stateless OpenPGP interface inside the Flatpak (/app/bin/pgpony-sop), reached from the
-# host as `flatpak run --command=pgpony-sop app.pgpony.PGPony`.
-exec /app/bin/pgpony sop "$@"

@@ -1,5 +1,0 @@
-#!/bin/sh
-# The git signing shim inside the Flatpak (/app/bin/pgpony-gpg). Host git reaches it through a
-# two-line wrapper on the host that runs `flatpak run --command=pgpony-gpg app.pgpony.PGPony`;
-# README.md has the wrapper and the git config line.
-exec /app/bin/pgpony gpg-shim "$@"

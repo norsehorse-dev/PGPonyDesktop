@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- The .pgpony backup type. application/pgp-encrypted comes with shared-mime-info. -->
-<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="application/x-pgpony-backup">
-    <comment>PGPony backup</comment>
-    <glob pattern="*.pgpony"/>
-  </mime-type>
-</mime-info>
