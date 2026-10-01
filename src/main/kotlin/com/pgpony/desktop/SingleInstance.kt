@@ -15,6 +15,11 @@
 //     (LocalIpc). A loopback port is open to every account on the machine; without this, any
 //     of them could make the window open a path of its choosing, or hold the listener. Each
 //     connection has one short deadline and bounded lines.
+//   • 3.0.0 (hardening): each connection is served on its own short-lived thread, with a short
+//     deadline to prove the token and a bounded pool, so idle connections from another account
+//     cannot queue a real secondary out. A secondary that cannot reach the primary while the
+//     lock is held tries again, then tells the user PGPony did not answer; it never starts a
+//     second window on the same keyring.
 //
 // AppOpen is the bus in between: the initial CLI file args, macOS "Open With" events, and
 // forwarded paths from secondaries all funnel through it; DesktopState registers a handler and
@@ -95,22 +100,51 @@ object SingleInstance {
      * the primary begins serving forwarded opens. On failure the [request] is forwarded to the
      * already-running instance and this returns false (the caller should exit).
      *
-     * If anything about the IPC goes wrong (stale port file, refused connection), we fail SAFE
-     * by treating this process as primary — a second window beats a file that opens nothing.
+     * The lock is the truth: while another process holds it, this one never becomes primary.
+     * When the primary cannot be reached after a few tries, the user is told and this returns
+     * false; two windows on one database and key store would step on each other.
      */
-    fun acquire(request: OpenRequest): Boolean {
+    fun acquire(request: OpenRequest): Boolean = acquire(Config.dataDir, request)
+
+    /** [acquire] in [dataDir]; [onNotAnswering] runs when the primary cannot be reached (tests). */
+    internal fun acquire(
+        dataDir: Path,
+        request: OpenRequest,
+        onNotAnswering: () -> Unit = ::reportNotAnswering
+    ): Boolean {
         val files = request.paths
-        val lockPath = Config.dataDir.resolve(LOCK_FILE)
-        val portPath = Config.dataDir.resolve(PORT_FILE)
+        val lockPath = dataDir.resolve(LOCK_FILE)
+        val portPath = dataDir.resolve(PORT_FILE)
 
         val channel = FileChannel.open(
             lockPath,
             StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE
         )
+        var lockUnsupported = false
         val acquired = try {
             channel.tryLock()
-        } catch (_: Exception) {
-            null // lock already held by another process (OverlappingFileLockException etc.)
+        } catch (_: java.nio.channels.OverlappingFileLockException) {
+            null // held by this process already
+        } catch (_: java.io.IOException) {
+            // The file system cannot lock (some network homes): no lock to trust either way.
+            lockUnsupported = true
+            null
+        }
+
+        if (lockUnsupported) {
+            // Without a lock, a primary that answers is the only sign of one. When none answers,
+            // run as our own instance, as before the lock could be trusted.
+            if (forward(portPath, request)) {
+                channel.close()
+                return false
+            }
+            lockChannel = channel
+            startServer(portPath)
+            if (files.isNotEmpty()) AppOpen.deliver(request)
+            Runtime.getRuntime().addShutdownHook(Thread {
+                runCatching { Files.deleteIfExists(portPath) }
+            })
+            return true
         }
 
         if (acquired != null) {
@@ -125,27 +159,48 @@ object SingleInstance {
             return true
         }
 
-        // Secondary: forward our request to the primary and bow out.
+        // Secondary: forward our request to the primary and bow out. A bare launch with no
+        // file just raises the primary's window.
         channel.close()
-        if (files.isEmpty()) {
-            // A bare second launch with no file: just raise the primary if we can, then exit.
-            forward(portPath, OpenRequest(emptyList()))
-            return false
-        }
-        val ok = forward(portPath, request)
-        if (!ok) {
-            // Couldn't reach the primary (stale state). Fail safe: run as our own instance.
-            return true
+        if (!forwardWithRetry(portPath, request)) onNotAnswering()
+        return false
+    }
+
+    // The primary may still be starting (lock taken, port file not yet written) or busy.
+    private val RETRY_DELAYS_MS = longArrayOf(250, 500, 1_000, 2_000)
+
+    private fun forwardWithRetry(portPath: Path, request: OpenRequest): Boolean {
+        if (forward(portPath, request)) return true
+        for (delay in RETRY_DELAYS_MS) {
+            try {
+                Thread.sleep(delay)
+            } catch (_: InterruptedException) {
+                return false
+            }
+            if (forward(portPath, request)) return true
         }
         return false
     }
 
+    /** The running PGPony did not answer: say so instead of opening a second window. */
+    private fun reportNotAnswering() {
+        val text = runCatching { I18n.template("d_instance_not_answering") }.getOrNull()
+            ?: "PGPony is already running but did not answer. Switch to its window, or quit it and try again."
+        System.err.println("pgpony: $text")
+        if (!java.awt.GraphicsEnvironment.isHeadless()) {
+            runCatching {
+                javax.swing.JOptionPane.showMessageDialog(null, text, "PGPony", javax.swing.JOptionPane.WARNING_MESSAGE)
+            }
+        }
+    }
+
     private fun startServer(portPath: Path) {
-        val server = ServerSocket(0, 4, InetAddress.getLoopbackAddress())
+        val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
         val token = LocalSecret.newToken()
         // 3.0.0 (4d): the port and a fresh token, owner-only. The port alone would let any
         // account on the machine make this window open a path of its choosing.
         OwnerOnlyFile.write(portPath, "${server.localPort} $token\n")
+        val pool = java.util.concurrent.Semaphore(MAX_CONNECTIONS)
         val t = Thread {
             while (!server.isClosed) {
                 val socket = try {
@@ -153,7 +208,21 @@ object SingleInstance {
                 } catch (_: Exception) {
                     break
                 }
-                runCatching { handleConnection(socket, token) }
+                if (!pool.tryAcquire()) {
+                    // Too many connections at once: drop this one unread; a real secondary retries.
+                    runCatching { socket.close() }
+                    continue
+                }
+                Thread({
+                    try {
+                        runCatching { handleConnection(socket, token) }
+                    } finally {
+                        pool.release()
+                    }
+                }, "pgpony-single-instance-conn").apply {
+                    isDaemon = true
+                    start()
+                }
             }
         }
         t.isDaemon = true
@@ -163,9 +232,12 @@ object SingleInstance {
 
     private fun handleConnection(socket: Socket, token: String) {
         socket.use { s ->
+            // The handshake within the short pre-auth deadline, then the request lines.
+            s.soTimeout = PREAUTH_TIMEOUT_MS.toInt()
+            val raw = BufferedInputStream(s.getInputStream())
+            if (!serverHandshake(DeadlineInputStream(raw, PREAUTH_TIMEOUT_MS), s.getOutputStream(), token)) return
             s.soTimeout = REQUEST_TIMEOUT_MS.toInt()
-            val input = DeadlineInputStream(BufferedInputStream(s.getInputStream()), REQUEST_TIMEOUT_MS)
-            val lines = serverExchange(input, s.getOutputStream(), token) ?: return
+            val lines = readRequestLines(DeadlineInputStream(raw, REQUEST_TIMEOUT_MS))
             val request = parseForwarded(lines.asSequence())
             // Always raise the window on a forwarded launch, even a bare one.
             AppOpen.focusWindow?.invoke()
@@ -175,6 +247,8 @@ object SingleInstance {
 
     private const val PROTOCOL = "PGPONY-OPEN 1"
     private const val REQUEST_TIMEOUT_MS = 5_000L
+    private const val PREAUTH_TIMEOUT_MS = 2_000L
+    private const val MAX_CONNECTIONS = 16
     private const val CONNECT_TIMEOUT_MS = 2_000
     private const val MAX_LINE = 4096
     private const val MAX_LINES = 256
@@ -186,15 +260,20 @@ object SingleInstance {
      * proves the token over the primary's. Then up to [MAX_LINES] request lines. Null when the
      * peer cannot prove it holds the token.
      */
-    internal fun serverExchange(input: java.io.InputStream, out: java.io.OutputStream, token: String): List<String>? {
-        if (readBoundedLine(input, MAX_LINE) != PROTOCOL) return null
-        val clientNonce = readBoundedLine(input, MAX_LINE)?.takeIf { NONCE.matches(it) } ?: return null
+    internal fun serverExchange(input: java.io.InputStream, out: java.io.OutputStream, token: String): List<String>? =
+        if (serverHandshake(input, out, token)) readRequestLines(input) else null
+
+    /** The handshake alone. True when the peer proved the token. */
+    internal fun serverHandshake(input: java.io.InputStream, out: java.io.OutputStream, token: String): Boolean {
+        if (readBoundedLine(input, MAX_LINE) != PROTOCOL) return false
+        val clientNonce = readBoundedLine(input, MAX_LINE)?.takeIf { NONCE.matches(it) } ?: return false
         val serverNonce = LocalSecret.newToken()
         out.write("HELLO $serverNonce ${LocalSecret.proof(token, "server", clientNonce)}\n".toByteArray(Charsets.UTF_8))
         out.flush()
-        if (!LocalSecret.sameText(readBoundedLine(input, MAX_LINE), LocalSecret.proof(token, "client", serverNonce))) {
-            return null
-        }
+        return LocalSecret.sameText(readBoundedLine(input, MAX_LINE), LocalSecret.proof(token, "client", serverNonce))
+    }
+
+    private fun readRequestLines(input: java.io.InputStream): List<String> {
         val lines = mutableListOf<String>()
         while (lines.size < MAX_LINES) lines += readBoundedLine(input, MAX_LINE) ?: break
         return lines

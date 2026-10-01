@@ -68,8 +68,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -130,12 +128,21 @@ private sealed class Banner(val text: String, val tone: Tone) {
     class Bad(text: String) : Banner(text, Tone.BAD)
     class Warn(text: String) : Banner(text, Tone.WARN)
     class Info(text: String) : Banner(text, Tone.NEUTRAL)
+
+    companion object {
+        /** A SignatureSummary line as a banner. */
+        fun of(line: SignatureSummary.Line): Banner = when (line.tone) {
+            SignatureSummary.Tone.GOOD -> Good(line.text)
+            SignatureSummary.Tone.WARN -> Warn(line.text)
+            SignatureSummary.Tone.BAD -> Bad(line.text)
+            SignatureSummary.Tone.INFO -> Info(line.text)
+        }
+    }
 }
 
 @Composable
 fun CryptoScreen(state: DesktopState) {
     val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboardManager.current
     val crypto = state.repository
 
     var tab by remember { mutableStateOf(CryptoTab.MESSAGE) }
@@ -184,7 +191,8 @@ fun CryptoScreen(state: DesktopState) {
     // remembered passphrase, and a typed passphrase that signed is remembered for the session.
     fun signPass(fp: String?): String? = signerPass.ifBlank { null } ?: fp?.let { PassphraseCache.get(it) }
     fun rememberSignPass(fp: String?) {
-        if (fp != null && signerPass.isNotBlank()) PassphraseCache.put(fp, signerPass)
+        // Entered to sign: git signing through the running app may use it (ShimBridge).
+        if (fp != null && signerPass.isNotBlank()) PassphraseCache.put(fp, signerPass, forSigning = true)
     }
 
     // Sign options
@@ -218,8 +226,8 @@ fun CryptoScreen(state: DesktopState) {
     // field-report bug's unreported sibling; see PathListOps).
     androidx.compose.runtime.LaunchedEffect(state.pendingOpen) {
         when (val a = state.pendingOpen) {
-            is OpenAction.DecryptText -> { tab = CryptoTab.MESSAGE; messageOp = MessageOp.DECRYPT; inputs[MessageOp.DECRYPT] = a.armored; banner = null; state.consumePendingOpen() }
-            is OpenAction.EncryptText -> { tab = CryptoTab.MESSAGE; messageOp = MessageOp.ENCRYPT; inputs[MessageOp.ENCRYPT] = a.text; banner = null; state.consumePendingOpen() }
+            is OpenAction.DecryptText -> { tab = CryptoTab.MESSAGE; messageOp = MessageOp.DECRYPT; inputs[MessageOp.DECRYPT] = a.armored; banner = null; output = ""; decryptedAttachments = emptyList(); state.consumePendingOpen() }
+            is OpenAction.EncryptText -> { tab = CryptoTab.MESSAGE; messageOp = MessageOp.ENCRYPT; inputs[MessageOp.ENCRYPT] = a.text; banner = null; output = ""; decryptedAttachments = emptyList(); state.consumePendingOpen() }
             is OpenAction.DecryptFile -> { tab = CryptoTab.FILES; fileList = PathListOps.add(fileList, a.path); fileOp = FileOp.DECRYPT; fileOpTouched = true; state.consumePendingOpen() }
             is OpenAction.EncryptFile -> { tab = CryptoTab.FILES; fileList = PathListOps.add(fileList, a.path); fileOp = FileOp.ENCRYPT; fileOpTouched = true; state.consumePendingOpen() }
             is OpenAction.VerifyDetachedSignature -> { tab = CryptoTab.FILES; fileList = PathListOps.add(fileList, a.path); fileOp = FileOp.VERIFY; fileOpTouched = true; state.consumePendingOpen() }
@@ -233,6 +241,10 @@ fun CryptoScreen(state: DesktopState) {
         val preset = state.cryptoPreset ?: return@LaunchedEffect
         tab = CryptoTab.MESSAGE
         banner = null
+        // A switch of operation starts with an empty output, as the operation picker does, so
+        // decrypted text never stays on screen under an operation that copies it as plain text.
+        output = ""
+        decryptedAttachments = emptyList()
         if (preset.encryptTo != null) {
             messageOp = MessageOp.ENCRYPT
             encryptWith = EncryptWith.PUBLIC_KEYS
@@ -972,6 +984,17 @@ fun CryptoScreen(state: DesktopState) {
                             enabled = !busy && input.contains("-----BEGIN PGP"),
                             onClick = {
                                 run {
+                                    // Clear-signed text is not encrypted: verify it, as the
+                                    // Verify tab would, instead of failing the decrypt.
+                                    if (isClearSigned(input)) {
+                                        val rings = state.keys.mapNotNull { crypto.loadPublicKeyRing(it.fingerprint) }
+                                        val result = DesktopCompositeVerify.verifyText(crypto, input)
+                                            ?: VerifyService.shared.verifyClearSigned(input, rings)
+                                        output = (result as? VerificationResult.Verified)?.signedContent ?: ""
+                                        decryptedAttachments = emptyList()
+                                        banner = Banner.of(SignatureSummary.verifyLine(crypto, result))
+                                        return@run
+                                    }
                                     // D7 — if the message is addressed to a paired card key, decrypt
                                     // on the hardware (PIN-and-tap) instead of in software.
                                     val armoredForCard = MimeOps.pgpPayload(input)
@@ -986,13 +1009,14 @@ fun CryptoScreen(state: DesktopState) {
                                                 match.entity.userID.ifBlank { tr("d_crypto_hardware_key") }
                                             )
                                         ) { session, pin ->
+                                            val verificationKeys = state.keys.mapNotNull {
+                                                crypto.loadPublicKeyRing(it.fingerprint)
+                                            }
                                             val r = com.pgpony.android.crypto.card.CardDecryptService.shared
                                                 .decryptBytes(
                                                     session, match.ring, pin,
                                                     armoredForCard.toByteArray(Charsets.UTF_8),
-                                                    verificationKeys = state.keys.mapNotNull {
-                                                        crypto.loadPublicKeyRing(it.fingerprint)
-                                                    }
+                                                    verificationKeys = verificationKeys
                                                 )
                                             val structured = mimeOps.structuredFromBytes(
                                                 r.data, r.signatureVerified, r.hadSignature,
@@ -1002,20 +1026,11 @@ fun CryptoScreen(state: DesktopState) {
                                             decryptedAttachments = structured.attachments
                                             val attachNote = if (structured.attachments.isEmpty()) ""
                                             else tr("d_crypto_banner_attach_suffix", structured.attachments.size)
-                                            banner = when {
-                                                structured.signatureVerified -> Banner.Good(
-                                                    tr("d_crypto_banner_decrypted_card_verified") +
-                                                        (resolveSigner(state.keys, structured.signerKeyID)
-                                                            ?.let { tr("d_crypto_banner_signer_suffix", it) }
-                                                            ?: "") + attachNote
-                                                )
-                                                structured.hasSignature -> Banner.Warn(
-                                                    tr("d_crypto_banner_decrypted_card_unknown") + attachNote
-                                                )
-                                                else -> Banner.Info(
-                                                    tr("d_crypto_banner_decrypted_card_unsigned") + attachNote
-                                                )
-                                            }
+                                            // The engine's grade, read like the software path:
+                                            // amber for an unconfirmed signer, the weak-key note,
+                                            // red with the reason for a signer that does not pass.
+                                            val sig = SignatureSummary.ofCard(crypto, r, verificationKeys)
+                                            banner = Banner.of(SignatureSummary.decryptLine(sig, onCard = true, suffix = attachNote))
                                         }
                                         return@run
                                     }
@@ -1024,43 +1039,14 @@ fun CryptoScreen(state: DesktopState) {
                                     decryptedAttachments = result.attachments
                                     val attachNote = (if (result.attachments.isEmpty()) ""
                                     else tr("d_crypto_banner_attach_suffix", result.attachments.size)) + result.weakNote
-                                    val sig = result.signature
-                                    banner = when {
-                                        // 3.0.0 (Android 4.5.3): valid from an unconfirmed key reads
-                                        // amber; a composite ML-DSA signature inside the message is
-                                        // verified too (it used to read as unsigned).
-                                        sig != null && sig.state == SignatureSummary.State.UNCONFIRMED -> Banner.Warn(
-                                            tr("d_crypto_banner_decrypted_unconfirmed") +
-                                                (sig.signerLabel?.let { tr("d_crypto_banner_signer_suffix", it) } ?: "") +
-                                                attachNote
-                                        )
-                                        sig != null && sig.state == SignatureSummary.State.INVALID -> Banner.Bad(
-                                            tr("d_crypto_banner_invalid") + attachNote
-                                        )
-                                        sig != null && sig.state == SignatureSummary.State.VERIFIED && !result.signatureVerified -> Banner.Good(
-                                            tr("d_crypto_banner_decrypted_verified") +
-                                                (sig.signerLabel?.let { tr("d_crypto_banner_signer_suffix", it) } ?: "") +
-                                                attachNote
-                                        )
-                                        result.signatureVerified -> Banner.Good(
-                                            tr("d_crypto_banner_decrypted_verified") +
-                                                (resolveSigner(state.keys, result.signerKeyID)
-                                                    ?.let { tr("d_crypto_banner_signer_suffix", it) }
-                                                    ?: "") + attachNote
-                                        )
-                                        result.hasSignature -> Banner.Warn(
-                                            tr("d_crypto_banner_decrypted_unknown") +
-                                                (result.signatureKeyIDRaw?.let {
-                                                    tr(
-                                                        "d_crypto_banner_keyid_suffix",
-                                                        String.format("%016X", it)
-                                                    )
-                                                } ?: "") + attachNote
-                                        )
-                                        else -> Banner.Info(
-                                            tr("d_crypto_banner_decrypted_unsigned") + attachNote
-                                        )
-                                    }
+                                    // 3.0.0 (Android 4.5.3): valid from an unconfirmed key reads
+                                    // amber; a composite ML-DSA signature inside the message is
+                                    // verified too. The signer weak-key note is in weakNote.
+                                    val sig = (result.signature ?: SignatureSummary.of(
+                                        crypto, result.signatureVerified, result.hasSignature,
+                                        result.signerKeyID, result.signatureKeyIDRaw
+                                    )).copy(weakKey = null)
+                                    banner = Banner.of(SignatureSummary.decryptLine(sig, onCard = false, suffix = attachNote))
                                 }
                             }
                         ) { Text(if (busy) tr("common_processing") else tr("decrypt_action_decrypt")) }
@@ -1205,31 +1191,12 @@ fun CryptoScreen(state: DesktopState) {
                                         SignedInputType.UNKNOWN ->
                                             error(tr("d_crypto_err_no_framing"))
                                     }
-                                    when (result) {
-                                        is VerificationResult.Verified -> {
-                                            output = result.signedContent ?: detachedContent
-                                            // 3.0.0 (Android 4.5.3, #57): amber for an unconfirmed signer key.
-                                            val confirmed = SignatureSummary.fromVerification(crypto, result).state ==
-                                                SignatureSummary.State.VERIFIED
-                                            val text = tr(
-                                                if (confirmed) "d_crypto_banner_verified" else "d_file_verify_ok_unconfirmed",
-                                                result.signerName ?: "",
-                                                result.signerEmail ?: "?",
-                                                result.signerKeyID
-                                            ) + SignatureSummary.weakNote(result.signerWeakKey, null)
-                                            // 3.0.0 (5d-3): a weak signing key reads amber too.
-                                            banner = if (confirmed && result.signerWeakKey == null) Banner.Good(text) else Banner.Warn(text)
-                                        }
-                                        is VerificationResult.Invalid -> banner = Banner.Bad(
-                                            tr("d_crypto_banner_invalid")
-                                        )
-                                        is VerificationResult.UnknownSigner -> banner = Banner.Warn(
-                                            tr("d_crypto_banner_unknown_signer")
-                                        )
-                                        is VerificationResult.Unsigned -> banner = Banner.Info(
-                                            tr("d_crypto_banner_no_signature")
-                                        )
+                                    if (result is VerificationResult.Verified) {
+                                        output = result.signedContent ?: detachedContent
                                     }
+                                    // 3.0.0 (Android 4.5.3, #57): amber for an unconfirmed signer
+                                    // key; the key shown is the one that verified.
+                                    banner = Banner.of(SignatureSummary.verifyLine(crypto, result))
                                 }
                             }
                         ) { Text(if (busy) tr("common_processing") else tr("verify_file_verify_button")) }
@@ -1282,7 +1249,9 @@ fun CryptoScreen(state: DesktopState) {
                         enabled = output.isNotBlank(),
                         shape = RoundedCornerShape(Radius.Small),
                         onClick = {
-                            clipboard.setText(AnnotatedString(output))
+                            // Decrypted text is a secret: the clipboard clears it again
+                            // under the auto-clear setting.
+                            DesktopClipboard.copy(output, secret = messageOp == MessageOp.DECRYPT)
                             state.status = tr("d_status_copied")
                         }
                     ) { Text(tr("d_crypto_copy_output")) }
@@ -1774,14 +1743,9 @@ private suspend fun buildCardFileDecrypt(
     }
 }
 
-/** Resolve a signature's long key ID against the keyring for display. */
-private fun resolveSigner(keys: List<PGPKeyEntity>, signerKeyID: String?): String? {
-    if (signerKeyID == null) return null
-    val match = keys.firstOrNull { it.longKeyId.equals(signerKeyID, ignoreCase = true) }
-        ?: keys.firstOrNull { it.fingerprint.endsWith(signerKeyID, ignoreCase = true) }
-        ?: keys.firstOrNull { it.fingerprint.startsWith(signerKeyID, ignoreCase = true) }
-    return match?.userID?.ifBlank { null } ?: signerKeyID
-}
+/** True when the first non-blank line of [text] is the clear-signed framing line. */
+internal fun isClearSigned(text: String): Boolean =
+    text.lineSequence().firstOrNull { it.isNotBlank() }?.trim() == "-----BEGIN PGP SIGNED MESSAGE-----"
 
 /** Stage 4b: under an empty signer passphrase field, say that key's passphrase is remembered. */
 private fun rememberedPassNote(typed: String, fingerprint: String?): (@Composable () -> Unit)? {

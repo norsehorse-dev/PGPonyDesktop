@@ -76,8 +76,16 @@ class DesktopBackupTest {
         val (dbB, repoB) = repo()
         repoB.importArmoredText(repoA.exportArmoredPublicKey(pair.fingerprint)!!)
         val report = DesktopBackupService(repoB).restoreBackup(bytes, recovery.canonical)
-        assertEquals(1, report.upgraded.size, report.summary())
+        // KEYSTORE-4: the protected secret of a held contact waits for its passphrase.
+        assertEquals(1, report.pending.size, report.summary())
+        assertFalse(repoB.byFingerprint(pair.fingerprint)!!.isKeyPair)
+        val waiting = repoB.pendingSecrets.value.single()
+        assertEquals(
+            com.pgpony.android.crypto.SecretKeyCheck.SecretMatch.OK,
+            repoB.completeSecretUpgrade(waiting, "test-passphrase".toCharArray())
+        )
         assertTrue(repoB.byFingerprint(pair.fingerprint)!!.isKeyPair)
+        assertTrue(repoB.pendingSecrets.value.isEmpty())
 
         assertFailsWith<BackupError.WrongCode> {
             DesktopBackupService(repoB).restoreBackup(bytes, "AAAAAA-AAAAAA-AAAAAA-AAAAAA")

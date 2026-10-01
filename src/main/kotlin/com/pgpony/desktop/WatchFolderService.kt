@@ -18,6 +18,7 @@
 package com.pgpony.desktop
 
 import androidx.compose.runtime.mutableStateListOf
+import com.pgpony.android.crypto.SecurityLimits
 import kotlinx.coroutines.runBlocking
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -25,7 +26,11 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
 import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
+import java.nio.file.SecureDirectoryStream
+import java.nio.file.StandardOpenOption
 import java.nio.file.WatchService
+import java.nio.file.attribute.BasicFileAttributeView
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.TimeUnit
 
 /** One thing the watcher did, for the results pane. [ok] false with [detail] on a failure. */
@@ -144,14 +149,12 @@ object WatchFolderService {
                     // 3.0.0 (4d): a link is never followed. An arrival that is a symlink to a file
                     // elsewhere (a synced or shared folder) would otherwise encrypt that file and
                     // write the result where the link's author can collect it.
-                    if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                    val seen = identity(path)
+                    if (seen == null) {
                         quiesce.forget(path); active.remove(path); continue
                     }
-                    val mtime = runCatching { Files.getLastModifiedTime(path).toMillis() }.getOrDefault(0L)
-                    if (processed[path] == mtime) { active.remove(path); continue }
-                    val size = runCatching { Files.size(path) }.getOrNull()
-                    if (size == null) continue
-                    if (quiesce.observe(path, size)) {
+                    if (processed[path] == seen.mtime) { active.remove(path); continue }
+                    if (quiesce.observe(path, seen.size)) {
                         handleStable(path, byFolder, fileOps, processed)
                         quiesce.forget(path)
                         active.remove(path)
@@ -180,10 +183,19 @@ object WatchFolderService {
         // 3.0.0 (4d): the file as it was when encrypting began. Delete-original only removes a
         // file that is still exactly that, so a writer that paused past the quiesce window and
         // then appended does not lose what it wrote after the ciphertext was made.
-        val before = snapshot(path) ?: return
+        val before = identity(path) ?: return
         var anyDelete = false
         var allOk = true
+        // A file that changed under the open is left for its next event, not marked as done.
+        var changedUnderOpen = false
         for (rule in matches) {
+            // A file PGPony could not decrypt again is never encrypted by a rule that then
+            // deletes the original.
+            if (rule.deleteOriginal && before.size > SecurityLimits.MAX_STREAM_PLAINTEXT_BYTES) {
+                record(rule, FileCryptoOps.FileOutcome(path, null, false, tr("d_watch_err_too_large", limitLabel())))
+                allOk = false
+                continue
+            }
             val outcome = try {
                 runBlocking {
                     fileOps.encryptFile(
@@ -192,7 +204,17 @@ object WatchFolderService {
                         signerFingerprint = null,      // encrypt-only: no secret, ever
                         signerPassphrase = null,
                         armor = rule.armor,
-                        outputDir = rule.outputPath
+                        outputDir = rule.outputPath,
+                        // Opened inside the watched folder without following links, and checked
+                        // to be the file that went quiet (see WatchInput).
+                        openInput = {
+                            try {
+                                WatchInput.open(folder, it, before)
+                            } catch (e: WatchInput.Refused) {
+                                if (e.changed) changedUnderOpen = true
+                                throw e
+                            }
+                        }
                     )
                 }
             } catch (t: Throwable) {
@@ -203,14 +225,24 @@ object WatchFolderService {
         }
 
         // delete-original only after every matching rule succeeded (default off per rule).
-        if (allOk && anyDelete && snapshot(path) == before) runCatching { Files.deleteIfExists(path) }
-        processed[path] = runCatching { Files.getLastModifiedTime(path).toMillis() }.getOrDefault(0L)
+        if (allOk && anyDelete && identity(path) == before) runCatching { Files.deleteIfExists(path) }
+        if (changedUnderOpen) processed.remove(path) else processed[path] = identity(path)?.mtime ?: 0L
     }
 
+    private fun limitLabel(): String = "${SecurityLimits.MAX_STREAM_PLAINTEXT_BYTES / (1024L * 1024 * 1024)} GB"
+
     /** Size and modification time of a regular file (not a link), or null. */
-    internal fun snapshot(path: Path): Pair<Long, Long>? = runCatching {
-        val attrs = Files.readAttributes(path, java.nio.file.attribute.BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
-        if (attrs.isRegularFile) attrs.size() to attrs.lastModifiedTime().toMillis() else null
+    internal fun snapshot(path: Path): Pair<Long, Long>? = identity(path)?.let { it.size to it.mtime }
+
+    /**
+     * Size, modification time and file key (where the platform has one) of a regular file,
+     * read without following a link; null for anything else.
+     */
+    internal fun identity(path: Path): FileIdentity? = runCatching {
+        val attrs = Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+        if (attrs.isRegularFile) {
+            FileIdentity(attrs.size(), attrs.lastModifiedTime().toMillis(), attrs.fileKey(), WatchInput.changeTime(path))
+        } else null
     }.getOrNull()
 
     private fun record(rule: WatchRule, outcome: FileCryptoOps.FileOutcome) {
@@ -233,4 +265,101 @@ object WatchFolderService {
             )
         )
     }
+}
+
+/**
+ * What a watched file was when it went quiet. [key] is the file key and [ctime] the status
+ * change time (which a rename or a new link moves on), each null where the platform has none.
+ */
+internal data class FileIdentity(val size: Long, val mtime: Long, val key: Any?, val ctime: Any? = null)
+
+/**
+ * Opening a watched file for a rule. The checks that matter are made on the open itself, not
+ * before it: the file is opened inside the watched folder without following a link (through the
+ * folder's handle where the platform has one, so no path component can be swapped), and must
+ * still be the file that went quiet (same file key) and have no other hard link, so a link to a
+ * file elsewhere, planted or swapped in, is refused rather than encrypted. The name is checked
+ * again after the open, and the opened file's own size must be the size that went quiet; the
+ * status change time catches a file renamed away and back around the open.
+ */
+internal object WatchInput {
+
+    /** [changed]: the file was replaced or changed (worth another look later), not a link. */
+    class Refused(message: String, val changed: Boolean = true) : java.io.IOException(message)
+
+    fun open(folderReal: Path, file: Path, expected: FileIdentity): OpenedInput {
+        val name = file.fileName ?: throw Refused(tr("d_watch_err_changed"))
+        if (linkCount(file) > 1) throw Refused(tr("d_watch_err_linked"), changed = false)
+        val noFollowRead = setOf(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)
+        val folderStream = Files.newDirectoryStream(folderReal)
+        val channel = folderStream.use { dir ->
+            if (dir is SecureDirectoryStream<Path>) {
+                val ch = try {
+                    dir.newByteChannel(name, noFollowRead)
+                } catch (e: java.io.IOException) {
+                    throw Refused(tr("d_watch_err_changed"))
+                }
+                val now = runCatching {
+                    dir.getFileAttributeView(name, BasicFileAttributeView::class.java, LinkOption.NOFOLLOW_LINKS)
+                        .readAttributes()
+                }.getOrNull()
+                if (now == null || !now.isRegularFile || !matches(now, expected)) {
+                    ch.close()
+                    throw Refused(tr("d_watch_err_changed"))
+                }
+                ch
+            } else {
+                null
+            }
+        } ?: openByPath(folderReal, file, expected, noFollowRead)
+        if (linkCount(file) > 1) {
+            channel.close()
+            throw Refused(tr("d_watch_err_linked"), changed = false)
+        }
+        val openedSize = runCatching { channel.size() }.getOrDefault(-1L)
+        val ctimeNow = changeTime(file)
+        if (openedSize != expected.size || (expected.ctime != null && ctimeNow != expected.ctime)) {
+            channel.close()
+            throw Refused(tr("d_watch_err_changed"))
+        }
+        return OpenedInput(java.nio.channels.Channels.newInputStream(channel), expected.size)
+    }
+
+    /** Where folders have no handle (Windows): open by path, then check where it was opened. */
+    private fun openByPath(
+        folderReal: Path,
+        file: Path,
+        expected: FileIdentity,
+        options: Set<java.nio.file.OpenOption>
+    ): java.nio.channels.SeekableByteChannel {
+        if (file.parent?.toRealPath() != folderReal) throw Refused(tr("d_watch_err_changed"))
+        val ch = try {
+            Files.newByteChannel(file, options)
+        } catch (e: java.io.IOException) {
+            throw Refused(tr("d_watch_err_changed"))
+        }
+        val now = runCatching {
+            Files.readAttributes(file, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
+        }.getOrNull()
+        if (now == null || !now.isRegularFile || !matches(now, expected) || file.parent?.toRealPath() != folderReal) {
+            ch.close()
+            throw Refused(tr("d_watch_err_changed"))
+        }
+        return ch
+    }
+
+    private fun matches(now: BasicFileAttributes, expected: FileIdentity): Boolean {
+        val key = now.fileKey()
+        return if (key != null && expected.key != null) key == expected.key
+        else now.size() == expected.size && now.lastModifiedTime().toMillis() == expected.mtime
+    }
+
+    /** The status change time (unix:ctime) of [file] itself, or null where there is none. */
+    internal fun changeTime(file: Path): Any? =
+        runCatching { Files.getAttribute(file, "unix:ctime", LinkOption.NOFOLLOW_LINKS) }.getOrNull()
+
+    /** The file's hard link count where the platform reports one, else 1. */
+    internal fun linkCount(file: Path): Int =
+        runCatching { (Files.getAttribute(file, "unix:nlink", LinkOption.NOFOLLOW_LINKS) as Number).toInt() }
+            .getOrDefault(1)
 }

@@ -15,11 +15,22 @@ name: Release
 #
 # The workflow triggers only on tag pushes. There is nothing secret here for a fork PR to reach,
 # but keep it that way regardless.
+#
+# Supply chain. Every action is pinned to a full commit SHA (the tag it was taken from is in the
+# comment beside it), so a moved tag upstream cannot change what runs here. The token is
+# read-only everywhere except the one job that opens the draft, and checkout does not leave it
+# in .git/config while Gradle, its plugins and jpackage run. Tools downloaded at build time
+# (appimagetool and its runtime) are pinned by version and sha256 in
+# packaging/appimage/tools.pin and checked before they run. To move a pin, see RELEASING.md,
+# "Pinned build inputs".
 
 on:
   push:
     tags:
       - 'v*'
+
+permissions:
+  contents: read
 
 jobs:
   # One matrix, two architectures, ONE set of steps. Deliberately not two copied jobs: an arm64
@@ -44,7 +55,6 @@ jobs:
             deb: PGPony-linux.deb
             tarball: PGPony-linux-x86_64.tar.gz
             appimage: PGPony-x86_64.AppImage
-            appimagetool: appimagetool-x86_64.AppImage
             artifact: linux-x86_64
           - arch: aarch64
             runner: ubuntu-24.04-arm
@@ -52,11 +62,14 @@ jobs:
             deb: PGPony-linux-arm64.deb
             tarball: PGPony-linux-aarch64.tar.gz
             appimage: PGPony-aarch64.AppImage
-            appimagetool: appimagetool-aarch64.AppImage
             artifact: linux-aarch64
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # The committed gradle-wrapper.jar must be a published Gradle release, not something else.
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '17'
@@ -162,6 +175,34 @@ jobs:
           echo "bin/PGPony version -> $out"
           test -n "$out"
 
+      # appimagetool and the type2 runtime it puts at the front of every AppImage are fetched at
+      # the versions pinned in packaging/appimage/tools.pin and refused unless their sha256 matches
+      # the pin. The runtime is the first code that runs on a user's machine, so it is passed in
+      # explicitly with --runtime-file; without it appimagetool downloads whatever the upstream
+      # "continuous" release holds at build time.
+      - name: Fetch and verify appimagetool and its runtime
+        run: |
+          . packaging/appimage/tools.pin
+          case "${{ matrix.arch }}" in
+            x86_64)  TOOL_SHA="$APPIMAGETOOL_X86_64_SHA256";  RUNTIME_SHA="$RUNTIME_X86_64_SHA256" ;;
+            aarch64) TOOL_SHA="$APPIMAGETOOL_AARCH64_SHA256"; RUNTIME_SHA="$RUNTIME_AARCH64_SHA256" ;;
+            *) echo "no pin for ${{ matrix.arch }}"; exit 1 ;;
+          esac
+          for sum in "$TOOL_SHA" "$RUNTIME_SHA"; do
+            if ! printf '%s' "$sum" | grep -Eq '^[0-9a-f]{64}$'; then
+              echo "packaging/appimage/tools.pin has no sha256 for ${{ matrix.arch }} yet."
+              echo "Run packaging/appimage/pin-tools.sh and commit the result (RELEASING.md, Pinned build inputs)."
+              exit 1
+            fi
+          done
+          mkdir -p appimage-tools
+          curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o appimage-tools/appimagetool \
+            "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-${{ matrix.arch }}.AppImage"
+          curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o appimage-tools/runtime \
+            "https://github.com/AppImage/type2-runtime/releases/download/${TYPE2_RUNTIME_VERSION}/runtime-${{ matrix.arch }}"
+          printf '%s  %s\n%s  %s\n' "$TOOL_SHA" appimage-tools/appimagetool "$RUNTIME_SHA" appimage-tools/runtime | sha256sum -c -
+          chmod +x appimage-tools/appimagetool
+
       # AppRun and the .desktop are COMMITTED files copied in, never heredocs written inline.
       # A YAML block scalar re-indents its content, and a shell script whose shebang line
       # arrives with leading whitespace cannot be exec'd at all.
@@ -178,9 +219,9 @@ jobs:
           chmod +x "$APPDIR/AppRun"
           cp packaging/appimage/pgpony.desktop "$APPDIR/pgpony.desktop"
           cp packaging/pgpony.png "$APPDIR/pgpony.png"
-          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/${{ matrix.appimagetool }}
-          chmod +x ${{ matrix.appimagetool }}
-          ARCH=${{ matrix.arch }} ./${{ matrix.appimagetool }} --appimage-extract-and-run "$APPDIR" ${{ matrix.appimage }}
+          ARCH=${{ matrix.arch }} ./appimage-tools/appimagetool --appimage-extract-and-run \
+            --runtime-file appimage-tools/runtime "$APPDIR" ${{ matrix.appimage }}
+          rm -rf appimage-tools
 
       # --appimage-extract needs no FUSE either, so the produced image can be opened and its
       # entry point actually executed. This proves AppRun's exec path resolves inside the
@@ -196,7 +237,7 @@ jobs:
           test -n "$out"
           rm -rf squashfs-root
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ matrix.artifact }}
           path: |
@@ -208,17 +249,22 @@ jobs:
     name: msi (Windows)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '17'
 
+      # Pinned to one version. Chocolatey checks the installer it downloads against the checksum
+      # in that package version, so the pin also fixes the installer bytes.
       - name: Ensure WiX Toolset 3.x (jpackage needs candle.exe/light.exe)
         shell: pwsh
         run: |
           if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
-            choco install wixtoolset -y --no-progress
+            choco install wixtoolset --version 3.14.1 -y --no-progress
             $wix = Get-ChildItem 'C:\Program Files (x86)' -Filter 'WiX Toolset v3*' -Directory | Select-Object -Last 1
             if ($wix) { Join-Path $wix.FullName 'bin' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8 }
           }
@@ -296,7 +342,7 @@ jobs:
           if ($ci -match  'MISSING from this runtime') { throw 'smartcardio did not resolve at runtime' }
           if ($ci -match  'Usage: pgpony')    { throw 'card-info fell through to the usage text' }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: msi
           path: PGPony-windows.msi
@@ -309,7 +355,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: artifacts
 
@@ -324,7 +370,14 @@ jobs:
           mv artifacts/linux-aarch64/PGPony-aarch64.AppImage dist/
           mv artifacts/msi/PGPony-windows.msi dist/
           ls -l dist
-          sha256sum dist/*
+          ( cd dist && sha256sum * ) | tee CI-SHA256SUMS
+
+      # What CI built, by hash, kept with the run. RELEASING.md section 4 checks the files it
+      # downloads against this list before anything is signed.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-sha256sums
+          path: CI-SHA256SUMS
 
       # DRAFT, deliberately. A release published without the dmg, without signatures and without
       # SHA256SUMS would be visible to anyone watching the repo, and the site would start linking

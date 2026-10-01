@@ -130,7 +130,62 @@ FILES=(
   PGPony-aarch64.AppImage
   PGPony-windows.msi
 )
+```
 
+### Check CI's bytes before you sign them
+
+Your signature is what users check, so it has to cover bytes you have reason to trust, not just
+whatever the hosted runner handed back. Two checks, both before any `gpg` command.
+
+**Same bytes as CI built.** The draft job keeps the sha256 of every file it attached as a run
+artifact named `ci-sha256sums`:
+
+```sh
+RUN=$(gh run list --repo norsehorse-dev/PGPonyDesktop --workflow=release.yml --branch v1.0.3 \
+  --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run download "$RUN" --repo norsehorse-dev/PGPonyDesktop -n ci-sha256sums --dir ci
+shasum -a 256 -c ci/CI-SHA256SUMS
+```
+
+Every line must say `OK`. This catches a draft asset that was replaced after the build. It cannot
+catch a build that was tampered with while it ran, which is what the next check is for.
+
+**Same app as the tag.** Rebuild the tarball from the tag on a machine you control and compare
+the app inside it with CI's. Use the Debian VM and the tarball for its architecture (aarch64 on
+an Apple silicon Mac), with JDK 17 like CI:
+
+```sh
+# in the Debian VM
+git clone --branch v1.0.3 --depth 1 https://github.com/norsehorse-dev/PGPonyDesktop.git
+cd PGPonyDesktop
+./gradlew createDistributable
+tar -czf ../local.tar.gz -C build/compose/binaries/main/app PGPony
+# copy CI's PGPony-linux-aarch64.tar.gz, PGPony-linux-arm64.deb and PGPony-aarch64.AppImage
+# into this folder, then
+packaging/release/compare-builds.sh PGPony-linux-aarch64.tar.gz ../local.tar.gz
+packaging/release/compare-builds.sh PGPony-linux-aarch64.tar.gz PGPony-linux-arm64.deb
+packaging/release/compare-builds.sh PGPony-linux-aarch64.tar.gz PGPony-aarch64.AppImage
+```
+
+`compare-builds.sh` compares every jar in `lib/app`, entry by entry, by content: PGPony's own
+code and every library it ships. Jar timestamps and entry order are ignored, since a rebuild
+differs in those alone. The launcher config beside them (`lib/app/PGPony.cfg`: classpath, main
+class, JVM options) must match exactly. The first command shows CI built what the tag says; the other two show
+the `.deb` and AppImage steps added nothing to the app (the AppImage needs `squashfs-tools` in
+the VM). Each must end with `All N jars in lib/app match.` A `DIFFERS` line means stop: do not
+sign until you know why. `--all` also lists other files that differ, for information only; the
+bundled Java runtime and the native launcher come from whichever JDK did the build.
+
+What this cannot catch is a poisoned library on Maven Central or the Gradle plugin portal: both
+builds download the same one. Gradle dependency verification (`gradle/verification-metadata.xml`)
+is what closes that, and it is not in this repository yet.
+
+The x86_64 artifacts are built by the same matrix steps as the aarch64 ones, and the `.msi` only
+on CI's Windows runner, so neither has an independent rebuild here yet.
+
+### Sign
+
+```sh
 shasum -a 256 $FILES > SHA256SUMS
 cat SHA256SUMS
 for f in $FILES SHA256SUMS; do
@@ -294,3 +349,38 @@ first submission are in `packaging/flathub/README.md`. For each release after th
   request. Flathub's bot builds it; merge when the test build passes.
 
 Flathub review and builds run on Flathub's schedule. A release is not held for them.
+
+## 9. Pinned build inputs
+
+The release workflow only runs code that is pinned to exact bytes, so a tag moved upstream or a
+rolling "continuous" download cannot change what ends up in a signed release.
+
+- **GitHub Actions** are pinned to full commit SHAs in both workflows, with the tag they came
+  from in a comment (`actions/checkout@<sha> # v5.1.0`). To move one, look the tag up and paste
+  the SHA it prints, keeping the comment in step:
+
+```sh
+git ls-remote https://github.com/actions/checkout refs/tags/v5.1.0
+```
+
+  A line ending in `^{}` is the commit an annotated tag points at; use that one when it is there.
+- **appimagetool and the type2 runtime** are pinned by version and sha256 in
+  `packaging/appimage/tools.pin`. The release build stops at "Fetch and verify appimagetool"
+  while a sum is missing or does not match. To pin or move them:
+
+```sh
+packaging/appimage/pin-tools.sh            # the versions already in tools.pin
+packaging/appimage/pin-tools.sh 1.9.1 20251108
+git diff packaging/appimage/tools.pin
+```
+
+  The script downloads both architectures of each, checks the runtime's detached signature
+  against the key in the type2-runtime repository when `gpg` is installed, and writes the sums.
+  It runs nothing it downloads.
+- **WiX** is installed at a fixed Chocolatey package version (`--version 3.14.1`), whose package
+  carries the installer's checksum.
+- **The Gradle wrapper** jar is checked against Gradle's published checksums on every run
+  (`gradle/actions/wrapper-validation`).
+- **Tokens.** Both workflows default to a read-only `GITHUB_TOKEN`; only the draft job asks for
+  `contents: write`. Checkout runs with `persist-credentials: false`, so the token is not left in
+  `.git/config` while Gradle, its plugins and jpackage run.

@@ -34,6 +34,8 @@ class ShimBridgeTest {
     fun hooks() {
         val node = MemoryPreferences()
         SettingsStores.install { _, _ -> DesktopPrefsSettings(node) }
+        GitSigningPrefs.prefsOverride = MemoryPreferences()
+        GitSigningPrefs.setEnabled(true)
         PassphraseCache.clearAll()
     }
 
@@ -42,6 +44,7 @@ class ShimBridgeTest {
         ShimBridge.stop()
         PassphraseCache.clearAll()
         SettingsStores.uninstall()
+        GitSigningPrefs.prefsOverride = null
     }
 
     private fun sign(bytes: ByteArray) = ShimBridge.readSign(ByteArrayInputStream(bytes))
@@ -128,7 +131,8 @@ class ShimBridgeTest {
         val db = Db.open(dir.resolve("pgpony.db"))
         val repo = DesktopKeyRepository(db, KeyMaterialStore(dir.resolve("keys")))
         val key = repo.generateKey("Git", "git@pgpony.app", KeyAlgorithm.ED25519_CV25519, "git-pass")
-        val payload = "tree 0000\nauthor Git\n\ncommit message\n".toByteArray()
+        val payload = ("tree ${"0".repeat(40)}\nauthor Git <git@pgpony.app> 1700000000 +0000\n" +
+            "committer Git <git@pgpony.app> 1700000000 +0000\n\ncommit message\n").toByteArray()
 
         assertEquals(ShimSigner.Result.Locked, ShimSigner.sign(repo, key, payload, null), "the shim alone cannot sign")
         assertEquals(ShimSigner.Result.WrongPassphrase, ShimSigner.sign(repo, key, payload, "nope"))
@@ -138,6 +142,7 @@ class ShimBridgeTest {
         val signed = assertIs<ShimBridge.Reply.Signed>(first)
         assertEquals(2, prompts, "a wrong answer asks again")
         assertEquals("git-pass", PassphraseCache.get(key.fingerprint), "remembered for the session")
+        assertEquals("git-pass", PassphraseCache.getForSigning(key.fingerprint), "entered to sign")
         val verdict = VerifyService.shared.verifyDetached(signed.armored, payload, listOf(repo.loadPublicKeyRing(key.fingerprint)!!))
         assertIs<VerificationResult.Verified>(verdict)
 
@@ -156,5 +161,114 @@ class ShimBridgeTest {
         assertEquals(ShimSigner.Result.Locked, ShimSigner.sign(repo, pq, payload, null))
         assertIs<ShimSigner.Result.Signed>(ShimSigner.sign(repo, pq, payload, "pq-pass"))
         db.close()
+    }
+
+    // ── LOCAL-IPC-3: opt-in, git objects only, visible ──
+
+    private val commit = ("tree ${"a".repeat(40)}\nparent ${"b".repeat(40)}\n" +
+        "author Dev <dev@pgpony.app> 1700000000 +0000\ncommitter Dev <dev@pgpony.app> 1700000000 +0000\n\n" +
+        "Fix the parser\n\nLonger body.\n").toByteArray()
+
+    @Test
+    fun localIpc3TheBridgeListensOnlyWhenGitSigningIsOn() {
+        val dir = Files.createTempDirectory("pgpony-bridge-optin")
+        GitSigningPrefs.setEnabled(false)
+        assertFalse(ShimBridge.start(dir) { _, _ -> ShimBridge.Reply.Refused("no") }, "off by default: nothing listens")
+        assertFalse(Files.exists(dir.resolve(ShimBridge.FILE_NAME)))
+        assertTrue(ShimBridge.setEnabled(true), "the Settings switch starts it")
+        assertTrue(GitSigningPrefs.enabled())
+        assertTrue(Files.exists(dir.resolve(ShimBridge.FILE_NAME)))
+        assertFalse(ShimBridge.setEnabled(false), "and stops it")
+        assertFalse(Files.exists(dir.resolve(ShimBridge.FILE_NAME)))
+        assertFalse(ShimBridge.isRunning())
+    }
+
+    @Test
+    fun localIpc3OnlyGitObjectsAreSigned() {
+        assertEquals(GitPayload.Parsed(GitPayload.Kind.COMMIT, "Fix the parser"), GitPayload.parse(commit))
+        val sha256Commit = ("tree ${"c".repeat(64)}\nauthor A <a@b> 1 +0000\ncommitter A <a@b> 1 +0000\n\nmsg\n").toByteArray()
+        assertEquals(GitPayload.Kind.COMMIT, GitPayload.parse(sha256Commit)?.kind, "SHA-256 repositories")
+        val tag = ("object ${"d".repeat(40)}\ntype commit\ntag v1.2.3\ntagger A <a@b> 1 +0000\n\nRelease\n").toByteArray()
+        assertEquals(GitPayload.Parsed(GitPayload.Kind.TAG, "v1.2.3"), GitPayload.parse(tag))
+        val push = "certificate version 0.1\npusher A <a@b> 1 +0000\npushee origin\nnonce 1\n\nold new ref\n".toByteArray()
+        assertEquals(GitPayload.Kind.PUSH_CERTIFICATE, GitPayload.parse(push)?.kind)
+
+        assertNull(GitPayload.parse("release-1.2.3.tar.gz contents".toByteArray()), "a document")
+        assertNull(GitPayload.parse("tree 0000\nauthor A\n\nmsg".toByteArray()), "not an object id")
+        assertNull(GitPayload.parse("tree ${"a".repeat(40)}\n\nmsg".toByteArray()), "no author or committer")
+        assertNull(GitPayload.parse(byteArrayOf(0x1f, 0x8b.toByte(), 8, 0)), "binary")
+        assertNull(GitPayload.parse("Content-Type: multipart/signed\n\nbody".toByteArray()), "a mail")
+    }
+
+    @Test
+    fun localIpc3TheBridgeRefusesNonGitDataAndAnnouncesEverySignature() = runBlocking {
+        val dir = Files.createTempDirectory("pgpony-bridge-visible")
+        val db = Db.open(dir.resolve("pgpony.db"))
+        val repo = DesktopKeyRepository(db, KeyMaterialStore(dir.resolve("keys")))
+        val key = repo.generateKey("Git", "git@pgpony.app", KeyAlgorithm.ED25519_CV25519, "git-pass")
+        val notes = mutableListOf<String>()
+        var prompts = 0
+
+        val refused = ShimSigner.signForShim(repo, key.fingerprint, "a release tarball".toByteArray(), { notes += it }) { prompts++; "git-pass" }
+        assertIs<ShimBridge.Reply.Refused>(refused)
+        assertEquals(0, prompts, "no prompt for data that is not a git object")
+
+        // Unlocked to decrypt only: git still has to ask.
+        PassphraseCache.put(key.fingerprint, "git-pass")
+        assertIs<ShimBridge.Reply.Signed>(ShimSigner.signForShim(repo, key.fingerprint, commit, { notes += it }) { prompts++; "git-pass" })
+        assertEquals(1, prompts, "a decrypt unlock does not sign silently")
+        assertEquals(1, notes.size)
+        assertEquals(GitPayload.describe(commit)?.let { tr("d_shim_what", it, "git@pgpony.app") }, notes[0], "names what was signed")
+
+        // Entered to sign: no prompt, and still announced.
+        assertIs<ShimBridge.Reply.Signed>(ShimSigner.signForShim(repo, key.fingerprint, commit, { notes += it }) { prompts++; null })
+        assertEquals(1, prompts)
+        assertEquals(2, notes.size, "every signature is announced")
+        db.close()
+    }
+
+    // ── LOCAL-IPC-4: idle connections cannot hold the bridge ──
+
+    @Test
+    fun localIpc4IdleConnectionsDoNotBlockSigning() {
+        val dir = Files.createTempDirectory("pgpony-bridge-squat")
+        assertTrue(ShimBridge.start(dir) { _, payload -> ShimBridge.Reply.Signed(payload.reversedArray(), 22, 8) })
+        val port = Files.readString(dir.resolve(ShimBridge.FILE_NAME)).trim().substringBefore(' ').toInt()
+        val idle = (1..40).map { java.net.Socket(java.net.InetAddress.getLoopbackAddress(), port) }
+        try {
+            val started = System.nanoTime()
+            val reply = assertIs<ShimBridge.Reply.Signed>(ShimBridge.requestSignature(dir, fp, "abc".toByteArray()))
+            assertEquals("cba", String(reply.armored))
+            assertTrue((System.nanoTime() - started) / 1_000_000 < 8_000, "answered within the retries")
+        } finally {
+            idle.forEach { runCatching { it.close() } }
+        }
+    }
+
+    @Test
+    fun localIpc4StopLeavesAnotherProcesssEndpointAlone() {
+        val dir = Files.createTempDirectory("pgpony-bridge-other-endpoint")
+        assertTrue(ShimBridge.start(dir) { _, _ -> ShimBridge.Reply.Refused("no") })
+        val endpoint = dir.resolve(ShimBridge.FILE_NAME)
+        Files.writeString(endpoint, "12345 ${"e".repeat(64)}\n")
+        ShimBridge.stop()
+        assertTrue(Files.exists(endpoint), "a newer PGPony's endpoint is not deleted")
+    }
+
+    @Test
+    fun localIpc4ARequestThatWentOutIsNeverSentTwice() {
+        val dir = Files.createTempDirectory("pgpony-bridge-once")
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        // The app takes the request and then the connection drops with no answer.
+        assertTrue(ShimBridge.start(dir) { _, _ -> calls.incrementAndGet(); throw IllegalStateException("gone") })
+        assertEquals(ShimBridge.Reply.Unreachable, ShimBridge.requestSignature(dir, fp, "abc".toByteArray()))
+        assertEquals(1, calls.get(), "no second prompt or signature for the same request")
+    }
+
+    @Test
+    fun localIpc3ACommitInALegacyEncodingIsStillAGitObject() {
+        val latin1 = "tree ${"a".repeat(40)}\nauthor A <a@b> 1 +0000\ncommitter A <a@b> 1 +0000\nencoding ISO-8859-1\n\nCaf\u00e9\n"
+            .toByteArray(Charsets.ISO_8859_1)
+        assertEquals(GitPayload.Kind.COMMIT, GitPayload.parse(latin1)?.kind)
     }
 }

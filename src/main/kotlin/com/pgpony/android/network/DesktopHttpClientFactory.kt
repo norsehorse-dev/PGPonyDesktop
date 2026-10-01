@@ -1,14 +1,14 @@
 // DesktopHttpClientFactory.kt — DESKTOP TWIN of network/HttpClientFactory.kt (vendored copy
 // excluded: Context-typed). Declares the same `object HttpClientFactory`; the body mirrors the
-// Android build verbatim — same ktor Android engine (plain JVM), same timeout split, same
-// SOCKS wiring, same signature-keyed cache. File name differs from the excluded file (D1 Fix1
-// rule). Vendored callers use the no-arg client(); a PGPonyApp-typed overload covers the rest.
+// Android build verbatim: same ktor Android engine (plain JVM), same timeout split, same
+// SOCKS wiring through the shared SocksBridge, same signature-keyed cache. File name differs
+// from the excluded file (D1 Fix1 rule). Vendored callers use the no-arg client(); a
+// PGPonyApp-typed overload covers the rest.
 
 package com.pgpony.android.network
 
 import com.pgpony.android.PGPonyApp
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.ProxyBuilder
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.api.createClientPlugin
@@ -32,29 +32,6 @@ object HttpClientFactory {
     @Volatile private var cached: HttpClient? = null
     @Volatile private var cachedSignature: String? = null
 
-    // Proxy stream isolation: SOCKS5 user/pass auth. Java exposes no per-client
-    // SOCKS credentials, so a single default Authenticator, scoped to the active
-    // proxy's port and the SOCKS5 protocol, hands the pair to the SOCKS
-    // handshake. It returns null for everything else, so it is inert when no
-    // proxy auth is configured. Distinct credentials put PGPony on its own Tor
-    // circuit (Orbot IsolateSOCKSAuth).
-    private val socksAuthenticator = object : java.net.Authenticator() {
-        @Volatile var port: Int = -1
-        @Volatile var auth: java.net.PasswordAuthentication? = null
-        override fun getPasswordAuthentication(): java.net.PasswordAuthentication? {
-            val a = auth ?: return null
-            // Android 4.6.0 (item 17.8): java.net.SocksSocketImpl asks through the
-            // requestPasswordAuthentication overload that leaves requestorType at
-            // SERVER, so filtering on PROXY dropped the pair every time and stream
-            // isolation silently did nothing. Match the SOCKS5 protocol string and
-            // the proxy's port instead.
-            if (!"SOCKS5".equals(requestingProtocol, ignoreCase = true)) return null
-            if (requestingPort != port) return null
-            return a
-        }
-    }
-    @Volatile private var authenticatorInstalled = false
-
     // Offline switch: fail every request fast, before any socket, when offline
     // mode is on. This is the single choke point the whole network layer routes
     // through, so one guard here covers keyserver lookup/search/publish, WKD, and
@@ -66,18 +43,27 @@ object HttpClientFactory {
         }
     }
 
-    private fun applyProxyAuth(cfg: ProxyPrefs.Config) {
-        if (cfg.enabled && cfg.host != null && cfg.hasAuth) {
-            socksAuthenticator.port = cfg.port
-            socksAuthenticator.auth =
-                java.net.PasswordAuthentication(cfg.username, cfg.password!!.toCharArray())
-            if (!authenticatorInstalled) {
-                java.net.Authenticator.setDefault(socksAuthenticator)
-                authenticatorInstalled = true
+    // The loopback bridge that carries proxied requests over SOCKS5 with the
+    // host name resolved by the proxy (see SocksBridge). One per proxied
+    // client; replaced with the client when the proxy config changes. It also
+    // does the SOCKS5 sign-in itself: the user/pass pair when one is set (a
+    // distinct pair puts PGPony on its own Tor circuit, IsolateSOCKSAuth),
+    // otherwise no authentication, so the OS login name is never sent.
+    @Volatile private var bridge: SocksBridge? = null
+
+    private fun closeBridge() {
+        bridge?.close()
+        bridge = null
+    }
+
+    // An .onion address only exists inside Tor. With no proxy set, refuse it
+    // before any socket so the name is never handed to the local resolver or
+    // tried in the clear.
+    private val onionGuard = createClientPlugin("PGPonyOnionGuard") {
+        onRequest { request, _ ->
+            if (request.url.host.trimEnd('.').lowercase().endsWith(".onion")) {
+                throw java.io.IOException("An .onion address can only be reached through Tor, and no proxy is set, so nothing was sent")
             }
-        } else {
-            socksAuthenticator.auth = null
-            socksAuthenticator.port = -1
         }
     }
 
@@ -112,25 +98,26 @@ object HttpClientFactory {
         // picked before a host was typed, the host cleared, or a restored backup
         // with a blank host) used to build a DIRECT client while Settings showed a
         // proxy. Fail closed instead: every request errors, nothing leaves.
+        closeBridge()
         if (cfg.enabled && cfg.host.isNullOrBlank()) {
-            applyProxyAuth(cfg.copy(mode = ProxyPrefs.MODE_OFF))
-            return HttpClient(Android) {
-                install(offlineGuard)
-                install(createClientPlugin("PGPonyProxyMissing") {
-                    onRequest { _, _ ->
-                        throw java.io.IOException("A proxy is turned on but no proxy host is set, so nothing was sent")
-                    }
-                })
-            }
+            return failClosedClient("A proxy is turned on but no proxy host is set, so nothing was sent")
         }
         val proxied = cfg.enabled && cfg.host != null
-        // Scope the SOCKS Authenticator to this config before the client makes
-        // its first connection (fail-closed: bad auth fails the SOCKS handshake).
-        applyProxyAuth(cfg)
+        val via = if (proxied) {
+            try {
+                SocksBridge(cfg.host!!, cfg.port, cfg.username, cfg.password, TOR_CONNECT_TIMEOUT_MS)
+            } catch (e: java.io.IOException) {
+                return failClosedClient("The proxy connection could not be set up, so nothing was sent")
+            }
+        } else {
+            null
+        }
+        bridge = via
         return HttpClient(Android) {
             // Offline switch: block outright when offline mode is on, before any
             // other plugin or the socket.
             install(offlineGuard)
+            if (!proxied) install(onionGuard)
             install(identityEncoding)
             install(HttpTimeout) {
                 requestTimeoutMillis =
@@ -141,8 +128,10 @@ object HttpClientFactory {
                     (if (proxied) TOR_SOCKET_TIMEOUT_MS else SOCKET_TIMEOUT_MS).toLong()
             }
             engine {
-                if (proxied) {
-                    proxy = ProxyBuilder.socks(cfg.host!!, cfg.port)
+                if (via != null) {
+                    // An HTTP proxy at the loopback bridge, which opens the
+                    // SOCKS5 connection by host name. No direct fallback.
+                    proxy = via.proxy
                     connectTimeout = TOR_CONNECT_TIMEOUT_MS
                     socketTimeout = TOR_SOCKET_TIMEOUT_MS
                 } else {
@@ -153,9 +142,20 @@ object HttpClientFactory {
         }
     }
 
+    // A client that sends nothing: every request fails with [reason].
+    private fun failClosedClient(reason: String): HttpClient = HttpClient(Android) {
+        install(offlineGuard)
+        install(createClientPlugin("PGPonyProxyMissing") {
+            onRequest { _, _ ->
+                throw java.io.IOException(reason)
+            }
+        })
+    }
+
     /** Force a rebuild on the next client() (call after a settings change). */
     @Synchronized
     fun invalidate() {
+        closeBridge()
         cached?.close()
         cached = null
         cachedSignature = null

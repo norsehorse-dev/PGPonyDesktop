@@ -20,6 +20,13 @@
 // set it), and on Windows whether LogonUI.exe is running (it runs while the lock screen shows).
 // Where none answers, Settings does not offer the choice. ScreenLockWatch polls only while the
 // choice is selected.
+//
+// The choice fails closed. Many Linux lockers never set LockedHint, so there a "not locked"
+// answer proves nothing until the desktop has once reported a lock. Until then, and whenever
+// the watch has no fresh answer (the probe stopped answering, the watch is not running), held
+// secrets follow the shortest timed choice instead of staying held, and Settings says so. A
+// probe that stops answering also drops what is held, and so does a long gap between polls
+// (the machine slept).
 
 package com.pgpony.desktop
 
@@ -91,16 +98,29 @@ object SessionPolicy {
     fun isUntilCleared(): Boolean = durationSec() == DURATION_UNTIL_CLEARED
     fun isUntilLocked(): Boolean = durationSec() == DURATION_UNTIL_LOCKED
 
-    /** True under either lifecycle choice: a held secret has no timer. */
-    fun isLifecycleHeld(): Boolean = durationSec() < 0
+    /** What "until the screen locks" means while a lock cannot be confirmed: the shortest timed choice. */
+    val UNCONFIRMED_LOCK_FALLBACK_SEC: Int get() = TIMED_CHOICES.first()
+
+    /**
+     * The duration secrets actually follow: the stored choice, except that "until the screen
+     * locks" reads as [UNCONFIRMED_LOCK_FALLBACK_SEC] while ScreenLockWatch cannot vouch for
+     * seeing a lock.
+     */
+    fun effectiveDurationSec(): Int {
+        val d = durationSec()
+        return if (d == DURATION_UNTIL_LOCKED && !ScreenLockWatch.isTrusted()) UNCONFIRMED_LOCK_FALLBACK_SEC else d
+    }
+
+    /** True under either lifecycle choice while it is in force: a held secret has no timer. */
+    fun isLifecycleHeld(): Boolean = effectiveDurationSec() < 0
 
     /**
      * Milliseconds left for a secret stored at [storedAtNanos] (System.nanoTime, which does
      * not jump with the wall clock), under the CURRENT duration, so a change applies to secrets
-     * already held. Long.MAX_VALUE under a lifecycle choice.
+     * already held. Long.MAX_VALUE under a lifecycle choice in force.
      */
     fun remainingMs(storedAtNanos: Long, nowNanos: Long = System.nanoTime()): Long {
-        val d = durationSec()
+        val d = effectiveDurationSec()
         if (d < 0) return Long.MAX_VALUE
         val elapsedMs = TimeUnit.NANOSECONDS.toMillis(nowNanos - storedAtNanos)
         return (d * 1000L - elapsedMs).coerceAtLeast(0L)
@@ -129,29 +149,44 @@ object SessionPolicy {
  * and ProviderPassphraseCache in one). Filled only after the passphrase worked: a decrypt, a
  * signature, an SSH agent or git signing prompt. A wrong cached passphrase is dropped by the
  * caller that found it wrong, and a passphrase change drops the key's entry.
+ *
+ * An entry also records whether the passphrase was entered to sign (a signing screen or the git
+ * signing prompt). Git signing through the running app uses only those ([getForSigning]), so
+ * unlocking a key to decrypt or for ssh never lets another program get a signature silently.
  */
 object PassphraseCache {
 
-    private class Entry(val passphrase: String, val storedAtNanos: Long)
+    private class Entry(val passphrase: String, val storedAtNanos: Long, val forSigning: Boolean)
 
     private val entries = ConcurrentHashMap<String, Entry>()
 
     private fun key(fingerprint: String) = fingerprint.lowercase()
 
-    fun put(fingerprint: String, passphrase: String) {
+    /**
+     * Remember [passphrase] for [fingerprint]. [forSigning] marks one entered to sign; a later
+     * put of the same passphrase for another purpose keeps that mark.
+     */
+    fun put(fingerprint: String, passphrase: String, forSigning: Boolean = false) {
         if (passphrase.isEmpty()) return
-        entries[key(fingerprint)] = Entry(passphrase, System.nanoTime())
+        val k = key(fingerprint)
+        val keepMark = entries[k]?.let { it.forSigning && it.passphrase == passphrase } == true
+        entries[k] = Entry(passphrase, System.nanoTime(), forSigning || keepMark)
     }
 
-    fun get(fingerprint: String): String? {
+    private fun live(fingerprint: String): Entry? {
         val k = key(fingerprint)
         val entry = entries[k] ?: return null
         if (SessionPolicy.remainingMs(entry.storedAtNanos) <= 0L) {
             entries.remove(k, entry)
             return null
         }
-        return entry.passphrase
+        return entry
     }
+
+    fun get(fingerprint: String): String? = live(fingerprint)?.passphrase
+
+    /** The held passphrase only when it was entered to sign; null otherwise. */
+    fun getForSigning(fingerprint: String): String? = live(fingerprint)?.takeIf { it.forSigning }?.passphrase
 
     fun clear(fingerprint: String) {
         entries.remove(key(fingerprint))
@@ -190,6 +225,30 @@ object ScreenLock {
     /** Whether [probe] answers here; asked once per run. */
     fun isSupported(): Boolean = supported ?: (probe() != null).also { supported = it }
 
+    private fun isLinux(): Boolean {
+        val os = System.getProperty("os.name").orEmpty().lowercase()
+        return !os.contains("mac") && !os.contains("win")
+    }
+
+    /** The settings key that records a lock seen on this kind of Linux desktop. */
+    internal fun seenKey(): String =
+        "session_lock_seen:" + (System.getenv("XDG_CURRENT_DESKTOP")?.takeIf { it.isNotBlank() } ?: "unknown").take(64)
+
+    /**
+     * Whether an answer of "not locked" can be believed: always on macOS and Windows, whose
+     * probes read the lock itself; on Linux only once this desktop has reported a lock.
+     */
+    fun isConfirmed(): Boolean {
+        if (!isLinux()) return true
+        return runCatching { SettingsStores.open()?.getLong(seenKey(), 0L) == 1L }.getOrDefault(false)
+    }
+
+    /** Record that this desktop reported a lock (Linux). */
+    fun markLockSeen() {
+        if (!isLinux() || isConfirmed()) return
+        runCatching { SettingsStores.open()?.putLong(seenKey(), 1L) }
+    }
+
     private val MAC_LOCKED = Regex("\"(CGSSessionScreenIsLocked|IOConsoleLocked)\"\\s*=\\s*Yes")
 
     internal fun parseMacIoreg(text: String): Boolean? = when {
@@ -222,12 +281,28 @@ object ScreenLock {
     }
 }
 
-/** Clears every held secret on a lock event while "Until the screen locks" is chosen. */
+/**
+ * Clears every held secret on a lock event while "Until the screen locks" is chosen, and keeps
+ * the freshness that SessionPolicy.effectiveDurationSec relies on.
+ */
 object ScreenLockWatch {
 
-    private const val POLL_MS = 4_000L
+    internal const val POLL_MS = 2_000L
+
+    // An answer older than this is not fresh: the probe can take up to 3 seconds itself.
+    private const val FRESH_MS = 10_000L
+
+    // A gap between polls this much longer than POLL_MS means the machine slept.
+    private const val SLEEP_GAP_MS = 30_000L
 
     @Volatile private var thread: Thread? = null
+
+    @Volatile private var lastAnswerMs = 0L
+    @Volatile private var wasLocked = false
+    @Volatile private var wasTrusted = false
+
+    /** Test hook: treat the watch as running. */
+    @Volatile internal var assumeRunning = false
 
     fun start() {
         synchronized(this) {
@@ -242,22 +317,57 @@ object ScreenLockWatch {
     /** True when a probe of [locked] after [wasLocked] is a lock event. */
     internal fun isLockEvent(wasLocked: Boolean, locked: Boolean): Boolean = locked && !wasLocked
 
+    /**
+     * Whether "until the screen locks" can be honoured right now: the watch runs, the platform
+     * can confirm a lock, and the last probe answered recently.
+     */
+    fun isTrusted(nowMs: Long = System.currentTimeMillis()): Boolean =
+        (thread != null || assumeRunning) && ScreenLock.isConfirmed() && nowMs - lastAnswerMs <= FRESH_MS
+
     private fun loop() {
-        var wasLocked = false
+        var lastTick = System.currentTimeMillis()
         while (true) {
             try {
                 Thread.sleep(POLL_MS)
             } catch (_: InterruptedException) {
                 return
             }
+            val now = System.currentTimeMillis()
+            val gap = now - lastTick
+            lastTick = now
             if (!SessionPolicy.isUntilLocked()) {
-                wasLocked = false
+                reset()
                 continue
             }
-            val locked = ScreenLock.probe() ?: continue
-            if (isLockEvent(wasLocked, locked)) SessionPolicy.clearAll()
-            wasLocked = locked
+            step(ScreenLock.probe(), now, gap)
         }
+    }
+
+    internal fun reset() {
+        wasLocked = false
+        wasTrusted = false
+        lastAnswerMs = 0L
+    }
+
+    /**
+     * One poll under "until the screen locks": [locked] is the probe's answer (null for none),
+     * [gapMs] the time since the previous poll. Internal for tests.
+     */
+    internal fun step(locked: Boolean?, nowMs: Long, gapMs: Long) {
+        if (gapMs > POLL_MS + SLEEP_GAP_MS) SessionPolicy.clearAll()
+        if (locked == null) {
+            // No answer: what was held under a trusted watch goes now; from here on the
+            // fallback duration applies until answers come back.
+            if (wasTrusted) SessionPolicy.clearAll()
+            wasTrusted = false
+            lastAnswerMs = 0L
+            return
+        }
+        lastAnswerMs = nowMs
+        if (locked) ScreenLock.markLockSeen()
+        if (isLockEvent(wasLocked, locked)) SessionPolicy.clearAll()
+        wasLocked = locked
+        wasTrusted = isTrusted(nowMs)
     }
 }
 
@@ -274,6 +384,7 @@ fun SessionPolicySection() {
     var lockSupported by remember { mutableStateOf<Boolean?>(null) }
     var remaining by remember { mutableStateOf(PassphraseCache.remainingMs()) }
     var pinHeld by remember { mutableStateOf(CardPinCache.isHolding()) }
+    var lockTrusted by remember { mutableStateOf(ScreenLockWatch.isTrusted()) }
     var menuOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -283,9 +394,11 @@ fun SessionPolicySection() {
         while (true) {
             remaining = PassphraseCache.remainingMs()
             pinHeld = CardPinCache.isHolding()
+            lockTrusted = ScreenLockWatch.isTrusted()
             delay(1000)
         }
     }
+    val lockInForce = duration == SessionPolicy.DURATION_UNTIL_LOCKED && lockTrusted
 
     val choices = SessionPolicy.TIMED_CHOICES + SessionPolicy.DURATION_UNTIL_CLEARED +
         if (lockSupported == true || duration == SessionPolicy.DURATION_UNTIL_LOCKED) {
@@ -315,7 +428,7 @@ fun SessionPolicySection() {
         Text(
             when {
                 remaining <= 0L -> tr("settings_passphrase_cache_none_held")
-                duration == SessionPolicy.DURATION_UNTIL_LOCKED -> tr("d_session_held_until_locked")
+                lockInForce -> tr("d_session_held_until_locked")
                 duration == SessionPolicy.DURATION_UNTIL_CLEARED -> tr("settings_passphrase_cache_held_until_cleared")
                 else -> tr("settings_passphrase_cache_countdown_format", formatSessionCountdown(remaining))
             },
@@ -328,10 +441,10 @@ fun SessionPolicySection() {
             TextButton(onClick = { SessionPolicy.clearAll(); version++ }) { Text(tr("d_common_clear_now")) }
         }
     }
-    if (duration == SessionPolicy.DURATION_UNTIL_LOCKED && lockSupported == false) {
+    if (duration == SessionPolicy.DURATION_UNTIL_LOCKED && !lockTrusted) {
         Spacer(Modifier.height(Spacing.Small))
         Text(
-            tr("d_session_lock_unsupported"),
+            tr("d_session_lock_unconfirmed", SessionPolicy.label(SessionPolicy.UNCONFIRMED_LOCK_FALLBACK_SEC)),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error
         )

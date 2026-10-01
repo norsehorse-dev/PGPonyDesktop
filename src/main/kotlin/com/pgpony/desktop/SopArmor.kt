@@ -161,9 +161,15 @@ internal data class SopSigInfo(
             var created: Date? = null
             var issuerFp: String? = null
             var issuerId: Long? = null
+            // The creation time counts only from the hashed area, which the signature covers; the
+            // issuer subpackets are hints for which key to try and may sit in either area.
+            for ((kind, data) in subpackets(hashed)) {
+                if (kind == 2 && created == null && data.size >= 4) {
+                    created = Date((SopPackets.be32(data, 0).toLong() and 0xFFFFFFFFL) * 1000)
+                }
+            }
             for ((kind, data) in subpackets(hashed) + subpackets(unhashed)) {
                 when (kind) {
-                    2 -> if (created == null && data.size >= 4) created = Date((SopPackets.be32(data, 0).toLong() and 0xFFFFFFFFL) * 1000)
                     33 -> if (issuerFp == null && data.size > 1) issuerFp = data.copyOfRange(1, data.size).joinToString("") { "%02X".format(it) }
                     16 -> if (issuerId == null && data.size == 8) issuerId = data.fold(0L) { acc, b -> (acc shl 8) or (b.toLong() and 0xFF) }
                 }

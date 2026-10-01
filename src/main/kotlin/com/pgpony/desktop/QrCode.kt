@@ -154,9 +154,19 @@ object QrCode {
      */
     fun importFrom(texts: List<String>): Import {
         if (texts.isEmpty()) return Import.Empty
-        texts.firstOrNull { !QrChunking.isFrame(it) && it.contains("-----BEGIN PGP") }?.let { return Import.Key(it) }
         val frames = texts.filter { QrChunking.isFrame(it) }
+        val plain = texts.firstOrNull { !QrChunking.isFrame(it) && it.contains("-----BEGIN PGP") }
+        if (plain != null) {
+            // A whole key next to frames (or next to a different whole key) is two sources.
+            val others = texts.filter { !QrChunking.isFrame(it) && it.contains("-----BEGIN PGP") && it != plain }
+            return if (frames.isEmpty() && others.isEmpty()) Import.Key(plain) else Import.Mixed
+        }
         if (frames.isEmpty()) return Import.NotAKey
+        // Two different payloads for the same part of the same sequence: two sources.
+        val parsed = frames.mapNotNull { QrChunking.parse(it) }
+        if (parsed.groupBy { Triple(it.id, it.total, it.seq) }.values.any { g -> g.map { it.payload }.distinct().size > 1 }) {
+            return Import.Mixed
+        }
         val collector = QrChunking.Collector()
         var restarted = false
         for (raw in frames.sortedBy { QrChunking.parse(it)?.id.orEmpty() }) {
@@ -164,6 +174,8 @@ object QrCode {
                 is QrChunking.Outcome.Complete ->
                     return if (o.text.contains("-----BEGIN PGP")) Import.Key(o.text) else Import.NotAKey
                 is QrChunking.Outcome.Restarted -> restarted = true
+                is QrChunking.Outcome.Conflict -> return Import.Mixed
+                QrChunking.Outcome.Malformed -> if (QrChunking.parse(raw) != null) return Import.Mixed
                 else -> Unit
             }
         }

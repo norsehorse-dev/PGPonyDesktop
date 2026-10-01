@@ -11,6 +11,10 @@
 // a .onion address) through the vendored UrlKeyFetcher on the desktop HTTP client, so the proxy,
 // Tor stream isolation and offline mode all apply. Only public key material comes back, and it
 // goes to the preview with the final link shown; nothing is stored until Import.
+//
+// SecretUpgradeDialog (3.0.0): a protected secret key offered for a contact the keyring already
+// holds as a public key is added only once its passphrase unlocks it and it proves to be that
+// contact's secret. Any import (paste, file, link, backup, pairing) can raise it.
 
 package com.pgpony.desktop
 
@@ -37,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.pgpony.android.network.UrlKeyFetcher
 import kotlinx.coroutines.launch
@@ -191,5 +196,70 @@ fun ImportLinkDialog(onDismiss: () -> Unit, onFetched: (armored: String, finalUr
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !fetching) { Text(tr("common_button_cancel")) } }
+    )
+}
+
+/**
+ * Ask for the passphrase of [pending], a secret key offered for a contact already in the keyring.
+ * The key is added only when the passphrase unlocks it and it proves to belong to that contact.
+ * Skip leaves the contact as it is.
+ */
+@Composable
+fun SecretUpgradeDialog(state: DesktopState, pending: PendingSecret) {
+    var pass by remember(pending.fingerprint) { mutableStateOf("") }
+    var working by remember(pending.fingerprint) { mutableStateOf(false) }
+    var error by remember(pending.fingerprint) { mutableStateOf<String?>(null) }
+
+    fun submit() {
+        if (pass.isEmpty() || working) return
+        working = true
+        error = null
+        state.completePendingSecret(pending, pass.toCharArray()) { match ->
+            working = false
+            if (match == com.pgpony.android.crypto.SecretKeyCheck.SecretMatch.WRONG_PASSPHRASE) {
+                error = tr("d_secret_upgrade_wrong")
+            }
+        }
+    }
+
+    BrandDialog(
+        onDismissRequest = { if (!working) state.dismissPendingSecret(pending) },
+        title = tr("d_secret_upgrade_title"),
+        content = {
+            Column(Modifier.fillMaxWidth()) {
+                Text(tr("d_secret_upgrade_body", pending.label), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    pending.fingerprint.uppercase().chunked(4).joinToString(" "),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = pass,
+                    onValueChange = { pass = it; error = null },
+                    singleLine = true,
+                    enabled = !working,
+                    visualTransformation = PasswordVisualTransformation(),
+                    label = { Text(tr("d_secret_upgrade_passphrase")) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = pass.isNotEmpty() && !working, onClick = { submit() }) {
+                Text(if (working) tr("d_common_working") else tr("d_secret_upgrade_add"))
+            }
+        },
+        dismissButton = {
+            TextButton(enabled = !working, onClick = { state.dismissPendingSecret(pending) }) {
+                Text(tr("d_secret_upgrade_skip"))
+            }
+        }
     )
 }

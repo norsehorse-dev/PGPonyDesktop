@@ -370,6 +370,13 @@ pairing across machines, the four new languages with CJK text on Linux and Windo
 mnemonics. Left: the section 14 matrix, the upgrade gate and the release mechanics (section 13).
 Version moved to 3.0.0 (Config.kt and build.gradle.kts) so the upgrade gate installs the real
 3.0.0 packages over 2.1.3.
+Pre-release review (2026-10-01): a second security review of 3.0.0 as built, covering the shared
+engine's signature and message checks, the keyring store, pairing (protocol revision before
+anything shipped, vectors regenerated), GnuPG import, networking through proxies, the git shim and
+session policy, and the release build. Fixes landed upstream on Android main first and were
+vendored back; the matching iOS changes are in the iOS tree. Findings stay outside this repository.
+The section 14 rows dated 2026-10-01 cover the behavior it changed; decisions to confirm are in
+section 16.
 
 ## 12. Features (decided: all three, inside 3.0.0)
 
@@ -633,6 +640,14 @@ The section 13 release gate covers the Flatpak build itself, not Flathub accepta
 | GnuPG | Import from a GPG Suite home on the Mac with gpg, and from a copy of the home with no gpg on PATH | Public keys, trust and the protected secret key arrive; without gpg, public keys and trust only, with the note |
 | Languages | Switch to each of the ten languages | Every screen translated, no clipped CJK text, Settings shows the endonyms |
 | Upgrade | Populated 2.1.3 install, then the 3.0.0 installer, on macOS, Windows and Linux | Every key, note, trust level, watch rule and pass-store setting intact; schema v12 |
+| Pairing (2026-10-01) | Host types the joiner's code right, then a new window with a wrong code three times | Pairs; then the attempt ends and nothing is imported |
+| Pairing (2026-10-01) | Receive a public key, a key pair and a backup | Each shown with its fingerprint before Add or Skip; the backup restores without trust |
+| Git (2026-10-01) | `git commit -S` with a protected key, switch off, then on | Refused naming the Settings switch, then signs; `git log --show-signature` shows the signer |
+| Session (2026-10-01) | "Until the screen locks" on a Linux desktop before it has reported a lock | Prompted again after 1 minute; lock and unlock once, then held until the next lock |
+| Import (2026-10-01) | Import the protected secret of a key held as a contact, wrong passphrase then right | Refused, then added as a key pair |
+| Verify (2026-10-01) | gpg clear-signed, inline signed, detached and signed-and-encrypted messages | Each verifies with the signer shown; a tampered copy fails |
+| Network (2026-10-01) | Key search and WKD through Tor, then a SOCKS proxy with user and password | Both work; nothing resolves locally |
+| GnuPG (2026-10-01) | Import from the own home, then from a copied home folder | Own home brings secrets through gpg; the copy brings public keys, trust unticked |
 
 ## 15. Risks
 
@@ -668,3 +683,14 @@ Resolved (2026-09-26):
 - Q9. CLI signs and warns on stderr when a composite signature goes to a v4-only recipient.
 - Q10. Keep SHA-1 `ssh-rsa` agent signatures for old servers.
 - Q11. 3.0.0 does not wait for Flathub review; Flathub follows when accepted.
+
+Open (2026-10-01), from the pre-release review:
+- Q12. Git signing with protected keys is opt-in (Settings > Git signing). Keep it off by default?
+- Q13. "Until the screen locks" falls back to 1 minute where no lock has been seen. Acceptable?
+- Q14. Automatic key refresh is off for new installs, unchanged for existing ones. Keep?
+- Q15. GnuPG import runs gpg only for the own home, with `--no-options`. Keep?
+- Q16. Pairing: the host types the joiner's code; only local-network addresses may connect
+  (CGNAT and global IPv6 refused). A typed host name is still accepted for a join. Keep?
+- Q17. The onion key-server mirror stays plain http and on by default. Keep, or default it off?
+- Q18. AppImage tools must be pinned (`packaging/appimage/pin-tools.sh`) before the tag, and the
+  Gradle verification metadata and wrapper checksum generated on the Mac.

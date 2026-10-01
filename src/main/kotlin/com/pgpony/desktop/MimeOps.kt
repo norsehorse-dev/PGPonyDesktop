@@ -128,11 +128,9 @@ class MimeOps(
             hasSignature = result.hasSignature,
             signerKeyID = result.signerKeyID,
             signatureKeyIDRaw = result.signatureKeyIDRaw,
-            signature = SignatureSummary.of(
-                repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
-                result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp,
-                weakKey = result.signerWeakKey
-            ),
+            // The signer is the key that verified, and a held signer whose signature did not
+            // pass reads as invalid.
+            signature = SignatureSummary.ofDecrypt(repo, result),
             weakNote = SignatureSummary.weakNote(result.signerWeakKey, result.decryptionWeakKey)
         )
     }

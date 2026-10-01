@@ -28,10 +28,19 @@ finish-args:
   # Smart cards over PC/SC: the host pcscd's socket. The client library is the pcsc-lite module
   # below; Flatpak.kt points javax.smartcardio at it.
   - --socket=pcsc
-  # PGPony encrypts, decrypts, signs and verifies files and folders the user picks, and watch
-  # folders process whole directories on their own. The AWT file chooser does not go through the
-  # file chooser portal, so the grant is home rather than a portal.
-  - --filesystem=home
+  # Files. PGPony encrypts, decrypts, signs and verifies files and folders the user picks, and
+  # watch folders process whole directories on their own. The AWT file chooser does not go
+  # through the file chooser portal, so the grant names the usual folders instead of all of
+  # home: a home grant would let any bug in the app rewrite ~/.bashrc, ~/.gitconfig or an
+  # autostart entry and so run code outside the sandbox. A file opened from the file manager
+  # comes in through the document portal (Exec %f) wherever it lives, so it can be read. Other
+  # folders are the user's choice to add (README.md, "Folders").
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+  - --filesystem=xdg-desktop
+  # Read only: GnuPG import and the pass store read these folders and never write them.
+  - --filesystem=~/.gnupg:ro
+  - --filesystem=~/.password-store:ro
 
 modules:
   # The PC/SC client library only; pcscd itself runs on the host.

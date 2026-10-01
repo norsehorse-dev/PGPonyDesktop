@@ -40,6 +40,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -272,6 +273,34 @@ class DesktopState(private val scope: CoroutineScope) {
     fun importBytes(data: ByteArray) = scope.launch {
         status = tr("d_status_import", repository.importBytes(data).summary())
         refresh()
+    }
+
+    /**
+     * 3.0.0: a secret key offered for a contact already in the keyring waits for its passphrase
+     * (DesktopKeyRepository.pendingSecrets); the window asks for it. [onResult] gets the check's
+     * answer; on OK the contact has become a key pair.
+     */
+    fun completePendingSecret(
+        pending: PendingSecret,
+        passphrase: CharArray,
+        onResult: (com.pgpony.android.crypto.SecretKeyCheck.SecretMatch) -> Unit
+    ) = scope.launch {
+        val match = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            repository.completeSecretUpgrade(pending, passphrase)
+        }
+        when (match) {
+            com.pgpony.android.crypto.SecretKeyCheck.SecretMatch.OK ->
+                status = tr("d_status_secret_added", pending.label)
+            com.pgpony.android.crypto.SecretKeyCheck.SecretMatch.WRONG_PASSPHRASE -> Unit
+            else -> status = tr("d_status_secret_refused", pending.label)
+        }
+        refresh()
+        onResult(match)
+    }
+
+    fun dismissPendingSecret(pending: PendingSecret) {
+        repository.dismissPendingSecret(pending.fingerprint)
+        status = tr("d_status_secret_skipped", pending.label)
     }
 
     /** D2b — full Android generateKey port (incl. pre-cached revocation certificate).
@@ -740,6 +769,9 @@ private fun guiApplication() = application {
         PGPonyTheme {
             App(state)
             if (showAbout) AboutDialog(state) { showAbout = false }
+            // 3.0.0: a secret key for a held contact, from any import, waits here for its passphrase.
+            val waitingSecrets by state.repository.pendingSecrets.collectAsState()
+            waitingSecrets.firstOrNull()?.let { SecretUpgradeDialog(state, it) }
         }
     }
 }

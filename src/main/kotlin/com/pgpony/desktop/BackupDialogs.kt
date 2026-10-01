@@ -33,8 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.AwtWindow
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.pgpony.android.backup.CrockfordBase32
@@ -46,7 +44,6 @@ import java.time.LocalDate
 
 @Composable
 fun ExportBackupDialog(state: DesktopState, onDismiss: () -> Unit) {
-    val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val backup = remember { DesktopBackupService(state.repository) }
     val recovery = remember { CrockfordBase32.generate() }
@@ -73,7 +70,9 @@ fun ExportBackupDialog(state: DesktopState, onDismiss: () -> Unit) {
                     fontFamily = FontFamily.Monospace
                 )
                 TextButton(onClick = {
-                    clipboard.setText(AnnotatedString(recovery.grouped))
+                    // The recovery code opens every secret key in the backup: copied as a
+                    // secret, so the clipboard clears it under the auto-clear setting.
+                    DesktopClipboard.copy(recovery.grouped, secret = true)
                     state.status = tr("d_backup_code_copied")
                 }) { Text(tr("backup_code_copy")) }
                 Spacer(Modifier.height(6.dp))

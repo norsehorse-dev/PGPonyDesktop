@@ -2,10 +2,12 @@
 // PGPony Desktop 3.0.0, stage 5 checkpoint 5c (plan 13a): what changes when PGPony runs as a
 // Flatpak. Detection, and the two JVM defaults the sandbox needs before anything else runs.
 //
-// Preferences. java.util.prefs keeps its user tree under ~/.java, and the Flatpak build has a
-// home grant, so without this a Flatpak install would share its settings with an AppImage, AUR
-// or .deb install on the same account while keeping a keyring of its own (XDG_DATA_HOME points
-// into ~/.var/app). The user tree moves beside the rest of the Flatpak's data instead.
+// Preferences. java.util.prefs keeps its user tree under ~/.java. The Flatpak is granted only a
+// few folders in home (Documents, Downloads, Desktop, and ~/.gnupg and ~/.password-store read
+// only), so ~/.java is not writable there; and a user who widens the grant to all of home would
+// otherwise share settings with an AppImage, AUR or .deb install on the same account while
+// keeping a keyring of its own (XDG_DATA_HOME points into ~/.var/app). The user tree moves beside
+// the rest of the Flatpak's data instead.
 //
 // Smart cards. javax.smartcardio looks for libpcsclite under /usr only. The Flatpak ships its own
 // client library in /app/lib (the manifest builds pcsc-lite without its daemon), and

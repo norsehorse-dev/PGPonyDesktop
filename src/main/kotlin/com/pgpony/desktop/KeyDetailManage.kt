@@ -143,7 +143,9 @@ private suspend fun loadManageData(state: DesktopState, key: PGPKeyEntity): Mana
         state.keys.filter { it.isKeyPair && !it.isCardBacked && !it.isRevoked && it.fingerprint != key.fingerprint }
     } else emptyList()
     return ManageData(
-        passphraseProtected = soft && runCatching { edits.isPassphraseProtected(key.fingerprint) }.getOrDefault(false),
+        // "Protected" here means unlocking needs a passphrase, so Change Passphrase asks for the
+        // current one; a key with some unprotected subkeys gets them protected by that change.
+        passphraseProtected = soft && runCatching { edits.needsPassphrase(key.fingerprint) }.getOrDefault(false),
         userIds = runCatching { edits.userIdRows(key) }.getOrDefault(emptyList()),
         subkeys = runCatching { edits.subkeyRows(key) }.getOrDefault(emptyList()),
         notations = runCatching { edits.readNotations(key.fingerprint) }.getOrDefault(emptyList()),

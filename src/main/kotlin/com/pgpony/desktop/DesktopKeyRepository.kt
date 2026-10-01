@@ -26,6 +26,8 @@ import com.pgpony.android.crypto.KeyExpirationService
 import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.RevocationError
 import com.pgpony.android.crypto.RevocationService
+import com.pgpony.android.crypto.SecretKeyCheck
+import com.pgpony.android.crypto.SecretKeyUnlock
 import com.pgpony.android.crypto.SubkeyCapability
 import com.pgpony.android.crypto.pqc.CompositeKeyFacade
 import com.pgpony.android.crypto.pqc.CompositePrimaryKeyGen
@@ -44,7 +46,6 @@ import org.bouncycastle.openpgp.PGPSecretKeyRing
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 /** Mirrors the Android ImportResolution vocabulary (card pairing arrives D7). */
@@ -53,22 +54,42 @@ import java.util.UUID
 class RecipientLoadException(val keys: List<String>) :
     Exception(tr("d_err_recipient_unusable", keys.joinToString(", ")))
 
-enum class ImportResolution { INSERTED, UPGRADED_TO_KEY_PAIR, MERGED_NEW_MATERIAL, ALREADY_IN_KEYRING, FAILED }
+/**
+ * 3.0.0: [NEEDS_PASSPHRASE] is a protected secret key for a contact already in the keyring. It is
+ * not added until its passphrase proves it (DesktopKeyRepository.pendingSecrets).
+ */
+enum class ImportResolution { INSERTED, UPGRADED_TO_KEY_PAIR, MERGED_NEW_MATERIAL, ALREADY_IN_KEYRING, FAILED, NEEDS_PASSPHRASE }
+
+/**
+ * 3.0.0: a secret key offered for a contact the keyring already holds as a public key, waiting for
+ * its passphrase. [block] is the key as offered (still protected by its own passphrase).
+ */
+data class PendingSecret(val fingerprint: String, val label: String, val block: String)
 
 data class ImportReport(
     val inserted: Int,
     val upgraded: Int,
     val already: Int,
     val failed: Int,
-    val merged: Int = 0
+    val merged: Int = 0,
+    /** Secret keys for held contacts that wait for their passphrase (see [PendingSecret]). */
+    val pending: List<PendingSecret> = emptyList(),
+    /** Contacts whose offered secret key did not prove to be theirs; nothing was added for them. */
+    val refused: List<String> = emptyList()
 ) {
-    val total: Int get() = inserted + upgraded + already + failed + merged
+    val total: Int get() = inserted + upgraded + already + failed + merged + pending.size
     fun summary(): String {
         val clauses = StringBuilder(trQuantity("d_import_summary_added", inserted))
         if (upgraded > 0) clauses.append(trQuantity("d_import_summary_upgraded", upgraded))
         if (merged > 0) clauses.append(trQuantity("d_import_summary_merged", merged))
         if (already > 0) clauses.append(trQuantity("d_import_summary_already", already))
         if (failed > 0) clauses.append(trQuantity("d_import_summary_failed", failed))
+        if (pending.isNotEmpty()) {
+            clauses.append(tr("d_import_summary_needs_passphrase", pending.joinToString(tr("d_list_separator")) { it.label }))
+        }
+        if (refused.isNotEmpty()) {
+            clauses.append(tr("d_import_summary_secret_refused", refused.joinToString(tr("d_list_separator"))))
+        }
         return trQuantity("d_import_summary_blocks", total, clauses.toString())
     }
 }
@@ -308,12 +329,90 @@ class DesktopKeyRepository(
             ?: dao.getByFingerprint(fingerprint.lowercase())
             ?: dao.getByFingerprint(fingerprint.uppercase())   // engine emits uppercase; backup meta lowercases
 
+    /** The newest row in Recently Deleted for [fingerprint], or null. */
+    suspend fun binnedByFingerprint(fingerprint: String): PGPKeyEntity? =
+        dao.getDeletedKeys().firstOrNull { it.fingerprint.equals(fingerprint, ignoreCase = true) }
+
+    /** A row for [fingerprint] in the keyring or in Recently Deleted. */
+    suspend fun byFingerprintAnyState(fingerprint: String): PGPKeyEntity? =
+        byFingerprint(fingerprint) ?: binnedByFingerprint(fingerprint)
+
+    /**
+     * The row for [fingerprint] an import should build on: the live row, or else a row in Recently
+     * Deleted, which is brought back (its trust, notes and settings with it). Key material is
+     * stored per fingerprint, so a second row for a binned key would share its files, and purging
+     * the binned row later would delete the live key's material.
+     */
+    private suspend fun rowForImport(fingerprint: String, outcome: UpgradeOutcome): PGPKeyEntity? {
+        byFingerprint(fingerprint)?.let { return it }
+        val binned = binnedByFingerprint(fingerprint) ?: return null
+        dao.restoreFromBin(binned.id)
+        outcome.restoredFromBin = true
+        return byFingerprint(fingerprint)
+    }
+
+    // ── Secret keys waiting for their passphrase (KEYSTORE-4) ───────────
+
+    private val pendingFlow = kotlinx.coroutines.flow.MutableStateFlow<List<PendingSecret>>(emptyList())
+
+    /** Secret keys for held contacts that an import could not prove yet; the GUI asks for each. */
+    val pendingSecrets: kotlinx.coroutines.flow.StateFlow<List<PendingSecret>> get() = pendingFlow
+
+    private fun addPending(p: PendingSecret) {
+        pendingFlow.value = pendingFlow.value.filter { !it.fingerprint.equals(p.fingerprint, true) } + p
+    }
+
+    /** Forget a waiting secret key without adding it. */
+    fun dismissPendingSecret(fingerprint: String) {
+        pendingFlow.value = pendingFlow.value.filter { !it.fingerprint.equals(fingerprint, true) }
+    }
+
+    /**
+     * Add a waiting secret key with its [passphrase]. The key is added only when the secret
+     * unlocks with it and proves to belong to the stored contact (SecretKeyCheck); the result
+     * says what happened. On OK, or on any answer other than a wrong passphrase, the key stops
+     * waiting.
+     */
+    suspend fun completeSecretUpgrade(pending: PendingSecret, passphrase: CharArray): SecretKeyCheck.SecretMatch {
+        val existing = byFingerprint(pending.fingerprint)
+        if (existing == null || existing.isKeyPair) {
+            dismissPendingSecret(pending.fingerprint)
+            return if (existing?.isKeyPair == true) SecretKeyCheck.SecretMatch.OK else SecretKeyCheck.SecretMatch.PUBLIC_MISMATCH
+        }
+        val outcome = UpgradeOutcome()
+        val resolution = runCatching { importDetailed(pending.block, passphrase, emptySet(), outcome) }
+            .getOrElse { ImportResolution.FAILED }
+        val match = outcome.match
+            ?: if (resolution == ImportResolution.UPGRADED_TO_KEY_PAIR) SecretKeyCheck.SecretMatch.OK
+            else SecretKeyCheck.SecretMatch.UNREADABLE
+        if (match != SecretKeyCheck.SecretMatch.WRONG_PASSPHRASE) dismissPendingSecret(pending.fingerprint)
+        return match
+    }
+
+    /**
+     * Whether [secretBytes] really is the secret of the stored contact [existing]
+     * (SecretKeyCheck.checkSecretForPublic against the stored certificate).
+     */
+    private suspend fun proveSecret(existing: PGPKeyEntity, secretBytes: ByteArray, passphrase: CharArray?): SecretKeyCheck.SecretMatch {
+        val stored = rawPublicBytes(existing.fingerprint) ?: return SecretKeyCheck.SecretMatch.UNREADABLE
+        return runCatching { SecretKeyCheck.checkSecretForPublic(secretBytes, stored, passphrase) }
+            .getOrDefault(SecretKeyCheck.SecretMatch.UNREADABLE)
+    }
+
+    /** Label for messages about [e]: its User ID, else its short fingerprint. */
+    private fun labelOf(e: PGPKeyEntity): String = e.userID.ifBlank { e.shortFingerprint }
+
     // ── Import ──────────────────────────────────────────────────────────
 
-    suspend fun importArmoredText(text: String): ImportReport =
-        importBlocks(splitArmoredBlocks(text))
+    /**
+     * [insertedInSession]: for an import that spans several calls (a public export followed by
+     * the secret of the same keys). Every key a call inserts is added to it, and a secret key for
+     * a key in it upgrades without proof, as within one call; see [importArmoredKeyDetailed].
+     */
+    suspend fun importArmoredText(text: String, insertedInSession: MutableSet<String>? = null): ImportReport =
+        importBlocks(splitArmoredBlocks(text).flatMap { splitKeys(it) }, insertedInSession)
 
-    suspend fun importBytes(data: ByteArray): ImportReport {
+    suspend fun importBytes(data: ByteArray, insertedInSession: MutableSet<String>? = null): ImportReport {
         // 3.0.0: a BINARY composite ML-DSA or v4 algo-35 key cannot go through BouncyCastle's
         // explode; armor it as-is and take the raw-octet import path.
         val looksArmored = data.take(64).toByteArray().toString(Charsets.ISO_8859_1).contains("-----BEGIN PGP")
@@ -323,11 +422,12 @@ class DesktopKeyRepository(
         ) {
             val header = if (CompositeKeyFacade.hasSecret(data)) "PRIVATE" else "PUBLIC"
             return importBlocks(
-                listOf(
+                splitKeys(
                     CompositeSigPacket.armor(
                         "-----BEGIN PGP $header KEY BLOCK-----", "-----END PGP $header KEY BLOCK-----", data
                     )
-                )
+                ),
+                insertedInSession
             )
         }
         // 3.0.0 (5d-3): the same for an ARMORED one. BouncyCastle's explode would hand back
@@ -341,35 +441,99 @@ class DesktopKeyRepository(
                     CompositeKeyFacade.isCompositePrimary(raw) || CompositeKeyFacade.hasV4Algo35Subkey(raw)
                 }.getOrDefault(false)
             }
-            if (composite) return importArmoredText(text)
+            if (composite) return importArmoredText(text, insertedInSession)
         }
         val blocks = runCatching { crypto.explodeToArmoredKeys(data) }.getOrDefault(emptyList())
-        if (blocks.isNotEmpty()) return importBlocks(blocks)
+        if (blocks.isNotEmpty()) return importBlocks(blocks, insertedInSession)
         val asText = data.toString(Charsets.UTF_8)
-        return if (asText.contains("-----BEGIN PGP")) importArmoredText(asText)
+        return if (asText.contains("-----BEGIN PGP")) importArmoredText(asText, insertedInSession)
         else ImportReport(0, 0, 0, failed = 1)
     }
 
-    private suspend fun importBlocks(blocks: List<String>): ImportReport {
+    private suspend fun importBlocks(blocks: List<String>, insertedInSession: MutableSet<String>? = null): ImportReport {
         var inserted = 0; var upgraded = 0; var already = 0; var failed = 0; var merged = 0
+        val pending = ArrayList<PendingSecret>()
+        val refused = ArrayList<String>()
+        // Rows this call inserted: a public block followed by the secret of the same key (an
+        // OpenKeychain backup, a gpg export of both) was never a contact the user held before.
+        val fresh = insertedInSession ?: HashSet()
         for (block in blocks) {
-            when (runCatching { importArmoredKeyDetailed(block) }.getOrElse { ImportResolution.FAILED }) {
+            val outcome = UpgradeOutcome()
+            val resolution = runCatching {
+                importDetailed(block, null, fresh, outcome)
+            }.getOrElse { ImportResolution.FAILED }
+            outcome.inserted?.let { fresh.add(it.uppercase()) }
+            when (resolution) {
                 ImportResolution.INSERTED -> inserted++
                 ImportResolution.UPGRADED_TO_KEY_PAIR -> upgraded++
                 ImportResolution.MERGED_NEW_MATERIAL -> merged++
                 ImportResolution.ALREADY_IN_KEYRING -> already++
-                ImportResolution.FAILED -> failed++
+                ImportResolution.FAILED -> {
+                    failed++
+                    outcome.refusedLabel?.let { refused.add(it) }
+                }
+                ImportResolution.NEEDS_PASSPHRASE -> outcome.pending?.let { pending.add(it) }
             }
         }
-        return ImportReport(inserted, upgraded, already, failed, merged)
+        return ImportReport(inserted, upgraded, already, failed, merged, pending, refused)
+    }
+
+    /** What one import did beyond its resolution, for [importBlocks] and [completeSecretUpgrade]. */
+    private class UpgradeOutcome {
+        var inserted: String? = null
+        var match: SecretKeyCheck.SecretMatch? = null
+        var refusedLabel: String? = null
+        var pending: PendingSecret? = null
+        var restoredFromBin = false
     }
 
     /**
      * One armored block → one resolution. Same core semantics as Android's
      * importArmoredKeyDetailed: dedupe by fingerprint; secret material arriving for a
      * public-only row upgrades in place; a held secret is never overwritten.
+     *
+     * 3.0.0: a secret key for a contact already held as a public key is added only when it
+     * proves to be that contact's secret (SecretKeyCheck.checkSecretForPublic). An unprotected
+     * secret is tested at once; a protected one needs [secretPassphrase], and without it the
+     * block waits in [pendingSecrets] and the result is [ImportResolution.NEEDS_PASSPHRASE].
+     * Anything that does not prove itself is [ImportResolution.FAILED] and nothing is written.
+     * A block holding several keys imports only its first; [importArmoredText] splits them.
+     * [insertedInSession] spans an import made of several calls: a key an earlier call inserted
+     * was never a contact the user held, so its secret upgrades without proof, and a key this
+     * call inserts is added to it.
      */
-    suspend fun importArmoredKeyDetailed(block: String): ImportResolution {
+    suspend fun importArmoredKeyDetailed(
+        block: String,
+        secretPassphrase: CharArray? = null,
+        insertedInSession: MutableSet<String>? = null
+    ): ImportResolution {
+        val outcome = UpgradeOutcome()
+        val resolution = importDetailed(block, secretPassphrase, insertedInSession ?: emptySet(), outcome)
+        outcome.inserted?.let { insertedInSession?.add(it.uppercase()) }
+        return resolution
+    }
+
+    private suspend fun importDetailed(
+        offered: String,
+        secretPassphrase: CharArray?,
+        freshInCall: Set<String>,
+        outcome: UpgradeOutcome
+    ): ImportResolution {
+        val resolution = importDetailedCore(offered, secretPassphrase, freshInCall, outcome)
+        // A key brought back from Recently Deleted reads as added, whatever the material did.
+        return if (outcome.restoredFromBin && resolution == ImportResolution.ALREADY_IN_KEYRING) {
+            ImportResolution.INSERTED
+        } else resolution
+    }
+
+    private suspend fun importDetailedCore(
+        offered: String,
+        secretPassphrase: CharArray?,
+        freshInCall: Set<String>,
+        outcome: UpgradeOutcome
+    ): ImportResolution {
+        // Only ever one key per stored block (KEYSTORE-5): a block with several keys keeps the first.
+        val block = splitKeys(offered).firstOrNull() ?: offered
         // 3.0.0 (Android 4.4.0 RC3 #30/#31 and 4.5.0 item 14 #56): composite ML-DSA keys and v4
         // Ed25519 + algo-35 interop keys are not BouncyCastle rings. They are recognized first
         // and stored as raw octets, exactly as Android does; everything else falls through to
@@ -384,7 +548,8 @@ class DesktopKeyRepository(
                 userId = info.userIds.firstOrNull() ?: "",
                 algorithm = if (info.primaryAlgId == 31) KeyAlgorithm.MLDSA87_ED448_V6 else KeyAlgorithm.MLDSA65_ED25519_V6,
                 createdAt = info.creationTimeMillis,
-                expiresAt = expiresAt
+                expiresAt = expiresAt,
+                gate = UpgradeGate(block, secretPassphrase, freshInCall, outcome)
             )
         }
         v4Algo35FromArmored(block)?.let { bytes ->
@@ -396,14 +561,15 @@ class DesktopKeyRepository(
                 userId = meta.userId,
                 algorithm = KeyAlgorithm.MLKEM768_X25519_V4,
                 createdAt = meta.createdAtMs,
-                expiresAt = meta.expiresAtMs
+                expiresAt = meta.expiresAtMs,
+                gate = UpgradeGate(block, secretPassphrase, freshInCall, outcome)
             )
         }
         val result = crypto.importArmoredKey(block)
         val fingerprint = result.fingerprint
         val publicArmor = result.publicKeyRing?.let { crypto.exportArmoredPublicKey(it) }
 
-        val existing = byFingerprint(fingerprint)
+        val existing = rowForImport(fingerprint, outcome)
         return when {
             existing == null -> {
                 val (name, email) = PGPKeyEntity.parseUserID(result.userID)
@@ -426,9 +592,12 @@ class DesktopKeyRepository(
                         armoredPublicKey = publicArmor
                     )
                 )
+                outcome.inserted = fingerprint
                 ImportResolution.INSERTED
             }
             result.hasPrivateKey && !existing.isKeyPair -> {
+                val gate = UpgradeGate(block, secretPassphrase, freshInCall, outcome)
+                gate.check(existing, block.toByteArray(Charsets.UTF_8))?.let { return it }
                 materials.storeSecret(fingerprint, block)
                 // 3.0.0 (5d-3): the certificate already held may carry newer self-signatures
                 // (changed preferences, a later expiry) than the key being added; keep the
@@ -465,7 +634,45 @@ class DesktopKeyRepository(
      * are left out; an empty list means there is no key to import.
      */
     suspend fun previewArmoredText(text: String): List<ImportPreviewItem> =
-        splitArmoredBlocks(text).mapNotNull { runCatching { previewBlock(it) }.getOrNull() }
+        splitArmoredBlocks(text).flatMap { splitKeys(it) }.mapNotNull { runCatching { previewBlock(it) }.getOrNull() }
+
+    /**
+     * The fingerprint of every key [armored] holds, read without writing anything (the backup
+     * restore checks an entry holds exactly the key its name says). Unreadable keys are left out.
+     */
+    internal suspend fun fingerprintsOf(armored: String): List<String> =
+        previewArmoredText(armored).map { it.fingerprint }
+
+    /**
+     * [block] as one armored block per key. `gpg --export-secret-keys` with several keys writes
+     * them all into ONE armor block, and Bouncy Castle reads only the first; stored as is, the
+     * other secret keys would travel hidden inside the first key's file. A block with one key is
+     * returned unchanged; a block with several is cut at each primary key packet, each part
+     * keeping its own packets as they were (trust packets, which only mean something to the
+     * program that wrote them, are dropped).
+     */
+    internal fun splitKeys(block: String): List<String> {
+        val raw = runCatching { CompositeSigPacket.dearmor(block) }.getOrNull() ?: return listOf(block)
+        val packets = runCatching { CertificateBindings.packets(raw) }.getOrNull() ?: return listOf(block)
+        if (packets.count { it.tag == TAG_SECRET_KEY || it.tag == TAG_PUBLIC_KEY } <= 1) return listOf(block)
+        val groups = ArrayList<MutableList<CertificateBindings.Packet>>()
+        for (p in packets) {
+            when {
+                p.tag == TAG_SECRET_KEY || p.tag == TAG_PUBLIC_KEY -> groups.add(mutableListOf(p))
+                p.tag == TAG_TRUST -> Unit
+                else -> groups.lastOrNull()?.add(p)
+            }
+        }
+        return groups.map { g ->
+            val out = java.io.ByteArrayOutputStream()
+            g.forEach { out.write(CertificateBindings.frame(it.tag, it.body)) }
+            if (g.first().tag == TAG_SECRET_KEY) {
+                CompositeSigPacket.armor("-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----", out.toByteArray())
+            } else {
+                CompositeSigPacket.armor("-----BEGIN PGP PUBLIC KEY BLOCK-----", "-----END PGP PUBLIC KEY BLOCK-----", out.toByteArray())
+            }
+        }
+    }
 
     private suspend fun previewBlock(block: String): ImportPreviewItem? {
         compositeFromArmored(block)?.let { (bytes, info) ->
@@ -538,7 +745,8 @@ class DesktopKeyRepository(
         userId: String,
         algorithm: KeyAlgorithm,
         createdAt: Long,
-        expiresAt: Long?
+        expiresAt: Long?,
+        gate: UpgradeGate
     ): ImportResolution {
         val hasPrivate = CompositeKeyFacade.hasSecret(bytes)
         val armoredPublic = CompositeSigPacket.armor(
@@ -547,10 +755,10 @@ class DesktopKeyRepository(
         val armoredSecret = if (hasPrivate) CompositeSigPacket.armor(
             "-----BEGIN PGP PRIVATE KEY BLOCK-----", "-----END PGP PRIVATE KEY BLOCK-----", bytes
         ) else null
-        val existing = byFingerprint(fingerprint)
+        val existing = rowForImport(fingerprint, gate.outcome)
         if (existing != null) {
             if (hasPrivate && !existing.isKeyPair) {
-                materials.storePublic(existing.fingerprint, armoredPublic)
+                gate.check(existing, bytes)?.let { return it }
                 materials.storeSecret(existing.fingerprint, armoredSecret!!)
                 dao.update(existing.copy(isKeyPair = true, armoredPublicKey = armoredPublic))
                 return ImportResolution.UPGRADED_TO_KEY_PAIR
@@ -574,7 +782,34 @@ class DesktopKeyRepository(
                 armoredPublicKey = armoredPublic
             )
         )
+        gate.outcome.inserted = fingerprint
         return ImportResolution.INSERTED
+    }
+
+    /**
+     * The proof a secret key must give before a held contact becomes a key pair. [check] returns
+     * null when the upgrade may go ahead, else the resolution to report (nothing written).
+     */
+    private inner class UpgradeGate(
+        val block: String,
+        val passphrase: CharArray?,
+        val freshInCall: Set<String>,
+        val outcome: UpgradeOutcome
+    ) {
+        suspend fun check(existing: PGPKeyEntity, secretBytes: ByteArray): ImportResolution? {
+            if (existing.fingerprint.uppercase() in freshInCall) return null
+            val match = proveSecret(existing, secretBytes, passphrase)
+            outcome.match = match
+            if (match == SecretKeyCheck.SecretMatch.OK) return null
+            if (match == SecretKeyCheck.SecretMatch.NEEDS_PASSPHRASE) {
+                val p = PendingSecret(existing.fingerprint, labelOf(existing), block)
+                addPending(p)
+                outcome.pending = p
+                return ImportResolution.NEEDS_PASSPHRASE
+            }
+            outcome.refusedLabel = labelOf(existing)
+            return ImportResolution.FAILED
+        }
     }
 
     /**
@@ -1056,9 +1291,14 @@ class DesktopKeyRepository(
         all.firstOrNull { it.longKeyId.equals(id, ignoreCase = true) }?.let { return it }
         all.firstOrNull { it.fingerprint.endsWith(id, ignoreCase = true) }?.let { return it }
         val wanted = runCatching { java.lang.Long.parseUnsignedLong(id, 16) }.getOrNull() ?: return null
+        // A subkey counts only when its certificate validly binds it as a signer (a copy of
+        // someone else's subkey attached to another certificate names nobody).
         for (e in all) {
             val ring = loadPublicKeyRing(e.fingerprint) ?: continue
-            if (ring.publicKeys.asSequence().any { it.keyID == wanted }) return e
+            val key = ring.publicKeys.asSequence().firstOrNull { it.keyID == wanted } ?: continue
+            if (key.isMasterKey) return e
+            val fp = org.bouncycastle.util.encoders.Hex.toHexString(key.fingerprint)
+            if (runCatching { CertificateBindings.analyze(ring)?.isValidSignerKey(fp) }.getOrNull() == true) return e
         }
         return null
     }
@@ -1099,8 +1339,18 @@ class DesktopKeyRepository(
         return runCatching { CompositeKeyFacade.parse(raw) }.getOrNull()
     }
 
-    internal fun rawSecretBytes(fingerprint: String): ByteArray? {
+    /**
+     * The stored secret of [fingerprint], its first key only. Versions before 3.0.0 could store
+     * a block holding several keys under the first key's fingerprint; the others never leave
+     * with it (export, backup, pairing) and are never read as part of it.
+     */
+    private fun storedSecret(fingerprint: String): String? {
         val armored = materials.loadSecret(fingerprint) ?: return null
+        return splitKeys(armored).firstOrNull() ?: armored
+    }
+
+    internal fun rawSecretBytes(fingerprint: String): ByteArray? {
+        val armored = storedSecret(fingerprint) ?: return null
         return runCatching { CompositeSigPacket.dearmor(armored) }.getOrNull()
     }
 
@@ -1125,7 +1375,7 @@ class DesktopKeyRepository(
         allKeys().filter { it.isKeyPair }.mapNotNull { compositeDecryptRing(it) }
 
     fun loadSecretKeyRing(fingerprint: String): PGPSecretKeyRing? {
-        val armored = materials.loadSecret(fingerprint) ?: return null
+        val armored = storedSecret(fingerprint) ?: return null
         runCatching { crypto.importArmoredKey(armored).secretKeyRing }.getOrNull()?.let { return it }
         // Android item 7 (#55): a v4 interop key carries an algo-35 subkey BouncyCastle cannot
         // parse, so the whole ring fails to load. Fall back to the BouncyCastle-parseable base
@@ -1302,10 +1552,11 @@ class DesktopKeyRepository(
         // FIRST, so a failure leaves the stored key untouched; then everything is stored with the
         // ML-KEM subkey carried over and its binding replaced.
         val v4Bindings = v4Algo35Bindings(fingerprint, secRing, passphrase, expiresAtEpochSeconds)
-        val armor = storeCarriedPublic(fingerprint, updated.publicRing.encoded)
         // UpdatedRings.secretRing is nullable (the card path has none); guard like Android's
-        // persistExpiration. The software path always produces one.
+        // persistExpiration. The software path always produces one. The secret half is written
+        // first, so a failure in between never leaves a public key the secret does not match.
         updated.secretRing?.let { storeCarriedSecret(fingerprint, it.encoded) }
+        val armor = storeCarriedPublic(fingerprint, updated.publicRing.encoded)
         dao.update(
             entity.copy(
                 armoredPublicKey = armor,
@@ -1332,11 +1583,8 @@ class DesktopKeyRepository(
         val bodies = com.pgpony.android.crypto.pqc.V4Algo35Edit.publicBodies(raw)
         if (bodies.isEmpty()) return emptyList()
         val priv = try {
-            secRing.secretKey.extractPrivateKey(
-                org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
-                    org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
-                ).build((passphrase ?: "").toCharArray())
-            )
+            SecretKeyUnlock.extract(secRing.secretKey, (passphrase ?: "").toCharArray())
+                ?: throw KeyExpirationService.ExpirationError.UnsupportedKey(tr("d_repo_err_secret_ring_load", fingerprint))
         } catch (e: org.bouncycastle.openpgp.PGPException) {
             throw if (passphrase.isNullOrEmpty()) KeyExpirationService.ExpirationError.PassphraseRequired()
             else KeyExpirationService.ExpirationError.InvalidPassphrase()
@@ -1386,13 +1634,13 @@ class DesktopKeyRepository(
         return runCatching { crypto.exportArmoredPublicKeyForSharing(ring) }.getOrDefault(armor)
     }
 
-    fun exportArmoredPrivateKey(fingerprint: String): String? = materials.loadSecret(fingerprint)
+    fun exportArmoredPrivateKey(fingerprint: String): String? = storedSecret(fingerprint)
 
     /** issue #2 symptom D: export a composite secret in GnuPG's native format
      *  so gpg 2.5.x / GPG4WIN can import it. [exportPassphrase] both unlocks a
      *  protected source and, when non-blank, AES-128-OCB protects the export. */
     fun exportArmoredPrivateKeyGpgCompat(fingerprint: String, exportPassphrase: String?): String? {
-        val armor = materials.loadSecret(fingerprint) ?: return null
+        val armor = storedSecret(fingerprint) ?: return null
         val ring = runCatching { crypto.importArmoredKey(armor).secretKeyRing }.getOrNull() ?: return null
         val source = if (crypto.isPassphraseProtected(ring)) exportPassphrase else null
         val protect = exportPassphrase?.takeIf { it.isNotBlank() }
@@ -1441,30 +1689,53 @@ class DesktopKeyRepository(
 
     suspend fun deleteByFingerprint(fingerprint: String) {
         byFingerprint(fingerprint)?.let { dao.delete(it) }
-        materials.delete(fingerprint)
+        // The material is shared by every row with this fingerprint; a binned row keeps it.
+        if (byFingerprintAnyState(fingerprint) == null) materials.delete(fingerprint)
     }
 
     // ── D1 → D2a store migration ────────────────────────────────────────
 
     /**
      * One-shot import of the D1 bootstrap store (keyring.json: metadata + full armored blocks).
-     * On success the file is renamed *.migrated so this never runs twice. Returns null when
+     * Once imported the file is overwritten and deleted, so this never runs twice and no copy of
+     * the armored secret keys stays beside the database. An entry that did not import (it failed,
+     * or its secret waits for a passphrase) is kept in the file, alone, and tried again at the
+     * next start, so a key is never lost with the file. Versions before 3.0.0 renamed it to
+     * keyring.json.migrated and kept it; such a file is removed here too. Returns null when
      * there was nothing to migrate.
      */
     suspend fun migrateLegacyJson(file: Path): ImportReport? {
+        OwnerOnlyPaths.wipe(file.resolveSibling(file.fileName.toString() + ".migrated"))
         if (!Files.exists(file)) return null
         val entries = runCatching {
             Json { ignoreUnknownKeys = true }
                 .decodeFromString<List<LegacyJsonKey>>(Files.readString(file))
         }.getOrElse { return null }
         if (entries.isEmpty()) {
-            Files.move(file, file.resolveSibling(file.fileName.toString() + ".migrated"),
-                StandardCopyOption.REPLACE_EXISTING)
+            OwnerOnlyPaths.wipe(file)
             return null
         }
-        val report = importBlocks(entries.map { it.armored })
-        Files.move(file, file.resolveSibling(file.fileName.toString() + ".migrated"),
-            StandardCopyOption.REPLACE_EXISTING)
+        val inserted = HashSet<String>()
+        val left = ArrayList<LegacyJsonKey>()
+        var report = ImportReport(0, 0, 0, 0)
+        for (entry in entries) {
+            val r = importBlocks(splitKeys(entry.armored), inserted)
+            if (r.failed > 0 || r.pending.isNotEmpty()) left += entry
+            report = ImportReport(
+                report.inserted + r.inserted, report.upgraded + r.upgraded, report.already + r.already,
+                report.failed + r.failed, report.merged + r.merged,
+                report.pending + r.pending, report.refused + r.refused
+            )
+        }
+        if (left.isEmpty()) {
+            OwnerOnlyPaths.wipe(file)
+        } else {
+            OwnerOnlyPaths.writeAtomically(
+                file,
+                Json.encodeToString(kotlinx.serialization.builtins.ListSerializer(LegacyJsonKey.serializer()), left)
+                    .toByteArray(Charsets.UTF_8)
+            )
+        }
         return report
     }
 
@@ -1472,6 +1743,10 @@ class DesktopKeyRepository(
     private data class LegacyJsonKey(val fingerprint: String, val armored: String)
 
     companion object {
+        private const val TAG_SECRET_KEY = 5
+        private const val TAG_PUBLIC_KEY = 6
+        private const val TAG_TRUST = 12
+
         /** Android KeyDeduplicationService.isExpiryDowngrade (item 24): a fetched copy that
          *  removes (null) or shortens a primary expiry the row already has. */
         internal fun isExpiryDowngrade(existingExpiresAtMs: Long?, fetchedExpiresAtMs: Long?): Boolean {

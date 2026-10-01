@@ -23,6 +23,8 @@ import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.RevocationError
 import com.pgpony.android.crypto.RevocationService
+import com.pgpony.android.crypto.SecretKeyCheck
+import com.pgpony.android.crypto.SecretKeyUnlock
 import com.pgpony.android.crypto.SubkeyCapability
 import com.pgpony.android.crypto.UserIdService
 import com.pgpony.android.crypto.V6SubkeyGen
@@ -112,25 +114,49 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
 
     suspend fun deletedKeys(): List<PGPKeyEntity> = dao.getDeletedKeys()
     suspend fun deletedCount(): Int = dao.deletedCount()
-    suspend fun restore(id: String) = dao.restoreFromBin(id)
 
-    /** Destroy a binned key for good: material, related rows, the row itself. */
+    /**
+     * Bring a binned key back. Key material is stored per fingerprint, so when the keyring already
+     * holds a live row for the same fingerprint (an older version could import a binned key a
+     * second time) the binned row is dropped instead: the key is in the keyring either way, and
+     * two live rows for one key would make lookups pick either.
+     */
+    suspend fun restore(id: String) {
+        val binned = dao.getDeletedById(id) ?: return
+        if (repo.byFingerprint(binned.fingerprint) != null) dao.purgeById(id)
+        else dao.restoreFromBin(id)
+    }
+
+    /**
+     * Destroy a binned key for good: material, related rows, the row itself. The material and the
+     * per-fingerprint records are shared by every row with the same fingerprint, so they are only
+     * removed when no other row (live or binned) still has it.
+     */
     suspend fun purge(entity: PGPKeyEntity) {
-        RemovedUserIdStore.clear(entity.fingerprint)
-        KeyPublicationStore.clear(entity.fingerprint)
-        repo.materials.delete(entity.fingerprint)
-        fallbackDao.deleteAllReferencing(entity.fingerprint)
-        signingDefaultsDao.deleteFor(entity.fingerprint)
+        val shared = (repo.allKeys() + deletedKeys()).any {
+            it.id != entity.id && it.fingerprint.equals(entity.fingerprint, ignoreCase = true)
+        }
+        if (!shared) {
+            RemovedUserIdStore.clear(entity.fingerprint)
+            KeyPublicationStore.clear(entity.fingerprint)
+            repo.materials.delete(entity.fingerprint)
+            fallbackDao.deleteAllReferencing(entity.fingerprint)
+            signingDefaultsDao.deleteFor(entity.fingerprint)
+        }
         dao.purgeById(entity.id)
     }
 
-    suspend fun emptyBin() = deletedKeys().forEach { purge(it) }
+    suspend fun emptyBin() {
+        deletedKeys().forEach { purge(it) }
+        Db.compact(repo.db)
+    }
 
     /** Purge keys binned longer than the retention window. Returns how many. */
     suspend fun purgeExpiredDeleted(nowMs: Long = System.currentTimeMillis()): Int {
         val cutoff = nowMs - RETENTION_DAYS * DAY_MS
         val expired = deletedKeys().filter { (it.deletedAt ?: 0L) < cutoff }
         expired.forEach { purge(it) }
+        if (expired.isNotEmpty()) Db.compact(repo.db)
         return expired.size
     }
 
@@ -152,6 +178,7 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
         repo.db.autocryptPeerDao().clear()
         val clients = repo.db.apiClientDao()
         clients.getAll().forEach { clients.deleteByPackage(it.packageName) }
+        Db.compact(repo.db)
     }
 
     // ── Last backed up (Android 4.3.0) ──────────────────────────────────
@@ -204,30 +231,101 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
     }
 
     /**
-     * 3.0.0 (F1, pairing): the armored secret key to hand to another PGPony, never unprotected.
-     * A key with a passphrase goes as stored. A key without one is protected under
-     * [transferPassphrase] in memory, the same re-protection [changePassphrase] does, and nothing
-     * is written: the stored key stays as it was. Returns null for a key without a passphrase
-     * when no transfer passphrase is given.
+     * 3.0.0 (F1, pairing): the armored secret key to hand to another PGPony, never with secret
+     * material in the clear. A key whose every secret (sub)key is protected goes as stored. Any
+     * other key is protected under [transferPassphrase] in memory: every secret (sub)key that has
+     * no passphrase gets the transfer passphrase, the same protection [changePassphrase] gives;
+     * parts that already have a passphrase keep it, and offline or card stubs stay stubs. Nothing
+     * is written: the stored key stays as it was. Returns null when such a key gets no transfer
+     * passphrase, or when it cannot be protected.
      */
     fun transferArmor(fingerprint: String, transferPassphrase: String?): String? {
         val stored = repo.exportArmoredPrivateKey(fingerprint) ?: return null
         if (isPassphraseProtected(fingerprint)) return stored
         val newChars = transferPassphrase?.takeIf { it.isNotEmpty() }?.toCharArray() ?: return null
         val raw = repo.rawSecretBytes(fingerprint) ?: return null
-        return if (CompositeKeyFacade.isCompositePrimary(raw)) {
-            armorPrivate(CompositeKeyFacade.reprotect(raw, null, newChars))
+        val protected = if (CompositeKeyFacade.isCompositePrimary(raw)) {
+            protectCompositeForTransfer(raw, newChars)
         } else {
-            val changed = crypto.changePassphrase(secretRing(fingerprint), "", transferPassphrase)
-            armorPrivate(V4Algo35Carry.carry(raw, changed.encoded) { body -> V4Algo35Carry.reprotectBody(body, null, newChars) })
-        }
+            val ring = repo.loadSecretKeyRing(fingerprint) ?: return null
+            val changed = protectUnprotectedKeys(ring, newChars)
+            V4Algo35Carry.carry(raw, changed.encoded) { body ->
+                if (SecretKeyCheck.protectionOf(7, body) == SecretKeyCheck.Protection.UNPROTECTED) {
+                    V4Algo35Carry.reprotectBody(body, null, newChars)
+                } else body
+            }
+        } ?: return null
+        // Never hand out a block that still carries unprotected material.
+        if (!SecretKeyCheck.isFullyPassphraseProtected(protected)) return null
+        return armorPrivate(protected)
     }
 
+    /** Each secret key of [ring] that has material and no passphrase, protected under [pass]. */
+    private fun protectUnprotectedKeys(ring: PGPSecretKeyRing, pass: CharArray): PGPSecretKeyRing {
+        var out = ring
+        val random = java.security.SecureRandom()
+        for (key in ring.secretKeys.asSequence().toList()) {
+            if (key.isPrivateKeyEmpty) continue
+            if (key.s2KUsage.toInt() != 0) continue
+            val encryptor = if (key.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6) {
+                org.bouncycastle.openpgp.operator.bc.BcAEADSecretKeyEncryptorBuilder(
+                    org.bouncycastle.bcpg.AEADAlgorithmTags.OCB,
+                    org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags.AES_256,
+                    org.bouncycastle.bcpg.S2K.Argon2Params.memoryConstrainedParameters()
+                ).setSecureRandom(random).build(pass, key.publicKey.publicKeyPacket)
+            } else {
+                com.pgpony.android.crypto.S2kPolicy.v4EncryptorBuilder().setSecureRandom(random).build(pass)
+            }
+            val sha1 = if (key.publicKey.version == org.bouncycastle.bcpg.PublicKeyPacket.VERSION_6) null
+            else org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
+                .get(org.bouncycastle.bcpg.HashAlgorithmTags.SHA1)
+            val reprotected = if (sha1 == null) {
+                org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(key, null, encryptor)
+            } else {
+                org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(key, null, encryptor, sha1)
+            }
+            out = PGPSecretKeyRing.insertSecretKey(out, reprotected)
+        }
+        return out
+    }
+
+    /**
+     * A composite key for transfer: protected under [pass] when nothing in it has a passphrase.
+     * When some parts already have one, the transfer passphrase must also be that passphrase
+     * (then the whole key ends up under it); otherwise null, and the key cannot be sent until
+     * its passphrase is set again in Key Detail.
+     */
+    private fun protectCompositeForTransfer(raw: ByteArray, pass: CharArray): ByteArray? {
+        val anyProtected = CertificateBindings.packets(raw).any {
+            (it.tag == 5 || it.tag == 7) &&
+                SecretKeyCheck.protectionOf(it.tag, it.body) == SecretKeyCheck.Protection.PROTECTED
+        }
+        return runCatching {
+            CompositeKeyFacade.reprotect(raw, if (anyProtected) pass else null, pass)
+        }.getOrNull()
+    }
+
+    /**
+     * True when every secret (sub)key of the stored key that carries material is protected by a
+     * passphrase (offline and card stubs do not count). A key with a protected primary but an
+     * unprotected subkey is not protected. Pairing sends only such keys as stored.
+     */
     fun isPassphraseProtected(fingerprint: String): Boolean {
         val raw = repo.rawSecretBytes(fingerprint) ?: return false
-        if (CompositeKeyFacade.isCompositePrimary(raw)) return CompositeKeyFacade.isProtected(raw)
-        val ring = repo.loadSecretKeyRing(fingerprint) ?: return false
-        return crypto.isPassphraseProtected(ring)
+        return SecretKeyCheck.isFullyPassphraseProtected(raw)
+    }
+
+    /**
+     * True when unlocking the stored key needs a passphrase for at least one of its secret
+     * (sub)keys. Key Detail asks for the current passphrase when this is true, so a key whose
+     * subkeys are not all protected can still have its passphrase changed (which protects them).
+     */
+    fun needsPassphrase(fingerprint: String): Boolean {
+        val raw = repo.rawSecretBytes(fingerprint) ?: return false
+        return CertificateBindings.packets(raw).any {
+            (it.tag == 5 || it.tag == 7) &&
+                SecretKeyCheck.protectionOf(it.tag, it.body) == SecretKeyCheck.Protection.PROTECTED
+        }
     }
 
     // ── User IDs (Android 4.2.0 #29, 4.5.0 #55, 4.5.1) ─────────────────
@@ -314,8 +412,8 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
     }
 
     private suspend fun persistUserIdChange(entity: PGPKeyEntity, updated: UserIdService.UpdatedRings, newPrimaryUserId: String?) {
-        val armor = storeEditedPublic(entity.fingerprint, updated.publicRing.encoded)
         storeEditedSecret(entity.fingerprint, updated.secretRing.encoded)
+        val armor = storeEditedPublic(entity.fingerprint, updated.publicRing.encoded)
         val parsed = newPrimaryUserId?.let { PGPKeyEntity.parseUserID(it) }
         dao.update(
             entity.copy(
@@ -434,8 +532,8 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
             expirationSeconds = expirationSeconds
         )
         // Android 4.6.0 (item 19): the carry keeps an earlier ML-KEM subkey beside the new one.
-        val armor = storeEditedPublic(fingerprint, rings.publicRaw)
         storeEditedSecret(fingerprint, rings.secretRaw)
+        val armor = storeEditedPublic(fingerprint, rings.publicRaw)
         dao.update(entity.copy(algorithm = KeyAlgorithm.MLKEM768_X25519_V4, armoredPublicKey = armor))
     }
 
@@ -467,8 +565,8 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
 
     private suspend fun storeRingEdit(entity: PGPKeyEntity, updatedSecretRing: PGPSecretKeyRing) {
         val updatedPublicRing = PGPPublicKeyRing(updatedSecretRing.publicKeys.asSequence().toList())
-        val armor = storeEditedPublic(entity.fingerprint, updatedPublicRing.encoded)
         storeEditedSecret(entity.fingerprint, updatedSecretRing.encoded)
+        val armor = storeEditedPublic(entity.fingerprint, updatedPublicRing.encoded)
         dao.update(entity.copy(armoredPublicKey = armor))
     }
 
@@ -698,19 +796,19 @@ class DesktopKeyEdits(private val repo: DesktopKeyRepository) {
     }
 
     internal fun unlockPrimary(secRing: PGPSecretKeyRing, passphrase: String?): org.bouncycastle.openpgp.PGPPrivateKey = try {
-        secRing.secretKey.extractPrivateKey(
-            org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
-                org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider()
-            ).build((passphrase ?: "").toCharArray())
-        )
+        SecretKeyUnlock.extract(secRing.secretKey, (passphrase ?: "").toCharArray())
+            ?: throw RevocationError.UnsupportedKey(tr("d_repo_err_secret_ring_load", fpHex(secRing.publicKey)))
     } catch (e: org.bouncycastle.openpgp.PGPException) {
         throw if (passphrase.isNullOrEmpty()) RevocationError.PassphraseRequired() else RevocationError.InvalidPassphrase()
     }
 
     /** Apply [transform] to the stored public and secret octets and refresh the cached armor. */
     internal suspend fun applyV4Algo35Edits(fingerprint: String, transform: (ByteArray) -> ByteArray) {
-        repo.rawPublicBytes(fingerprint)?.let { repo.materials.storePublic(fingerprint, armorPublic(transform(it))) }
-        repo.rawSecretBytes(fingerprint)?.let { repo.materials.storeSecret(fingerprint, armorPrivate(transform(it))) }
+        // Both edits are computed before anything is written; the secret half is written first.
+        val newPublic = repo.rawPublicBytes(fingerprint)?.let { armorPublic(transform(it)) }
+        val newSecret = repo.rawSecretBytes(fingerprint)?.let { armorPrivate(transform(it)) }
+        newSecret?.let { repo.materials.storeSecret(fingerprint, it) }
+        newPublic?.let { repo.materials.storePublic(fingerprint, it) }
         repo.byFingerprint(fingerprint)?.let { e ->
             dao.update(e.copy(armoredPublicKey = repo.exportArmoredPublicKey(fingerprint) ?: e.armoredPublicKey))
         }

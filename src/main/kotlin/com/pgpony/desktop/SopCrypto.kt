@@ -3,9 +3,11 @@
 // engine the app uses. See Sop.kt for the shape and SopKeyring below for the scratch keyring.
 //
 // Verification lines (VERIFICATIONS): each signature packet is checked on its own through the
-// engine (VerifyService for classical signatures, CompositeDocumentVerifier for ML-DSA), and a
-// good one is reported as "<creation time> <signing key fp> <primary key fp> mode:<binary|text>".
-// The engine grades the signer too (revoked, expired, not a signing key), as it does in the app.
+// engine (VerifyService for classical signatures, CompositeSignerGate for ML-DSA), and a good
+// one is reported as "<creation time> <signing key fp> <primary key fp> mode:<binary|text>".
+// Both grade the signer (revoked, expired, not a signing key, unbound, older than the key) and
+// the signature's own policy, so only a signature the app would show as verified gets a line.
+// The creation time comes from the hashed area only, the part the signature covers.
 
 package com.pgpony.desktop
 
@@ -21,12 +23,11 @@ import com.pgpony.android.crypto.pqc.CompositeDocumentVerifier
 import com.pgpony.android.crypto.pqc.CompositeKeyFacade
 import com.pgpony.android.crypto.pqc.CompositeSigPacket
 import com.pgpony.android.crypto.pqc.CompositeSignSuite
+import com.pgpony.android.crypto.pqc.CompositeSignerGate
 import com.pgpony.android.data.PGPDatabase
 import com.pgpony.android.data.PGPKeyEntity
 import kotlinx.coroutines.runBlocking
 import org.bouncycastle.openpgp.PGPPublicKeyRing
-import org.bouncycastle.openpgp.PGPSignatureList
-import org.bouncycastle.openpgp.jcajce.JcaPGPObjectFactory
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator
 import java.io.InputStream
 import java.io.OutputStream
@@ -45,29 +46,182 @@ import java.util.Date
 
 /**
  * The scratch keyring one SOP invocation works in: a database and key store in a new
- * owner-only temporary folder, deleted on close.
+ * owner-only temporary folder, deleted on close. A shutdown hook deletes it too when the process
+ * is stopped (SIGTERM, SIGINT, Ctrl+C), and the next invocation sweeps folders that a killed or
+ * crashed process left behind (it holds a lock on .lock while alive, so a running one is spared).
  */
-internal class SopKeyring private constructor(private val dir: Path, private val db: PGPDatabase) : AutoCloseable {
+internal class SopKeyring private constructor(
+    internal val dir: Path,
+    private val db: PGPDatabase,
+    private val liveLock: java.nio.channels.FileChannel?
+) : AutoCloseable {
 
     val repo = DesktopKeyRepository(db, KeyMaterialStore(dir.resolve("keys")))
     private val crypto = PGPCryptoService.shared
 
+    private val hook = Thread({ release() }, "pgpony-sop-cleanup")
+    @Volatile private var released = false
+
     companion object {
+        internal const val PREFIX = "pgpony-sop"
+        private const val LOCK_NAME = ".lock"
+
+        // A folder from a version without the lock file is swept only once it is this old.
+        private const val UNLOCKED_STALE_MS = 60L * 60 * 1000
+
+        // A folder this new is never swept: its invocation may not have taken its lock yet.
+        private const val FRESH_MS = 60L * 1000
+
+        @Volatile private var swept = false
+
         fun open(): SopKeyring {
-            val dir = if ("posix" in FileSystems.getDefault().supportedFileAttributeViews()) {
-                Files.createTempDirectory("pgpony-sop", PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
-            } else {
-                Files.createTempDirectory("pgpony-sop")
+            val dir = createPrivateDir()
+            val lock = runCatching {
+                val ch = java.nio.channels.FileChannel.open(
+                    dir.resolve(LOCK_NAME),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE
+                )
+                if (ch.tryLock() == null) { ch.close(); null } else ch
+            }.getOrNull()
+            if (!swept) {
+                swept = true
+                runCatching { sweepStale(dir.parent, dir) }
             }
-            return SopKeyring(dir, Db.open(dir.resolve("sop.db")))
+            val keyring = try {
+                SopKeyring(dir, Db.open(dir.resolve("sop.db")), lock)
+            } catch (t: Throwable) {
+                runCatching { lock?.close() }
+                wipe(dir)
+                throw t
+            }
+            runCatching { Runtime.getRuntime().addShutdownHook(keyring.hook) }
+            return keyring
         }
+
+        /** A new temporary folder only this account can open. */
+        private fun createPrivateDir(): Path {
+            if ("posix" in FileSystems.getDefault().supportedFileAttributeViews()) {
+                return Files.createTempDirectory(PREFIX, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
+            }
+            val dir = Files.createTempDirectory(PREFIX)
+            // Windows: %TEMP% is per user already; also give the folder an ACL naming only its
+            // owner, inherited by everything created inside it.
+            runCatching {
+                val view = Files.getFileAttributeView(dir, java.nio.file.attribute.AclFileAttributeView::class.java)
+                if (view != null) {
+                    val entry = java.nio.file.attribute.AclEntry.newBuilder()
+                        .setType(java.nio.file.attribute.AclEntryType.ALLOW)
+                        .setPrincipal(view.owner)
+                        .setPermissions(java.nio.file.attribute.AclEntryPermission.values().toSet())
+                        .setFlags(
+                            java.nio.file.attribute.AclEntryFlag.FILE_INHERIT,
+                            java.nio.file.attribute.AclEntryFlag.DIRECTORY_INHERIT
+                        )
+                        .build()
+                    view.acl = listOf(entry)
+                }
+            }
+            return dir
+        }
+
+        /**
+         * Delete [dir]: the secret key files first (overwritten, then deleted), then everything
+         * else, each file on its own so one that cannot be deleted never leaves the rest behind.
+         * Symbolic links are deleted, never followed.
+         */
+        internal fun wipe(dir: Path) {
+            val keys = dir.resolve("keys")
+            runCatching {
+                Files.newDirectoryStream(keys).use { stream ->
+                    for (f in stream) {
+                        if (f.fileName.toString().endsWith(".sec.asc") &&
+                            Files.isRegularFile(f, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                        ) {
+                            runCatching {
+                                val size = Files.size(f).toInt().coerceIn(0, 16 * 1024 * 1024)
+                                Files.write(f, ByteArray(size), java.nio.file.StandardOpenOption.WRITE)
+                            }
+                        }
+                        runCatching { Files.deleteIfExists(f) }
+                    }
+                }
+            }
+            val rest = runCatching {
+                Files.walk(dir).use { walk -> walk.sorted(Comparator.reverseOrder()).toList() }
+            }.getOrDefault(listOf(dir))
+            for (p in rest) runCatching { Files.deleteIfExists(p) }
+        }
+
+        /** [sweepStale] over the temporary directory, for a caller with no scratch folder (app start). */
+        fun sweepStaleNow() {
+            val probe = Files.createTempFile("pgpony-owner", ".tmp")
+            try {
+                sweepStale(probe.parent, probe)
+            } finally {
+                runCatching { Files.deleteIfExists(probe) }
+            }
+        }
+
+        /**
+         * Delete scratch folders in [tmp] that an earlier invocation left behind: folders named
+         * [PREFIX]*, owned by this account (the owner of [own], the folder just created), real
+         * directories (not links), and not held by a running process.
+         */
+        internal fun sweepStale(tmp: Path, own: Path, nowMs: Long = System.currentTimeMillis()) {
+            val nofollow = java.nio.file.LinkOption.NOFOLLOW_LINKS
+            val me = Files.getOwner(own, nofollow)
+            Files.newDirectoryStream(tmp, "$PREFIX*").use { stream ->
+                for (d in stream) {
+                    if (d == own) continue
+                    runCatching {
+                        if (!Files.isDirectory(d, nofollow) || Files.isSymbolicLink(d)) return@runCatching
+                        if (Files.getOwner(d, nofollow) != me) return@runCatching
+                        val age = nowMs - Files.getLastModifiedTime(d, nofollow).toMillis()
+                        if (age < FRESH_MS) return@runCatching
+                        val lockFile = d.resolve(LOCK_NAME)
+                        if (Files.exists(lockFile, nofollow)) {
+                            if (!Files.isRegularFile(lockFile, nofollow)) return@runCatching
+                            val ch = java.nio.channels.FileChannel.open(lockFile, java.nio.file.StandardOpenOption.WRITE)
+                            val held = try {
+                                ch.tryLock()
+                            } catch (_: java.nio.channels.OverlappingFileLockException) {
+                                null
+                            } catch (_: java.io.IOException) {
+                                null
+                            }
+                            if (held == null) {
+                                ch.close()
+                                return@runCatching
+                            }
+                            // Nobody holds it: the process that made it is gone. Let go of the
+                            // lock first (Windows cannot delete a locked file), then delete.
+                            runCatching { held.release() }
+                            ch.close()
+                            wipe(d)
+                        } else if (age >= UNLOCKED_STALE_MS) {
+                            wipe(d)
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    /** Close the database and delete the folder; safe to call more than once. */
+    private fun release() {
+        synchronized(this) {
+            if (released) return
+            released = true
+        }
+        runCatching { db.close() }
+        runCatching { liveLock?.close() }
+        wipe(dir)
     }
 
     override fun close() {
-        runCatching { db.close() }
-        runCatching {
-            Files.walk(dir).use { walk -> walk.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) } }
-        }
+        release()
+        runCatching { Runtime.getRuntime().removeShutdownHook(hook) }
     }
 
     /** Every key or certificate in [data], loaded, in input order. BAD_DATA when there is none. */
@@ -319,14 +473,17 @@ internal object SopCrypto {
         window: SopWindow
     ): List<String> {
         val rings = certs.mapNotNull { r.verifyRing(it) }
+        val anyComposite = packets.any { p -> SopSigInfo.parse(p)?.let { CompositeSignSuite.forAlgId(it.pkAlgo) != null } == true }
+        val rawCerts = if (anyComposite) certs.mapNotNull { r.repo.rawPublicBytes(it.fingerprint) } else emptyList()
         val out = LinkedHashSet<String>()
         for (packet in packets) {
             val info = SopSigInfo.parse(packet) ?: continue
             if (info.type != 0x00 && info.type != 0x01) continue
+            // Hashed creation time only (SopSigInfo): a signature without one is not reported.
             val created = info.created ?: continue
             if (!window.contains(created)) continue
             val hit = if (CompositeSignSuite.forAlgId(info.pkAlgo) != null) {
-                verifyComposite(r, certs, info, packet, data)
+                verifyComposite(rawCerts, packet, data, created)
             } else {
                 verifyClassical(rings, packet, data)
             }
@@ -338,34 +495,38 @@ internal object SopCrypto {
         return out.toList()
     }
 
-    private fun verifyClassical(rings: List<PGPPublicKeyRing>, packet: ByteArray, data: ByteArray): Pair<String, String>? {
+    /**
+     * A classical signature through VerifyService, which grades the signer by the exact key that
+     * verified. The line pairs that key with its own certificate's primary: when the engine's
+     * answer does not name a certificate among [rings] that holds the signing key, no line.
+     */
+    internal fun verifyClassical(rings: List<PGPPublicKeyRing>, packet: ByteArray, data: ByteArray): Pair<String, String>? {
         val verdict = runCatching { VerifyService.shared.verifyDetached(packet, data, rings) }.getOrNull()
         val good = verdict as? VerificationResult.Verified ?: return null
-        // The engine reports the key the signature verified under, which is not
-        // always the one its issuer subpacket names (5d-1).
-        val signing = good.signingKeyFingerprint ?: run {
-            val sig = runCatching { (JcaPGPObjectFactory(packet).nextObject() as PGPSignatureList)[0] }.getOrNull() ?: return null
-            rings.firstNotNullOfOrNull { it.getPublicKey(sig.keyID) }?.let { hex(it.fingerprint) } ?: return null
-        }
-        return signing.uppercase() to good.signerFingerprint.uppercase()
+        val signing = good.signingKeyFingerprint?.uppercase() ?: return null
+        val primary = good.signerFingerprint.uppercase()
+        val owner = rings.firstOrNull { hex(it.publicKey.fingerprint).equals(primary, ignoreCase = true) } ?: return null
+        val holds = owner.publicKeys.asSequence().any { hex(it.fingerprint).equals(signing, ignoreCase = true) }
+        return if (holds) signing to primary else null
     }
 
-    private suspend fun verifyComposite(
-        r: SopKeyring,
-        certs: List<PGPKeyEntity>,
-        info: SopSigInfo,
+    /**
+     * A composite (ML-DSA) signature through the engine's CompositeSignerGate: the math against
+     * the supplied certificates, the signature's own policy, and the signer at [created]. Only a
+     * VERIFIED grade gives a line, and only when the gate read the same creation time.
+     */
+    internal fun verifyComposite(
+        rawCerts: List<ByteArray>,
         packet: ByteArray,
-        data: ByteArray
+        data: ByteArray,
+        created: Date
     ): Pair<String, String>? {
-        val issuer = info.issuerFingerprint ?: return null
-        for (e in certs.filter { it.algorithm.isCompositeSign }) {
-            val publicInfo = r.repo.loadCompositePublicInfo(e.fingerprint) ?: continue
-            val c = publicInfo.compositeSigners.firstOrNull { it.fingerprintHex.equals(issuer, ignoreCase = true) } ?: continue
-            val doc = if (info.isText) canonicalText(data) else data
-            val ok = runCatching { CompositeDocumentVerifier.verifyDetached(c.publicMaterial, packet, doc).valid }.getOrDefault(false)
-            return if (ok) c.fingerprintHex.uppercase() to e.fingerprint.uppercase() else null
-        }
-        return null
+        val g = runCatching { CompositeSignerGate.verifyDetached(rawCerts, packet, data) }.getOrNull() ?: return null
+        if (!g.verified) return null
+        if (g.createdMs == null || g.createdMs / 1000 != created.time / 1000) return null
+        val signing = g.signingKeyFingerprint ?: return null
+        val primary = g.signerPrimaryFingerprint ?: return null
+        return signing.uppercase() to primary.uppercase()
     }
 
     fun verify(rest: List<String>, io: SopIo, stdin: InputStream, out: OutputStream): Int {
@@ -472,10 +633,13 @@ internal object SopCrypto {
         val window = SopWindow.parse(a.value("--not-before"), a.value("--not-after"))
         val input = stdin.readBytes()
         val head = String(input, 0, minOf(input.size, 4096), Charsets.ISO_8859_1)
+        // Clear-signed only when the first non-blank line is the framing line, as the engine
+        // decides it; the same text inside an armor header does not count.
+        val clearSigned = head.lineSequence().firstOrNull { it.isNotBlank() }?.trim() == "-----BEGIN PGP SIGNED MESSAGE-----"
         val (content, lines) = SopKeyring.open().use { r ->
             runBlocking {
                 val certs = a.positionals.flatMap { r.load(io.read(it), "certificate") }
-                if (head.contains("-----BEGIN PGP SIGNED MESSAGE-----")) {
+                if (clearSigned) {
                     // 3.0.0 (5d-4): SopCleartext keeps the text as signed, final line ending included.
                     val parsed = SopCleartext.parse(input)
                     val packets = SopPackets.signatures(SopArmor.binary(parsed.signatureBlock))
@@ -483,9 +647,14 @@ internal object SopCrypto {
                 } else if (isCompositeInline(input)) {
                     // An ML-DSA signed message: BouncyCastle cannot parse its one-pass packet.
                     val raw = SopArmor.binary(input)
+                    val inner = runCatching { CompositeDocumentVerifier.decompress(raw) }.getOrNull()
+                        ?: throw SopException(SopExit.BAD_DATA, "a malformed signed message")
+                    // Exactly one literal: the content written out is the content verified.
+                    val literals = runCatching { CompositeDocumentVerifier.packetsOf(inner).count { it.first == 11 } }.getOrDefault(0)
+                    if (literals != 1) throw SopException(SopExit.BAD_DATA, "a malformed signed message")
                     val content = CompositeDocumentVerifier.inlineContent(raw)
                         ?: throw SopException(SopExit.BAD_DATA, "a malformed signed message")
-                    val packets = SopPackets.signatures(CompositeDocumentVerifier.decompress(raw))
+                    val packets = SopPackets.signatures(inner)
                     content to verifyPackets(r, certs, packets, content, window)
                 } else {
                     val rings = certs.mapNotNull { r.verifyRing(it) }

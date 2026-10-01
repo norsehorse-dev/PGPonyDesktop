@@ -81,7 +81,11 @@ object CardPinCache {
     fun remainingMs(): Long {
         if (pin == null) return 0L
         if (SessionPolicy.isLifecycleHeld()) return Long.MAX_VALUE
-        val expiresAt = capturedAt + durationSec() * 1000L
+        // The effective duration: under "until the screen locks" with no lock seen yet, the
+        // short fallback applies, so the PIN still expires.
+        val d = SessionPolicy.effectiveDurationSec()
+        if (d < 0) return Long.MAX_VALUE
+        val expiresAt = capturedAt + d * 1000L
         return (expiresAt - System.currentTimeMillis()).coerceAtLeast(0L)
     }
 

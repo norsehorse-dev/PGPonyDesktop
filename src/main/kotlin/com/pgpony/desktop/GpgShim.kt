@@ -31,6 +31,7 @@
 
 package com.pgpony.desktop
 
+import com.pgpony.android.crypto.SignerStatus
 import com.pgpony.android.crypto.VerificationResult
 import com.pgpony.android.crypto.VerifyService
 import kotlinx.coroutines.runBlocking
@@ -65,7 +66,7 @@ object GpgShim {
                 (hasShort(args, 'b') && hasShort(args, 's')) ->
                 sign(args, stdin, stdout, stderr, status)
 
-            args.contains("--verify") -> verify(args, stderr, status)
+            args.contains("--verify") -> verify(args, stdin, stderr, status)
 
             // git also calls `gpg --version` while probing gpg.program; answer plausibly.
             args.contains("--version") -> {
@@ -125,8 +126,16 @@ object GpgShim {
                         is ShimBridge.Reply.Refused -> return@withRepo fail(stderr, "sign: ${remote.message}")
                         ShimBridge.Reply.Unreachable -> return@withRepo fail(
                             stderr,
-                            "sign: key ${match.fingerprint} is passphrase-protected; open PGPony and sign " +
-                                "again, and the app will ask for the passphrase"
+                            if (GitSigningPrefs.enabled() && Files.exists(Config.dataDir.resolve(ShimBridge.FILE_NAME))) {
+                                "sign: PGPony did not answer the request to sign with key ${match.fingerprint}; " +
+                                    "check that its window is responding and sign again"
+                            } else if (GitSigningPrefs.enabled()) {
+                                "sign: key ${match.fingerprint} is passphrase-protected; open PGPony and sign " +
+                                    "again, and the app will ask for the passphrase"
+                            } else {
+                                "sign: key ${match.fingerprint} is passphrase-protected; turn on Git signing in " +
+                                    "PGPony's Settings, keep PGPony open, and sign again"
+                            }
                         )
                     }
             }
@@ -147,11 +156,13 @@ object GpgShim {
 
     // ── Verify ────────────────────────────────────────────────────────────────
 
-    private fun verify(args: List<String>, stderr: PrintStream, status: PrintStream): Int {
-        // git: `gpg --verify <sig-file> <signed-file>` — the two trailing non-option args.
-        val files = args.filterNot { it.startsWith("-") }
+    private fun verify(args: List<String>, stdin: InputStream, stderr: PrintStream, status: PrintStream): Int {
+        // git: `gpg --status-fd=1 --verify <sig-file> -`, the signed data on stdin. A bare "-"
+        // is the stdin operand, not an option.
+        val files = args.filter { it == "-" || !it.startsWith("-") }
         val sigPath = files.getOrNull(0) ?: return fail(stderr, "verify: no signature file")
         val dataPath = files.getOrNull(1) ?: return fail(stderr, "verify: no signed-data file")
+        if (sigPath == "-") return fail(stderr, "verify: the signature must be a file")
 
         val sigBytes = try {
             Files.readAllBytes(Path.of(sigPath))
@@ -159,7 +170,14 @@ object GpgShim {
             return fail(stderr, "verify: cannot read signature: ${e.message}")
         }
         val signed = try {
-            Files.readAllBytes(Path.of(dataPath))
+            if (dataPath == "-") {
+                // Bounded like a signing payload: a commit or tag object is small.
+                val bytes = stdin.readNBytes(ShimBridge.MAX_PAYLOAD + 1)
+                if (bytes.size > ShimBridge.MAX_PAYLOAD) return fail(stderr, "verify: the signed data is too large")
+                bytes
+            } else {
+                Files.readAllBytes(Path.of(dataPath))
+            }
         } catch (e: Exception) {
             return fail(stderr, "verify: cannot read signed data: ${e.message}")
         }
@@ -172,44 +190,79 @@ object GpgShim {
             val result = runBlocking {
                 DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), signed)
             } ?: VerifyService.shared.verifyDetached(sigBytes, signed, rings)
-            when (val r = result) {
-                is VerificationResult.Verified -> {
-                    // 3.0.0 (4d): the name and email come from the signer's User ID, which the
-                    // signer wrote. Escaped the way gpg escapes status lines, or a line break in a
-                    // User ID would add a status line of its own (a second VALIDSIG, a TRUST_).
-                    val who = statusText("${r.signerName ?: ""} <${r.signerEmail ?: ""}>".trim())
-                    // git reads GOODSIG + VALIDSIG off the status fd; the human line is stderr.
-                    status.println("[GNUPG:] GOODSIG ${r.signerKeyID} $who")
-                    status.println("[GNUPG:] VALIDSIG ${r.signerFingerprint} 0 0 0 0 0 0 0 ${r.signerFingerprint}")
-                    // 3.0.0 (Android 4.5.3, #57): the signer key's trust, the way gpg reports it,
-                    // so `git log --show-signature` and %G? tell a good signature from an
-                    // unconfirmed key ("U") apart from one from a key the user verified ("G").
-                    val signer = runBlocking { repo.byFingerprint(r.signerFingerprint) ?: repo.findByKeyId(r.signerKeyID) }
-                    status.println(
-                        when (r.signerTrust ?: signer?.trustLevel) {
-                            com.pgpony.android.data.TrustLevel.ULTIMATE -> "[GNUPG:] TRUST_ULTIMATE 0 pgp"
-                            com.pgpony.android.data.TrustLevel.VERIFIED -> "[GNUPG:] TRUST_FULLY 0 pgp"
-                            else -> "[GNUPG:] TRUST_UNDEFINED 0 pgp"
-                        }
-                    )
-                    stderr.println("pgpony-gpg: Good signature from \"$who\" [${r.signerKeyID}]")
-                    0
+            report(result, stderr, status) { fp -> runBlocking { repo.byFingerprint(fp) } }
+        }
+    }
+
+    /**
+     * The status and human lines for [result], as gpg writes them. The key ID and both
+     * fingerprints are those of the key that verified (never an issuer subpacket), and trust is
+     * read for that key's own certificate only: a certificate PGPony cannot find by fingerprint
+     * reads TRUST_UNDEFINED. Internal for tests.
+     */
+    internal fun report(
+        result: VerificationResult,
+        stderr: PrintStream,
+        status: PrintStream,
+        lookup: (String) -> com.pgpony.android.data.PGPKeyEntity?
+    ): Int = when (val r = result) {
+        is VerificationResult.Verified -> {
+            // 3.0.0 (4d): the name and email come from the signer's User ID, which the
+            // signer wrote. Escaped the way gpg escapes status lines, or a line break in a
+            // User ID would add a status line of its own (a second VALIDSIG, a TRUST_).
+            val who = statusText("${r.signerName ?: ""} <${r.signerEmail ?: ""}>".trim())
+            val primary = r.signerFingerprint.uppercase()
+            val signing = (r.signingKeyFingerprint ?: r.signerFingerprint).uppercase()
+            val keyId = statusText(r.signerKeyID.uppercase())
+            // git reads GOODSIG + VALIDSIG off the status fd; the human line is stderr.
+            status.println("[GNUPG:] GOODSIG $keyId $who")
+            status.println("[GNUPG:] VALIDSIG $signing 0 0 0 0 0 0 0 00 $primary")
+            // 3.0.0 (Android 4.5.3, #57): the signer key's trust, the way gpg reports it,
+            // so `git log --show-signature` and %G? tell a good signature from an
+            // unconfirmed key ("U") apart from one from a key the user verified ("G").
+            val trust = r.signerTrust ?: lookup(primary)?.trustLevel
+            status.println(
+                when (trust) {
+                    com.pgpony.android.data.TrustLevel.ULTIMATE -> "[GNUPG:] TRUST_ULTIMATE 0 pgp"
+                    com.pgpony.android.data.TrustLevel.VERIFIED -> "[GNUPG:] TRUST_FULLY 0 pgp"
+                    else -> "[GNUPG:] TRUST_UNDEFINED 0 pgp"
                 }
-                is VerificationResult.Invalid -> {
-                    status.println("[GNUPG:] BADSIG ${r.signerKeyID ?: "0000000000000000"}")
-                    stderr.println("pgpony-gpg: BAD signature: ${statusText(r.reason)}")
-                    1
-                }
-                is VerificationResult.UnknownSigner -> {
-                    status.println("[GNUPG:] NO_PUBKEY ${r.signerKeyID}")
-                    stderr.println("pgpony-gpg: signer's public key is not in the keyring (${r.signerKeyID})")
-                    1
-                }
-                is VerificationResult.Unsigned -> {
-                    stderr.println("pgpony-gpg: no signature found")
-                    1
-                }
+            )
+            stderr.println("pgpony-gpg: Good signature from \"$who\" [$keyId]")
+            stderr.println("pgpony-gpg: signing key $signing, primary key $primary")
+            if (trust != com.pgpony.android.data.TrustLevel.ULTIMATE && trust != com.pgpony.android.data.TrustLevel.VERIFIED) {
+                stderr.println("pgpony-gpg: WARNING: This key is not certified as belonging to its owner in PGPony.")
             }
+            0
+        }
+        is VerificationResult.Invalid -> {
+            val signing = r.signingKeyFingerprint?.uppercase()
+            val keyId = statusText((r.signerKeyID ?: "0000000000000000").uppercase())
+            // A signature that verified from a key that does not pass gets gpg's specific
+            // lines (git %G? "R", "Y", "X"), never GOODSIG. Every other failure is BADSIG.
+            val word = when (r.signerStatus) {
+                SignerStatus.REVOKED_KEY -> "REVKEYSIG"
+                SignerStatus.EXPIRED_KEY -> "EXPKEYSIG"
+                SignerStatus.EXPIRED_SIGNATURE -> "EXPSIG"
+                else -> "BADSIG"
+            }
+            if (word != "BADSIG" && signing != null) {
+                status.println("[GNUPG:] $word $keyId")
+                status.println("[GNUPG:] VALIDSIG $signing 0 0 0 0 0 0 0 00 ${(r.signerFingerprint ?: signing).uppercase()}")
+            } else {
+                status.println("[GNUPG:] BADSIG $keyId")
+            }
+            stderr.println("pgpony-gpg: BAD signature: ${statusText(r.reason)}")
+            1
+        }
+        is VerificationResult.UnknownSigner -> {
+            status.println("[GNUPG:] NO_PUBKEY ${statusText(r.signerKeyID)}")
+            stderr.println("pgpony-gpg: signer's public key is not in the keyring (${statusText(r.signerKeyID)})")
+            1
+        }
+        is VerificationResult.Unsigned -> {
+            stderr.println("pgpony-gpg: no signature found")
+            1
         }
     }
 

@@ -7,7 +7,10 @@
 // ciphertext intact. One entry, streamed both ways, so a large file is never held in memory.
 //
 // Reading is bounded the way Android 4.6.0 bounds it: an entry count cap and a payload size cap,
-// so a small crafted archive cannot fill the disk before any OpenPGP limit applies. Entry names
+// so a small crafted archive cannot fill the disk before any OpenPGP limit applies. 3.0.0 adds
+// an expansion bound: the payload is OpenPGP data, which deflate barely shrinks, so past the
+// first STREAM_EXPANSION_FREE_BYTES an entry may expand at most MAX_EXPANSION_RATIO times the
+// archive bytes read (a deflate bomb expands about a thousand times). Entry names
 // are reduced to a plain base name on write and on read, so nothing lands outside the folder.
 // A zip with no PGP entry, or with several, is reported rather than guessed at.
 
@@ -69,8 +72,20 @@ object ZipTransport {
         zip.flush()
     }
 
-    /** Copy [input] to [out], refusing past [max] bytes. Returns the bytes copied. */
-    fun copyToCapped(input: InputStream, out: OutputStream, max: Long = SecurityLimits.MAX_ZIP_PAYLOAD_BYTES): Long {
+    /** Past [SecurityLimits.STREAM_EXPANSION_FREE_BYTES], how far an entry may expand. */
+    internal const val MAX_EXPANSION_RATIO = 20L
+
+    /**
+     * Copy [input] to [out], refusing past [max] bytes. With [consumed] (the archive bytes read
+     * so far), also refusing an entry that expands more than [MAX_EXPANSION_RATIO] times once
+     * it is past the free allowance. Returns the bytes copied.
+     */
+    fun copyToCapped(
+        input: InputStream,
+        out: OutputStream,
+        max: Long = SecurityLimits.MAX_ZIP_PAYLOAD_BYTES,
+        consumed: (() -> Long)? = null
+    ): Long {
         val buf = ByteArray(DEFAULT_BUFFER_SIZE)
         var total = 0L
         while (true) {
@@ -78,8 +93,26 @@ object ZipTransport {
             if (n < 0) return total
             total += n
             if (total > max) throw PGPCryptoError.ResourceLimitExceeded("zip entry larger than $max bytes")
+            if (consumed != null && total > SecurityLimits.STREAM_EXPANSION_FREE_BYTES &&
+                total / MAX_EXPANSION_RATIO > consumed()
+            ) {
+                throw PGPCryptoError.ResourceLimitExceeded("zip entry expands too far")
+            }
             out.write(buf, 0, n)
         }
+    }
+
+    /** Counts the bytes read through it (the compressed side of a zip). */
+    private class CountingInputStream(inner: InputStream) : java.io.FilterInputStream(inner) {
+        var count = 0L
+            private set
+
+        override fun read(): Int = super.read().also { if (it >= 0) count++ }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int =
+            super.read(b, off, len).also { if (it > 0) count += it }
+
+        override fun skip(n: Long): Long = super.skip(n).also { if (it > 0) count += it }
     }
 
     /** Counts entries as a scan walks an archive, refusing past the cap. */
@@ -107,7 +140,8 @@ object ZipTransport {
         out: OutputStream,
         max: Long = SecurityLimits.MAX_ZIP_PAYLOAD_BYTES
     ): Found {
-        val zip = ZipInputStream(source)
+        val counted = CountingInputStream(source)
+        val zip = ZipInputStream(counted)
         val budget = EntryBudget()
         var count = 0
         var name: String? = null
@@ -118,7 +152,7 @@ object ZipTransport {
                 count++
                 if (name == null) {
                     name = safeEntryName(e.name)
-                    copyToCapped(zip, out, max)
+                    copyToCapped(zip, out, max) { counted.count }
                 }
             }
             zip.closeEntry()

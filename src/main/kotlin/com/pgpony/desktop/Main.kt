@@ -48,6 +48,16 @@ fun main(args: Array<String>) {
     DesktopPrefsSettings.install()
     // 3.0.0 (plan section 7): the armor Comment setting, read fresh by every face of the binary.
     com.pgpony.android.data.ArmorCommentPrefs.load()
+    // 3.0.0: automatic key refresh is off for a new install and keeps its old default (on) for an
+    // install that already has a keyring. Decided once, before any face can create the key store.
+    // The keys folder is the mark of a keyring: every earlier version created it when it opened
+    // the keyring, and Clear All Data deletes it (the database file itself stays behind), so a
+    // reset install starts with the switch off like a new one.
+    if (args.firstOrNull() !in setOf("version", "--version", "help", "--help", "-h")) runCatching {
+        DesktopNetworkPrefs.settleDefault(
+            existingInstall = Files.isDirectory(Config.keysDir) || Files.exists(Config.legacyKeyringFile)
+        )
+    }
 
     val first = args.firstOrNull()
 
@@ -90,6 +100,7 @@ fun main(args: Array<String>) {
             exitProcess(ExitCode.USAGE)
         }
         if (!SingleInstance.acquire(request)) return
+        sweepSopScratch()
         cmdGui()
         return
     }
@@ -110,7 +121,21 @@ fun main(args: Array<String>) {
     if (!SingleInstance.acquire(OpenRequest(fileArgs))) {
         return // forwarded to the running instance — exit quietly
     }
+    sweepSopScratch()
     cmdGui()
+}
+
+/**
+ * 3.0.0: remove scratch folders that a `pgpony-sop` run left in the temporary directory when it
+ * was killed before it could clean up. Only folders with PGPony's SOP name prefix, owned by this
+ * account and not held by a running SOP process are removed (SopKeyring.sweepStale). Runs in the
+ * background so the window does not wait for it.
+ */
+private fun sweepSopScratch() {
+    Thread({ runCatching { SopKeyring.sweepStaleNow() } }, "pgpony-sop-sweep").apply {
+        isDaemon = true
+        start()
+    }
 }
 
 /**

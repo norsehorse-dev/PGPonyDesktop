@@ -1,0 +1,14 @@
+# Pinned AppImage build tools, read by .github/workflows/release.yml (sourced as shell).
+#
+# appimagetool builds the AppImage, and the type2 runtime it is given becomes the first bytes of
+# every PGPony AppImage, the code that runs before the app on a user's machine. CI downloads both
+# at exactly these versions and refuses to run them unless the sha256 matches. A sum that is not
+# 64 hex characters stops the release build on purpose.
+#
+# Change these only with packaging/appimage/pin-tools.sh, and read the diff before committing.
+APPIMAGETOOL_VERSION=1.9.1
+TYPE2_RUNTIME_VERSION=20251108
+APPIMAGETOOL_X86_64_SHA256=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+APPIMAGETOOL_AARCH64_SHA256=f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158
+RUNTIME_X86_64_SHA256=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+RUNTIME_AARCH64_SHA256=00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444

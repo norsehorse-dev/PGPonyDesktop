@@ -42,6 +42,12 @@ object QrChunking {
 
         /** A frame of a different sequence arrived; what was collected was dropped. */
         data class Restarted(val have: Int, val total: Int) : Outcome
+
+        /**
+         * A frame carried a different payload for a part already held. The held part is kept;
+         * two sources are mixed, so the result cannot be trusted to be one key.
+         */
+        data class Conflict(val seq: Int, val have: Int, val total: Int) : Outcome
         data object NotAFrame : Outcome
         data object Malformed : Outcome
     }
@@ -86,7 +92,10 @@ object QrChunking {
         return Frame(seq, total, id, payload)
     }
 
-    /** Reassembly. Frames arrive in any order and more than once. Not thread-safe. */
+    /**
+     * Reassembly. Frames arrive in any order and more than once. A part already held is never
+     * replaced, and a completed sequence must hash to its id. Not thread-safe.
+     */
     class Collector {
         private var id: String? = null
         private var total: Int = 0
@@ -110,9 +119,19 @@ object QrChunking {
                 id = frame.id
                 total = frame.total
             }
-            val fresh = parts.put(frame.seq, frame.payload) == null
+            val held = parts[frame.seq]
+            if (held != null && held != frame.payload) return Outcome.Conflict(frame.seq, parts.size, total)
+            val fresh = held == null
+            if (fresh) parts[frame.seq] = frame.payload
             if (parts.size == total) {
-                return Outcome.Complete(buildString { for (i in 1..total) append(parts[i]) })
+                val text = buildString { for (i in 1..total) append(parts[i]) }
+                // The id is the hash of the whole text: parts that do not add up to it came
+                // from more than one source (or were damaged), and are not a key.
+                if (idFor(text) != id) {
+                    reset()
+                    return Outcome.Malformed
+                }
+                return Outcome.Complete(text)
             }
             return when {
                 switching -> Outcome.Restarted(parts.size, total)

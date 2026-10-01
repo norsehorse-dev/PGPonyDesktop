@@ -3,7 +3,6 @@
 
 package com.pgpony.desktop
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -27,6 +26,11 @@ object Config {
      *   macOS   ~/Library/Application Support/PGPony
      *   Linux   $XDG_DATA_HOME/pgpony  (fallback ~/.local/share/pgpony)
      *   Windows %APPDATA%\PGPony
+     *
+     * 3.0.0: the folder is owner-only (0700 on macOS and Linux), set at creation and again at
+     * every start so an install made with the default umask is fixed too. It holds the database
+     * (contacts, notes, trust, revocation certificates) next to the key files. Windows keeps the
+     * per-user ACL of %APPDATA%.
      */
     val dataDir: Path by lazy {
         val home = System.getProperty("user.home")
@@ -44,7 +48,8 @@ object Config {
                 else Paths.get(xdg, "pgpony")
             }
         }
-        Files.createDirectories(dir)
+        OwnerOnlyPaths.createPrivateDirectories(dir)
+        OwnerOnlyPaths.restrictTree(dir)
         dir
     }
 

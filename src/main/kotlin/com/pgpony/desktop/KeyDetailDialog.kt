@@ -367,7 +367,10 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                     SaveTarget.REVOCATION_CERT -> state.repository.exportRevocationCertificate(key.fingerprint)
                 }
                 if (armor != null) {
-                    file.writeText(armor)
+                    // Secret keys and revocation certificates are written owner-only (0600 where
+                    // the file system has POSIX permissions), as the CLI writes them.
+                    if (target == SaveTarget.PUBLIC) file.writeText(armor)
+                    else OwnerOnlyFile.write(file.toPath(), armor)
                     state.status = tr("d_keydetail_status_exported", file.name)
                 } else state.status = tr("d_keydetail_status_nothing_to_export")
             }

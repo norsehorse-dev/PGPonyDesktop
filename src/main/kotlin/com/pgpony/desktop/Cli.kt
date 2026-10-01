@@ -9,6 +9,14 @@
 // selects ASCII armor for binary-capable verbs. Passphrases come from --passphrase-env,
 // --passphrase-fd, or an interactive prompt (never a plain flag — it would leak into `ps` and
 // shell history). Exit codes are stable (see ExitCode).
+//
+// 3.0.0: decrypt holds its output until the message has passed every check. The plaintext goes
+// to an owner-only temp file (in the --output folder, or a private temp folder for stdout) and
+// is moved into place, or copied to stdout, only after the engine returned; a failed integrity
+// or structure check leaves nothing behind and exits 3. A signature that is present but bad
+// exits 4, as gpg exits non-zero for a bad signature. Outputs never write through a link at the
+// destination. Text that comes from keys or messages (User IDs, file names, error details) is
+// printed with control characters escaped, so it cannot drive the terminal.
 
 package com.pgpony.desktop
 
@@ -22,10 +30,11 @@ import com.pgpony.android.crypto.pqc.CompositeDocumentSigner
 import com.pgpony.android.data.PGPKeyEntity
 import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 
 /** Stable process exit codes — scripts can branch on them. */
 object ExitCode {
@@ -33,7 +42,7 @@ object ExitCode {
     const val USAGE = 1
     const val NOT_FOUND = 2       // key or file not found / ambiguous selector
     const val FAILED = 3          // crypto or I/O failure
-    const val UNVERIFIED = 4      // `verify` — signature invalid / unsigned / unknown signer
+    const val UNVERIFIED = 4      // verify: signature bad, unknown or missing; decrypt: a bad signature, or a --require-* flag not met
 }
 
 object Cli {
@@ -135,32 +144,54 @@ object Cli {
         val o = Options(args)
         val input = o.value("--input", "-i") ?: o.positional()
         val outPath = o.value("--output", "-o")
+        val requireSignature = o.flag("--require-signature")
+        val requireVerified = o.flag("--require-verified")
         // 3.0.0 (plan 3.7): --decrypt-with tries that key first, then its fallbacks, then the
         // rest unless the key is in strict mode (set in the app's Key Detail).
         val selected = o.value("--decrypt-with")?.let { sel -> resolveOne(repo, sel, requireSecret = true).fingerprint }
         val keys = repo.decryptKeys(selected)
         val pass = passphraseOrNull(o)
-        val data = unzipIfZip(readAll(input))
 
-        outStream(outPath).use { output ->
-            val result = try {
-                crypto.decryptStream(
-                    data.inputStream(), output, keys.secretRings, pass, keys.verificationRings, keys.compositeRings
-                )
-            } catch (t: Throwable) {
-                // Same exit path as before (message to stderr, exit 3); only the text is sharper
-                // when a --decrypt-with key is not a recipient or its passphrase was wrong.
-                throw repo.explainDecryptFailure({ crypto.recipientKeyIDs(data) }, selected, t)
+        withScratch { scratch ->
+            val source = cipherSource(input, scratch)
+            val target = DecryptTarget.open(outPath, scratch)
+            try {
+                val result = try {
+                    Files.newInputStream(source).use { ins ->
+                        target.stream().use { output ->
+                            crypto.decryptStream(
+                                ins, output, keys.secretRings, pass, keys.verificationRings, keys.compositeRings
+                            )
+                        }
+                    }
+                } catch (t: Throwable) {
+                    // Same exit path as before (message to stderr, exit 3); only the text is sharper
+                    // when a --decrypt-with key is not a recipient or its passphrase was wrong.
+                    throw repo.explainDecryptFailure(
+                        { Files.newInputStream(source).use { crypto.inspectEncryptedMessage(it).publicKeyIDs } },
+                        selected, t
+                    )
+                }
+                val summary = DecryptSignature.of(repo, result)
+                reportSignature(summary, result.signerStatus)
+                val unmet = when {
+                    requireVerified && summary.state != SignatureSummary.State.VERIFIED ->
+                        "--require-verified: no good signature from a verified key"
+                    requireSignature && summary.state != SignatureSummary.State.VERIFIED &&
+                        summary.state != SignatureSummary.State.UNCONFIRMED ->
+                        "--require-signature: no good signature from a key in the keyring"
+                    else -> null
+                }
+                if (unmet != null) {
+                    err("$unmet; nothing was written")
+                    return@withScratch ExitCode.UNVERIFIED
+                }
+                target.publish()
+                if (summary.state == SignatureSummary.State.INVALID) ExitCode.UNVERIFIED else ExitCode.OK
+            } finally {
+                target.discard()
             }
-            reportSignature(
-                SignatureSummary.of(
-                    repo, result.signatureVerified, result.hasSignature, result.signerKeyID, result.signatureKeyIDRaw,
-                    result.compositeInline, result.compositeInlineBytes, result.compositeClaimedSignerFp,
-                    weakKey = result.signerWeakKey
-                )
-            )
         }
-        ExitCode.OK
     }
 
     private fun sign(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
@@ -241,16 +272,24 @@ object Cli {
         when (result) {
             is VerificationResult.Verified -> {
                 val confirmed = SignatureSummary.fromVerification(repo, result).state == SignatureSummary.State.VERIFIED
+                // The key ID and fingerprints are those of the key the signature verified under.
                 out(
-                    "Good signature — ${result.signerName ?: ""} <${result.signerEmail ?: "?"}> · ${result.signerKeyID}" +
+                    "Good signature: ${safe(result.signerName ?: "")} <${safe(result.signerEmail ?: "?")}> · ${safe(result.signerKeyID)}" +
                         (if (confirmed) "" else " (signer key not verified)") +
-                        (result.signerWeakKey?.let { " (weak signing key: $it)" } ?: "")
+                        (result.signerWeakKey?.let { " (weak signing key: ${safe(it)})" } ?: "")
                 )
-                ExitCode.OK
+                out("Signer fingerprint: ${safe(result.signerFingerprint.uppercase())}")
+                result.signingKeyFingerprint?.takeIf { !it.equals(result.signerFingerprint, ignoreCase = true) }?.let {
+                    out("Signing subkey: ${safe(it.uppercase())}")
+                }
+                if (!confirmed && o.flag("--require-verified")) {
+                    err("--require-verified: the signer key is not verified")
+                    ExitCode.UNVERIFIED
+                } else ExitCode.OK
             }
-            is VerificationResult.Invalid -> { err("BAD signature — ${result.reason}"); ExitCode.UNVERIFIED }
+            is VerificationResult.Invalid -> { err("BAD signature: ${safe(result.reason)}"); ExitCode.UNVERIFIED }
             is VerificationResult.UnknownSigner -> {
-                err("Signature by an unknown key — ${result.signerKeyID} (import the signer's public key to verify)")
+                err("Signature by an unknown key: ${safe(result.signerKeyID)} (import the signer's public key to verify)")
                 ExitCode.UNVERIFIED
             }
             is VerificationResult.Unsigned -> { err("No signature found"); ExitCode.UNVERIFIED }
@@ -267,19 +306,45 @@ object Cli {
 
     // 3.0.0 (5b): the keys in a GnuPG home. Public keys always; trust unless --no-trust; secret
     // keys with --secret, through gpg, which asks for each passphrase with its own pinentry.
+    // A folder that is not the user's own GnuPG home is only read, never handed to gpg: public
+    // keys, plus trust only when asked for with --trust (the app's dialog leaves it unticked).
     private fun importGnupg(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
         val o = Options(args)
         val home = o.value("--homedir")?.let { Path.of(it) } ?: GnupgImport.defaultHome()
-        if (!GnupgImport.looksLikeHome(home)) throw CliError(ExitCode.NOT_FOUND, "no GnuPG keyring in $home")
+        if (!GnupgImport.looksLikeHome(home)) throw CliError(ExitCode.NOT_FOUND, "no GnuPG keyring in ${safe(home.toString())}")
         val scan = GnupgImport.scan(home)
-        if (scan.gpg == null) err("gpg not found: public keys and trust only")
-        val result = GnupgImport.import(repo, scan, withTrust = !o.flag("--no-trust"), withSecrets = o.flag("--secret"))
-        out("Import from $home: ${result.report.summary()}")
-        if (!o.flag("--no-trust")) out("Trust raised on ${result.trustSet} key(s)")
-        if (o.flag("--secret")) out("Secret keys imported: ${result.secretsImported}")
-        result.notes.forEach { err(it) }
+        val withSecrets = o.flag("--secret")
+        val withTrust = if (scan.isDefault) !o.flag("--no-trust") else o.flag("--trust") && !o.flag("--no-trust")
+        when {
+            !scan.isDefault -> err("not your GnuPG home: public keys and trust only, read from the files")
+            scan.gpg == null -> err("gpg not found: public keys and trust only")
+        }
+        if (withSecrets && !scan.isDefault) err("secret keys are only read from your own GnuPG home; none will be imported")
+        val plan = GnupgImport.prepare(scan)
+        if (o.flag("--dry-run")) {
+            val preview = GnupgImport.trustPreview(repo, plan, withSecrets)
+            out("Keys in $home: ${plan.keys.size}")
+            if (withTrust) {
+                out("Trust that would change: ${preview.size}")
+                preview.forEach { out("  " + trustLine(it)) }
+            }
+            plan.notes.forEach { err(safe(it)) }
+            out("Dry run: nothing was imported")
+            return@runBlocking ExitCode.OK
+        }
+        val result = GnupgImport.apply(repo, plan, withTrust, withSecrets)
+        out("Import from ${safe(home.toString())}: ${result.report.summary()}")
+        if (withTrust) {
+            out("Trust raised on ${result.trustSet} key(s)")
+            result.trustChanges.forEach { out("  " + trustLine(it)) }
+        }
+        if (withSecrets) out("Secret keys imported: ${result.secretsImported}")
+        result.notes.forEach { err(safe(it)) }
         if (result.report.total > 0 && result.report.failed == result.report.total) ExitCode.FAILED else ExitCode.OK
     }
+
+    private fun trustLine(c: GnupgImport.TrustChange): String =
+        "${safe(c.userId)}  ${safe(c.fingerprint.uppercase().takeLast(16))}  ${c.from?.name ?: "new"} -> ${c.to.name}"
 
     private fun export(repo: DesktopKeyRepository, args: List<String>): Int = runBlocking {
         val o = Options(args)
@@ -314,7 +379,7 @@ object Cli {
                 if (k.isRevoked) add("revoked")
                 if (k.isExpired) add("expired")
             }.joinToString(",")
-            out("${k.fingerprint.uppercase()}  ${k.algorithm.displayName.padEnd(20)}  [$flags]  ${k.userID}")
+            out("${safe(k.fingerprint.uppercase())}  ${k.algorithm.displayName.padEnd(20)}  [$flags]  ${safe(k.userID)}")
         }
         ExitCode.OK
     }
@@ -358,7 +423,7 @@ object Cli {
                 err("warning: key created, but the SSH subkey could not be added: ${t.message ?: t::class.simpleName}")
             }
         }
-        out("Generated ${entity.userID}")
+        out("Generated ${safe(entity.userID)}")
         out(entity.fingerprint.uppercase())
         ExitCode.OK
     }
@@ -375,10 +440,10 @@ object Cli {
             if (requireSecret) it.filter { k -> k.isKeyPair } else it
         }
         return when {
-            matches.isEmpty() -> throw CliError(ExitCode.NOT_FOUND, "no ${if (requireSecret) "secret " else ""}key matches \"$selector\"")
+            matches.isEmpty() -> throw CliError(ExitCode.NOT_FOUND, "no ${if (requireSecret) "secret " else ""}key matches \"${safe(selector)}\"")
             matches.size > 1 -> throw CliError(
                 ExitCode.NOT_FOUND,
-                "\"$selector\" is ambiguous — matches ${matches.size} keys; use a fingerprint. " +
+                "\"${safe(selector)}\" is ambiguous: matches ${matches.size} keys; use a fingerprint. " +
                     matches.joinToString(", ") { it.shortFingerprint }
             )
             else -> matches.first()
@@ -444,34 +509,93 @@ object Cli {
 
     // ── Signature reporting (decrypt) ───────────────────────────────────
 
-    private fun reportSignature(s: SignatureSummary.Summary) {
-        val who = (s.signerLabel?.let { " — $it" } ?: "") + (s.weakKey?.let { " (weak signing key: $it)" } ?: "")
+    private fun reportSignature(s: SignatureSummary.Summary, status: com.pgpony.android.crypto.SignerStatus) {
+        val who = (s.signerLabel?.let { ": ${safe(it)}" } ?: "") +
+            (s.keyIdHex?.takeIf { s.signer != null }?.let { " (${safe(it)})" } ?: "") +
+            (s.weakKey?.let { " (weak signing key: ${safe(it)})" } ?: "")
         when (s.state) {
             SignatureSummary.State.VERIFIED -> err("Good signature$who")
             SignatureSummary.State.UNCONFIRMED -> err("Good signature$who (signer key not verified)")
-            SignatureSummary.State.UNHELD -> err("Signed by an unheld key" + (s.keyIdHex?.let { " ($it)" } ?: "") + " — not verified")
-            SignatureSummary.State.INVALID -> err("BAD signature$who")
+            SignatureSummary.State.UNHELD -> err("Signed by a key not in the keyring" + (s.keyIdHex?.let { " (${safe(it)})" } ?: "") + ", not verified")
+            SignatureSummary.State.INVALID -> {
+                val reason = status.takeIf {
+                    it != com.pgpony.android.crypto.SignerStatus.NONE && it != com.pgpony.android.crypto.SignerStatus.VERIFIED
+                }?.let { " (${DecryptSignature.reason(it)})" } ?: ""
+                err("BAD signature$who$reason")
+            }
             SignatureSummary.State.NONE -> err("No signature")
         }
     }
+
+    /**
+     * [s] as one line of terminal text: control characters (C0, DEL, C1, line breaks included)
+     * and the bidirectional overrides are shown as \xNN or \uNNNN instead of acting on the
+     * terminal. For anything taken from a key or a message.
+     */
+    internal fun safe(s: String?): String {
+        if (s == null) return ""
+        val sb = StringBuilder(s.length)
+        for (c in s) {
+            val code = c.code
+            when {
+                code < 0x20 || code == 0x7F || code in 0x80..0x9F -> sb.append(String.format("\\x%02X", code))
+                code == 0x061C || code == 0x200E || code == 0x200F || code in 0x202A..0x202E || code in 0x2066..0x2069 ->
+                    sb.append(String.format("\\u%04X", code))
+                else -> sb.append(c)
+            }
+        }
+        return sb.toString()
+    }
+
+    /** Like [safe], but keeps line breaks and tabs: the last guard on everything printed. */
+    internal fun terminalText(s: String): String =
+        s.split('\n').joinToString("\n") { line -> line.split('\t').joinToString("\t") { safe(it) } }
 
     // ── I/O ─────────────────────────────────────────────────────────────
 
     private fun readAll(input: String?): ByteArray =
         if (input == null || input == "-") System.`in`.readBytes()
         else Files.readAllBytes(Path.of(input).also {
-            if (!Files.exists(it)) throw CliError(ExitCode.NOT_FOUND, "input file not found: $input")
+            if (!Files.exists(it)) throw CliError(ExitCode.NOT_FOUND, "input file not found: ${safe(input)}")
         })
 
+    /** A private (owner-only) temp folder for [block], removed with everything in it afterwards. */
+    private inline fun <T> withScratch(block: (Path) -> T): T {
+        val dir = Files.createTempDirectory("pgpony-cli", *SafeFiles.dirAttrs(ownerOnly = true))
+        try {
+            return block(dir)
+        } finally {
+            runCatching {
+                Files.walk(dir).use { w -> w.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) } }
+            }
+        }
+    }
+
     /**
-     * 3.0.0 (Android #31): a .zip holding one PGP message decrypts as that message. None, or
-     * several, is an error rather than a guess.
+     * The ciphertext to decrypt, as a file: the input file itself, or stdin spooled into
+     * [scratch]. 3.0.0 (Android #31): a .zip holding one PGP message decrypts as that message
+     * (its entry streamed into [scratch], bounded); none, or several, is an error rather than a
+     * guess.
      */
-    private fun unzipIfZip(data: ByteArray): ByteArray {
-        if (!ZipTransport.looksLikeZip(data)) return data
-        val out = java.io.ByteArrayOutputStream()
-        return when (ZipTransport.extractSinglePgpEntry(data.inputStream(), out)) {
-            is ZipTransport.Found.One -> out.toByteArray()
+    private fun cipherSource(input: String?, scratch: Path): Path {
+        val file = if (input == null || input == "-") {
+            scratch.resolve("input").also { p ->
+                Files.newOutputStream(p, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use { System.`in`.copyTo(it) }
+            }
+        } else {
+            Path.of(input).also {
+                if (!Files.exists(it)) throw CliError(ExitCode.NOT_FOUND, "input file not found: ${safe(input)}")
+            }
+        }
+        if (!ZipTransport.looksLikeZip(file)) return file
+        val entry = scratch.resolve("entry")
+        val found = Files.newInputStream(file).use { ins ->
+            Files.newOutputStream(entry, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use {
+                ZipTransport.extractSinglePgpEntry(ins, it)
+            }
+        }
+        return when (found) {
+            is ZipTransport.Found.One -> entry
             ZipTransport.Found.None -> throw CliError(ExitCode.FAILED, "decrypt: no encrypted message in this .zip")
             ZipTransport.Found.Several -> throw CliError(
                 ExitCode.FAILED, "decrypt: this .zip holds several encrypted files; extract them and decrypt one at a time"
@@ -479,25 +603,118 @@ object Cli {
         }
     }
 
-    private fun outStream(outPath: String?): OutputStream =
-        if (outPath == null || outPath == "-") UncloseableStream(System.out)
-        else Files.newOutputStream(Path.of(outPath))
+    /**
+     * Where decrypt writes. The plaintext first goes to an owner-only temp file, written and read
+     * back through the handle that created it: beside the --output file (so the final move is a
+     * rename on one file system), or in the private scratch folder for stdout and for an output
+     * that is not a plain file (/dev/null, a pipe, a terminal). [publish] moves it into place or
+     * copies it out; [discard] removes whatever was not published.
+     */
+    private class DecryptTarget(
+        private val tmp: SafeFiles.OpenTemp,
+        private val final: Path?,
+        private val direct: Boolean
+    ) {
+        private var published = false
 
+        fun stream(): OutputStream = java.io.BufferedOutputStream(tmp.output(), 1 shl 16)
+
+        fun publish() {
+            when {
+                final == null -> {
+                    tmp.input().copyTo(System.out)
+                    System.out.flush()
+                }
+                direct -> writeThrough(final) { tmp.input().copyTo(it) }
+                else -> {
+                    tmp.close()
+                    SafeFiles.replaceInto(tmp.path, final)
+                }
+            }
+            published = true
+        }
+
+        fun discard() {
+            runCatching { tmp.close() }
+            if (!published || final == null || direct) runCatching { Files.deleteIfExists(tmp.path) }
+        }
+
+        companion object {
+            fun open(outPath: String?, scratch: Path): DecryptTarget {
+                if (outPath == null || outPath == "-") {
+                    return DecryptTarget(SafeFiles.openTemp(scratch, ownerOnly = true), null, direct = false)
+                }
+                val final = outputPath(outPath)
+                if (writesThrough(final)) {
+                    return DecryptTarget(SafeFiles.openTemp(scratch, ownerOnly = true), final, direct = true)
+                }
+                val dir = final.parent ?: throw CliError(ExitCode.USAGE, "--output has no folder: ${safe(outPath)}")
+                val tmp = try {
+                    SafeFiles.openTemp(dir, ownerOnly = true)
+                } catch (e: java.nio.file.AccessDeniedException) {
+                    // A file the user may write in a folder they may not (/dev/stdout sent to a
+                    // file): written in place once the message has passed.
+                    if (!Files.isWritable(final)) throw e
+                    return DecryptTarget(SafeFiles.openTemp(scratch, ownerOnly = true), final, direct = true)
+                }
+                return DecryptTarget(tmp, final, direct = false)
+            }
+        }
+    }
+
+    /** The absolute --output path; a folder there is a usage error. */
+    private fun outputPath(outPath: String): Path {
+        val final = Path.of(outPath).toAbsolutePath().normalize()
+        if (Files.isDirectory(final, LinkOption.NOFOLLOW_LINKS)) {
+            throw CliError(ExitCode.USAGE, "--output is a folder: ${safe(outPath)}")
+        }
+        return final
+    }
+
+    /**
+     * An output that exists and is not a plain file or folder (/dev/null, /dev/stdout to a pipe
+     * or terminal, a named pipe) is written in place; nothing can be renamed over it.
+     */
+    private fun writesThrough(final: Path): Boolean =
+        Files.exists(final) && !Files.isRegularFile(final) && !Files.isDirectory(final)
+
+    private inline fun writeThrough(final: Path, block: (OutputStream) -> Unit) {
+        Files.newOutputStream(final, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
+            block(out)
+            out.flush()
+        }
+    }
+
+    /**
+     * Write [bytes] to stdout, or to [outPath] through a temp file beside it that is then
+     * renamed into place (a link at [outPath] is replaced, never written through). An output
+     * that is not a plain file (/dev/null, a pipe) is written in place.
+     */
     private fun writeAll(outPath: String?, bytes: ByteArray) {
-        if (outPath == null || outPath == "-") { System.out.write(bytes); System.out.flush() }
-        else Files.write(Path.of(outPath), bytes)
+        if (outPath == null || outPath == "-") { System.out.write(bytes); System.out.flush(); return }
+        val final = outputPath(outPath)
+        if (writesThrough(final)) { writeThrough(final) { it.write(bytes) }; return }
+        val dir = final.parent ?: throw CliError(ExitCode.USAGE, "--output has no folder: ${safe(outPath)}")
+        val tmp = try {
+            SafeFiles.openTemp(dir, ownerOnly = false)
+        } catch (e: java.nio.file.AccessDeniedException) {
+            if (!Files.isWritable(final)) throw e
+            writeThrough(final) { it.write(bytes) }
+            return
+        }
+        try {
+            tmp.output().write(bytes)
+            tmp.close()
+            SafeFiles.replaceInto(tmp.path, final)
+        } catch (t: Throwable) {
+            runCatching { tmp.close() }
+            runCatching { Files.deleteIfExists(tmp.path) }
+            throw t
+        }
     }
 
     private fun fileName(input: String?): String? =
         input?.takeIf { it != "-" }?.let { Path.of(it).fileName?.toString() }
-
-    /** Keep System.out open when a stream consumer calls close(). */
-    private class UncloseableStream(private val delegate: OutputStream) : OutputStream() {
-        override fun write(b: Int) = delegate.write(b)
-        override fun write(b: ByteArray, off: Int, len: Int) = delegate.write(b, off, len)
-        override fun flush() = delegate.flush()
-        override fun close() { delegate.flush() } // do NOT close stdout
-    }
 
     // ── Passphrase ──────────────────────────────────────────────────────
 
@@ -546,7 +763,11 @@ object Cli {
 
     // ── Repository lifecycle ────────────────────────────────────────────
 
+    /** Tests run the verbs against a keyring of their own. */
+    internal var repoOverride: DesktopKeyRepository? = null
+
     private fun withRepo(block: (DesktopKeyRepository) -> Int): Int {
+        repoOverride?.let { return block(it) }
         val db = Db.open(Config.dbFile)
         return try {
             val repo = DesktopKeyRepository(db, KeyMaterialStore(Config.keysDir))
@@ -594,27 +815,27 @@ object Cli {
         return ExitCode.OK
     }
 
-    private fun out(msg: String) = println(msg)
-    private fun err(msg: String) = System.err.println("pgpony: $msg")
+    private fun out(msg: String) = println(terminalText(msg))
+    private fun err(msg: String) = System.err.println("pgpony: " + terminalText(msg))
 
     private fun usage(): Int {
         err(
             """
-            pgpony — OpenPGP on the command line (shares the app's keyring)
+            pgpony: OpenPGP on the command line (shares the app's keyring)
 
             Usage: pgpony <verb> [options] [file]
 
             Verbs:
-              encrypt   -r <key> [-r …] [-u <key>] [-c] [-a] [-o out] [file|-]
-              decrypt   [--decrypt-with <key>] [-o out] [file|-]
+              encrypt   -r <key> [-r ...] [-u <key>] [-c] [-a] [-o out] [file|-]
+              decrypt   [--decrypt-with <key>] [--require-signature | --require-verified] [-o out] [file|-]
               sign      [-u <key>] [-b] [-a] [-o out] [file|-]
-              verify    [-s <sigfile>] [file|-]
+              verify    [-s <sigfile>] [--require-verified] [file|-]
               import    [file|-]
-              import-gnupg [--homedir DIR] [--secret] [--no-trust]
+              import-gnupg [--homedir DIR] [--secret] [--no-trust | --trust] [--dry-run]
               export    [--secret] [-a] [-o out] <key>
               list-keys [--secret]
               gen-key   --name <n> [--email <e>] [--algo ed25519] [--expires <days>] [--ssh-auth]
-                        [--subkey <kind> …] [--no-default-encryption]
+                        [--subkey <kind> ...] [--no-default-encryption]
               card-info                        report the PC/SC readers this build can see
 
             Common options:
@@ -624,11 +845,26 @@ object Cli {
               -u, --sign-as <key>    signing key
               --no-signing-defaults  sign with the -u key itself, not its signing default
               --decrypt-with <key>   try this key first, then its fallbacks
+              --require-signature    decrypt: write nothing unless a key in the keyring made a good signature
+              --require-verified     decrypt, verify: as above, and the signer key must be verified
               --passphrase-env VAR   read passphrase from an environment variable
               --passphrase-fd N      read passphrase from a file descriptor
 
+            Decrypt writes nothing until the whole message has passed its integrity check; the
+            output appears (or reaches stdout) only then, readable by you alone.
+
+            import-gnupg: a folder other than your own GnuPG home is only read, never run through
+            gpg; its trust is carried over only with --trust. --dry-run lists what would change.
+
             A key selector is a fingerprint, long key id, email, or a unique name substring.
-            Exit codes: 0 ok · 1 usage · 2 not-found · 3 failed · 4 unverified.
+            Exit codes:
+              0  ok
+              1  usage
+              2  key or file not found
+              3  failed (a message that fails its integrity check exits 3 and writes nothing)
+              4  unverified: verify found a bad, unknown or missing signature; decrypt found a
+                 signature that is present but bad (output written, as gpg does), or a
+                 --require-signature / --require-verified condition was not met (nothing written)
             """.trimIndent()
         )
         return ExitCode.USAGE

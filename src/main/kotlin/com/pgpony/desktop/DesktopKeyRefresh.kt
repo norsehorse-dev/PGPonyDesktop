@@ -27,9 +27,6 @@ import com.pgpony.android.data.PGPKeyEntity
 import com.pgpony.android.data.RevocationReason
 import com.pgpony.android.keyserver.KeyServerDirectory
 import com.pgpony.android.keyserver.MultiKeyServerService
-import org.bouncycastle.bcpg.SignatureSubpacketTags
-import org.bouncycastle.openpgp.PGPPublicKeyRing
-import org.bouncycastle.openpgp.PGPSignature
 import java.util.prefs.Preferences
 
 /**
@@ -166,17 +163,19 @@ class DesktopKeyRefresh(
         //    removing or shortening a stored primary expiry (see DesktopKeyRepository).
         val (merged, changed) = repo.mergeFetchedPublicMaterial(existing, fetchedRing)
 
-        // 4. Revocation scan on the fetched primary.
+        // 4. Revocation scan on the fetched primary: only a key revocation the primary itself
+        //    made and that verifies counts. A certificate whose primary cannot be checked here
+        //    gives none, so a server cannot mark such a key revoked.
         var revocationApplied = false
         if (!wasRevokedLocally) {
-            val revSig = findKeyRevocationSignature(fetchedRing)
-            if (revSig != null) {
-                val reason = revocationReasonCode(revSig)?.let { code ->
+            val rev = com.pgpony.android.crypto.CertificateBindings.verifiedKeyRevocation(fetchedRing)
+            if (rev != null) {
+                val reason = rev.reason?.let { code ->
                     RevocationReason.entries.firstOrNull { it.rfcCode == code }
                 }
                 repo.markRevokedFromUpstream(
                     fingerprint = merged.fingerprint,
-                    revokedAtMs = revSig.creationTime?.time ?: System.currentTimeMillis(),
+                    revokedAtMs = rev.createdMs.takeIf { it > 0 } ?: System.currentTimeMillis(),
                     reason = reason
                 )
                 revocationApplied = true
@@ -202,37 +201,17 @@ class DesktopKeyRefresh(
      *  port): lowercase, whitespace stripped. */
     private fun normalize(fingerprint: String): String =
         fingerprint.lowercase().filter { !it.isWhitespace() }
-
-    /** First key-revocation signature (tag 2, type 0x20) on the fetched ring's primary. */
-    private fun findKeyRevocationSignature(ring: PGPPublicKeyRing): PGPSignature? {
-        // Android 4.6.0 (item 17.1): only a revocation the primary itself made, and that
-        // verifies, counts. The verified view drops every other 0x20, so a key server cannot
-        // mark someone else's key revoked with a forged or foreign signature.
-        val view = com.pgpony.android.crypto.CertificateBindings.verified(ring)
-        val report = view.report
-        if (report != null && report.supported && !report.primaryRevoked) return null
-        val primary = view.ring.publicKey ?: return null
-        val sigs = primary.getSignaturesOfType(PGPSignature.KEY_REVOCATION) ?: return null
-        while (sigs.hasNext()) {
-            (sigs.next() as? PGPSignature)?.let { return it }
-        }
-        return null
-    }
-
-    /** RFC 4880 §5.2.3.23 reason code (hashed preferred, unhashed fallback), or null. */
-    private fun revocationReasonCode(sig: PGPSignature): Int? {
-        val packet = sig.hashedSubPackets
-            ?.getSubpacket(SignatureSubpacketTags.REVOCATION_REASON)
-            ?: sig.unhashedSubPackets
-                ?.getSubpacket(SignatureSubpacketTags.REVOCATION_REASON)
-        return (packet as? org.bouncycastle.bcpg.sig.RevocationReason)
-            ?.revocationReason?.toInt()
-    }
 }
 
 /**
  * Desktop-only network toggles that are NOT part of a twin (twins stay verbatim). Currently
  * just the auto-refresh switch for the DesktopState ticker.
+ *
+ * 3.0.0: automatic refresh sends the fingerprint of every key in the keyring to each lookup
+ * server, so a new install starts with it off, like the update check. An install from before
+ * keeps what it had: [settleDefault] runs at every start and, the first time, writes the value
+ * the switch had then (on when the user never touched it) for an existing install and off for a
+ * new one. A value the user chose is never changed.
  */
 object DesktopNetworkPrefs {
     private const val KEY_AUTO_REFRESH = "auto_refresh_keys"
@@ -243,6 +222,21 @@ object DesktopNetworkPrefs {
     private fun prefs(): Preferences =
         prefsOverride ?: Preferences.userRoot().node("app/pgpony/desktop")
 
-    fun autoRefresh(): Boolean = prefs().getBoolean(KEY_AUTO_REFRESH, true)
-    fun setAutoRefresh(enabled: Boolean) = prefs().putBoolean(KEY_AUTO_REFRESH, enabled)
+    fun autoRefresh(): Boolean = prefs().getBoolean(KEY_AUTO_REFRESH, false)
+    fun setAutoRefresh(enabled: Boolean) {
+        prefs().putBoolean(KEY_AUTO_REFRESH, enabled)
+        runCatching { prefs().flush() }
+    }
+
+    /**
+     * Store the switch explicitly when it has never been stored: on for an install that already
+     * had a keyring before this version ([existingInstall], where it was on by default), off
+     * for a new one.
+     */
+    fun settleDefault(existingInstall: Boolean) {
+        val p = prefs()
+        if (p.get(KEY_AUTO_REFRESH, null) != null) return
+        p.putBoolean(KEY_AUTO_REFRESH, existingInstall)
+        runCatching { p.flush() }
+    }
 }

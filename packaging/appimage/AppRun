@@ -19,7 +19,7 @@
 HERE="$(dirname "$(readlink -f "$0")")"
 
 SYS_FT=""
-for LDC in ldconfig /sbin/ldconfig /usr/sbin/ldconfig; do
+for LDC in /sbin/ldconfig /usr/sbin/ldconfig ldconfig; do
   SYS_FT="$("$LDC" -p 2>/dev/null | awk '/libfreetype\.so\.6/ {print $NF; exit}')"
   [ -n "$SYS_FT" ] && break
 done

@@ -7,8 +7,13 @@
 //   · plaintext: strict ustar — pgpony-meta.json first, keys/<fp>.asc per key
 //   · recovery code: 120-bit Crockford (vendored CrockfordBase32); the S2K passphrase is the
 //     normalized STRING
-//   · card-backed keys export public-only; restore is merge-import (secret never overwritten),
-//     trust reapplied from meta for changed rows only
+//   · card-backed keys export public-only; restore is merge-import (secret never overwritten)
+//   · 3.0.0 trust on restore: an entry restores only when the (first) key inside it is the key
+//     its name and its meta row name (full fingerprint), and only that key is imported; trust from the meta is applied only to keys the
+//     keyring did not hold before (live or in Recently Deleted), never raising or lowering a key
+//     already there, and Ultimate only with the key's secret in the same entry (else Verified).
+//     restoreBackup(applyTrust = false) restores every key with no trust at all (pairing).
+//   · 3.0.0: only a password-encrypted message (SKESK + encrypted data) is read as a backup
 //   · OpenKeychain restore (the Succession): numeric9x4 code WITH hyphens, payload exploded
 //     into per-ring merge imports
 // D11b — localized. MergeReport.summary() assembles per-clause plurals, each clause carrying
@@ -51,7 +56,9 @@ data class MergeReport(
     val updated: List<RestoredKey>,
     val unchanged: List<RestoredKey>,
     val failed: List<RestoredKey>,
-    val settingsApplied: Boolean
+    val settingsApplied: Boolean,
+    /** Secret keys of contacts already held that wait for their passphrase (the app asks). */
+    val pending: List<RestoredKey> = emptyList()
 ) {
     val totalRestored: Int get() = added.size + upgraded.size + updated.size
     fun summary(): String = buildString {
@@ -60,6 +67,9 @@ data class MergeReport(
         if (updated.isNotEmpty()) append(trQuantity("d_restore_summary_updated", updated.size))
         if (unchanged.isNotEmpty()) append(trQuantity("d_restore_summary_unchanged", unchanged.size))
         if (failed.isNotEmpty()) append(trQuantity("d_restore_summary_failed", failed.size))
+        if (pending.isNotEmpty()) {
+            append(tr("d_import_summary_needs_passphrase", pending.joinToString(tr("d_list_separator")) { it.label }))
+        }
     }
 }
 
@@ -163,7 +173,20 @@ class DesktopBackupService(
 
     // ── Restore ──────────────────────────────────────────────────────
 
-    suspend fun restoreBackup(fileBytes: ByteArray, enteredCode: String): MergeReport {
+    /**
+     * Restore a `.pgpony` backup with [enteredCode]. Each `keys/<fingerprint>.asc` entry restores
+     * only when it is one armor block whose first key has the full fingerprint its name gives;
+     * only that key is imported. Anything else is reported as failed and nothing of it is
+     * imported.
+     *
+     * Trust: with [applyTrust] (a backup file the user restores) the trust level in the backup's
+     * metadata is applied to keys this keyring did not hold before, matched by the key's own
+     * fingerprint, and Ultimate only when the entry also holds the key's secret (otherwise
+     * Verified). A key the keyring already holds (live or in Recently Deleted) keeps the trust it
+     * has. With applyTrust = false (a backup that arrives from a paired device) no trust is
+     * taken from the backup at all.
+     */
+    suspend fun restoreBackup(fileBytes: ByteArray, enteredCode: String, applyTrust: Boolean = true): MergeReport {
         val text = fileBytes.toString(Charsets.UTF_8)
         if (!text.contains("BEGIN PGP MESSAGE")) throw BackupError.NotABackup
 
@@ -190,7 +213,7 @@ class DesktopBackupService(
 
         val added = ArrayList<RestoredKey>(); val upgraded = ArrayList<RestoredKey>()
         val updated = ArrayList<RestoredKey>(); val unchanged = ArrayList<RestoredKey>()
-        val failed = ArrayList<RestoredKey>()
+        val failed = ArrayList<RestoredKey>(); val pending = ArrayList<RestoredKey>()
 
         val seen = HashSet<String>()
         for (entry in entries) {
@@ -198,10 +221,23 @@ class DesktopBackupService(
             val fpFromName = entry.name.removePrefix(KEYS_DIR).removeSuffix(".asc").lowercase()
             if (!seen.add(fpFromName)) continue
             val armored = String(entry.data, Charsets.UTF_8)
+            val nameLabel = metaByFp[fpFromName]?.get("userID")?.jsonPrimitive?.content
+                ?.ifBlank { null } ?: fpFromName
             try {
-                val resolution = repo.importArmoredKeyDetailed(armored)
-                val row = repo.byFingerprint(fpFromName)
-                val fp = (row?.fingerprint ?: fpFromName).lowercase()
+                // The key inside the entry, by its own fingerprint; it must be the named one.
+                // The key inside the entry, by its own fingerprint; it must be the named one.
+                // Only that key is imported: an older version could store (and so back up) a
+                // secret file with further keys after it, and those are left out.
+                val keyBlock = DesktopKeyRepository.splitArmoredBlocks(armored).singleOrNull()
+                    ?.let { repo.splitKeys(it).firstOrNull() }
+                val fp = keyBlock?.let { repo.fingerprintsOf(it).singleOrNull()?.lowercase() }
+                if (keyBlock == null || fp == null || fp != fpFromName) {
+                    failed.add(RestoredKey(fpFromName, nameLabel))
+                    continue
+                }
+                val heldBefore = repo.byFingerprintAnyState(fp) != null
+                val resolution = repo.importArmoredKeyDetailed(keyBlock)
+                val row = repo.byFingerprint(fp)
                 val rk = RestoredKey(fp, row?.userID?.ifBlank { fp } ?: fp)
                 when (resolution) {
                     ImportResolution.INSERTED -> added.add(rk)
@@ -209,20 +245,18 @@ class DesktopBackupService(
                     ImportResolution.MERGED_NEW_MATERIAL -> updated.add(rk)
                     ImportResolution.ALREADY_IN_KEYRING -> unchanged.add(rk)
                     ImportResolution.FAILED -> failed.add(rk)
+                    ImportResolution.NEEDS_PASSPHRASE -> pending.add(rk)
                 }
-                // Reapply trust for anything actually changed — never clobber an unchanged key.
-                if (resolution != ImportResolution.ALREADY_IN_KEYRING && resolution != ImportResolution.FAILED) {
-                    metaByFp[fp]?.let { applyTrust(fp, it) }
+                if (applyTrust && !heldBefore && resolution == ImportResolution.INSERTED && row != null) {
+                    metaByFp[fp]?.let { applyTrust(row.fingerprint, it, withSecret = row.isKeyPair) }
                 }
             } catch (e: Exception) {
-                val label = metaByFp[fpFromName]?.get("userID")?.jsonPrimitive?.content
-                    ?.ifBlank { null } ?: fpFromName
-                failed.add(RestoredKey(fpFromName, label))
+                failed.add(RestoredKey(fpFromName, nameLabel))
             }
         }
 
         // Settings entry ignored on desktop until D4 (spec: additive-optional).
-        return MergeReport(added, upgraded, updated, unchanged, failed, settingsApplied = false)
+        return MergeReport(added, upgraded, updated, unchanged, failed, settingsApplied = false, pending = pending)
     }
 
     // ── OpenKeychain migration (the Succession) ──────────────────────
@@ -259,14 +293,27 @@ class DesktopBackupService(
 
         val added = ArrayList<RestoredKey>(); val upgraded = ArrayList<RestoredKey>()
         val updated = ArrayList<RestoredKey>(); val unchanged = ArrayList<RestoredKey>()
-        val failed = ArrayList<RestoredKey>()
+        val failed = ArrayList<RestoredKey>(); val pending = ArrayList<RestoredKey>()
         val seen = HashSet<String>()
+        // OpenKeychain writes each key's public ring before its secret ring: a key inserted from
+        // this backup takes its secret without a passphrase prompt.
+        val insertedHere = HashSet<String>()
         for (block in blocks) {
             try {
-                val resolution = repo.importArmoredKeyDetailed(block)
+                val resolution = repo.importArmoredKeyDetailed(block, insertedInSession = insertedHere)
                 val fp = runCatching { crypto.importArmoredKey(block).fingerprint.lowercase() }
                     .getOrDefault("?")
-                if (!seen.add(fp)) continue
+                if (!seen.add(fp)) {
+                    // The secret block of a key already listed: report it when it waits for its
+                    // passphrase, so the summary names it.
+                    if (resolution == ImportResolution.NEEDS_PASSPHRASE) {
+                        val rk = RestoredKey(fp, repo.byFingerprint(fp)?.userID?.ifBlank { fp } ?: fp)
+                        unchanged.removeAll { it.fingerprint == fp }
+                        updated.removeAll { it.fingerprint == fp }
+                        pending.add(rk)
+                    }
+                    continue
+                }
                 val row = repo.byFingerprint(fp)
                 val rk = RestoredKey(fp, row?.userID?.ifBlank { fp } ?: fp)
                 when (resolution) {
@@ -275,20 +322,40 @@ class DesktopBackupService(
                     ImportResolution.MERGED_NEW_MATERIAL -> updated.add(rk)
                     ImportResolution.ALREADY_IN_KEYRING -> unchanged.add(rk)
                     ImportResolution.FAILED -> failed.add(rk)
+                    ImportResolution.NEEDS_PASSPHRASE -> pending.add(rk)
                 }
             } catch (_: Exception) {
                 failed.add(RestoredKey("?", tr("d_restore_unreadable_block")))
             }
         }
-        if (added.isEmpty() && upgraded.isEmpty() && updated.isEmpty() && unchanged.isEmpty()) {
+        if (added.isEmpty() && upgraded.isEmpty() && updated.isEmpty() && unchanged.isEmpty() && pending.isEmpty()) {
             throw BackupError.Corrupt(tr("d_backup_detail_no_keys"))
         }
-        return MergeReport(added, upgraded, updated, unchanged, failed, settingsApplied = false)
+        return MergeReport(added, upgraded, updated, unchanged, failed, settingsApplied = false, pending = pending)
     }
 
     // ── Helpers ──────────────────────────────────────────────────────
 
+    /**
+     * A backup is a password-encrypted message: one or more password packets (SKESK) and then the
+     * encrypted data. Anything else (a signed-only or public-key encrypted message) is not one,
+     * whatever code is typed.
+     */
+    private fun requirePasswordEncrypted(fileBytes: ByteArray) {
+        val ok = runCatching {
+            val input = org.bouncycastle.openpgp.PGPUtil.getDecoderStream(java.io.ByteArrayInputStream(fileBytes))
+            val factory = org.bouncycastle.openpgp.bc.BcPGPObjectFactory(input)
+            var obj = factory.nextObject()
+            while (obj is org.bouncycastle.openpgp.PGPMarker) obj = factory.nextObject()
+            val list = obj as? org.bouncycastle.openpgp.PGPEncryptedDataList ?: return@runCatching false
+            val items = list.toList()
+            items.isNotEmpty() && items.all { it is org.bouncycastle.openpgp.PGPPBEEncryptedData }
+        }.getOrDefault(false)
+        if (!ok) throw BackupError.NotABackup
+    }
+
     private fun decryptOrThrow(fileBytes: ByteArray, passphrase: String): ByteArray = try {
+        requirePasswordEncrypted(fileBytes)
         crypto.decrypt(
             encryptedData = fileBytes,
             secretKeyRings = emptyList(),
@@ -306,10 +373,12 @@ class DesktopBackupService(
         throw BackupError.WrongCode
     }
 
-    private suspend fun applyTrust(fingerprint: String, meta: JsonObject) {
+    /** The meta row's trust for a key just added; Ultimate needs the key's secret ([withSecret]). */
+    private suspend fun applyTrust(fingerprint: String, meta: JsonObject, withSecret: Boolean) {
         val display = meta["trustLevel"]?.jsonPrimitive?.content?.ifBlank { null } ?: return
         val level = TrustLevel.entries.firstOrNull { it.displayName.equals(display, true) } ?: return
-        runCatching { repo.updateTrustLevel(fingerprint, level) }
+        val capped = if (level == TrustLevel.ULTIMATE && !withSecret) TrustLevel.VERIFIED else level
+        runCatching { repo.updateTrustLevel(fingerprint, capped) }
     }
 
     private val ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC)

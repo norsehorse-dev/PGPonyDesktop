@@ -133,6 +133,13 @@ fun SettingsScreen(state: DesktopState) {
         }
         Spacer(Modifier.height(Spacing.Large))
 
+        // ── Git signing (3.0.0) ─────────────────────────────────────────
+        // pgpony-gpg asks this window to sign with a protected key only when this is on.
+        SectionCard(tr("d_settings_section_git_signing"), tr("d_settings_git_signing_note")) {
+            GitSigningSection()
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
         // ── Watch folders (D18) ─────────────────────────────────────────
         SectionCard(tr("d_settings_section_watch"), tr("d_settings_watch_note")) {
             WatchSection(state)
@@ -932,4 +939,33 @@ private fun AddServerDialog(onDismiss: () -> Unit, onAdd: (label: String, baseUr
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(tr("common_button_cancel")) } }
     )
+}
+
+/**
+ * Git signing through the running app (ShimBridge): off by default, like the SSH agent. Keys
+ * without a passphrase sign in pgpony-gpg itself and need none of this.
+ */
+@Composable
+private fun GitSigningSection() {
+    var enabled by remember { mutableStateOf(GitSigningPrefs.enabled()) }
+    var running by remember { mutableStateOf(ShimBridge.isRunning()) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(
+            checked = enabled,
+            onCheckedChange = { on ->
+                running = ShimBridge.setEnabled(on)
+                enabled = on
+            }
+        )
+        Spacer(Modifier.width(Spacing.Small))
+        Text(tr("d_settings_git_signing_enable"), style = MaterialTheme.typography.bodyMedium)
+    }
+    if (enabled && !running) {
+        Spacer(Modifier.height(Spacing.Small))
+        Text(
+            tr("d_settings_git_signing_not_running"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
 }

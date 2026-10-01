@@ -38,7 +38,14 @@ class DesktopKeyRepositoryTest {
 
         assertEquals(ImportResolution.INSERTED, repo.importArmoredKeyDetailed(gen.armoredPublicKey))
         assertEquals(ImportResolution.ALREADY_IN_KEYRING, repo.importArmoredKeyDetailed(gen.armoredPublicKey))
-        assertEquals(ImportResolution.UPGRADED_TO_KEY_PAIR, repo.importArmoredKeyDetailed(gen.armoredPrivateKey))
+        // A protected secret for a held contact waits for its passphrase (KEYSTORE-4) ...
+        assertEquals(ImportResolution.NEEDS_PASSPHRASE, repo.importArmoredKeyDetailed(gen.armoredPrivateKey))
+        assertTrue(!repo.byFingerprint(gen.fingerprint)!!.isKeyPair, "nothing added without the passphrase")
+        // ... and upgrades once the passphrase proves it.
+        assertEquals(
+            ImportResolution.UPGRADED_TO_KEY_PAIR,
+            repo.importArmoredKeyDetailed(gen.armoredPrivateKey, "test-passphrase".toCharArray())
+        )
         // A held secret is never overwritten by a public re-import (restore rule).
         assertEquals(ImportResolution.ALREADY_IN_KEYRING, repo.importArmoredKeyDetailed(gen.armoredPublicKey))
 
@@ -89,7 +96,9 @@ class DesktopKeyRepositoryTest {
         val report = repo.migrateLegacyJson(legacy)
         assertNotNull(report)
         assertEquals(1, report.inserted)
-        assertTrue(Files.exists(dir.resolve("keyring.json.migrated")), "legacy file renamed")
+        // KEYSTORE-9: the old store (armored secret keys) is removed, not kept as *.migrated.
+        assertTrue(!Files.exists(legacy), "legacy file removed")
+        assertTrue(!Files.exists(dir.resolve("keyring.json.migrated")), "no migrated copy left")
         assertEquals(1, repo.count())
 
         // Second call: nothing to do.

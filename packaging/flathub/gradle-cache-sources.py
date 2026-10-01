@@ -12,6 +12,13 @@
 # from the cached copy, and a destination in a Maven layout under offline-repository/, which
 # offline.init.gradle hands to the offline build.
 #
+# Each cached file is also checked twice before it is listed: against the SHA-1 Gradle filed it
+# under, and against the .sha1 the repository publishes beside it. A mismatch stops the run, so a
+# cache that was altered after download cannot quietly become the Flatpak's pinned sources. This
+# proves the files match what the repositories serve, not that the repositories are honest; the
+# build's own dependency verification is what checks that. The other architecture's natives,
+# downloaded here rather than taken from the cache, are checked against the published .sha1 too.
+#
 # Native artifacts for one Linux architecture (Skiko's runtime, Compose's desktop-jvm) also get
 # their counterpart for the other one, tagged with only-arches, so a single run on either x86_64
 # or aarch64 covers both.
@@ -35,7 +42,8 @@ DEST_ROOT = "offline-repository"
 
 
 def cached_files(gradle_home):
-    """(maven path, local file) for every file in the module cache."""
+    """(maven path, local file) for every file in the module cache. Gradle names the directory
+    that holds each file after the file's SHA-1."""
     root = os.path.join(gradle_home, "caches", "modules-2", "files-2.1")
     if not os.path.isdir(root):
         sys.exit(f"no Gradle module cache at {root}")
@@ -47,6 +55,35 @@ def cached_files(gradle_home):
                     for name in sorted(os.listdir(os.path.join(version_dir, checksum_dir))):
                         path = f"{group.replace('.', '/')}/{artifact}/{version}/{name}"
                         yield path, os.path.join(version_dir, checksum_dir, name)
+
+
+def sha1_file(path):
+    digest = hashlib.sha1()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def check(path, file, url):
+    """None when [file] matches its cache directory name and the repository's .sha1, else why not."""
+    actual = sha1_file(file)
+    filed_under = os.path.basename(os.path.dirname(file))
+    if actual.lstrip("0") != filed_under.lstrip("0"):
+        return f"{path}: cached file does not match the SHA-1 Gradle stored it under"
+    return check_published(path, actual, url)
+
+
+def check_published(path, actual, url):
+    """None when the SHA-1 [actual] matches the .sha1 published beside [url] (or none is), else why not."""
+    published = request(url + ".sha1", "GET")
+    if published is None:
+        print(f"no published .sha1 to compare: {url}", file=sys.stderr)
+        return None
+    words = published.decode("ascii", "replace").split()
+    if not words or words[0].lower().lstrip("0") != actual.lstrip("0"):
+        return f"{path}: file does not match the .sha1 published at {url}.sha1"
+    return None
 
 
 def sha256_file(path):
@@ -120,6 +157,14 @@ def main():
         urls = dict(zip(local, pool.map(locate, local)))
         sibling_urls = dict(zip(siblings, pool.map(locate, siblings)))
 
+    found = [(path, file, urls[path]) for path, file in local.items() if urls[path] is not None]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        problems = [p for p in pool.map(lambda a: check(*a), found) if p]
+    if problems:
+        for p in problems:
+            print(p, file=sys.stderr)
+        sys.exit(f"{len(problems)} cached files do not match their repositories; nothing written")
+
     sources, missing = [], []
     for path, file in local.items():
         if urls[path] is None:
@@ -130,7 +175,14 @@ def main():
         if url is None:
             missing.append(path)
             continue
-        sources.append(entry(path, url, hashlib.sha256(request(url, "GET")).hexdigest(), arch_of(path)[1]))
+        body = request(url, "GET")
+        if body is None:
+            missing.append(path)
+            continue
+        problem = check_published(path, hashlib.sha1(body).hexdigest(), url)
+        if problem:
+            sys.exit(problem + "; nothing written")
+        sources.append(entry(path, url, hashlib.sha256(body).hexdigest(), arch_of(path)[1]))
 
     for path in missing:
         print(f"not found in any repository: {path}", file=sys.stderr)

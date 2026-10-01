@@ -7,7 +7,10 @@
 // Reset to first run: every key (Recently Deleted included) with its material, the Autocrypt and
 // API client tables, every desktop setting (the whole app/pgpony/desktop preferences node, which
 // holds the key server list, network, SSH agent, watch folder and password store settings), the
-// watch rules file, the agent socket directory, and the held card PIN and passphrases. The
+// watch rules file, the agent socket directory, the D1 keyring file a 1.0 development build left
+// (keyring.json, or keyring.json.migrated, which holds armored secret keys), stale SOP scratch
+// folders, and the held card PIN and passphrases. Key files and the old keyring file are
+// overwritten before they are deleted, and the database is compacted after its rows go. The
 // password store itself and anything the user saved elsewhere are theirs and stay. The app then
 // closes, because every screen holds settings it read at launch.
 
@@ -69,13 +72,24 @@ object ClearAllData {
         }
         val dir = dataDirOverride ?: Config.dataDir
         Files.deleteIfExists(dir.resolve("watch-rules.json"))
-        Files.deleteIfExists(dir.resolve("keyring.json"))
+        OwnerOnlyPaths.wipe(dir.resolve("keyring.json"))
+        OwnerOnlyPaths.wipe(dir.resolve("keyring.json.migrated"))
         deleteTree(dir.resolve("agent"))
+        wipeKeyFiles(dir.resolve("keys"))
         deleteTree(dir.resolve("keys"))
+        if (dataDirOverride == null) runCatching { SopKeyring.sweepStaleNow() }
         val root = prefsRootOverride ?: Preferences.userRoot()
         if (root.nodeExists(PREFS_NODE)) {
             root.node(PREFS_NODE).removeNode()
             runCatching { root.flush() }
+        }
+    }
+
+    /** Overwrite every regular file in the key store before the tree is deleted. */
+    private fun wipeKeyFiles(keys: Path) {
+        if (!Files.isDirectory(keys)) return
+        runCatching {
+            Files.newDirectoryStream(keys).use { stream -> for (f in stream) OwnerOnlyPaths.wipe(f) }
         }
     }
 

@@ -1,8 +1,11 @@
 // PairDialog.kt
 // PGPony Desktop 3.0.0, F1: "Pair with another computer". One computer waits, the other
-// connects to the address it shows, both users compare a six-digit code, and then either side
-// can send public keys, key pairs or a full backup; the receiver picks what to take. Nothing is
-// remembered: closing the dialog ends the session and wipes its keys. The protocol is
+// connects to the address it shows; the joining computer shows a six-digit code and asks whether
+// the waiting one shows the same, and the waiting computer's user types the code the joining one
+// shows (docs/PAIRING_PROTOCOL.md, section 4). Then either side can send public keys, key pairs or
+// a full backup; the receiver picks what to take and sees each item, as read from its bytes,
+// before anything is written. Nothing is remembered: closing the dialog ends the session and
+// wipes its keys, and no socket is written on the UI thread. The protocol is
 // docs/PAIRING_PROTOCOL.md in PGPonyAndroid (vendor/app-pair); PairController holds the logic
 // this dialog drives.
 
@@ -51,8 +54,11 @@ import com.pgpony.android.pair.PairItem
 import com.pgpony.android.pair.PairMessage
 import com.pgpony.android.pair.PairOffer
 import com.pgpony.android.pair.PairResult
+import com.pgpony.android.pair.PairRole
 import com.pgpony.android.pair.PairSession
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Toolkit
@@ -65,11 +71,17 @@ import java.util.concurrent.ConcurrentHashMap
 
 private sealed class PairStage {
     object Choose : PairStage()
-    class Hosting(val window: PairController.HostWindow) : PairStage()
+    /** [peer] is set once a device connected and the handshake runs. */
+    class Hosting(val window: PairController.HostWindow, val peer: String? = null) : PairStage()
     object Joining : PairStage()
-    class Compare(val attempt: PairAttempt, val waiting: Boolean = false) : PairStage()
-    class Paired(val session: PairSession) : PairStage()
+    class Compare(val attempt: PairAttempt, val peer: String, val waiting: Boolean = false) : PairStage()
+    class Paired(val session: PairSession, val peer: String) : PairStage()
     class Failed(val message: String) : PairStage()
+}
+
+/** Runs [block] on a daemon thread, so a socket write never runs on the UI thread. */
+private fun inBackground(block: () -> Unit) {
+    Thread({ runCatching(block) }, "pgpony-pair-ui").apply { isDaemon = true }.start()
 }
 
 /** The clipboard's text, trimmed, or null when it holds none. */
@@ -90,6 +102,10 @@ internal fun pairFailureMessage(e: Throwable): String {
     }
 }
 
+/** The message a failed join shows: a refused or cut connection may mean the window was taken. */
+internal fun joinFailureMessage(e: Throwable): String =
+    if (PairController.windowMayBeTaken(e)) tr("d_pair_fail_window_taken") else pairFailureMessage(e)
+
 @Composable
 fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
@@ -97,14 +113,12 @@ fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
     var stage by remember { mutableStateOf<PairStage>(PairStage.Choose) }
 
     // Whatever is open when the dialog goes away is closed: the listener, the attempt, the session.
+    // Nothing here waits on the network: a peer that stopped reading cannot freeze the window.
     fun teardown() {
         when (val s = stage) {
             is PairStage.Hosting -> s.window.close()
-            is PairStage.Compare -> runCatching { s.attempt.reject() }
-            is PairStage.Paired -> {
-                s.session.sendBye()
-                s.session.close()
-            }
+            is PairStage.Compare -> inBackground { s.attempt.reject() }
+            is PairStage.Paired -> s.session.endAsync()
             else -> {}
         }
     }
@@ -114,11 +128,14 @@ fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
         stage = PairStage.Failed(pairFailureMessage(e))
     }
 
-    fun startCompare(attempt: PairAttempt) {
-        val compare = PairStage.Compare(attempt)
+    fun startCompare(attempt: PairAttempt, peer: String) {
+        val compare = PairStage.Compare(attempt, peer)
         stage = compare
         attempt.peerRefused.thenAccept { failure ->
-            scope.launch { if (stage === compare) stage = PairStage.Failed(pairFailureMessage(PairException(failure, ""))) }
+            scope.launch {
+                val s = stage
+                if (s is PairStage.Compare && s.attempt === attempt) stage = PairStage.Failed(pairFailureMessage(PairException(failure, "")))
+            }
         }
     }
 
@@ -132,8 +149,12 @@ fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
         stage = PairStage.Hosting(window)
         scope.launch {
             try {
-                val attempt = withContext(Dispatchers.IO) { window.accept() }
-                startCompare(attempt)
+                // The screen leaves "waiting" as soon as a device connects, and says which one.
+                val peer = withContext(Dispatchers.IO) { window.awaitConnection() }
+                if (stage !is PairStage.Hosting) return@launch
+                stage = PairStage.Hosting(window, peer)
+                val attempt = withContext(Dispatchers.IO) { window.handshake() }
+                startCompare(attempt, peer)
             } catch (e: Exception) {
                 if (stage is PairStage.Hosting) fail(e)
             }
@@ -141,15 +162,20 @@ fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
     }
 
     fun confirm(compare: PairStage.Compare) {
-        stage = PairStage.Compare(compare.attempt, waiting = true)
+        stage = PairStage.Compare(compare.attempt, compare.peer, waiting = true)
         scope.launch {
             try {
                 val session = withContext(Dispatchers.IO) { compare.attempt.confirm() }
-                stage = PairStage.Paired(session)
+                stage = PairStage.Paired(session, compare.peer)
             } catch (e: Exception) {
                 fail(e)
             }
         }
+    }
+
+    fun refuse(compare: PairStage.Compare, message: String) {
+        inBackground { compare.attempt.reject() }
+        stage = PairStage.Failed(message)
     }
 
     val s = stage
@@ -168,17 +194,29 @@ fun PairDialog(state: DesktopState, onDismiss: () -> Unit) {
                             OutlinedButton(onClick = { stage = PairStage.Joining }) { Text(tr("d_pair_join")) }
                         }
                     }
-                    is PairStage.Hosting -> HostingPane(s.window)
-                    PairStage.Joining -> JoiningPane(controller, onAttempt = { startCompare(it) }, onError = { fail(it) })
-                    is PairStage.Compare -> ComparePane(
-                        s.attempt.code, s.waiting,
-                        onMatch = { confirm(s) },
-                        onDiffer = {
-                            s.attempt.reject()
-                            stage = PairStage.Failed(tr("d_pair_fail_you_refused"))
-                        }
+                    is PairStage.Hosting -> if (s.peer == null) HostingPane(s.window) else {
+                        Text(tr("d_pair_host_connected", s.peer), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    PairStage.Joining -> JoiningPane(
+                        controller,
+                        onAttempt = { startCompare(it.attempt, it.peer) },
+                        onError = { stage = PairStage.Failed(joinFailureMessage(it)) }
                     )
-                    is PairStage.Paired -> SessionPane(state, controller, s.session, onEnded = { stage = PairStage.Failed(tr("d_pair_ended")) })
+                    is PairStage.Compare -> if (s.attempt.role == PairRole.HOST) {
+                        HostComparePane(
+                            s,
+                            onMatch = { confirm(s) },
+                            onCancel = { refuse(s, tr("d_pair_fail_you_cancelled")) },
+                            onTooManyWrong = { refuse(s, tr("d_pair_fail_typed_wrong")) }
+                        )
+                    } else {
+                        ComparePane(
+                            s,
+                            onMatch = { confirm(s) },
+                            onDiffer = { refuse(s, tr("d_pair_fail_you_refused")) }
+                        )
+                    }
+                    is PairStage.Paired -> SessionPane(state, controller, s.session, s.peer, onEnded = { stage = PairStage.Failed(tr("d_pair_ended")) })
                     is PairStage.Failed -> {
                         Text(s.message, style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(12.dp))
@@ -250,7 +288,7 @@ private fun HostingPane(window: PairController.HostWindow) {
 }
 
 @Composable
-private fun JoiningPane(controller: PairController, onAttempt: (PairAttempt) -> Unit, onError: (Throwable) -> Unit) {
+private fun JoiningPane(controller: PairController, onAttempt: (PairController.Connection) -> Unit, onError: (Throwable) -> Unit) {
     val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var bad by remember { mutableStateOf(false) }
@@ -273,16 +311,22 @@ private fun JoiningPane(controller: PairController, onAttempt: (PairAttempt) -> 
     OutlinedButton(enabled = !working && text.isNotBlank(), onClick = {
         working = true
         scope.launch {
-            val target = withContext(Dispatchers.IO) { PairController.target(text) }
-            if (target == null) {
-                bad = true
-                working = false
-                return@launch
-            }
             try {
-                onAttempt(withContext(Dispatchers.IO) { controller.join(target) })
+                val target = withContext(Dispatchers.IO) { PairController.target(text) }
+                if (target == null) {
+                    bad = true
+                    return@launch
+                }
+                // Not cancelled half way: an attempt that connected after the dialog closed is
+                // refused rather than left open.
+                val connection = withContext(Dispatchers.IO + NonCancellable) { controller.connect(target) }
+                if (!isActive) {
+                    inBackground { connection.attempt.reject() }
+                    return@launch
+                }
+                onAttempt(connection)
             } catch (e: Exception) {
-                onError(e)
+                if (isActive) onError(e)
             } finally {
                 working = false
             }
@@ -290,13 +334,16 @@ private fun JoiningPane(controller: PairController, onAttempt: (PairAttempt) -> 
     }) { Text(if (working) tr("d_common_working") else tr("d_pair_connect")) }
 }
 
+/** The joining side: the code, and whether the other computer shows the same one. */
 @Composable
-private fun ComparePane(code: String, waiting: Boolean, onMatch: () -> Unit, onDiffer: () -> Unit) {
+private fun ComparePane(compare: PairStage.Compare, onMatch: () -> Unit, onDiffer: () -> Unit) {
+    Text(tr("d_pair_peer_address", compare.peer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(8.dp))
     Text(tr("d_pair_compare_body"), style = MaterialTheme.typography.bodyMedium)
     Spacer(Modifier.height(12.dp))
-    Text(code, fontSize = 40.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+    Text(compare.attempt.code, fontSize = 40.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
     Spacer(Modifier.height(12.dp))
-    if (waiting) {
+    if (compare.waiting) {
         Text(tr("d_pair_waiting_other"), style = MaterialTheme.typography.bodyMedium)
     } else {
         Row {
@@ -307,11 +354,61 @@ private fun ComparePane(code: String, waiting: Boolean, onMatch: () -> Unit, onD
     }
 }
 
+/**
+ * The waiting side: its user types the code the joining computer shows instead of pressing a
+ * "same code" button, so the pairing cannot be confirmed when the other screen shows no code
+ * (docs/PAIRING_PROTOCOL.md, section 4). This side's own code stays visible for the other user
+ * to compare.
+ */
+@Composable
+private fun HostComparePane(compare: PairStage.Compare, onMatch: () -> Unit, onCancel: () -> Unit, onTooManyWrong: () -> Unit) {
+    var typed by remember(compare.attempt) { mutableStateOf("") }
+    var wrong by remember(compare.attempt) { mutableStateOf(false) }
+    var tries by remember(compare.attempt) { mutableStateOf(0) }
+    Text(tr("d_pair_peer_address", compare.peer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(8.dp))
+    if (compare.waiting) {
+        Text(tr("d_pair_waiting_other"), style = MaterialTheme.typography.bodyMedium)
+        return
+    }
+    Text(tr("d_pair_compare_host_body"), style = MaterialTheme.typography.bodyMedium)
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = typed,
+        onValueChange = { v -> typed = v.filter { it in '0'..'9' || it == ' ' }.take(7); wrong = false },
+        label = { Text(tr("d_pair_typed_code_label")) },
+        singleLine = true,
+        isError = wrong,
+        textStyle = MaterialTheme.typography.headlineSmall.copy(fontFamily = FontFamily.Monospace),
+        modifier = Modifier.fillMaxWidth()
+    )
+    if (wrong) Text(tr("d_pair_typed_code_wrong"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    Spacer(Modifier.height(8.dp))
+    Row {
+        OutlinedButton(enabled = typed.count { it in '0'..'9' } == 6, onClick = {
+            if (compare.attempt.matchesTypedCode(typed)) {
+                onMatch()
+            } else {
+                tries += 1
+                if (tries >= PairController.TYPED_CODE_TRIES) onTooManyWrong() else {
+                    wrong = true
+                    typed = ""
+                }
+            }
+        }) { Text(tr("d_pair_typed_code_confirm")) }
+        Spacer(Modifier.width(Spacing.Small))
+        OutlinedButton(onClick = onCancel) { Text(tr("common_button_cancel")) }
+    }
+    Spacer(Modifier.height(12.dp))
+    Text(tr("d_pair_compare_host_own"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(compare.attempt.code, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Monospace)
+}
+
 /** An offer from the other side, waiting for this user's picks. */
 private class Incoming(val offer: PairOffer)
 
 @Composable
-private fun SessionPane(state: DesktopState, controller: PairController, session: PairSession, onEnded: () -> Unit) {
+private fun SessionPane(state: DesktopState, controller: PairController, session: PairSession, peer: String, onEnded: () -> Unit) {
     val scope = rememberCoroutineScope()
     var peerName by remember { mutableStateOf<String?>(null) }
     // What the other side can import (its INFO); nothing is offered that it cannot take.
@@ -325,6 +422,36 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
     val expected = remember { ConcurrentHashMap<Int, Long>() }
     val acceptedItems = remember { ConcurrentHashMap<Int, PairItem>() }
     var backupCode by remember { mutableStateOf("") }
+    // Received items that passed the checks, each waiting for this user's Add or Skip.
+    val received = remember { mutableStateListOf<PairController.Received>() }
+
+    fun sendResult(result: PairResult) {
+        scope.launch { runCatching { withContext(Dispatchers.IO) { session.sendResult(result) } } }
+    }
+
+    // Nothing is written before the user accepted the preview; the RESULT goes out after.
+    fun decide(r: PairController.Received, add: Boolean) {
+        received.remove(r)
+        val item = r.item
+        if (!add) {
+            log += tr("d_pair_skipped", item.name)
+            sendResult(PairResult(item.id, false, tr("d_pair_skipped_reason")))
+            return
+        }
+        scope.launch {
+            val result = try {
+                val summary = withContext(Dispatchers.IO) { controller.apply(item, r.bytes, backupCode) }
+                log += tr("d_pair_result_ok", item.name, summary)
+                PairResult(item.id, true)
+            } catch (e: Exception) {
+                val why = e.message ?: e.javaClass.simpleName
+                log += tr("d_pair_result_failed", item.name, why)
+                PairResult(item.id, false, why)
+            }
+            state.reload()
+            runCatching { withContext(Dispatchers.IO) { session.sendResult(result) } }
+        }
+    }
 
     fun onMessage(m: PairMessage) {
         when (m) {
@@ -358,18 +485,15 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
             is PairMessage.Item -> {
                 val item = acceptedItems[m.id] ?: return
                 expected.remove(m.id)
+                // Checked against the offer first; only an item that passes is shown for Add or Skip.
                 scope.launch {
-                    val result = try {
-                        val summary = withContext(Dispatchers.IO) { controller.apply(item, m.bytes, backupCode) }
-                        log += tr("d_pair_result_ok", item.name, summary)
-                        PairResult(item.id, true)
+                    try {
+                        received += withContext(Dispatchers.IO) { controller.check(item, m.bytes) }
                     } catch (e: Exception) {
                         val why = e.message ?: e.javaClass.simpleName
                         log += tr("d_pair_result_failed", item.name, why)
-                        PairResult(item.id, false, why)
+                        sendResult(PairResult(item.id, false, why))
                     }
-                    state.reload()
-                    runCatching { withContext(Dispatchers.IO) { session.sendResult(result) } }
                 }
             }
             is PairMessage.Result -> {
@@ -409,10 +533,15 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
     // No name: a whole sentence per language, since a bare "the other computer" would need a
     // different grammatical case in each slot it filled.
     Text(peerName?.let { tr("d_pair_paired_with", it) } ?: tr("d_pair_paired_unnamed"), style = MaterialTheme.typography.titleMedium)
+    // The name comes from the other side; the address is what this computer actually talks to.
+    Text(tr("d_pair_peer_address", peer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(8.dp))
 
     val inc = incoming
-    if (inc != null) {
+    val first = received.firstOrNull()
+    if (first != null) {
+        ReceivedPane(first) { add -> decide(first, add) }
+    } else if (inc != null) {
         IncomingPane(inc.offer, peerName, backupCode, { backupCode = it }) { accept ->
             val picked = inc.offer.items.filter { it.id in accept }
             picked.forEach { expected[it.id] = it.size; acceptedItems[it.id] = it }
@@ -529,19 +658,29 @@ private fun IncomingPane(
 ) {
     // An item of a kind this version does not know is not shown, so it can never be accepted.
     val items = remember(offer) { offer.items.filter { it.kind in PairItem.KINDS } }
-    val chosen = remember(offer) { mutableStateListOf<Int>().apply { addAll(items.map { it.id }) } }
+    // Nothing is picked until the user picks it.
+    val chosen = remember(offer) { mutableStateListOf<Int>() }
     Text(from?.let { tr("d_pair_incoming_heading", it) } ?: tr("d_pair_incoming_heading_unnamed"), style = MaterialTheme.typography.titleSmall)
     items.forEach { item ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = item.id in chosen, onCheckedChange = { if (it) chosen += item.id else chosen -= item.id })
-            Text(
-                when (item.kind) {
-                    PairItem.KEY_PAIR -> tr("d_pair_kind_keypair", item.name)
-                    PairItem.PUBLIC_KEY -> tr("d_pair_kind_public", item.name)
-                    else -> tr("d_pair_item_backup")
-                },
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Column {
+                Text(
+                    when (item.kind) {
+                        PairItem.KEY_PAIR -> tr("d_pair_kind_keypair", item.name)
+                        PairItem.PUBLIC_KEY -> tr("d_pair_kind_public", item.name)
+                        else -> tr("d_pair_item_backup")
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                item.fingerprint?.takeIf { item.kind != PairItem.BACKUP }?.let { fp ->
+                    Text(
+                        tr("d_pair_incoming_fingerprint", fp.uppercase().chunked(4).joinToString(" ")),
+                        style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
     val wantsBackup = items.any { it.kind == PairItem.BACKUP && it.id in chosen }
@@ -560,5 +699,40 @@ private fun IncomingPane(
         }
         Spacer(Modifier.width(Spacing.Small))
         OutlinedButton(onClick = { onAnswer(emptyList()) }) { Text(tr("d_pair_decline")) }
+    }
+}
+
+/**
+ * A received item that passed the checks, as read from its own bytes (not as the offer named
+ * it): the key's fingerprint and user IDs, or what restoring the backup does. Nothing is written
+ * until the user chooses Add (or Restore).
+ */
+@Composable
+private fun ReceivedPane(received: PairController.Received, onDecide: (Boolean) -> Unit) {
+    val key = received.keys.firstOrNull()
+    if (received.item.kind == PairItem.BACKUP || key == null) {
+        Text(tr("d_pair_received_backup"), style = MaterialTheme.typography.bodyMedium)
+    } else {
+        Text(
+            tr(if (key.hasPrivateKey) "d_pair_received_keypair" else "d_pair_received_public"),
+            style = MaterialTheme.typography.titleSmall
+        )
+        Spacer(Modifier.height(4.dp))
+        key.userIds.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        Text(
+            key.fingerprint.uppercase().chunked(4).joinToString(" "),
+            style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace
+        )
+        if (key.inKeyring) {
+            Text(tr("d_pair_received_in_keyring"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    Row {
+        OutlinedButton(onClick = { onDecide(true) }) {
+            Text(tr(if (received.item.kind == PairItem.BACKUP) "d_pair_received_restore" else "d_pair_received_add"))
+        }
+        Spacer(Modifier.width(Spacing.Small))
+        OutlinedButton(onClick = { onDecide(false) }) { Text(tr("d_pair_received_skip")) }
     }
 }

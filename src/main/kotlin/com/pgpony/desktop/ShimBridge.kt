@@ -18,6 +18,14 @@
 // reply is "OK <pk algo> <hash algo> <length>" and the armored signature, or "ERR <message>".
 // Only signing is served, two requests at a time, sizes bounded, the request under one
 // deadline.
+//
+// 3.0.0 (hardening): the bridge is opt-in (Settings, Git signing; GitSigningPrefs), off by
+// default like the SSH agent. It signs only git commits, tags and push certificates
+// (GitPayload), uses a remembered passphrase only when it was entered to sign (a decrypt or ssh
+// unlock alone never lets git sign silently), and posts a notification naming what it signed for
+// every signature. A connection gets a short deadline to prove the token, from its own pool,
+// and takes one of the two request slots only after it has; a peer that connects and says
+// nothing cannot hold the signing slots.
 
 package com.pgpony.desktop
 
@@ -36,6 +44,7 @@ import java.net.Socket
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Semaphore
+import java.util.prefs.Preferences
 
 object ShimBridge {
 
@@ -48,8 +57,17 @@ object ShimBridge {
     private const val MAX_CLIENTS = 2
     private const val CONNECT_TIMEOUT_MS = 2_000
 
-    // The whole request, handshake and payload, arrives within this or the connection ends.
+    // Connections still proving the token. A connection that has not proved it within
+    // PREAUTH_TIMEOUT_MS is dropped; one past the pool is closed at once.
+    private const val MAX_PREAUTH = 32
+    private const val PREAUTH_TIMEOUT_MS = 2_000L
+
+    // After the handshake, the request and payload arrive within this or the connection ends.
     private const val REQUEST_TIMEOUT_MS = 10_000L
+
+    // The shim tries a busy or unanswering bridge this many times before giving up.
+    private const val CLIENT_ATTEMPTS = 5
+    private const val CLIENT_RETRY_MS = 400L
 
     // Three passphrase prompts of 60 seconds each, and some room.
     private const val REPLY_TIMEOUT_MS = 200_000
@@ -75,21 +93,50 @@ object ShimBridge {
     private val lock = Any()
     private var server: ServerSocket? = null
     private var endpointFile: Path? = null
+    private var endpointToken: String? = null
     private var hooked = false
+
+    // What start() was given, so the Settings switch can start and stop the bridge later.
+    private var configuredDir: Path? = null
+    private var configuredHandler: Handler? = null
 
     // ── App side ────────────────────────────────────────────────────────────
 
-    /** Start serving (the app's primary instance). True when listening. */
+    /**
+     * Register the app's signer and start serving when git signing is turned on in Settings
+     * (GitSigningPrefs). True when listening. With the setting off nothing listens until
+     * [setEnabled] turns it on.
+     */
     fun start(dataDir: Path, handler: Handler): Boolean {
         synchronized(lock) {
+            configuredDir = dataDir
+            configuredHandler = handler
             if (server != null) return true
+            if (!GitSigningPrefs.enabled()) return false
             return startLocked(dataDir, handler)
         }
     }
 
+    /** The Settings switch: remember the choice, then start or stop serving. True when listening. */
+    fun setEnabled(enabled: Boolean): Boolean {
+        GitSigningPrefs.setEnabled(enabled)
+        synchronized(lock) {
+            if (!enabled) {
+                stopLocked()
+                return false
+            }
+            if (server != null) return true
+            val dir = configuredDir ?: return false
+            val handler = configuredHandler ?: return false
+            return startLocked(dir, handler)
+        }
+    }
+
+    fun isRunning(): Boolean = synchronized(lock) { server != null }
+
     private fun startLocked(dataDir: Path, handler: Handler): Boolean =
         try {
-            val socket = ServerSocket(0, 8, InetAddress.getLoopbackAddress())
+            val socket = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
             val token = LocalSecret.newToken()
             val file = dataDir.resolve(FILE_NAME)
             try {
@@ -100,12 +147,14 @@ object ShimBridge {
             }
             server = socket
             endpointFile = file
+            endpointToken = token
             if (!hooked) {
                 hooked = true
                 Runtime.getRuntime().addShutdownHook(Thread { stop() })
             }
             val slots = Semaphore(MAX_CLIENTS)
-            Thread({ serve(socket, token, handler, slots) }, "pgpony-shim-bridge").apply {
+            val preauth = Semaphore(MAX_PREAUTH)
+            Thread({ serve(socket, token, handler, slots, preauth) }, "pgpony-shim-bridge").apply {
                 isDaemon = true
                 start()
             }
@@ -115,34 +164,44 @@ object ShimBridge {
         }
 
     fun stop() {
-        synchronized(lock) {
-            runCatching { server?.close() }
-            endpointFile?.let { f -> runCatching { Files.deleteIfExists(f) } }
-            server = null
-            endpointFile = null
-        }
+        synchronized(lock) { stopLocked() }
     }
 
-    private fun serve(socket: ServerSocket, token: String, handler: Handler, slots: Semaphore) {
+    private fun stopLocked() {
+        runCatching { server?.close() }
+        // The endpoint file goes only while it is still this process's: another PGPony that
+        // wrote its own since then keeps its endpoint.
+        val file = endpointFile
+        val token = endpointToken
+        if (file != null && token != null) {
+            runCatching {
+                if (readEndpoint(file)?.second == token) Files.deleteIfExists(file)
+            }
+        }
+        server = null
+        endpointFile = null
+        endpointToken = null
+    }
+
+    private fun serve(socket: ServerSocket, token: String, handler: Handler, slots: Semaphore, preauth: Semaphore) {
         while (!socket.isClosed) {
             val client = try {
                 socket.accept()
             } catch (_: Exception) {
                 break
             }
-            if (!slots.tryAcquire()) {
-                runCatching {
-                    client.use { writeReply(it.getOutputStream(), Reply.Refused("PGPony is busy with another signing request")) }
-                }
+            if (!preauth.tryAcquire()) {
+                // Too many connections that have not proved the token: drop this one unread.
+                runCatching { client.close() }
                 continue
             }
             Thread({
                 try {
-                    client.use { handle(it, token, handler) }
+                    client.use { handle(it, token, handler, slots, preauth) }
                 } catch (_: Exception) {
                     // A dropped or malformed connection ends with the connection.
                 } finally {
-                    slots.release()
+                    preauth.release()
                 }
             }, "pgpony-shim-request").apply {
                 isDaemon = true
@@ -151,24 +210,42 @@ object ShimBridge {
         }
     }
 
-    private fun handle(client: Socket, token: String, handler: Handler) {
-        client.soTimeout = REQUEST_TIMEOUT_MS.toInt()
-        val input = DeadlineInputStream(BufferedInputStream(client.getInputStream()), REQUEST_TIMEOUT_MS)
+    /**
+     * One connection: the handshake under the short pre-auth deadline, holding a pre-auth
+     * permit ([preauth], released by the caller); then a request slot from [slots], only once the
+     * peer has proved the token.
+     */
+    private fun handle(client: Socket, token: String, handler: Handler, slots: Semaphore, preauth: Semaphore) {
+        client.soTimeout = PREAUTH_TIMEOUT_MS.toInt()
+        val raw = BufferedInputStream(client.getInputStream())
         val out = client.getOutputStream()
-        val reply = when (val request = serverExchange(input, out, token)) {
-            is Request.Bad -> Reply.Refused(request.message)
-            is Request.Sign -> handler.sign(request.fingerprint, request.payload)
+        serverHandshake(DeadlineInputStream(raw, PREAUTH_TIMEOUT_MS), out, token)?.let { bad ->
+            writeReply(out, Reply.Refused(bad.message))
+            return
         }
-        writeReply(out, reply)
+        if (!slots.tryAcquire()) {
+            writeReply(out, Reply.Refused("PGPony is busy with another signing request"))
+            return
+        }
+        try {
+            client.soTimeout = REQUEST_TIMEOUT_MS.toInt()
+            val reply = when (val request = readSign(DeadlineInputStream(raw, REQUEST_TIMEOUT_MS))) {
+                is Request.Bad -> Reply.Refused(request.message)
+                is Request.Sign -> handler.sign(request.fingerprint, request.payload)
+            }
+            writeReply(out, reply)
+        } finally {
+            slots.release()
+        }
     }
 
     /**
      * The app's side of the handshake. The shim sends a nonce; the app answers with its own
      * nonce and a proof over the shim's (HMAC under the token), so the shim knows it is talking
      * to the app before it sends anything; the shim then proves itself over the app's nonce.
-     * The token itself never crosses the socket.
+     * The token itself never crosses the socket. Null when the peer proved the token.
      */
-    internal fun serverExchange(input: InputStream, out: OutputStream, token: String): Request {
+    internal fun serverHandshake(input: InputStream, out: OutputStream, token: String): Request.Bad? {
         if (readBoundedLine(input, MAX_LINE) != PROTOCOL) return Request.Bad("unsupported request")
         val clientNonce = readBoundedLine(input, MAX_LINE)?.takeIf { NONCE.matches(it) }
             ?: return Request.Bad("unsupported request")
@@ -179,8 +256,12 @@ object ShimBridge {
         if (!LocalSecret.sameText(proof, LocalSecret.proof(token, "client", serverNonce))) {
             return Request.Bad("not authorized")
         }
-        return readSign(input)
+        return null
     }
+
+    /** The handshake and then the request, on one stream (tests). */
+    internal fun serverExchange(input: InputStream, out: OutputStream, token: String): Request =
+        serverHandshake(input, out, token) ?: readSign(input)
 
     /** After the handshake: "SIGN <fingerprint>", the payload length, then the payload. */
     internal fun readSign(input: InputStream): Request {
@@ -200,19 +281,47 @@ object ShimBridge {
     /** Ask the running app to sign [payload] with [fingerprint]. */
     fun requestSignature(dataDir: Path, fingerprint: String, payload: ByteArray): Reply {
         if (payload.size > MAX_PAYLOAD) return Reply.Refused("the data to sign is too large")
-        val (port, token) = readEndpoint(dataDir.resolve(FILE_NAME)) ?: return Reply.Unreachable
-        return try {
+        val endpoint = dataDir.resolve(FILE_NAME)
+        var last: Reply = Reply.Unreachable
+        // A bridge that is busy or did not answer the handshake (its pre-auth pool full, say)
+        // gets a few tries. A refusal after the handshake is the app's answer and is final.
+        for (attempt in 1..CLIENT_ATTEMPTS) {
+            val (port, token) = readEndpoint(endpoint) ?: return Reply.Unreachable
+            val (reply, sent) = attemptOnce(port, token, fingerprint, payload)
+            last = reply
+            // Once the request went out, the app may already be asking for the passphrase or
+            // have signed: never send it a second time.
+            val retry = !sent && (reply == Reply.Unreachable) ||
+                (reply is Reply.Refused && reply.message.contains("busy"))
+            if (!retry || attempt == CLIENT_ATTEMPTS) break
+            try {
+                Thread.sleep(CLIENT_RETRY_MS * attempt)
+            } catch (_: InterruptedException) {
+                break
+            }
+        }
+        return last
+    }
+
+    /** One connection: the reply, and whether the request itself was sent. */
+    private fun attemptOnce(port: Int, token: String, fingerprint: String, payload: ByteArray): Pair<Reply, Boolean> {
+        var sent = false
+        val reply = try {
             Socket().use { s ->
                 s.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), port), CONNECT_TIMEOUT_MS)
                 s.soTimeout = REQUEST_TIMEOUT_MS.toInt()
                 clientExchange(
                     BufferedInputStream(s.getInputStream()), BufferedOutputStream(s.getOutputStream()),
                     token, fingerprint, payload
-                ) { s.soTimeout = REPLY_TIMEOUT_MS }
+                ) {
+                    sent = true
+                    s.soTimeout = REPLY_TIMEOUT_MS
+                }
             }
         } catch (_: Exception) {
             Reply.Unreachable
         }
+        return reply to sent
     }
 
     /**
@@ -325,33 +434,44 @@ object ShimSigner {
      * The app's side of ShimBridge: sign with the remembered passphrase (SessionPolicy), else ask
      * through [prompt] up to three times and remember the one that works. Only the app's own
      * software key pairs sign, and an expired key only when Settings allows it.
+     *
+     * Only a git commit, tag or push certificate is signed (GitPayload). A remembered passphrase
+     * is used only when it was entered to sign (PassphraseCache.getForSigning); one entered to
+     * decrypt or for ssh asks again. Every signature made here is announced through [notify].
      */
     fun signForShim(
         repo: DesktopKeyRepository,
         fingerprint: String,
         payload: ByteArray,
-        prompt: (label: String) -> String? = { AgentPrompt.ask(it, "d_shim_unlock_message") }
+        notify: (String) -> Unit = ::announce,
+        prompt: (label: String) -> String? = { AgentPrompt.ask(it, "d_shim_unlock_object") }
     ): ShimBridge.Reply {
+        val what = GitPayload.describe(payload)
+            ?: return ShimBridge.Reply.Refused("PGPony signs only git commits, tags and push certificates for pgpony-gpg")
         val key = runBlocking { repo.byFingerprint(fingerprint) }
             ?.takeIf { it.isKeyPair && !it.isCardBacked }
             ?: return ShimBridge.Reply.Refused("no secret key $fingerprint in PGPony")
         if (!KeyUsePolicy.allowExpiredKeys() && KeyUsePolicy.isExpired(key)) {
             return ShimBridge.Reply.Refused("key $fingerprint has expired")
         }
-        fun signed(r: Result.Signed) = ShimBridge.Reply.Signed(r.armored, r.pkAlgo, r.hashAlgo)
+        val label = key.userEmail.ifBlank { key.userName }.ifBlank { key.shortFingerprint }
+        val described = tr("d_shim_what", what, label)
+        fun signed(r: Result.Signed): ShimBridge.Reply.Signed {
+            runCatching { notify(described) }
+            return ShimBridge.Reply.Signed(r.armored, r.pkAlgo, r.hashAlgo)
+        }
 
-        when (val r = sign(repo, key, payload, PassphraseCache.get(fingerprint))) {
+        when (val r = sign(repo, key, payload, PassphraseCache.getForSigning(fingerprint))) {
             is Result.Signed -> return signed(r)
             is Result.Failed -> return ShimBridge.Reply.Refused(r.message)
             Result.WrongPassphrase -> PassphraseCache.clear(fingerprint)
             Result.Locked -> Unit
         }
-        val label = key.userEmail.ifBlank { key.userName }.ifBlank { key.shortFingerprint }
         repeat(3) {
-            val pass = prompt(label) ?: return ShimBridge.Reply.Refused("the passphrase was not entered in PGPony")
+            val pass = prompt(described) ?: return ShimBridge.Reply.Refused("the passphrase was not entered in PGPony")
             when (val r = sign(repo, key, payload, pass)) {
                 is Result.Signed -> {
-                    PassphraseCache.put(fingerprint, pass)
+                    PassphraseCache.put(fingerprint, pass, forSigning = true)
                     return signed(r)
                 }
                 is Result.Failed -> return ShimBridge.Reply.Refused(r.message)
@@ -359,5 +479,97 @@ object ShimSigner {
             }
         }
         return ShimBridge.Reply.Refused("wrong passphrase")
+    }
+
+    /** The tray notification for a signature the bridge made. */
+    private fun announce(described: String) {
+        TrayOutbox.post(TrayOutbox.Msg(tr("d_shim_signed_title"), tr("d_shim_signed_body", described), warn = false))
+    }
+}
+
+/** The Settings switch for git signing through the running app (ShimBridge). Off by default. */
+object GitSigningPrefs {
+    private const val KEY_ENABLED = "git_signing_bridge_enabled"
+
+    /** Test hook, the SshAgentPrefs pattern. */
+    internal var prefsOverride: Preferences? = null
+
+    private fun prefs(): Preferences =
+        prefsOverride ?: Preferences.userRoot().node("app/pgpony/desktop")
+
+    fun enabled(): Boolean = runCatching { prefs().getBoolean(KEY_ENABLED, false) }.getOrDefault(false)
+
+    fun setEnabled(value: Boolean) {
+        runCatching { prefs().putBoolean(KEY_ENABLED, value) }
+    }
+}
+
+/**
+ * What git asks pgpony-gpg to sign: a commit object, a tag object or a push certificate. The
+ * bridge signs nothing else, so a process that can reach it cannot get a signature over a
+ * release file, a mail or any other document.
+ */
+object GitPayload {
+
+    private val OID = Regex("[0-9a-f]{40}|[0-9a-f]{64}")
+    private const val MAX_SUBJECT = 80
+
+    enum class Kind { COMMIT, TAG, PUSH_CERTIFICATE }
+
+    /** A recognised git object: its kind and its subject line or tag name. */
+    data class Parsed(val kind: Kind, val name: String)
+
+    /** A short description ("the commit \"subject\"", "the tag v1.0"), or null when not git. */
+    fun describe(payload: ByteArray): String? {
+        val p = parse(payload) ?: return null
+        return when (p.kind) {
+            Kind.COMMIT -> tr("d_shim_object_commit", p.name)
+            Kind.TAG -> tr("d_shim_object_tag", p.name)
+            Kind.PUSH_CERTIFICATE -> tr("d_shim_object_push")
+        }
+    }
+
+    /** [payload] as a git commit, tag or push certificate, or null. */
+    fun parse(payload: ByteArray): Parsed? {
+        // Decoded leniently: a commit made with i18n.commitEncoding (an "encoding" header) carries
+        // a message that is not UTF-8. The structure below decides what the payload is.
+        val text = String(payload, Charsets.UTF_8)
+        val blank = text.indexOf("\n\n")
+        val headerText = if (blank < 0) text else text.substring(0, blank)
+        val body = if (blank < 0) "" else text.substring(blank + 2)
+        // Header lines; a line starting with a space continues the one before (mergetag).
+        val headers = headerText.split('\n').filter { it.isNotEmpty() && !it.startsWith(" ") }
+        if (headers.isEmpty()) return null
+        fun field(name: String) = headers.firstOrNull { it.startsWith("$name ") }?.removePrefix("$name ")
+        val first = headers.first()
+        return when {
+            first.startsWith("tree ") -> {
+                if (!OID.matches(first.removePrefix("tree "))) return null
+                if (field("author") == null || field("committer") == null) return null
+                if (headers.drop(1).any { h -> h.startsWith("parent ") && !OID.matches(h.removePrefix("parent ")) }) return null
+                Parsed(Kind.COMMIT, subject(body))
+            }
+            first.startsWith("object ") -> {
+                if (!OID.matches(first.removePrefix("object "))) return null
+                val type = field("type") ?: return null
+                val tag = field("tag") ?: return null
+                if (type !in setOf("commit", "tree", "blob", "tag")) return null
+                Parsed(Kind.TAG, clean(tag))
+            }
+            first == "certificate version 0.1" -> {
+                if (field("pusher") == null) return null
+                Parsed(Kind.PUSH_CERTIFICATE, "")
+            }
+            else -> null
+        }
+    }
+
+    private fun subject(body: String): String =
+        clean(body.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty())
+
+    /** One line, control characters dropped, bounded. */
+    private fun clean(s: String): String {
+        val one = s.filter { it >= ' ' && it != '\u007F' }.trim()
+        return if (one.length > MAX_SUBJECT) one.take(MAX_SUBJECT - 3) + "..." else one
     }
 }
