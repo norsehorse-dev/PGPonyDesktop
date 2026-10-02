@@ -13,8 +13,10 @@ name: Release
 # certificate never reaches a hosted runner, and neither does the PGP release key — which for an
 # OpenPGP application signing its own releases is the whole point.
 #
-# The workflow triggers only on tag pushes. There is nothing secret here for a fork PR to reach,
-# but keep it that way regardless.
+# The workflow triggers on tag pushes, and by hand (workflow_dispatch) for a test build: a manual
+# run builds and checks the same artifacts and leaves them on the run page, but never opens a
+# release, because the draft job runs only for a tag. There is nothing secret here for a fork PR
+# to reach, but keep it that way regardless.
 #
 # Supply chain. Every action is pinned to a full commit SHA (the tag it was taken from is in the
 # comment beside it), so a moved tag upstream cannot change what runs here. The token is
@@ -28,6 +30,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -351,6 +354,8 @@ jobs:
     name: Open the draft release
     # Naming the matrix job once waits for BOTH of its legs.
     needs: [linux, windows]
+    # A manual test build stops at the artifacts: no release, draft or otherwise.
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write

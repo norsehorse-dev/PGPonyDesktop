@@ -1,12 +1,13 @@
 // PcscLibrary.kt
 // PGPony Desktop 3.0.1 (#6): which libpcsclite javax.smartcardio loads on Linux.
 //
-// Left to itself, the JDK picks the PC/SC client library by its own search, which looks for the
-// unversioned development name (libpcsclite.so) in a fixed list of directories. That is not the
-// file the system's own PC/SC tools run against, which is the runtime library by its soname,
-// libpcsclite.so.1. In #6 (Fedora 44, pcsc-lite 2.4.1) the default search left PGPony unable to
-// see a working YubiKey while pcscd logged "Communication protocol mismatch", and pointing the JDK
-// at /usr/lib64/libpcsclite.so.1 fixed it.
+// Left to itself, the bundled JDK 17 looks for exactly two files, /usr/lib64/libpcsclite.so and
+// /usr/local/lib64/libpcsclite.so (strace in #6). That unversioned name comes only with a -devel
+// or -dev package, and Debian-family systems keep the library under /usr/lib/<triplet>/, which the
+// JDK never searches. So on Fedora 44 (#6) and on Debian or Ubuntu without libpcsclite-dev,
+// javax.smartcardio loads no PC/SC library at all and reports no readers, while pcsc_scan and
+// GnuPG, which load the runtime library by its soname, libpcsclite.so.1, work. Pointing the JDK at
+// /usr/lib64/libpcsclite.so.1 fixed it in #6.
 //
 // So on Linux, unless the property is already set (on the command line, through
 // JAVA_TOOL_OPTIONS, or by Flatpak.apply for the sandbox's own copy), the JDK is pointed at the
