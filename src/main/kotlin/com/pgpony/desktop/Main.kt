@@ -26,6 +26,8 @@ fun main(args: Array<String>) {
     // 3.0.0 (5c): under Flatpak, the JVM defaults the sandbox needs (preferences beside the app's
     // data, the bundled pcsc-lite). First of all: the JDK reads them once, on first use.
     Flatpak.apply()
+    // 3.0.1 (#6): on Linux, javax.smartcardio is pointed at the system's libpcsclite.so.1 (PcscLibrary.kt).
+    PcscLibrary.apply()
 
     // 3.0.0 (5d-3): the JVM gets up to half the machine's memory (build.gradle.kts), so the
     // Argon2 guard may use most of the heap: a cost of up to 2 GiB then fits when the machine
