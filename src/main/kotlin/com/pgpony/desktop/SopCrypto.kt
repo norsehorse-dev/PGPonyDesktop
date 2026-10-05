@@ -764,8 +764,14 @@ internal object SopCrypto {
         val verOut = a.value("--verifications-out") ?: a.value("--verify-out")
         verOut?.let { io.checkOutput(it) }
         val verifyWith = a.all("--verify-with")
-        if (verOut != null && verifyWith.isEmpty()) {
-            throw SopException(SopExit.INCOMPATIBLE_OPTIONS, "--verifications-out needs --verify-with")
+        // 3.0.2 (#10): the two only make sense together. Either one alone fails with
+        // INCOMPLETE_VERIFICATION, as the SOP decrypt section requires; before, --verify-with
+        // alone decrypted an unsigned message and exited 0, and --verifications-out alone gave 83.
+        if ((verOut == null) != verifyWith.isEmpty()) {
+            throw SopException(
+                SopExit.INCOMPLETE_VERIFICATION,
+                if (verOut == null) "--verify-with needs --verifications-out" else "--verifications-out needs --verify-with"
+            )
         }
         val keyArgs = a.positionals
         val passwordArgs = a.all("--with-password")

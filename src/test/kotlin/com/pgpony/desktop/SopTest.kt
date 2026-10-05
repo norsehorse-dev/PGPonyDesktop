@@ -153,6 +153,17 @@ class SopTest {
         val otherCert = file("erin.cert", ok(sop("extract-cert", input = ok(sop("generate-key", "Erin <erin@openpgp.example>")).out)).out)
         val ct = ok(sop("encrypt", otherCert, input = message)).out
         assertEquals(SopExit.CANNOT_DECRYPT, sop("decrypt", keyFile, input = ct).code)
+
+        // #10: --verify-with and --verifications-out only together; either alone is 23, and
+        // no plaintext comes out.
+        val daveCert = file("dave.cert", ok(sop("extract-cert", input = key)).out)
+        val toDave = ok(sop("encrypt", daveCert, input = message)).out
+        val withOnly = sop("decrypt", "--verify-with=$daveCert", keyFile, input = toDave)
+        assertEquals(SopExit.INCOMPLETE_VERIFICATION, withOnly.code)
+        assertEquals(0, withOnly.out.size)
+        assertEquals(SopExit.INCOMPLETE_VERIFICATION, sop("decrypt", "--verifications-out=${dir.resolve("v1")}", keyFile, input = toDave).code)
+        assertEquals(SopExit.INCOMPLETE_VERIFICATION, sop("decrypt", "--verify-out=${dir.resolve("v2")}", keyFile, input = toDave).code)
+        ok(sop("decrypt", "--verify-with=$daveCert", "--verifications-out=${dir.resolve("v3")}", keyFile, input = toDave))
     }
 
     @Test
