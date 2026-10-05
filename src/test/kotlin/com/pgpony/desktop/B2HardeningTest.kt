@@ -262,6 +262,24 @@ class B2HardeningTest {
         db2.close()
     }
 
+    @Test
+    fun aBinaryCompositeSignatureVerifiesLikeTheArmoredOne() = runBlocking {
+        // 3.0.2: a binary .sig was decoded as UTF-8 text before the composite path saw it, so it
+        // fell through to BouncyCastle and read as not matching. Same signer, same data, both forms.
+        val k = pqKey()
+        val binary = CompositeDocumentSigner.signDetached(suite, k.secret, k.fp, data, random = rnd)
+        val armored = CompositeDocumentSigner.signDetachedArmored(suite, k.secret, k.fp, data, random = rnd)
+        val (db, repo) = repo()
+        repo.importBytes(k.publicCert)
+        for ((name, sig) in listOf("binary" to binary, "armored" to armored.toByteArray(Charsets.UTF_8))) {
+            val v = assertIs<VerificationResult.Verified>(DesktopCompositeVerify.verifyDetached(repo, sig, data), name)
+            assertEquals(k.fpHex, v.signerFingerprint, name)
+        }
+        val tampered = data.copyOf().also { it[0] = (it[0].toInt() xor 1).toByte() }
+        assertIs<VerificationResult.Invalid>(DesktopCompositeVerify.verifyDetached(repo, binary, tampered), "tampered data")
+        db.close()
+    }
+
     // ── SOP-2 ───────────────────────────────────────────────────────────────
 
     @Test

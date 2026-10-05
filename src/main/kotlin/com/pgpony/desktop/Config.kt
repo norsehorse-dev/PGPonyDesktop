@@ -16,7 +16,7 @@ object AppVersion {
      * also written into every .pgpony backup as `appVersion` metadata — informational only, nothing
      * reads it back on restore.
      */
-    const val VERSION = "3.0.1"
+    const val VERSION = "3.0.2"
 }
 
 object Config {

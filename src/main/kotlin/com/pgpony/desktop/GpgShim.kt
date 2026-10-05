@@ -188,7 +188,7 @@ object GpgShim {
             }
             // 3.0.0: composite ML-DSA signatures first (BouncyCastle cannot parse them).
             val result = runBlocking {
-                DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), signed)
+                DesktopCompositeVerify.verifyDetached(repo, sigBytes, signed)
             } ?: VerifyService.shared.verifyDetached(sigBytes, signed, rings)
             report(result, stderr, status) { fp -> runBlocking { repo.byFingerprint(fp) } }
         }

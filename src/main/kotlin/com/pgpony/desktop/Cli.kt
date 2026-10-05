@@ -251,7 +251,7 @@ object Cli {
         val result: VerificationResult = if (sigFile != null) {
             val sigBytes = Files.readAllBytes(Path.of(sigFile))
             val data = readAll(input)
-            DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), data)
+            DesktopCompositeVerify.verifyDetached(repo, sigBytes, data)
                 ?: data.inputStream().use { content ->
                     VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
                 }

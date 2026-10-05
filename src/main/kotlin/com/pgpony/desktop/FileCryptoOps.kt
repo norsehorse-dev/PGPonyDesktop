@@ -693,7 +693,7 @@ class FileCryptoOps(
         val contentBytes = Files.readAllBytes(contentFile)
         // Composite ML-DSA (RFC 9980) detached signatures verify whole-document; BouncyCastle
         // cannot parse them, so try the composite path first and fall back to VerifyService.
-        val result = DesktopCompositeVerify.verifyDetached(repo, String(sigBytes, Charsets.UTF_8), contentBytes)
+        val result = DesktopCompositeVerify.verifyDetached(repo, sigBytes, contentBytes)
             ?: run {
                 val publicRings = repo.allKeys().mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
                 contentBytes.inputStream().use { content ->

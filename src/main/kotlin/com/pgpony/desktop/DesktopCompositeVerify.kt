@@ -49,16 +49,28 @@ object DesktopCompositeVerify {
         )
     }
 
-    /** Detached armored signature over [data]. Null when the input is not a composite signature. */
+    /**
+     * Detached signature over [data], as read from a file: armored (.asc) or binary (.sig). Null
+     * when it is not a composite signature.
+     *
+     * 3.0.2: this took the signature as text and dearmored it, and callers handed it the file
+     * bytes decoded as UTF-8. A binary .sig is not armor, so the dearmor failed, the composite
+     * path returned null, and the caller fell back to BouncyCastle, which cannot read ML-DSA
+     * composites and reported the content as not matching. rawSignaturePacket takes either form.
+     */
     suspend fun verifyDetached(
-        repo: DesktopKeyRepository, armoredSig: String, data: ByteArray
+        repo: DesktopKeyRepository, signature: ByteArray, data: ByteArray
     ): VerificationResult? {
-        val sig = dearmor(armoredSig) ?: return null
-        val sigPacket = runCatching { CompositeDocumentVerifier.rawSignaturePacket(sig) }.getOrNull() ?: return null
+        val sigPacket = runCatching { CompositeDocumentVerifier.rawSignaturePacket(signature) }.getOrNull() ?: return null
         if (!CompositeDocumentVerifier.isCompositeSignature(sigPacket)) return null
         val (rows, certs) = certificates(repo)
-        return toResult(rows, CompositeSignerGate.verifyDetached(certs, sig, data), null)
+        return toResult(rows, CompositeSignerGate.verifyDetached(certs, sigPacket, data), null)
     }
+
+    /** Detached armored signature pasted as text over [data]. Null when it is not composite. */
+    suspend fun verifyDetached(
+        repo: DesktopKeyRepository, armoredSig: String, data: ByteArray
+    ): VerificationResult? = verifyDetached(repo, armoredSig.toByteArray(Charsets.UTF_8), data)
 
     /** Clear-signed or inline composite message. Null when the input is not composite. */
     suspend fun verifyText(repo: DesktopKeyRepository, armored: String): VerificationResult? {
