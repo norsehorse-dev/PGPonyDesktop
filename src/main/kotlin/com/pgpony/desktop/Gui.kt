@@ -590,7 +590,8 @@ private fun guiApplication() = application {
     val windowIcon = appIcon("pgpony_512") ?: stockIcon
 
     // D9 — system tray with quick actions + the channel key-expiration reminders post to.
-    Tray(
+    // 3.0.2 (#7): Settings > Appearance can hide it; the window and everything else stay as they are.
+    if (TrayIconState.visible.value) Tray(
         state = trayState,
         icon = trayIcon,
         tooltip = "PGPony",

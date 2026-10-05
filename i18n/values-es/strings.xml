@@ -966,4 +966,6 @@
     <string name="d_pair_err_no_secret">%1$s se ofreció como par de claves, pero no contiene ninguna clave secreta.</string>
     <string name="d_pair_err_unprotected">%1$s contiene una clave secreta sin frase de contraseña.</string>
     <string name="d_pair_err_not_backup">%1$s no es un archivo de copia de seguridad de PGPony.</string>
+    <string name="d_settings_tray_icon">Mostrar el icono de PGPony en la barra de menús o la bandeja del sistema</string>
+    <string name="d_settings_tray_icon_note">Los avisos de claves que caducan y de las carpetas vigiladas se muestran a través de este icono, así que no aparecen mientras está oculto.</string>
 </resources>

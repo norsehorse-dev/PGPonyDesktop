@@ -938,4 +938,6 @@
     <string name="d_pair_err_no_secret">%1$s 以密钥对形式提供，却不包含私钥。</string>
     <string name="d_pair_err_unprotected">%1$s 包含一个没有口令的私钥。</string>
     <string name="d_pair_err_not_backup">%1$s 不是 PGPony 备份文件。</string>
+    <string name="d_settings_tray_icon">在菜单栏或系统托盘中显示 PGPony 图标</string>
+    <string name="d_settings_tray_icon_note">密钥到期提醒和监视文件夹通知通过此图标显示，因此隐藏图标期间不会出现。</string>
 </resources>

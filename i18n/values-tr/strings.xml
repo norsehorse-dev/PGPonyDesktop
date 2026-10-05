@@ -966,4 +966,6 @@
     <string name="d_pair_err_no_secret">%1$s anahtar çifti olarak sunuldu ancak gizli anahtar içermiyor.</string>
     <string name="d_pair_err_unprotected">%1$s parola ifadesi olmayan bir gizli anahtar içeriyor.</string>
     <string name="d_pair_err_not_backup">%1$s bir PGPony yedek dosyası değil.</string>
+    <string name="d_settings_tray_icon">PGPony simgesini menü çubuğunda veya sistem tepsisinde göster</string>
+    <string name="d_settings_tray_icon_note">Anahtar süresi hatırlatmaları ve izlenen klasör bildirimleri bu simge üzerinden gösterilir; simge gizliyken görünmezler.</string>
 </resources>

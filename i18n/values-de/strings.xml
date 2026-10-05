@@ -966,4 +966,6 @@
     <string name="d_pair_err_no_secret">%1$s wurde als Schlüsselpaar angeboten, enthält aber keinen geheimen Schlüssel.</string>
     <string name="d_pair_err_unprotected">%1$s enthält einen geheimen Schlüssel ohne Passphrase.</string>
     <string name="d_pair_err_not_backup">%1$s ist keine PGPony-Backup-Datei.</string>
+    <string name="d_settings_tray_icon">PGPony-Symbol in der Menüleiste bzw. im Infobereich anzeigen</string>
+    <string name="d_settings_tray_icon_note">Erinnerungen an ablaufende Schlüssel und Hinweise von überwachten Ordnern laufen über dieses Symbol und erscheinen nicht, solange es ausgeblendet ist.</string>
 </resources>

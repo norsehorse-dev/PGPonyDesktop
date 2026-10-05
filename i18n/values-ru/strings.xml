@@ -1022,4 +1022,6 @@
     <string name="d_pair_err_no_secret">%1$s: предложено как пара ключей, но не содержит закрытого ключа.</string>
     <string name="d_pair_err_unprotected">%1$s: содержит закрытый ключ без парольной фразы.</string>
     <string name="d_pair_err_not_backup">%1$s: не является файлом резервной копии PGPony.</string>
+    <string name="d_settings_tray_icon">Показывать значок PGPony в строке меню или в системном трее</string>
+    <string name="d_settings_tray_icon_note">Напоминания об истечении срока ключей и уведомления отслеживаемых папок показываются через этот значок, поэтому, пока он скрыт, они не появляются.</string>
 </resources>

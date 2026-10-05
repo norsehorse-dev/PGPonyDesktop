@@ -966,4 +966,6 @@
     <string name="d_pair_err_no_secret">%1$s a été proposé comme paire de clés mais ne contient aucune clé secrète.</string>
     <string name="d_pair_err_unprotected">%1$s contient une clé secrète sans phrase secrète.</string>
     <string name="d_pair_err_not_backup">%1$s n\'est pas un fichier de sauvegarde PGPony.</string>
+    <string name="d_settings_tray_icon">Afficher l\'icône PGPony dans la barre des menus ou la zone de notification</string>
+    <string name="d_settings_tray_icon_note">Les rappels d\'expiration de clés et les alertes des dossiers surveillés passent par cette icône, ils n\'apparaissent donc pas tant qu\'elle est masquée.</string>
 </resources>

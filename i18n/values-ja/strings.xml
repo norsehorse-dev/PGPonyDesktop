@@ -938,4 +938,6 @@
     <string name="d_pair_err_no_secret">%1$s は鍵ペアとして送られてきましたが、秘密鍵が含まれていません。</string>
     <string name="d_pair_err_unprotected">%1$s にはパスフレーズのない秘密鍵が含まれています。</string>
     <string name="d_pair_err_not_backup">%1$s は PGPony のバックアップファイルではありません。</string>
+    <string name="d_settings_tray_icon">メニューバーまたはシステムトレイに PGPony のアイコンを表示する</string>
+    <string name="d_settings_tray_icon_note">鍵の有効期限のお知らせと監視フォルダーの通知はこのアイコンから表示されるため、非表示の間は表示されません。</string>
 </resources>

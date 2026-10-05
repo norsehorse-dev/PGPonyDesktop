@@ -1097,4 +1097,6 @@
     <string name="d_pair_err_no_secret">%1$s was offered as a key pair but holds no secret key.</string>
     <string name="d_pair_err_unprotected">%1$s holds a secret key without a passphrase.</string>
     <string name="d_pair_err_not_backup">%1$s is not a PGPony backup file.</string>
+    <string name="d_settings_tray_icon">Show the PGPony icon in the menu bar or system tray</string>
+    <string name="d_settings_tray_icon_note">Key expiry reminders and watch-folder alerts are shown through this icon, so they don\'t appear while it is hidden.</string>
 </resources>

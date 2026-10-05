@@ -51,6 +51,22 @@ object ThemeState {
     }
 }
 
+/**
+ * 3.0.2 (#7): whether the app shows its menu bar (macOS) or system tray icon. On by default.
+ * Read live by guiApplication, so turning it off removes the icon at once. Key-expiry reminders
+ * and watch-folder alerts are sent through the tray, so they do not appear while it is hidden.
+ */
+object TrayIconState {
+    private val prefs: Preferences = Preferences.userRoot().node("app/pgpony/desktop")
+
+    val visible: MutableState<Boolean> = mutableStateOf(prefs.getBoolean("show_tray_icon", true))
+
+    fun set(show: Boolean) {
+        visible.value = show
+        prefs.putBoolean("show_tray_icon", show)
+    }
+}
+
 /** Resolves the scheme for [theme] right now; System follows the OS setting reactively. */
 @Composable
 fun resolveColorScheme(theme: AppTheme): ColorScheme {

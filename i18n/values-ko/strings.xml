@@ -938,4 +938,6 @@
     <string name="d_pair_err_no_secret">%1$s은(는) 키쌍으로 제공되었지만 개인 키가 들어 있지 않습니다.</string>
     <string name="d_pair_err_unprotected">%1$s에 비밀구절이 없는 개인 키가 들어 있습니다.</string>
     <string name="d_pair_err_not_backup">%1$s은(는) PGPony 백업 파일이 아닙니다.</string>
+    <string name="d_settings_tray_icon">메뉴 막대 또는 시스템 트레이에 PGPony 아이콘 표시</string>
+    <string name="d_settings_tray_icon_note">키 만료 알림과 감시 폴더 알림은 이 아이콘을 통해 표시되므로, 아이콘을 숨긴 동안에는 나타나지 않습니다.</string>
 </resources>

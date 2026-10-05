@@ -181,6 +181,17 @@ fun SettingsScreen(state: DesktopState) {
             }
             Spacer(Modifier.height(Spacing.Medium))
             LanguagePicker()
+            // 3.0.2 (#7): hide the menu bar / system tray icon.
+            Spacer(Modifier.height(Spacing.Medium))
+            val showTray by TrayIconState.visible
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = showTray, onCheckedChange = { TrayIconState.set(it) })
+                Spacer(Modifier.width(Spacing.Small))
+                Text(tr("d_settings_tray_icon"), style = MaterialTheme.typography.bodyMedium)
+            }
+            if (!showTray) {
+                Text(tr("d_settings_tray_icon_note"), style = MaterialTheme.typography.bodySmall)
+            }
         }
         Spacer(Modifier.height(Spacing.Large))
 
