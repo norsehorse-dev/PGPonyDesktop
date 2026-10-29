@@ -127,7 +127,7 @@ internal object SopPackets {
     fun signatures(raw: ByteArray): List<ByteArray> = split(raw).filter { it.first == 2 }.map { it.second }
 }
 
-/** What a v4 or v6 signature packet says about itself. */
+/** What a v4, v5 or v6 signature packet says about itself. */
 internal data class SopSigInfo(
     val version: Int,
     val type: Int,
@@ -146,7 +146,9 @@ internal data class SopSigInfo(
             val (tag, body) = CompositeSigPacket.firstPacket(packet)
             if (tag != 2) return null
             val version = body[0].toInt() and 0xFF
-            if (version != 4 && version != 6) return null
+            // 3.0.3: LibrePGP v5 (GnuPG's Ed448 keys) lays the packet out as v4 does: two-octet
+            // subpacket area lengths, no salt.
+            if (version != 4 && version != 5 && version != 6) return null
             val type = body[1].toInt() and 0xFF
             val pk = body[2].toInt() and 0xFF
             val hash = body[3].toInt() and 0xFF

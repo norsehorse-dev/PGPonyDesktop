@@ -36,7 +36,6 @@ import org.bouncycastle.openpgp.PGPException
 import org.bouncycastle.openpgp.PGPSecretKey
 import org.bouncycastle.openpgp.PGPSecretKeyRing
 import org.bouncycastle.openpgp.PGPSignature
-import org.bouncycastle.openpgp.PGPSignatureGenerator
 import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder
 import java.io.ByteArrayOutputStream
@@ -104,6 +103,7 @@ class SigningService private constructor() {
             hashAlgorithm = hashAlgorithm,
             signatureType = PGPSignature.CANONICAL_TEXT_DOCUMENT
         )
+        sigGen.setCleartext() // 4.7.3: a v5 signer hashes the cleartext marker
 
         val out = ByteArrayOutputStream()
         val armored = ArmoredOutputStream(out).stripVersion()
@@ -240,7 +240,7 @@ class SigningService private constructor() {
     // ── Internals ─────────────────────────────────────────────────────
 
     /**
-     * Build a `PGPSignatureGenerator` initialized with the unlocked private
+     * Build a `PonySigGen` initialized with the unlocked private
      * key + standard hashed subpackets (issuer fingerprint, type 33). Throws
      * `SigningError.PassphraseRequired` or `InvalidPassphrase` for predictable
      * UI handling.
@@ -256,7 +256,7 @@ class SigningService private constructor() {
         passphrase: String?,
         hashAlgorithm: Int,
         signatureType: Int
-    ): PGPSignatureGenerator {
+    ): PonySigGen {
         // An Argon2 S2K outside the policy is refused before any KDF runs.
         enforceArgon2Policy(signingKey.s2K)
         val privateKey = try {
@@ -276,7 +276,7 @@ class SigningService private constructor() {
             throw SigningError.SigningFailed(e.message ?: "Failed to unlock signing key")
         }
 
-        val sigGen = PGPSignatureGenerator(
+        val sigGen = PonySigGen(
             BcPGPContentSignerBuilder(signingKey.publicKey.algorithm, hashAlgorithm),
             signingKey.publicKey
         )

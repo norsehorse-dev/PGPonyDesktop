@@ -12,6 +12,7 @@
 package com.pgpony.desktop
 
 import com.pgpony.android.crypto.KeyAlgorithm
+import com.pgpony.android.crypto.LibrePgpV5Sig
 import com.pgpony.android.crypto.PGPCryptoError
 import com.pgpony.android.crypto.PGPCryptoService
 import com.pgpony.android.crypto.SigningError
@@ -423,7 +424,14 @@ internal object SopCrypto {
 
     // ── sign, verify ────────────────────────────────────────────────────────
 
-    private suspend fun signOne(r: SopKeyring, k: PGPKeyEntity, data: ByteArray, text: Boolean, passwords: List<String?>): ByteArray {
+    private suspend fun signOne(
+        r: SopKeyring,
+        k: PGPKeyEntity,
+        data: ByteArray,
+        text: Boolean,
+        passwords: List<String?>,
+        block: SopV5Block = SopV5Block.Detached
+    ): ByteArray {
         requireSigner(k)
         if (k.algorithm.isCompositeSign) {
             val info = unlockComposite(r, k, passwords)
@@ -436,8 +444,11 @@ internal object SopCrypto {
         }
         val ring = r.repo.loadSecretKeyRing(k.fingerprint) ?: throw SopException(SopExit.BAD_DATA, "key ${k.fingerprint} could not be loaded")
         val protected = crypto.isPassphraseProtected(ring)
+        // 3.0.3: a v5 key's signature hashes a block that depends on where it sits (SopLibrePgpV5).
+        val v5 = block != SopV5Block.Detached && SopLibrePgpV5.signsV5(ring)
         return withKeyPasswords(passwords, protected) { p ->
-            SigningService.shared.signDetached(data, ring, p, armor = false, textMode = text)
+            if (v5) SopLibrePgpV5.sign(ring, p, data, text, block)
+            else SigningService.shared.signDetached(data, ring, p, armor = false, textMode = text)
         }
     }
 
@@ -470,7 +481,8 @@ internal object SopCrypto {
         certs: List<PGPKeyEntity>,
         packets: List<ByteArray>,
         data: ByteArray,
-        window: SopWindow
+        window: SopWindow,
+        v5: SopV5Check = SopV5Check.Detached
     ): List<String> {
         val rings = certs.mapNotNull { r.verifyRing(it) }
         val anyComposite = packets.any { p -> SopSigInfo.parse(p)?.let { CompositeSignSuite.forAlgId(it.pkAlgo) != null } == true }
@@ -484,6 +496,9 @@ internal object SopCrypto {
             if (!window.contains(created)) continue
             val hit = if (CompositeSignSuite.forAlgId(info.pkAlgo) != null) {
                 verifyComposite(rawCerts, packet, data, created)
+            } else if (info.version == 5 && v5 != SopV5Check.Detached) {
+                // 3.0.3: a v5 signature out of a cleartext or inline message (SopLibrePgpV5).
+                SopLibrePgpV5.verify(rings, packet, data, v5, packets)
             } else {
                 verifyClassical(rings, packet, data)
             }
@@ -573,11 +588,11 @@ internal object SopCrypto {
                 if (!enginePath) {
                     return@runBlocking if (mode == "clearsigned") {
                         val signed = SopCleartext.signedOctetsOf(data)
-                        SopCleartext.write(data, keys.map { signOne(r, it, signed, true, passwords) })
+                        SopCleartext.write(data, keys.map { signOne(r, it, signed, true, passwords, SopV5Block.Cleartext) })
                     } else {
                         val text = mode == "text"
                         SopArmor.output(
-                            SopInline.build(keys.map { signOne(r, it, data, text, passwords) }, data, text),
+                            SopInline.build(keys.map { signOne(r, it, data, text, passwords, SopV5Block.Inline(text)) }, data, text),
                             SopArmor.MESSAGE, noArmor
                         )
                     }
@@ -643,7 +658,7 @@ internal object SopCrypto {
                     // 3.0.0 (5d-4): SopCleartext keeps the text as signed, final line ending included.
                     val parsed = SopCleartext.parse(input)
                     val packets = SopPackets.signatures(SopArmor.binary(parsed.signatureBlock))
-                    parsed.text to verifyPackets(r, certs, packets, parsed.signed, window)
+                    parsed.text to verifyPackets(r, certs, packets, parsed.signed, window, SopV5Check.Block(LibrePgpV5Sig.CLEARTEXT_EXTRA))
                 } else if (isCompositeInline(input)) {
                     // An ML-DSA signed message: BouncyCastle cannot parse its one-pass packet.
                     val raw = SopArmor.binary(input)
@@ -663,7 +678,9 @@ internal object SopCrypto {
                     } catch (e: Exception) {
                         throw SopException(SopExit.BAD_DATA, "not a signed message: ${e.message}")
                     }
-                    result.data to verifyPackets(r, certs, packetsOf(result), result.data, window)
+                    // 3.0.3: a v5 signature hashes the literal packet's fields, read from the message.
+                    val v5 = SopLibrePgpV5.literalBlock(input)?.let { SopV5Check.Block(it) } ?: SopV5Check.Engine(result)
+                    result.data to verifyPackets(r, certs, packetsOf(result), result.data, window, v5)
                 }
             }
         }
@@ -711,7 +728,7 @@ internal object SopCrypto {
                 // 3.0.0 (5d-4): several signing keys, or a text signature, are signed here and the
                 // finished signed message is encrypted as it stands.
                 if (signers.size > 1 || (text && signers.isNotEmpty())) {
-                    val packets = signers.map { signOne(r, it, data, text, keyPasswords) }
+                    val packets = signers.map { signOne(r, it, data, text, keyPasswords, SopV5Block.Inline(text)) }
                     val plan = try {
                         EncryptOps(r.repo).plan(recipients.map { it.fingerprint }, null, null, compositeInV1Decision = true)
                     } catch (e: RecipientLoadException) {
@@ -809,7 +826,11 @@ internal object SopCrypto {
                         last = e
                         continue
                     }
-                    val lines = if (verOut != null) verifyPackets(r, certs, packetsOf(result), result.data, window) else emptyList()
+                    val lines = if (verOut != null) {
+                        verifyPackets(r, certs, packetsOf(result), result.data, window, SopV5Check.Engine(result))
+                    } else {
+                        emptyList()
+                    }
                     return@runBlocking result.data to lines
                 }
                 val edits = DesktopKeyEdits(r.repo)

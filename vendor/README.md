@@ -44,6 +44,26 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
 Last sync: 2026-09-30 (desktop 3.0.0, F1 for phones): the pair tree added. Every other tree was
 byte-identical to the PGPonyAndroid working tree before it, so the sync changed nothing else.
 
+Scoped sync for 3.0.3 (2026-10-28): PGPony Android 4.7.3, LibrePGP v5 keys (GnuPG and Kleopatra's
+Ed448 primary with an X448 encryption subkey). Taken from the PGPonyAndroid working tree ahead of its
+v4.7.3 tag, which did not exist yet: a recorded exception to the tag rule, and for the second list
+below to "verbatim" as well.
+1. Byte-identical to the Android tree: `crypto/GnuPgX448.kt`, `crypto/LibrePgpV5Sig.kt`,
+   `crypto/PonySigGen.kt`, the tests `crypto/GnuPgX448Test.kt` and `crypto/GnuPgX448InteropTest.kt`,
+   and the fixtures `gnupg448/`.
+2. Android's 4.7.3 hunks only, applied onto the files as they were here, not the whole Android file:
+   `crypto/PGPCryptoService.kt`, `crypto/VerifyService.kt`, `crypto/SigningService.kt`,
+   `crypto/SecretKeyCheck.kt`, `crypto/KeyExpirationService.kt`, `crypto/RevocationService.kt`,
+   `crypto/UserIdService.kt`, `crypto/card/CardSigningService.kt`. The whole files would also bring the
+   4.7.0 to 4.7.2 changes they carry (offline primary keys, signing subkey pins and more), which the
+   desktop takes with 3.1.0 section 3. Five hunks had moved context and were placed by hand; each
+   makes exactly the upstream change (`PGPSignatureGenerator` to `PonySigGen`).
+3. Not taken, no desktop counterpart: `crypto/CertificationService.kt` (4.7.0 item 31, not synced yet)
+   and `crypto/card/KeyToCardService.kt` (desktop keytocard is `DesktopCardKeyImport`, which makes no
+   test signature).
+The next full sync from a tag replaces all of this. The SOP wrapper's own v5 handling is desktop code
+(`src/…/desktop/SopLibrePgpV5.kt`), not vendored.
+
 Previous sync: 2026-09-27 (desktop 3.0.0, stage 3). All trees, delete-and-recopy, from the
 PGPonyAndroid working tree at commit b19b82e on main: the v4.6.1 tag (versionCode 461) plus two
 recorded 4.7.0 changes. `git diff v4.6.1` over the synced trees shows only these:

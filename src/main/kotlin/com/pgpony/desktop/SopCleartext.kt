@@ -122,7 +122,9 @@ internal object SopCleartext {
     fun write(text: ByteArray, packets: List<ByteArray>): ByteArray {
         val infos = packets.map { SopSigInfo.parse(it) }
         val out = StringBuilder(BEGIN_MESSAGE).append('\n')
-        if (infos.isNotEmpty() && infos.all { it != null && it.version == 4 }) {
+        // v4 and LibrePGP v5 signatures name their hashes here (3.0.3: without it GnuPG assumes
+        // MD5 for a v5 one and reports a digest conflict); RFC 9580 drops the header for v6.
+        if (infos.isNotEmpty() && infos.all { it != null && (it.version == 4 || it.version == 5) }) {
             val names = infos.mapNotNull { HASH_NAMES[it!!.hashAlgo] }.distinct()
             if (names.isNotEmpty()) out.append("Hash: ").append(names.joinToString(",")).append('\n')
         }
@@ -179,8 +181,11 @@ internal object SopInline {
             out.write(fp)
         } else {
             val id = sig.issuerKeyId() ?: sig.issuerFingerprint()?.let { fp ->
+                // A v4 key ID is the fingerprint's last eight octets; a LibrePGP v5 one (3.0.3)
+                // is its first eight.
+                val idBytes = if (sig.version == 5) fp.copyOfRange(0, 8) else fp.copyOfRange(fp.size - 8, fp.size)
                 var v = 0L
-                for (b in fp.copyOfRange(fp.size - 8, fp.size)) v = (v shl 8) or (b.toLong() and 0xFF)
+                for (b in idBytes) v = (v shl 8) or (b.toLong() and 0xFF)
                 v
             } ?: throw SopException(SopExit.BAD_DATA, "a signature without its issuer")
             out.write(byteArrayOf(3, sig.type.toByte(), sig.hashAlg.toByte(), sig.pkAlg.toByte()))
