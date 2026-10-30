@@ -72,4 +72,20 @@ class GenerateKeyTest {
         assertTrue(subkeys.size >= 2, "composite cert carries primary + KEM subkey")
         db.close()
     }
+
+    @Test
+    fun anMlKem1024KeysPrimaryRowNamesThePrimarysOwnAlgorithm() = runBlocking {
+        // 3.0.4: Key Detail labelled the primary row of an ML-KEM-1024+X448 key with the key's
+        // profile; the primary itself is a classical signing key. The row now reads the label below.
+        val (db, repo) = repo()
+        val entity = repo.generateKey(
+            name = "Gen PQC 1024", email = "genpqc1024@pgpony.app",
+            algorithm = KeyAlgorithm.MLKEM1024_X448_V6, passphrase = "test-passphrase"
+        )
+        assertEquals(KeyAlgorithm.MLKEM1024_X448_V6, entity.algorithm)
+        val primary = repo.subkeyInfos(entity.fingerprint).first { it.isPrimary }
+        assertTrue(primary.algorithmLabel != entity.algorithm.displayName, primary.algorithmLabel)
+        assertTrue(!primary.algorithmLabel.contains("ML-KEM"), primary.algorithmLabel)
+        db.close()
+    }
 }

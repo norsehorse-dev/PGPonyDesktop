@@ -247,7 +247,11 @@ internal fun KeyManageSections(state: DesktopState, key: PGPKeyEntity, primaryIn
     ManageLabel(tr("d_keydetail_section_keys", d.subkeys.size + 1))
     KeyRowCard(
         title = tr("key_detail_userids_primary"),
-        algorithm = key.algorithm.displayName,
+        // 3.0.4: the primary key's own algorithm. key.algorithm names the whole key's profile
+        // ("ML-KEM-1024+X448 (v6)" for an Ed25519 primary with an ML-KEM subkey), which is right
+        // in the keyring list but wrong on the primary's row. A composite primary has no
+        // primaryInfo (BouncyCastle cannot read it) and keeps the profile, which is its algorithm.
+        algorithm = primaryInfo?.algorithmLabel ?: key.algorithm.displayName,
         keyId = key.longKeyId,
         capabilities = primaryInfo?.capabilitiesLabel
             ?: SubkeyCapability.displayString(SubkeyCapability.heuristic(key.algorithm, true)),
