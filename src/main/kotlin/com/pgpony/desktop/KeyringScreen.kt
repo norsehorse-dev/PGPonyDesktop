@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
@@ -477,7 +478,7 @@ private fun KeyCard(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen)
     ) {
         Row(modifier = Modifier.padding(Spacing.Large)) {
-            KeyAvatar(isKeyPair = key.isKeyPair)
+            KeyAvatar(isKeyPair = key.isKeyPair, isCardBacked = key.isCardBacked)
             Spacer(Modifier.width(Spacing.Medium))
             Column(Modifier.weight(1f)) {
                 WrapRow(horizontalSpacing = Spacing.Small, verticalSpacing = Spacing.Tight) {
@@ -604,20 +605,25 @@ private fun LazyListScope.keySection(
     items(keys, key = { it.id }) { key -> row(key) }
 }
 
-/** The 44dp brand tile at the head of a [KeyCard]. Filled for a key pair, washed for a public key. */
+/**
+ * The 44dp brand tile at the head of a [KeyCard]. Filled for a key pair, washed for a public key.
+ * 3.0.5: a card-linked key shows the card icon the Hardware Keys tab uses, filled like a key pair
+ * since the user signs and decrypts with it. Decorative: the Card badge on the row carries the text.
+ */
 @Composable
-private fun KeyAvatar(isKeyPair: Boolean) {
+private fun KeyAvatar(isKeyPair: Boolean, isCardBacked: Boolean) {
+    val filled = isKeyPair || isCardBacked
     Box(
         Modifier
             .size(44.dp)
             .clip(RoundedCornerShape(Radius.Medium))
-            .background(if (isKeyPair) Brand.gradient() else Brand.gradientWash(0.18f)),
+            .background(if (filled) Brand.gradient() else Brand.gradientWash(0.18f)),
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            Icons.Filled.VpnKey,
+            if (isCardBacked) Icons.Filled.CreditCard else Icons.Filled.VpnKey,
             contentDescription = null,
-            tint = if (isKeyPair) Color.White else Brand.Accent,
+            tint = if (filled) Color.White else Brand.Accent,
             modifier = Modifier.size(22.dp)
         )
     }

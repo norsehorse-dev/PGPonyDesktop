@@ -66,18 +66,19 @@ section, pure, testable) and `KeyringSectionPrefs` in `KeyringSections.kt`; `Key
 Tests (`KeyringSectionsTest`): key pair, card-backed with and without `isKeyPair`, public only; search across
 sections; sort within a section; collapsed state round trip.
 
-## 4. Separate item for approval: card icon on card-linked rows (S, not started)
+## 4. Card icon on card-linked rows (S, done, approved for 3.0.5)
 
 Backlog: "an icon in the key list for card-linked keys". Since 1.1.0 a card-backed row already shows a text
 Card badge. What is left is the icon: the avatar tile at the head of the row would show the card icon
 (`Icons.Filled.CreditCard`, the one the Cards tab uses) instead of the key icon, filled like a key pair.
 About ten lines in `KeyAvatar`, no new strings (the tile stays decorative; the Card badge carries the text).
-Not built; waiting for a yes.
+Approved for 3.0.5 and built: the tile shows the card icon, filled, for any card-backed key.
 
 ## 5. Questions for Kevin
 
-- Q1. Section 4: add the card icon to 3.0.5, or leave it in the backlog?
+- Q1. Section 4: add the card icon to 3.0.5, or leave it in the backlog? Answered: add it to 3.0.5.
 
 ## 6. Status of this document
 
-Rev 1: #13 fix (done) and the key list sections. Goes to done when 3.0.5 ships.
+Rev 1: #13 fix (done) and the key list sections.
+Rev 2: card icon approved and built (section 4). Goes to done when 3.0.5 ships.
