@@ -609,6 +609,9 @@
     <string name="d_keyring_no_matches_title">Совпадений нет</string>
     <string name="d_keyring_no_matches_body">В вашей связке ключей ничего не соответствует «%1$s». Ищите по имени, адресу эл. почты или любой части отпечатка.</string>
     <string name="d_keyring_clear_search">Очистить поиск</string>
+    <string name="d_keyring_section_mine_empty">Пар ключей пока нет. Создайте пару, импортируйте закрытый ключ или свяжите аппаратный ключ.</string>
+    <string name="d_keyring_section_public_empty">Открытых ключей пока нет. Импортируйте открытый ключ другого человека, чтобы шифровать для него или проверять его подписи.</string>
+    <string name="d_keyring_section_no_matches">В этом разделе ничего не найдено по вашему запросу.</string>
     <string name="d_keyring_err_no_public_armor_for">Для %1$s не сохранён открытый ключ в ASCII-броне</string>
     <string name="d_keyring_qr_none_found">В %1$s QR-код не найден</string>
     <string name="d_keyring_qr_not_a_key">Этот QR-код не содержит ключ OpenPGP</string>

@@ -575,6 +575,9 @@
     <string name="d_keyring_no_matches_title">Aucun résultat</string>
     <string name="d_keyring_no_matches_body">Rien dans votre trousseau ne correspond à « %1$s ». Recherchez par nom, adresse e-mail ou fragment d\'empreinte.</string>
     <string name="d_keyring_clear_search">Effacer la recherche</string>
+    <string name="d_keyring_section_mine_empty">Aucune paire de clés pour l\'instant. Générez-en une, importez une clé secrète ou associez une clé matérielle.</string>
+    <string name="d_keyring_section_public_empty">Aucune clé publique pour l\'instant. Importez la clé publique d\'une autre personne pour chiffrer à son intention ou vérifier ses signatures.</string>
+    <string name="d_keyring_section_no_matches">Rien dans cette section ne correspond à votre recherche.</string>
     <string name="d_keyring_err_no_public_armor_for">Aucune clé publique en ASCII armor enregistrée pour %1$s</string>
     <string name="d_keyring_qr_none_found">Aucun code QR trouvé dans %1$s</string>
     <string name="d_keyring_qr_not_a_key">Ce code QR n\'est pas une clé OpenPGP</string>

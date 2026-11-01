@@ -9,6 +9,10 @@
 // AWT file pickers take their title as a parameter because the create = { } lambda runs
 // outside composition. The armor header in the paste placeholder is protocol framing, not
 // copy, and stays in English.
+//
+// 3.0.5: the list is split into My Keys and Public Keys, as the phone apps split it (a tester's
+// request). The rule, search and per-section sort live in KeyringSections.kt; this file draws
+// both sections through one builder, keySection(), the way Android's KeyringScreen does.
 
 package com.pgpony.desktop
 
@@ -26,12 +30,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
@@ -61,6 +68,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.pgpony.android.data.PGPKeyEntity
 import kotlinx.coroutines.launch
@@ -95,6 +103,8 @@ fun KeyringScreen(state: DesktopState) {
     var query by remember { mutableStateOf("") }
     var sortMode by remember { mutableStateOf(SortMode.RECENT) }
     var sortMenuOpen by remember { mutableStateOf(false) }
+    // 3.0.5: collapsed sections, remembered across launches (KeyringSectionPrefs).
+    var collapsedSections by remember { mutableStateOf(KeyringSectionPrefs.collapsed()) }
     var importMenuOpen by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
@@ -117,19 +127,9 @@ fun KeyringScreen(state: DesktopState) {
 
     // D2c — client-side search + sort over the Room rows. Manual drag-reorder (the Android
     // MANUAL sort mode) is deferred until the reorderable dependency is proven on desktop.
-    val displayKeys = remember(state.keys, query, sortMode) {
-        val q = query.trim()
-        val filtered = if (q.isBlank()) state.keys else state.keys.filter { k ->
-            k.userID.contains(q, ignoreCase = true) ||
-                k.userEmail.contains(q, ignoreCase = true) ||
-                k.fingerprint.contains(q.replace(" ", ""), ignoreCase = true)
-        }
-        when (sortMode) {
-            SortMode.RECENT -> filtered            // DAO order: createdAt DESC
-            SortMode.NAME -> filtered.sortedBy { it.userName.lowercase().ifBlank { it.userEmail } }
-            SortMode.ALGORITHM -> filtered.sortedBy { it.algorithm.displayName }
-        }
-    }
+    // 3.0.5: search covers both sections and the sort applies within each (KeyringSections).
+    val sections = remember(state.keys, query, sortMode) { KeyringSections.split(state.keys, query, sortMode) }
+    val matchCount = sections.values.sumOf { it.size }
 
     Column(modifier = Modifier.fillMaxSize().padding(Spacing.Section)) {
 
@@ -201,7 +201,7 @@ fun KeyringScreen(state: DesktopState) {
             }
             if (query.isNotBlank()) {
                 Text(
-                    trQuantity("d_keyring_match_count", displayKeys.size),
+                    trQuantity("d_keyring_match_count", matchCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -232,7 +232,7 @@ fun KeyringScreen(state: DesktopState) {
             // Before D12 a search that matched nothing showed an empty list and no explanation,
             // which is indistinguishable from an empty keyring. The query is echoed back because
             // the usual cause is a typo in it.
-            displayKeys.isEmpty() -> EmptyState(
+            matchCount == 0 -> EmptyState(
                 icon = Icons.Filled.Search,
                 title = tr("d_keyring_no_matches_title"),
                 message = tr("d_keyring_no_matches_body", query.trim()),
@@ -241,8 +241,8 @@ fun KeyringScreen(state: DesktopState) {
                 OutlinedButton(onClick = { query = "" }) { Text(tr("d_keyring_clear_search")) }
             }
 
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.Medium)) {
-                items(displayKeys, key = { it.id }) { key ->
+            else -> {
+                val keyRow: @Composable (PGPKeyEntity) -> Unit = { key ->
                     KeyCard(
                         key = key,
                         // 3.0.0 (Android 4.6.0 item 20): how many keys share this address.
@@ -264,6 +264,28 @@ fun KeyringScreen(state: DesktopState) {
                         },
                         onDelete = { confirmDelete = key }
                     )
+                }
+                // 3.0.5: each heading in its own colour, as on Android (primary for My Keys,
+                // tertiary for Public Keys). Read here: a LazyListScope builder is not a
+                // composable and cannot reach MaterialTheme.
+                val titleColors = mapOf(
+                    KeySection.MINE to MaterialTheme.colorScheme.primary,
+                    KeySection.PUBLIC to MaterialTheme.colorScheme.tertiary
+                )
+                val searching = query.isNotBlank()
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.Medium)) {
+                    KeySection.entries.forEachIndexed { index, section ->
+                        keySection(
+                            section = section,
+                            keys = sections.getValue(section),
+                            titleColor = titleColors.getValue(section),
+                            topPadding = if (index == 0) 0.dp else Spacing.Large,
+                            collapsed = KeyringSectionPrefs.isCollapsed(section, collapsedSections, query),
+                            searching = searching,
+                            onToggleCollapse = { collapsedSections = KeyringSectionPrefs.toggle(section) },
+                            row = keyRow
+                        )
+                    }
                 }
             }
         }
@@ -522,6 +544,64 @@ private fun KeyCard(
             }
         }
     }
+}
+
+/**
+ * 3.0.5: one section of the key list, drawn the same way for My Keys and Public Keys (Android's
+ * keySection()). The heading shows the count and collapses the section; a collapsed section draws
+ * its heading only. Unlike Android, an empty section keeps its heading and says why it is empty:
+ * on a wide window a lone section would otherwise read as the whole keyring. While a search is
+ * active every section is expanded and the heading does not toggle, so a click cannot change the
+ * remembered state out of sight.
+ */
+private fun LazyListScope.keySection(
+    section: KeySection,
+    keys: List<PGPKeyEntity>,
+    titleColor: Color,
+    topPadding: Dp,
+    collapsed: Boolean,
+    searching: Boolean,
+    onToggleCollapse: () -> Unit,
+    row: @Composable (PGPKeyEntity) -> Unit
+) {
+    item(key = "section_" + section.prefName) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = topPadding)
+                .clip(RoundedCornerShape(Radius.Small))
+                .clickable(enabled = !searching, onClick = onToggleCollapse)
+                .padding(vertical = Spacing.Tight),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (collapsed) Icons.Filled.ChevronRight else Icons.Filled.ExpandMore,
+                contentDescription = tr(if (collapsed) "help_row_expand_cd" else "help_row_collapse_cd"),
+                tint = titleColor,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(Spacing.Tight))
+            Text(
+                tr(section.titleKey) + " (" + keys.size + ")",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = titleColor
+            )
+        }
+    }
+    if (collapsed) return
+    if (keys.isEmpty()) {
+        item(key = "section_" + section.prefName + "_empty") {
+            Text(
+                if (searching) tr("d_keyring_section_no_matches") else tr(section.emptyKey),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 22.dp, bottom = Spacing.Small)
+            )
+        }
+        return
+    }
+    items(keys, key = { it.id }) { key -> row(key) }
 }
 
 /** The 44dp brand tile at the head of a [KeyCard]. Filled for a key pair, washed for a public key. */

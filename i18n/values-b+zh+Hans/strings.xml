@@ -558,6 +558,9 @@
     <string name="d_keyring_no_matches_title">没有匹配项</string>
     <string name="d_keyring_no_matches_body">你的密钥环中没有与「%1$s」匹配的内容。可以按姓名、邮箱地址或指纹的任意部分搜索。</string>
     <string name="d_keyring_clear_search">清除搜索</string>
+    <string name="d_keyring_section_mine_empty">还没有密钥对。请生成一个密钥对、导入私钥或配对硬件密钥。</string>
+    <string name="d_keyring_section_public_empty">还没有公钥。导入他人的公钥后，即可为其加密或验证其签名。</string>
+    <string name="d_keyring_section_no_matches">此部分中没有与搜索匹配的内容。</string>
     <string name="d_keyring_err_no_public_armor_for">未存储 %1$s 的 ASCII 封装公钥</string>
     <string name="d_keyring_qr_none_found">在 %1$s 中未找到二维码</string>
     <string name="d_keyring_qr_not_a_key">该二维码不是 OpenPGP 密钥</string>
