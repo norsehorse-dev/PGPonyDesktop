@@ -410,9 +410,12 @@ class DesktopKeyRepository(
      * a key in it upgrades without proof, as within one call; see [importArmoredKeyDetailed].
      */
     suspend fun importArmoredText(text: String, insertedInSession: MutableSet<String>? = null): ImportReport =
-        importBlocks(splitArmoredBlocks(text).flatMap { splitKeys(it) }, insertedInSession)
+        importBlocks(splitArmoredBlocks(normalizeArmor(text)).flatMap { splitKeys(it) }, insertedInSession)
 
-    suspend fun importBytes(data: ByteArray, insertedInSession: MutableSet<String>? = null): ImportReport {
+    suspend fun importBytes(input: ByteArray, insertedInSession: MutableSet<String>? = null): ImportReport {
+        // #13: armor saved by a Windows app (CR CR LF line endings, a leading BOM) is
+        // normalized before any parser sees it; binary input passes through untouched.
+        val data = normalizeArmorBytes(input)
         // 3.0.0: a BINARY composite ML-DSA or v4 algo-35 key cannot go through BouncyCastle's
         // explode; armor it as-is and take the raw-octet import path.
         val looksArmored = data.take(64).toByteArray().toString(Charsets.ISO_8859_1).contains("-----BEGIN PGP")
@@ -634,7 +637,7 @@ class DesktopKeyRepository(
      * are left out; an empty list means there is no key to import.
      */
     suspend fun previewArmoredText(text: String): List<ImportPreviewItem> =
-        splitArmoredBlocks(text).flatMap { splitKeys(it) }.mapNotNull { runCatching { previewBlock(it) }.getOrNull() }
+        splitArmoredBlocks(normalizeArmor(text)).flatMap { splitKeys(it) }.mapNotNull { runCatching { previewBlock(it) }.getOrNull() }
 
     /**
      * The fingerprint of every key [armored] holds, read without writing anything (the backup
@@ -1752,6 +1755,32 @@ class DesktopKeyRepository(
         internal fun isExpiryDowngrade(existingExpiresAtMs: Long?, fetchedExpiresAtMs: Long?): Boolean {
             val existing = existingExpiresAtMs ?: return false
             return fetchedExpiresAtMs == null || fetchedExpiresAtMs < existing
+        }
+
+        /**
+         * #13: armor as Windows tools save it. A GnuPG text export written out in text
+         * mode on Windows ends its lines in CR CR LF, and BouncyCastle's ArmoredInputStream
+         * rejects that ("invalid armor") as soon as the block carries an armor header such as
+         * "Version: GnuPG v1". Without a header the same text parses, which is why deleting the
+         * header line looked like the fix. A leading UTF-8 BOM makes it read nothing at all.
+         * Neither is part of the armored data, so line endings become LF and the BOM is dropped
+         * before any parser sees the text.
+         */
+        internal fun normalizeArmor(text: String): String {
+            val noBom = text.removePrefix("\uFEFF")
+            if (noBom.indexOf('\r') < 0) return noBom
+            return noBom.replace(CR_RUN_LF, "\n").replace('\r', '\n')
+        }
+
+        private val CR_RUN_LF = Regex("\r+\n")
+
+        /** [normalizeArmor] for file bytes. Input that does not start out armored is returned as is. */
+        internal fun normalizeArmorBytes(data: ByteArray): ByteArray {
+            val head = data.take(64).toByteArray().toString(Charsets.ISO_8859_1)
+            if (!head.contains("-----BEGIN PGP")) return data
+            val text = data.toString(Charsets.UTF_8)
+            val normalized = normalizeArmor(text)
+            return if (normalized == text) data else normalized.toByteArray(Charsets.UTF_8)
         }
 
         /** Split concatenated armored blocks; tolerant of surrounding prose (e.g. email bodies). */

@@ -117,4 +117,45 @@ class DesktopKeyRepositoryTest {
         assertEquals(2, report.inserted)
         db.close()
     }
+
+    /** The armor of [armored] with a "Version: GnuPG v1" header, lines ended in [eol]. */
+    private fun withVersionHeader(armored: String, eol: String): String {
+        val lines = armored.replace("\r\n", "\n").trimEnd('\n').split("\n")
+        return (listOf(lines.first(), "Version: GnuPG v1") + lines.drop(1)).joinToString(eol) + eol
+    }
+
+    @Test
+    fun windowsSavedArmorWithVersionHeaderImports() = runBlocking {
+        // #13: a GnuPG export saved by a Windows app ends its lines in CR CR LF. With an armor
+        // header in the block, BouncyCastle refused it and the import reported 1 failed.
+        val gen = generate(name = "Legacy", email = "legacy@pgpony.app")
+        val crcrlf = withVersionHeader(gen.armoredPublicKey, "\r\r\n")
+
+        val (db1, repo1, _) = temp()
+        assertEquals(1, repo1.previewArmoredText(crcrlf).size, "preview reads it")
+        val fromFile = repo1.importBytes(crcrlf.toByteArray())
+        assertEquals(1, fromFile.inserted)
+        assertEquals(0, fromFile.failed)
+        db1.close()
+
+        val (db2, repo2, _) = temp()
+        assertEquals(1, repo2.importArmoredText(crcrlf).inserted, "pasted text too")
+        db2.close()
+
+        // The same export behind a UTF-8 BOM, CRLF line endings.
+        val (db3, repo3, _) = temp()
+        val bom = "\uFEFF" + withVersionHeader(gen.armoredPublicKey, "\r\n")
+        assertEquals(1, repo3.importBytes(bom.toByteArray()).inserted)
+        db3.close()
+    }
+
+    @Test
+    fun normalizeArmorLeavesBinaryAndCleanTextAlone() {
+        val binary = byteArrayOf(0x99.toByte(), 0x01, 0x0D, 0x0D, 0x0A, 0x04)
+        assertTrue(DesktopKeyRepository.normalizeArmorBytes(binary) === binary, "binary passes through")
+        val clean = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nAAAA\n-----END PGP PUBLIC KEY BLOCK-----\n"
+        assertEquals(clean, DesktopKeyRepository.normalizeArmor(clean))
+        assertEquals(clean, DesktopKeyRepository.normalizeArmor(clean.replace("\n", "\r\r\n")))
+        assertEquals(clean, DesktopKeyRepository.normalizeArmor("\uFEFF" + clean.replace("\n", "\r")))
+    }
 }
