@@ -120,6 +120,13 @@ fun SettingsScreen(state: DesktopState) {
         }
         Spacer(Modifier.height(Spacing.Large))
 
+        // ── App lock (3.1.0, plan section 2) ────────────────────────────
+        // The PGPony PIN, the duress PIN and the wrong-PIN wipe (Android 4.7.0 item 32).
+        SectionCard(tr("d_settings_section_app_lock"), tr("d_settings_app_lock_note")) {
+            AppLockSection(state)
+        }
+        Spacer(Modifier.height(Spacing.Large))
+
         // ── Session (3.0.0 stage 4b, plan section 7) ────────────────────
         // One duration for key passphrases, the card PIN, SSH agent signing and git signing.
         SectionCard(tr("d_settings_section_session"), tr("d_settings_session_note")) {

@@ -986,4 +986,21 @@
     <string name="d_status_portable_secret_skipped">%1$s için yalnızca açık anahtar tutuldu</string>
     <string name="d_about_portable_label">Taşınabilir, veri klasörü</string>
     <string name="d_settings_updates_portable_hint">Bu taşınabilir bir kopyadır: taşınabilir sürümü indirin ve uygulamayı onunla değiştirin. PGPony-data klasörünü silmeyin.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">Uygulama kilidi</string>
+    <string name="d_settings_app_lock_note">PGPony\'yi bir PGPony PIN\'i ile kilitleyin. Kilitliyken pencerede hiçbir şey gösterilmez; SSH aracısı, git imzalama ve pgpony komutu anahtarlarınızı kullanmayı reddeder.</string>
+    <string name="d_applock_off_note">PGPony PIN sormadan açılır.</string>
+    <string name="d_applock_unlock">Kilidi aç</string>
+    <string name="d_applock_lock_now">PGPony\'yi kilitle</string>
+    <string name="d_applock_turn_off">Kapat</string>
+    <string name="d_applock_turn_off_title">Uygulama kilidi kapatılsın mı?</string>
+    <string name="d_applock_turn_off_message">PGPony PIN sormadan açılır. Zorlama PIN\'i ve yanlış PIN\'lerden sonra silme özelliği de kaldırılır.</string>
+    <string name="d_applock_idle_title">Otomatik kilit</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">%1$d dakika kullanılmadığında</item>
+        <item quantity="other">%1$d dakika kullanılmadığında</item>
+    </plurals>
+    <string name="d_applock_idle_never">Yalnızca açılışta, bilgisayar kilitlendiğinde veya elle</string>
+    <string name="d_applock_not_touched">Dokunulmayanlar: donanım güvenlik anahtarındaki anahtarlar (kendi PIN\'i vardır), PGPony dışına kaydettiğiniz yedekler ve PIN girilmeden önce alınmış bu bilgisayarın disk kopyaları.</string>
+    <string name="d_applock_disk_note">SSD\'de veya yazarken kopyalayan (copy-on-write) bir dosya sisteminde (APFS, btrfs) bir dosyanın üzerine yazmak eski verilerin gittiğini garanti etmez; bu yüzden parola ifadesi olmayan bir gizli anahtar, diski eline geçiren biri tarafından kurtarılabilir. Parola ifadesi olan anahtarlar onunla korunmaya devam eder.</string>
 </resources>

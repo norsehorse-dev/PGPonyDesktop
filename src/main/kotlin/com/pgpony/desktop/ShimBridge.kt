@@ -446,6 +446,8 @@ object ShimSigner {
         notify: (String) -> Unit = ::announce,
         prompt: (label: String) -> String? = { AgentPrompt.ask(it, "d_shim_unlock_object") }
     ): ShimBridge.Reply {
+        // 3.1.0 (plan Q1): nothing is signed while PGPony is locked.
+        if (DesktopAppLock.lockedNow) return ShimBridge.Reply.Refused("PGPony is locked; unlock it and sign again")
         val what = GitPayload.describe(payload)
             ?: return ShimBridge.Reply.Refused("PGPony signs only git commits, tags and push certificates for pgpony-gpg")
         val key = runBlocking { repo.byFingerprint(fingerprint) }

@@ -958,4 +958,20 @@
     <string name="d_status_portable_secret_skipped">仅保留了 %1$s 的公钥</string>
     <string name="d_about_portable_label">便携版，数据位于</string>
     <string name="d_settings_updates_portable_hint">这是便携版：请下载便携版并用它替换当前应用，保留 PGPony-data 文件夹。</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">应用锁</string>
+    <string name="d_settings_app_lock_note">用 PGPony PIN 锁定 PGPony。锁定期间，窗口中不显示任何内容，SSH 代理、Git 签名和 pgpony 命令都会拒绝使用你的密钥。</string>
+    <string name="d_applock_off_note">打开 PGPony 时无需输入 PIN。</string>
+    <string name="d_applock_unlock">解锁</string>
+    <string name="d_applock_lock_now">锁定 PGPony</string>
+    <string name="d_applock_turn_off">关闭</string>
+    <string name="d_applock_turn_off_title">要关闭应用锁吗？</string>
+    <string name="d_applock_turn_off_message">打开 PGPony 时将不再需要输入 PIN。胁迫 PIN 和「PIN 输错多次后抹除」也会一并移除。</string>
+    <string name="d_applock_idle_title">锁定时机</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="other">闲置 %1$d 分钟后</item>
+    </plurals>
+    <string name="d_applock_idle_never">仅在启动时、电脑锁定时或手动锁定</string>
+    <string name="d_applock_not_touched">不受影响的内容：硬件密钥上的密钥（它有自己的 PIN）、你存储在 PGPony 之外的备份，以及在输入 PIN 之前制作的此电脑磁盘副本。</string>
+    <string name="d_applock_disk_note">在 SSD 或写时复制文件系统（APFS、btrfs）上，覆盖文件并不能保证旧数据被清除，因此拿到磁盘的人可能恢复没有口令的私钥。有口令的密钥仍受口令保护。</string>
 </resources>

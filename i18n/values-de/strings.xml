@@ -986,4 +986,21 @@
     <string name="d_status_portable_secret_skipped">Nur den öffentlichen Schlüssel für %1$s behalten</string>
     <string name="d_about_portable_label">Portabel, Daten in</string>
     <string name="d_settings_updates_portable_hint">Dies ist eine portable Kopie: Lade die portable Version herunter und ersetze die App damit. Behalte den Ordner PGPony-data.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">App-Sperre</string>
+    <string name="d_settings_app_lock_note">Sperre PGPony mit einer PGPony-PIN. Solange es gesperrt ist, zeigt das Fenster nichts an, und der SSH-Agent, das Signieren mit git und der Befehl pgpony verweigern die Nutzung deiner Schlüssel.</string>
+    <string name="d_applock_off_note">PGPony öffnet sich ohne PIN.</string>
+    <string name="d_applock_unlock">Entsperren</string>
+    <string name="d_applock_lock_now">PGPony sperren</string>
+    <string name="d_applock_turn_off">Ausschalten</string>
+    <string name="d_applock_turn_off_title">App-Sperre ausschalten?</string>
+    <string name="d_applock_turn_off_message">PGPony öffnet sich dann ohne PIN. Die Zwangs-PIN und das Löschen nach falschen PINs werden dabei ebenfalls entfernt.</string>
+    <string name="d_applock_idle_title">Sperren nach</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">%1$d Minute ohne Nutzung</item>
+        <item quantity="other">%1$d Minuten ohne Nutzung</item>
+    </plurals>
+    <string name="d_applock_idle_never">Nur beim Start, wenn der Computer gesperrt wird, oder von Hand</string>
+    <string name="d_applock_not_touched">Nicht betroffen: Schlüssel auf einem Hardware-Sicherheitsschlüssel (er hat seine eigene PIN), Backups, die du außerhalb von PGPony gespeichert hast, und Kopien des Datenträgers dieses Computers, die vor der Eingabe der PIN angefertigt wurden.</string>
+    <string name="d_applock_disk_note">Auf einer SSD oder einem Copy-on-Write-Dateisystem (APFS, btrfs) garantiert das Überschreiben einer Datei nicht, dass die alten Daten weg sind. Ein geheimer Schlüssel ohne Passphrase kann daher für jemanden, der den Datenträger hat, wiederherstellbar sein. Schlüssel mit Passphrase bleiben durch sie geschützt.</string>
 </resources>

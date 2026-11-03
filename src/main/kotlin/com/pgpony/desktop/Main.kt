@@ -89,7 +89,15 @@ fun main(argv: Array<String>) {
         "selftest" -> exitProcess(SelfTest.run())
         "version", "--version" -> { println("PGPony Desktop ${AppVersion.VERSION}"); return }
         "help", "--help", "-h" -> { usage(); return }
-        in PGPONY_VERBS -> exitProcess(Cli.run(args))
+        in PGPONY_VERBS -> {
+            // 3.1.0 (plan section 2, Q3): a wipe cut short finishes first, and with a PGPony PIN
+            // set the terminal asks for it before the verb runs.
+            DesktopAppLock.resumeIfPendingStandalone()
+            val console = System.console()
+            val readPin: (() -> String?)? = console?.let { c -> { c.readPassword("PGPony PIN: ")?.let { String(it) } } }
+            if (!DesktopAppLock.cliGate(readPin, System.err)) exitProcess(ExitCode.FAILED)
+            exitProcess(Cli.run(args))
+        }
     }
 
     // D14 (2.0.0 §2a) — `open` puts files in the GUI like a bare file argument does, but can

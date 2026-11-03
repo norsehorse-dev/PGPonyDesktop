@@ -335,11 +335,16 @@ object ScreenLockWatch {
             val now = System.currentTimeMillis()
             val gap = now - lastTick
             lastTick = now
-            if (!SessionPolicy.isUntilLocked()) {
+            // 3.1.0 (plan 2.1): with a PGPony PIN set, a computer lock (or a sleep) locks PGPony
+            // too, whatever the passphrase setting is.
+            val appLock = DesktopAppLock.pinSet
+            if (!SessionPolicy.isUntilLocked() && !appLock) {
                 reset()
                 continue
             }
-            step(ScreenLock.probe(), now, gap)
+            val locked = ScreenLock.probe()
+            if (appLock && (locked == true || gap > POLL_MS + SLEEP_GAP_MS)) DesktopAppLock.lockNow()
+            if (SessionPolicy.isUntilLocked()) step(locked, now, gap) else reset()
         }
     }
 

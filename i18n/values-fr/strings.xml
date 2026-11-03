@@ -986,4 +986,21 @@
     <string name="d_status_portable_secret_skipped">Seule la clé publique de %1$s a été conservée</string>
     <string name="d_about_portable_label">Portable, données dans</string>
     <string name="d_settings_updates_portable_hint">Ceci est une copie portable : téléchargez la version portable et remplacez l\'application par celle-ci. Conservez le dossier PGPony-data.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">Verrouillage de l\'app</string>
+    <string name="d_settings_app_lock_note">Verrouillez PGPony avec un PIN PGPony. Tant qu\'il est verrouillé, la fenêtre n\'affiche rien, et l\'agent SSH, la signature git et la commande pgpony refusent d\'utiliser vos clés.</string>
+    <string name="d_applock_off_note">PGPony s\'ouvre sans PIN.</string>
+    <string name="d_applock_unlock">Déverrouiller</string>
+    <string name="d_applock_lock_now">Verrouiller PGPony</string>
+    <string name="d_applock_turn_off">Désactiver</string>
+    <string name="d_applock_turn_off_title">Désactiver le verrouillage de l\'app ?</string>
+    <string name="d_applock_turn_off_message">PGPony s\'ouvrira sans PIN. Le PIN de contrainte et l\'effacement après des PIN incorrects sont supprimés en même temps.</string>
+    <string name="d_applock_idle_title">Verrouiller après</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">%1$d minute sans utilisation</item>
+        <item quantity="other">%1$d minutes sans utilisation</item>
+    </plurals>
+    <string name="d_applock_idle_never">Seulement au lancement, au verrouillage de l\'ordinateur, ou manuellement</string>
+    <string name="d_applock_not_touched">Ne sont pas touchés : les clés sur une clé de sécurité matérielle (elle conserve son propre PIN), les sauvegardes que vous avez enregistrées hors de PGPony, et les copies du disque de cet ordinateur faites avant la saisie du PIN.</string>
+    <string name="d_applock_disk_note">Sur un SSD ou un système de fichiers en copie sur écriture (APFS, btrfs), écraser un fichier ne garantit pas que les anciennes données disparaissent : une clé secrète sans phrase secrète peut donc être récupérée par quelqu\'un qui possède le disque. Les clés avec une phrase secrète restent protégées par celle-ci.</string>
 </resources>

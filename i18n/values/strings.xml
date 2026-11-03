@@ -1117,4 +1117,21 @@
     <string name="d_status_portable_secret_skipped">Kept only the public key for %1$s</string>
     <string name="d_about_portable_label">Portable, data in</string>
     <string name="d_settings_updates_portable_hint">This is a portable copy: download the portable version and replace the app with it. Keep the PGPony-data folder.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">App lock</string>
+    <string name="d_settings_app_lock_note">Lock PGPony with a PGPony PIN. While it is locked, nothing in the window is shown, and the SSH agent, git signing and the pgpony command refuse to use your keys.</string>
+    <string name="d_applock_off_note">PGPony opens without a PIN.</string>
+    <string name="d_applock_unlock">Unlock</string>
+    <string name="d_applock_lock_now">Lock PGPony</string>
+    <string name="d_applock_turn_off">Turn off</string>
+    <string name="d_applock_turn_off_title">Turn off the app lock?</string>
+    <string name="d_applock_turn_off_message">PGPony will open without a PIN. The duress PIN and the wipe after wrong PINs are removed with it.</string>
+    <string name="d_applock_idle_title">Lock after</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">%1$d minute without use</item>
+        <item quantity="other">%1$d minutes without use</item>
+    </plurals>
+    <string name="d_applock_idle_never">Only at launch, when the computer locks, or by hand</string>
+    <string name="d_applock_not_touched">Not touched: keys on a hardware security key (it keeps its own PIN), backups you saved outside PGPony, and copies of this computer\'s disk made before the PIN was entered.</string>
+    <string name="d_applock_disk_note">On an SSD or a copy-on-write file system (APFS, btrfs), overwriting a file does not guarantee the old data is gone, so a secret key without a passphrase may be recoverable by someone who has the disk. Keys with a passphrase stay protected by it.</string>
 </resources>

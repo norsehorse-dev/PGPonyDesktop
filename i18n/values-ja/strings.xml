@@ -958,4 +958,20 @@
     <string name="d_status_portable_secret_skipped">%1$s の公開鍵だけを残しました</string>
     <string name="d_about_portable_label">ポータブル版、データの保存先</string>
     <string name="d_settings_updates_portable_hint">これはポータブル版です。ポータブル版をダウンロードして、今のアプリと置き換えてください。PGPony-data フォルダーはそのまま残してください。</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">アプリのロック</string>
+    <string name="d_settings_app_lock_note">PGPony PIN で PGPony をロックします。ロック中はウィンドウに何も表示されず、SSH エージェント、Git 署名、pgpony コマンドは鍵の使用を拒否します。</string>
+    <string name="d_applock_off_note">PGPony は PIN なしで開きます。</string>
+    <string name="d_applock_unlock">ロック解除</string>
+    <string name="d_applock_lock_now">PGPony をロック</string>
+    <string name="d_applock_turn_off">オフにする</string>
+    <string name="d_applock_turn_off_title">アプリのロックをオフにしますか？</string>
+    <string name="d_applock_turn_off_message">PGPony は PIN なしで開くようになります。強要時 PIN と、PIN の誤入力による消去も一緒に解除されます。</string>
+    <string name="d_applock_idle_title">ロックするタイミング</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="other">%1$d 分間使用しなかったとき</item>
+    </plurals>
+    <string name="d_applock_idle_never">起動時、コンピューターのロック時、手動でロックしたときのみ</string>
+    <string name="d_applock_not_touched">影響を受けないもの: ハードウェアキー上の鍵（キー独自の PIN もそのまま残ります）、PGPony の外に保存したバックアップ、PIN の入力前に取得されたこのコンピューターのディスクのコピー。</string>
+    <string name="d_applock_disk_note">SSD やコピーオンライト方式のファイルシステム（APFS、btrfs）では、ファイルを上書きしても古いデータが消えるとは限りません。そのため、パスフレーズのない秘密鍵は、ディスクを入手した人に復元される可能性があります。パスフレーズのある鍵は、引き続きパスフレーズで保護されます。</string>
 </resources>

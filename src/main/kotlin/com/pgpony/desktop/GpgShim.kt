@@ -117,7 +117,11 @@ object GpgShim {
             // the session policy or asks for it in its window. A composite ML-DSA key signs
             // through the composite signer; hosted forges show their own verdict for these, and
             // `git verify-commit` through this shim verifies them.
-            val signed = when (val local = ShimSigner.sign(repo, match, payload, passphrase = null)) {
+            // 3.1.0 (plan Q1): with a PGPony PIN set, the shim never signs on its own, even with a
+            // key that has no passphrase: the running app signs, and refuses while it is locked.
+            val firstTry = if (DesktopAppLock.isSet()) ShimSigner.Result.Locked
+            else ShimSigner.sign(repo, match, payload, passphrase = null)
+            val signed = when (val local = firstTry) {
                 is ShimSigner.Result.Signed -> local
                 is ShimSigner.Result.Failed -> return@withRepo fail(stderr, "sign: ${local.message}")
                 ShimSigner.Result.Locked, ShimSigner.Result.WrongPassphrase ->

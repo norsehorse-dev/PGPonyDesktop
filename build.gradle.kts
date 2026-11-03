@@ -46,6 +46,10 @@ sourceSets {
             srcDir("vendor/app-backup")                     // D6 — Crockford + strict-ustar codecs
             srcDir("vendor/app-network")                    // D4 — keyserver/WKD/VKS stack
             srcDir("vendor/app-pair")                       // 3.0.0 F1: pairing protocol (docs/PAIRING_PROTOCOL.md upstream)
+            srcDir("vendor/app-lock")                       // 3.1.0: app lock core (PIN hashing, duress, attempt count)
+            exclude("**/lock/AppLock.kt")                   // Android Context and SystemClock; desktop: DesktopAppLock.kt
+            exclude("**/lock/AppLockBiometricKey.kt")       // Android Keystore biometric key; no desktop counterpart
+            exclude("**/lock/AppWipe.kt")                   // Android process and task handling; desktop: DesktopAppLock.wipe
             exclude("**/backup/BackupService.kt")           // app-coupled (KeyRepository, org.json,
                                                             //   Android settings) — desktop twin:
                                                             //   DesktopBackupService

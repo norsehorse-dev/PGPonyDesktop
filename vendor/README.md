@@ -36,6 +36,10 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   `src/…/com/pgpony/pair` on top of a vendored copy of PonyDirect-Kotlin; the package now carries
   the few PonyDirect wire pieces it uses (framing, identify tags), pinned by the vectors, so
   `vendor/ponydirect/` and `tools/sync-ponydirect.sh` are gone.
+- `app-lock/` = the `lock/` tree (3.1.0, Android 4.7.0 item 32): the PGPony PIN app lock core (PIN
+  hashing, duress PIN, wrong PIN count and delay, wipe flag, file store), pure JVM. Its test
+  (`lock/AppLockCoreTest.kt`) syncs into `app-crypto-tests/`. The three Android-coupled files are
+  excluded (table below); the desktop side is `src/…/desktop/DesktopAppLock.kt`.
 - `app-crypto-tests/` = the crypto unit-test suite (+ `data/PGPKeyEntityKeyIdTest.kt`,
   `backup/BackupCodecTest.kt`) and `app-test-resources/` = its fixtures (rfc9580 vectors, pqc
   interop artifacts). Synced D5/D6; compiled into the desktop `test` source set, gates
@@ -52,6 +56,8 @@ Desktop-side changes it needed:
   `Config.dataDir`, so the pins live beside the keyring (and on the drive in portable mode).
 - The desktop-made fixture `gnupg448/signed.asc` (SopLibrePgpV5Test, 3.0.3) is not upstream, so the sync
   removed it from `app-test-resources/`; it now lives in `src/test/resources/gnupg448/`.
+- `tools/sync-vendor.sh` gained the `lock/` tree (`app-lock/`), new in this sync; its three
+  Android-coupled files are excluded (table below).
 - `CertificationService.kt`, `card/KeyToCardService.kt` and the other 4.7.x additions compile here; the
   desktop UI does not call them yet (plan section 3).
 
@@ -127,6 +133,9 @@ excluded file's name (D1 Fix1).
 | `network/ProxyPrefs.kt` | SharedPreferences | Desktop twin `src/…/network/DesktopProxyPrefs.kt` (java.util.prefs; MODE_ORBOT = local Tor daemon; prefsOverride test hook) |
 | `keyserver/KeyServerDirectory.kt` | Context + DataStore | Desktop twin `src/…/keyserver/DesktopKeyServerDirectory.kt` (declares `KeyServer` verbatim + the directory over java.util.prefs; no serversFlow — every caller uses readOnce) |
 | `data/AppReset.kt` | 4.7.x Clear All Data: Context, WorkManager, the Android repository | Desktop counterpart `src/…/desktop/ClearAllData.kt` |
+| `lock/AppLock.kt` | Android `Context` and `SystemClock` (the app-wide lock state and clock) | Desktop counterpart `src/…/desktop/DesktopAppLock.kt` (same core, clock from `/proc` or `sysctl`) |
+| `lock/AppLockBiometricKey.kt` | Android Keystore biometric key | No desktop counterpart: the desktop lock is PIN only |
+| `lock/AppWipe.kt` | Android process and task handling after a wipe | `DesktopAppLock.wipe` (ClearAllData) and `relaunchFresh` |
 | `data/PgpSubkeyEntity.kt` | Not in `PGPDatabase.entities` — Android-side vestige | Follows upstream if it ever rejoins the schema |
 | `data/RoomMigrations.kt`, `data/migrations/**` | `SupportSQLiteDatabase` is Android-only; fresh desktop DBs create at v7 | Future desktop schema bumps join the chain KMP-style |
 | `data/repository/**` | Android KeyRepository (SharedPreferences seam) | Desktop twin `src/…/desktop/DesktopKeyRepository.kt`; grows toward full parity D2b/D2c |

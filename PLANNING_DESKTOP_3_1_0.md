@@ -1,6 +1,8 @@
 # PGPony Desktop 3.1.0 Planning
 
-Status: Rev 1, 2026-11-02 (Rev 0 seed 2026-10-08). Base: 3.0.2.
+Status: Rev 2, 2026-11-02 (Rev 0 seed 2026-10-08). Base: 3.0.2.
+Split Nov 2: TPM and Secure Enclave keys (was 3c), OS key wrap (Q2), the apt repository (Q4) and the desktop
+screens for the Android 4.7.0 engine moved to 4.0.0 (PLANNING_DESKTOP_4_0_0.md).
 Release model: as 3.0.0, no release candidates; each stage is self-tested on the Mac, the Windows VM and Linux.
 
 Size tags: S (an evening), M (a few evenings), L (a week or more of evenings).
@@ -9,8 +11,8 @@ Size tags: S (an evening), M (a few evenings), L (a week or more of evenings).
 
 The first item is a duress PIN, asked for by a user for every platform (Android 4.7.0 item 32, iOS 8.4.0 item
 1.4). On desktop it needs an app lock first, because PGPony Desktop has none: anyone at an unlocked computer can
-open it. The rest of 3.1.0 follows Android 4.7.0 once its items are verified there (section 3). Section 3b closes the
-few places where English still shows in a translated build.
+open it. 3.1.0 also takes the Android v4.7.3 engine (section 3, the vendor sync; its desktop screens are 4.0.0),
+#14 (3f) and portable mode (3e). Section 3b closes the few places where English still shows in a translated build.
 
 ## 1. Rules for this cycle
 
@@ -60,6 +62,32 @@ dataDirOverride and prefsRootOverride for tests); on each OS, the duress PIN lea
 no settings, and opens first run; the real PIN unlocks; idle and screen-lock locking; the agent and shim behave as
 decided while locked.
 
+### 2.4 Built (Nov 2)
+
+Built on Android's own lock core, vendored verbatim as `vendor/app-lock/` (Android 4.7.0 item 32: PIN hashing,
+duress check, counter and delay, wipe flag, file store), so the PIN rules, the timings and the duress behavior are
+Android's exactly. Where the build differs from 2.1 to 2.3 as first written:
+
+- PIN only, 6 to 16 digits (Android's PinRules); no passphrase choice. Hashed with Argon2id (32 MiB, 2 passes),
+  stored in the data folder (`app_lock`, beside the keyring, so a portable copy carries it), not the preferences
+  node. Wrong PINs are counted with Android's growing delay, measured on a clock that a changed wall clock cannot
+  rewind (`/proc/uptime` on Linux, `kern.boottime` on macOS, both tied to the boot).
+- Locks at launch, after 1, 5 (default), 15, 30 or 60 idle minutes or never, when the computer locks or sleeps,
+  and by hand (File > Lock PGPony, Cmd or Ctrl+L, and the tray). While locked the window shows only the PIN screen,
+  the menu bar is only Quit, and expiry notices wait.
+- Duress PIN and wipe after 5, 10 or 20 wrong PINs (off by default) as Android. Both run ClearAllData with no
+  prompt and relaunch straight into first run. The wipe flag is written before anything is deleted, so a wipe cut
+  short finishes at the next start (app or CLI).
+- 2.3 as answered: the ssh-agent lists no keys and signs nothing, the git shim refuses with "PGPony is locked", and
+  `pgpony` asks for the PIN on the terminal (refused with no terminal; the duress PIN wipes and the command runs on
+  the empty keyring). `pgpony sop` and the watch folders are outside it.
+- Settings > App lock: turn on, change PIN, duress PIN on or off, wipe after, lock after, Lock PGPony, turn off.
+  Changing these asks for the PIN once per unlock.
+
+Tests: `DesktopAppLockTest` (unlock, count and delay, duress and wipe, wipe limit, resume after a cut-short wipe,
+the CLI gate, agent and shim while locked, idle, both clocks, the relaunch command) and the vendored
+`AppLockCoreTest`. Still to do on each OS: the manual pass in the Test line above.
+
 ## 3. Android 4.7.0 watch list
 
 Desktop picks these up when Android verifies them, mostly through the vendor re-sync: streaming ML-DSA signatures
@@ -68,7 +96,8 @@ key certification (item 31), trust levels and Don't use (item 10), offline prima
 desktop: keytocard, per-file encryption, Clear All Data emptying Recently Deleted (Android item 33 is that bug).
 
 Nov 2: done as a full vendor sync to the PGPonyAndroid `v4.7.3` tag (vendor/README.md). The engine for every
-item above is in; the desktop UI for items 24, 27, 31, 10 and 22 is still to do. Item 23 is wired (3f).
+item above is in; the desktop UI for items 24, 27, 31, 10 and 22 moved to 4.0.0 (section 4 there). Item 23 is
+wired (3f).
 
 ## 3a. Blank GTK file chooser on some Linux launches (#12)
 
@@ -118,57 +147,9 @@ Work:
 Test: strict audit green on both layers and I18nTest green; an .onion key server with no proxy and a card error
 show in the selected language.
 
-## 3c. Keys generated in the computer's TPM or Secure Enclave (L, user request, see Q5)
+## 3c. Keys generated in the computer's TPM or Secure Enclave
 
-Origin: a user, Oct 2026: generate hardware-backed keys on the device itself (no separate hardware key), to use
-in workflows that link his devices together.
-
-Today: hardware-backed keys exist only through an OpenPGP card over PC/SC (YubiKey, Token2, Nitrokey):
-on-card generation (DesktopCardKeygen, RSA; vendored EdDSA path), keytocard, and card sign / decrypt / ssh-agent.
-There is nothing for the computer's own TPM 2.0 (Linux, Windows) or the Mac's Secure Enclave. Outside the app,
-GnuPG 2.3+ has `keytotpm` (Linux, tpm2d), which moves an existing software key into the TPM; it does not
-generate one there, and the key existed in software first.
-
-Limits that shape the feature:
-
-- TPM 2.0 and the Secure Enclave do P-256 (TPMs also RSA 2048, some 3072). No Ed25519 / X25519 on most TPMs and
-  none on the Enclave, and no ML-DSA / ML-KEM anywhere. So these keys are OpenPGP v4 ECDSA P-256 (algo 19)
-  primary + ECDH P-256 (algo 18) subkey, which gpg, Sequoia, OpenKeychain and PGPony mobile all read.
-- The private key never leaves the chip: no backup, no export, no move to another computer. Clearing the TPM
-  (fTPM reset on a firmware update, "clear TPM" in the BIOS, a new motherboard) or replacing the Mac loses it.
-  For several devices the model is one key per device, shared as public keys (pairing already moves those).
-
-Work:
-
-1. Platform key seam. Mirror the card path, which already splits the private operation from the OpenPGP
-   packets: a PlatformPGPContentSigner next to CardPGPContentSigner, a PlatformPublicKeyDataDecryptorFactory
-   next to CardPublicKeyDataDecryptorFactory (reusing Rfc6637 / EcdhCipherData for the KDF and key unwrap),
-   and P-256 ECDSA / ECDH public-key packet building next to CardKeyPacketBuilder (today hardcoded to EdDSA /
-   Cv25519; the RSA twin is desktop-only). The P-256 packet code is portable, so it lands upstream in
-   PGPonyAndroid first and is vendored (it would also serve Android Keystore / StrongBox later); only the OS
-   bindings are desktop twins.
-2. OS bindings:
-   - Windows: CNG Platform Crypto Provider through JNA (`NCryptOpenStorageProvider` with
-     `MS_PLATFORM_CRYPTO_PROVIDER`, ECDSA_P256 for signing, ECDH_P256 with `NCryptSecretAgreement` for decrypt).
-     Nothing to install.
-   - Linux: TPM 2.0. Either `tpm2-pkcs11` through the JDK's SunPKCS11 provider (least new code, but needs the
-     user to install and init a token) or `libtss2-esys` through JNA (more code, needs `/dev/tpmrm0` access via
-     the `tss` group). See Q6.
-   - macOS: Secure Enclave P-256 through Security.framework (`kSecAttrTokenIDSecureEnclave`, sign and
-     `SecKeyCopyKeyExchangeResult`). Needs the signed and notarized build with a keychain-access-groups
-     entitlement, so it only works from the release dmg. A small Swift helper or JNA on Security.framework.
-3. UI: "Generate on this computer" beside "Generate on card" in key creation, with an optional PIN (TPM
-   authValue / Enclave user presence or Touch ID). The certificate list gets the same kind of badge planned for
-   card-linked keys. Setup says plainly that the key cannot be backed up and suggests also encrypting to a second
-   key (another device or a card).
-4. Everywhere a card key works, a platform key works: sign, decrypt, git signing shim, ssh-agent (ecdsa-sha2-nistp256),
-   SOP CLI. Backup and Clear All Data handle a key whose secret is a handle, not key material; Clear All Data and
-   the duress wipe (2.2) also delete the TPM / Enclave key.
-
-Test: per OS, generate, sign, decrypt, and a message encrypted by gpg and by PGPony Android to the new public key
-opens; the key ring file copied to another computer decrypts nothing; deleting the platform key makes decrypt
-fail with a plain message; an offline test with a software P-256 key in place of the chip checks the packets and
-fingerprint against real gpg, the same way the RSA card keygen test does.
+Moved to 4.0.0 (PLANNING_DESKTOP_4_0_0.md section 1) on Nov 2.
 
 ## 3d. SOP: v5 signatures in encrypted messages with several signers (left from 3.0.3)
 
@@ -219,8 +200,8 @@ registry, the plist or `~/.java`. Outside portable mode nothing changes.
 
 Everything that keeps state goes through dataDir or Preferences, so the 3.1.0 items follow it: the app lock PIN
 and duress state (section 2) live on the drive with the keyring. Two things cannot travel and are turned off in
-portable mode: keys generated in the TPM or Secure Enclave (3c, bound to one computer), and any key-file wrapping
-with an OS-held key (Q2), if that is adopted.
+portable mode: keys generated in the TPM or Secure Enclave (4.0.0 section 1, bound to one computer), and key-file
+wrapping with an OS-held key (Q2, 4.0.0 section 2).
 
 ### 3e.3 What changes on a drive
 
@@ -310,21 +291,23 @@ Tests: `MlDsaFileStreamingTest` (file, folder, detached, tamper; a gated 600 MB 
 - Q2. Worth wrapping the key files with an OS-held key (macOS Keychain, Windows DPAPI, libsecret) so a duress wipe
   can destroy that one key and make the files unreadable at once, whatever the disk does? A larger change; could
   be its own item later. Answered Nov 2: in 3.1.0, for installed copies only (a portable copy cannot hold an
-  OS key, so it keeps the passphrase-only rule of 3e.5).
+  OS key, so it keeps the passphrase-only rule of 3e.5). Moved to 4.0.0 (section 2 there) with the split.
 - Q4. An apt repository on pgpony.app, signed with the release key, so `apt upgrade` picks up new .deb releases
   (#12: the in-app update notice sends Linux users to download the .deb by hand)? Worth it now, or later?
-  Answered Nov 2: in 3.1.0.
+  Answered Nov 2: in 3.1.0. Moved to 4.0.0 (section 3 there) with the split.
 - Q3. Does the CLI (`pgpony` and SOP) ask for the PGPony PIN when the lock is on, or stay outside it? Answered
   Nov 2: `pgpony` asks; `pgpony sop` stays outside (it never touches the keyring).
 - Q5. TPM / Secure Enclave keys (3c) are an L item. Keep them in 3.1.0 after the app lock, or move them to the
-  next cycle so 3.1.0 stays app lock, duress and Android 4.7.0? Answered Nov 2: keep them in 3.1.0.
+  next cycle so 3.1.0 stays app lock, duress and Android 4.7.0? Answered Nov 2: keep them in 3.1.0. Then, the
+  same day, moved to 4.0.0 with the split (3.1.0 grew too large for a minor version).
 - Q6. Linux TPM route: tpm2-pkcs11 through SunPKCS11 (less code, user installs and sets up a token) or libtss2
-  through JNA (more code, works with just the `tss` group)? Answered Nov 2: libtss2 through JNA.
+  through JNA (more code, works with just the `tss` group)? Answered Nov 2: libtss2 through JNA (4.0.0).
 - Q7. Portable mode (3e): ship zips for Windows and both Macs and only instructions for Linux, as above, or a
   portable Linux tarball too? Answered Nov 2: a portable Linux tarball too (3e.4).
 
 ## 5. Status of this document
 
+Rev 2 (Nov 2): split into 3.1.0 and 4.0.0; section 2 built (2.4); 3.1.0's new strings in all eleven languages.
 Rev 1 (Nov 2): Q1 to Q7 answered. Rev 0 was the seed with the duress PIN request.
 Oct 23: section 3b added (remaining translation gaps; every language, Russian included, is already complete).
 Oct 23: section 3c added (keys generated in the TPM / Secure Enclave, user request), with Q5 and Q6.

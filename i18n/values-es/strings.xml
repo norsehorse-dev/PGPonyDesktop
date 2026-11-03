@@ -986,4 +986,21 @@
     <string name="d_status_portable_secret_skipped">Solo se ha conservado la clave pública de %1$s</string>
     <string name="d_about_portable_label">Portátil, datos en</string>
     <string name="d_settings_updates_portable_hint">Esta es una copia portátil: descarga la versión portátil y reemplaza la app con ella. Conserva la carpeta PGPony-data.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">Bloqueo de la app</string>
+    <string name="d_settings_app_lock_note">Bloquea PGPony con un PIN de PGPony. Mientras está bloqueado, la ventana no muestra nada, y el agente SSH, la firma de git y el comando pgpony se niegan a usar tus claves.</string>
+    <string name="d_applock_off_note">PGPony se abre sin PIN.</string>
+    <string name="d_applock_unlock">Desbloquear</string>
+    <string name="d_applock_lock_now">Bloquear PGPony</string>
+    <string name="d_applock_turn_off">Desactivar</string>
+    <string name="d_applock_turn_off_title">¿Desactivar el bloqueo de la app?</string>
+    <string name="d_applock_turn_off_message">PGPony se abrirá sin PIN. El PIN de coacción y el borrado tras PIN incorrectos se quitan junto con él.</string>
+    <string name="d_applock_idle_title">Bloquear tras</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">%1$d minuto sin uso</item>
+        <item quantity="other">%1$d minutos sin uso</item>
+    </plurals>
+    <string name="d_applock_idle_never">Solo al iniciar, cuando se bloquea el ordenador o manualmente</string>
+    <string name="d_applock_not_touched">No se tocan: las claves de una llave de seguridad (tiene su propio PIN), las copias de seguridad que guardaste fuera de PGPony y las copias del disco de este ordenador hechas antes de introducir el PIN.</string>
+    <string name="d_applock_disk_note">En un SSD o en un sistema de archivos copy-on-write (APFS, btrfs), sobrescribir un archivo no garantiza que los datos antiguos desaparezcan, así que alguien que tenga el disco podría recuperar una clave secreta sin frase de contraseña. Las claves con frase de contraseña siguen protegidas por ella.</string>
 </resources>

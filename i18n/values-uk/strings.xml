@@ -1042,4 +1042,23 @@
     <string name="d_status_portable_secret_skipped">Для %1$s збережено лише відкритий ключ</string>
     <string name="d_about_portable_label">Портативна версія, дані в</string>
     <string name="d_settings_updates_portable_hint">Це портативна копія: завантажте портативну версію й замініть нею програму. Папку PGPony-data збережіть.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">Блокування застосунку</string>
+    <string name="d_settings_app_lock_note">Блокуйте PGPony за допомогою PIN PGPony. Поки застосунок заблоковано, у вікні нічого не показується, а агент SSH, підписування git і команда pgpony відмовляються використовувати ваші ключі.</string>
+    <string name="d_applock_off_note">PGPony відкривається без PIN.</string>
+    <string name="d_applock_unlock">Розблокувати</string>
+    <string name="d_applock_lock_now">Заблокувати PGPony</string>
+    <string name="d_applock_turn_off">Вимкнути</string>
+    <string name="d_applock_turn_off_title">Вимкнути блокування застосунку?</string>
+    <string name="d_applock_turn_off_message">PGPony відкриватиметься без PIN. PIN примусу та стирання після неправильних PIN також буде вилучено.</string>
+    <string name="d_applock_idle_title">Автоматичне блокування</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">Через %1$d хвилину бездіяльності</item>
+        <item quantity="few">Через %1$d хвилини бездіяльності</item>
+        <item quantity="many">Через %1$d хвилин бездіяльності</item>
+        <item quantity="other">Через %1$d хвилини бездіяльності</item>
+    </plurals>
+    <string name="d_applock_idle_never">Лише під час запуску, коли комп’ютер блокується, або вручну</string>
+    <string name="d_applock_not_touched">Не зачіпаються: ключі на апаратному ключі безпеки (він має власний PIN), резервні копії, які ви зберегли поза PGPony, і копії диска цього комп’ютера, зроблені до введення PIN.</string>
+    <string name="d_applock_disk_note">На SSD або у файловій системі з копіюванням під час запису (APFS, btrfs) перезапис файлу не гарантує, що старі дані зникли, тож закритий ключ без парольної фрази може відновити той, у чиїх руках опиниться диск. Ключі з парольною фразою й надалі захищені нею.</string>
 </resources>

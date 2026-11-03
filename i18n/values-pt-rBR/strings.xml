@@ -986,4 +986,21 @@
     <string name="d_status_portable_secret_skipped">Apenas a chave pública de %1$s foi mantida</string>
     <string name="d_about_portable_label">Portátil, dados em</string>
     <string name="d_settings_updates_portable_hint">Esta é uma cópia portátil: baixe a versão portátil e substitua o app por ela. Mantenha a pasta PGPony-data.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">Bloqueio do app</string>
+    <string name="d_settings_app_lock_note">Bloqueie o PGPony com um PIN do PGPony. Enquanto ele estiver bloqueado, nada aparece na janela, e o agente SSH, a assinatura do git e o comando pgpony se recusam a usar suas chaves.</string>
+    <string name="d_applock_off_note">O PGPony abre sem PIN.</string>
+    <string name="d_applock_unlock">Desbloquear</string>
+    <string name="d_applock_lock_now">Bloquear o PGPony</string>
+    <string name="d_applock_turn_off">Desativar</string>
+    <string name="d_applock_turn_off_title">Desativar o bloqueio do app?</string>
+    <string name="d_applock_turn_off_message">O PGPony vai abrir sem PIN. O PIN de coação e o apagamento após PINs incorretos são removidos junto com ele.</string>
+    <string name="d_applock_idle_title">Bloquear após</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="one">%1$d minuto sem uso</item>
+        <item quantity="other">%1$d minutos sem uso</item>
+    </plurals>
+    <string name="d_applock_idle_never">Só ao abrir, quando o computador é bloqueado ou manualmente</string>
+    <string name="d_applock_not_touched">Não são afetados: chaves em uma chave de segurança de hardware (ela tem o próprio PIN), backups que você salvou fora do PGPony e cópias do disco deste computador feitas antes de o PIN ser digitado.</string>
+    <string name="d_applock_disk_note">Em um SSD ou em um sistema de arquivos copy-on-write (APFS, btrfs), sobrescrever um arquivo não garante que os dados antigos sumam, então uma chave secreta sem frase-senha pode ser recuperada por alguém que tenha o disco. Chaves com frase-senha continuam protegidas por ela.</string>
 </resources>

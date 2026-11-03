@@ -122,8 +122,10 @@ object SshAgentKeys {
      * Never throws: an unreadable ring is a missing identity, not a dead agent.
      */
     fun identities(repo: DesktopKeyRepository): List<AgentKey> = try {
+        // 3.1.0 (plan Q1): while PGPony is locked the agent lists nothing and signs nothing.
         val out = ArrayList<AgentKey>()
-        val entities = runBlocking { repo.allKeys() }.filter { it.isKeyPair && !it.isRevoked && !it.isCardBacked }
+        val entities = if (DesktopAppLock.lockedNow) emptyList()
+        else runBlocking { repo.allKeys() }.filter { it.isKeyPair && !it.isRevoked && !it.isCardBacked }
         for (entity in entities) {
             val identity = runCatching { identityFor(repo, entity) }.getOrNull() ?: continue
             out += identity
@@ -172,6 +174,7 @@ object SshAgentKeys {
      * oracle grows. Null for every refusal; SshWire turns that into SSH_AGENT_FAILURE.
      */
     fun sign(repo: DesktopKeyRepository, keyBlob: ByteArray, data: ByteArray, flags: Int): ByteArray? {
+        if (DesktopAppLock.lockedNow) return null
         val match = identities(repo).firstOrNull { it.identity.blob.contentEquals(keyBlob) } ?: return null
         val ring = repo.loadSshAuthSecretRing(match.primaryFingerprint) ?: return null
         val key = unlock(ring, match.keyId, match.identity.comment, match.primaryFingerprint) ?: return null

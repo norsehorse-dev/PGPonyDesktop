@@ -9,11 +9,13 @@
 #   app/src/main/java/com/pgpony/android/network     → vendor/app-network/...       (D4)
 #   app/src/main/java/com/pgpony/android/keyserver   → vendor/app-network/...       (D4)
 #   app/src/main/java/com/pgpony/android/pair        → vendor/app-pair/...          (3.0.0 F1)
+#   app/src/main/java/com/pgpony/android/lock        → vendor/app-lock/...          (3.1.0 app lock)
 #   docs/PAIRING_PROTOCOL.md                         → vendor/app-pair/PAIRING_PROTOCOL.md
 #   app/src/test/kotlin/com/pgpony/android/crypto    → vendor/app-crypto-tests/...  (D5)
 #   app/src/test/kotlin/.../data/PGPKeyEntityKeyIdTest.kt → same tree               (D5)
 #   app/src/test/kotlin/.../backup/BackupCodecTest.kt     → same tree               (D6)
 #   app/src/test/kotlin/com/pgpony/android/pair      → same tree                    (3.0.0 F1)
+#   app/src/test/kotlin/com/pgpony/android/lock      → same tree                    (3.1.0)
 #   app/src/test/resources                           → vendor/app-test-resources/   (D5)
 #
 # ALL trees sync together, every run — never refresh one in isolation (D5 Fix1: a
@@ -45,6 +47,7 @@ sync_tree backup app-backup
 sync_tree network app-network
 sync_tree keyserver app-network
 sync_tree pair app-pair
+sync_tree lock app-lock
 cp "$ANDROID_ROOT/docs/PAIRING_PROTOCOL.md" "$REPO_ROOT/vendor/app-pair/PAIRING_PROTOCOL.md"
 
 # D5 — the crypto unit-test suite + fixtures.
@@ -57,6 +60,7 @@ cp "$TSRC/kotlin/com/pgpony/android/data/PGPKeyEntityKeyIdTest.kt" "$TDST/data/"
 mkdir -p "$TDST/backup"
 cp "$TSRC/kotlin/com/pgpony/android/backup/BackupCodecTest.kt" "$TDST/backup/" 2>/dev/null || true
 cp -R "$TSRC/kotlin/com/pgpony/android/pair" "$TDST/pair"
+cp -R "$TSRC/kotlin/com/pgpony/android/lock" "$TDST/lock"
 rm -rf "$REPO_ROOT/vendor/app-test-resources"
 mkdir -p "$REPO_ROOT/vendor/app-test-resources"
 cp -R "$TSRC/resources/." "$REPO_ROOT/vendor/app-test-resources/"

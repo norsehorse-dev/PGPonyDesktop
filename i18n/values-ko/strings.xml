@@ -958,4 +958,20 @@
     <string name="d_status_portable_secret_skipped">%1$s의 공개 키만 보관함</string>
     <string name="d_about_portable_label">휴대용 판, 데이터 위치</string>
     <string name="d_settings_updates_portable_hint">휴대용 판입니다. 휴대용 판을 다운로드해 지금 앱과 교체하세요. PGPony-data 폴더는 그대로 두세요.</string>
+    <!-- 3.1.0 (plan section 2): app lock. The PIN, duress and wipe wording is Android's (applock_*); these are the desktop-only lines. -->
+    <string name="d_settings_section_app_lock">앱 잠금</string>
+    <string name="d_settings_app_lock_note">PGPony PIN으로 PGPony를 잠급니다. 잠겨 있는 동안에는 창에 아무것도 표시되지 않으며, SSH 에이전트, Git 서명, pgpony 명령은 키 사용을 거부합니다.</string>
+    <string name="d_applock_off_note">PGPony가 PIN 없이 열립니다.</string>
+    <string name="d_applock_unlock">잠금 해제</string>
+    <string name="d_applock_lock_now">PGPony 잠그기</string>
+    <string name="d_applock_turn_off">끄기</string>
+    <string name="d_applock_turn_off_title">앱 잠금을 끌까요?</string>
+    <string name="d_applock_turn_off_message">PGPony가 PIN 없이 열리게 됩니다. 강압 PIN과 잘못된 PIN 입력 시 지우기 설정도 함께 제거됩니다.</string>
+    <string name="d_applock_idle_title">잠금 시점</string>
+    <plurals name="d_applock_idle_minutes">
+        <item quantity="other">%1$d분 동안 사용하지 않으면</item>
+    </plurals>
+    <string name="d_applock_idle_never">실행할 때, 컴퓨터가 잠길 때, 직접 잠글 때만</string>
+    <string name="d_applock_not_touched">영향을 받지 않는 것: 하드웨어 보안 키에 있는 키(자체 PIN이 있음), PGPony 밖에 저장한 백업, PIN을 입력하기 전에 만들어진 이 컴퓨터 디스크의 사본.</string>
+    <string name="d_applock_disk_note">SSD나 copy-on-write 파일 시스템(APFS, btrfs)에서는 파일을 덮어써도 이전 데이터가 사라진다고 보장할 수 없으므로, 비밀구절이 없는 개인 키는 디스크를 손에 넣은 사람이 복구할 수 있습니다. 비밀구절이 있는 키는 계속 비밀구절로 보호됩니다.</string>
 </resources>

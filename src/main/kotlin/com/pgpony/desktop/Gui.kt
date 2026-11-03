@@ -582,6 +582,10 @@ enum class Destination(val labelKey: String, val icon: ImageVector, val enabled:
 // never renders one English frame and then swaps. Split in two only to keep the body's
 // indentation (and therefore its diff) untouched.
 fun cmdGui() {
+    // 3.1.0 (plan section 2): a duress wipe cut short finishes before anything is drawn, and a
+    // set PGPony PIN locks the window from the first frame.
+    DesktopAppLock.resumeIfPendingStandalone()
+    DesktopAppLock.lockAtLaunch()
     I18n.init()
     OfflineMode.initFromPrefs()
     guiApplication()
@@ -598,6 +602,8 @@ private fun guiApplication() = application {
     val trayEncrypt = tr("main_tab_encrypt")
     val trayKeyring = tr("main_tab_keyring")
     val trayQuit = tr("d_tray_quit")
+    val trayLock = tr("d_applock_lock_now")
+    val lockAvailable = DesktopAppLock.pinSet && !DesktopAppLock.locked
 
     // D12 — the real app mark on every OS surface that shows one. Both files come out of
     // tools/make-icons.py; appIcon() decodes each once for the process. The stock padlock stays
@@ -618,6 +624,9 @@ private fun guiApplication() = application {
             Item(trayOpen) { AppOpen.focusWindow?.invoke() }
             Item(trayEncrypt) { AppOpen.focusWindow?.invoke(); TrayNav.request = Destination.Crypto }
             Item(trayKeyring) { AppOpen.focusWindow?.invoke(); TrayNav.request = Destination.Keyring }
+            // 3.1.0 (plan 2.1): lock from the tray. While locked, the items above only bring the
+            // lock screen forward.
+            if (lockAvailable) Item(trayLock) { DesktopAppLock.lockNow() }
             Separator()
             Item(trayQuit) { exitApplication() }
         }
@@ -677,8 +686,23 @@ private fun guiApplication() = application {
                 kotlinx.coroutines.delay(150)
             }
         }
-        agentUnlock.value?.let { req ->
+        // 3.1.0: never over the lock screen (the agent refuses while locked anyway).
+        if (!DesktopAppLock.locked) agentUnlock.value?.let { req ->
             AgentUnlockDialog(req) { agentUnlock.value = null }
+        }
+
+        // 3.1.0 (plan 2.1): idle locking. Any key press, click or scroll in a PGPony window counts
+        // as activity; a timer locks once the chosen idle time has passed without any.
+        LaunchedEffect(Unit) {
+            val mask = java.awt.AWTEvent.KEY_EVENT_MASK or java.awt.AWTEvent.MOUSE_EVENT_MASK or
+                java.awt.AWTEvent.MOUSE_MOTION_EVENT_MASK or java.awt.AWTEvent.MOUSE_WHEEL_EVENT_MASK
+            runCatching {
+                java.awt.Toolkit.getDefaultToolkit().addAWTEventListener({ DesktopAppLock.noteActivity() }, mask)
+            }
+            while (true) {
+                DesktopAppLock.lockIfIdle()
+                kotlinx.coroutines.delay(5_000)
+            }
         }
 
         // D9 — key-expiration reminders. Re-scans whenever the keyring changes (it loads async
@@ -688,7 +712,8 @@ private fun guiApplication() = application {
         LaunchedEffect(state.keys) {
             while (true) {
                 ExpirationNotifier.due(state.keys, System.currentTimeMillis()).forEach { r ->
-                    if (seenExpiry.add(r.dedupeKey)) {
+                    // 3.1.0: no key names in notifications while locked; they come after unlocking.
+                    if (!DesktopAppLock.lockedNow && seenExpiry.add(r.dedupeKey)) {
                         trayState.sendNotification(
                             Notification(
                                 title = if (r.urgent) tr("d_notif_key_expiring") else tr("d_notif_key_expiration"),
@@ -746,7 +771,12 @@ private fun guiApplication() = application {
         // The mnemonics are read from the locale (see the header note) and fall back to the
         // English letter if a translation ever ships an empty one. The shortcuts are NOT
         // localized: Cmd/Ctrl+1 is muscle memory and stays put in every language.
-        MenuBar {
+        // 3.1.0 (plan 2.1): while locked the menu bar offers Quit only.
+        if (DesktopAppLock.locked) MenuBar {
+            Menu(tr("d_menu_file"), mnemonic = tr("d_menu_file_mnemonic").firstOrNull() ?: 'F') {
+                Item(tr("d_menu_quit"), shortcut = shortcut(Key.Q)) { exitApplication() }
+            }
+        } else MenuBar {
             Menu(tr("d_menu_file"), mnemonic = tr("d_menu_file_mnemonic").firstOrNull() ?: 'F') {
                 Item(tr("d_menu_goto_keyring"), shortcut = shortcut(Key.I)) { state.destination = Destination.Keyring }
                 // 3.0.0: the keyring's Import menu, reachable from the menu bar too.
@@ -762,6 +792,7 @@ private fun guiApplication() = application {
                 }
                 Item(tr("d_menu_restore_backup")) { state.destination = Destination.Settings; state.uiRequest = UiRequest.RESTORE }
                 Separator()
+                if (DesktopAppLock.pinSet) Item(tr("d_applock_lock_now"), shortcut = shortcut(Key.L)) { DesktopAppLock.lockNow() }
                 Item(tr("d_menu_quit"), shortcut = shortcut(Key.Q)) { exitApplication() }
             }
             Menu(tr("d_menu_keys"), mnemonic = tr("d_menu_keys_mnemonic").firstOrNull() ?: 'K') {
@@ -787,14 +818,19 @@ private fun guiApplication() = application {
         }
 
         PGPonyTheme {
-            App(state)
-            if (showAbout) AboutDialog(state) { showAbout = false }
-            // 3.0.0: a secret key for a held contact, from any import, waits here for its passphrase.
-            val waitingSecrets by state.repository.pendingSecrets.collectAsState()
-            waitingSecrets.firstOrNull()?.let { SecretUpgradeDialog(state, it) }
-            // 3.1.0 (plan 3e.5): in portable mode, a secret key without a passphrase waits here.
-            val heldSecrets by state.repository.unprotectedSecrets.collectAsState()
-            if (waitingSecrets.isEmpty()) heldSecrets.firstOrNull()?.let { ProtectHeldSecretDialog(state, it) }
+            // 3.1.0 (plan 2.1): nothing behind the lock screen is drawn while locked.
+            if (DesktopAppLock.locked) {
+                AppLockScreen(state)
+            } else {
+                App(state)
+                if (showAbout) AboutDialog(state) { showAbout = false }
+                // 3.0.0: a secret key for a held contact, from any import, waits here for its passphrase.
+                val waitingSecrets by state.repository.pendingSecrets.collectAsState()
+                waitingSecrets.firstOrNull()?.let { SecretUpgradeDialog(state, it) }
+                // 3.1.0 (plan 3e.5): in portable mode, a secret key without a passphrase waits here.
+                val heldSecrets by state.repository.unprotectedSecrets.collectAsState()
+                if (waitingSecrets.isEmpty()) heldSecrets.firstOrNull()?.let { ProtectHeldSecretDialog(state, it) }
+            }
         }
     }
 }
