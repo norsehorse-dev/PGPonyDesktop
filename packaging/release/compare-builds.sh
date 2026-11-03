@@ -15,6 +15,13 @@
 # beside them (lib/app/*.cfg: classpath, main class, JVM options) must match byte for byte. Exit
 # status is 0 when all of these match and 1 otherwise.
 #
+# 3.1.0: jars are paired by name without the content hash Compose appends to each file name
+# (foo-1.0-<hash>.jar). Compose re-packs the Skiko runtime jar each time it packages, with fresh
+# timestamps, so that one jar gets a new name in every build even when every entry is the same, and
+# pairing by full name never compared it. The launcher configuration is compared the same way,
+# with those hashes taken out of its classpath, and PGPony.bin.cfg (the name the release's
+# libfreetype launcher wrapper gives it, tools/linux-wrap-launcher.sh) is compared as PGPony.cfg.
+#
 # With --all, every other file is compared by sha256 as well and differences are listed. They are
 # informational only: the bundled Java runtime and the native launcher come from whichever JDK did
 # the build, so they match only when both sides used the same JDK build.
@@ -80,7 +87,7 @@ echo "A: $A ($rootA)"
 echo "B: $B ($rootB)"
 
 python3 - "$rootA" "$rootB" "$ALL" <<'PY'
-import hashlib, os, sys, zipfile
+import hashlib, os, re, sys, zipfile
 
 root_a, root_b, show_all = sys.argv[1], sys.argv[2], sys.argv[3] == '--all'
 
@@ -113,41 +120,83 @@ def files(root):
     return out
 
 fa, fb = files(root_a), files(root_b)
-jars = sorted(k for k in set(fa) | set(fb) if k.startswith('lib/app/') and k.endswith('.jar'))
+
+# Compose's content hash in a jar file name: the last dash-separated part, 16 to 32 hex digits.
+HASHED = re.compile(r'-[0-9a-f]{16,32}\.jar$')
+HASHED_IN_TEXT = re.compile(r'-[0-9a-f]{16,32}\.jar\b')
+
+def stable(name):
+    return HASHED.sub('.jar', name)
+
+def by_stable_name(found):
+    out, dupes = {}, []
+    for k, p in found.items():
+        if not (k.startswith('lib/app/') and k.endswith('.jar')):
+            continue
+        s = stable(k)
+        if s in out:
+            dupes.append(s)
+        out[s] = (k, p)
+    return out, dupes
+
+ja, dupes_a = by_stable_name(fa)
+jb, dupes_b = by_stable_name(fb)
 bad = 0
+for d in sorted(set(dupes_a + dupes_b)):
+    print('AMBIGUOUS %s (two jars share this name once the hash is taken off)' % d)
+    bad += 1
+jars = sorted(set(ja) | set(jb))
 for j in jars:
-    if j not in fa or j not in fb:
-        print('MISSING  %s (only in %s)' % (j, 'A' if j in fa else 'B'))
+    if j not in ja or j not in jb:
+        k = (ja.get(j) or jb.get(j))[0]
+        print('MISSING  %s (only in %s)' % (k, 'A' if j in ja else 'B'))
         bad += 1
         continue
-    da, db = jar_digest(fa[j]), jar_digest(fb[j])
+    (ka, pa), (kb, pb) = ja[j], jb[j]
+    da, db = jar_digest(pa), jar_digest(pb)
+    label = ka if ka == kb else '%s (B: %s)' % (ka, os.path.basename(kb))
     if da == db:
-        print('same     %s' % j)
+        print('same     %s' % label)
         continue
     bad += 1
-    print('DIFFERS  %s' % j)
+    print('DIFFERS  %s' % label)
     for e in sorted(set(da) | set(db)):
         if da.get(e) != db.get(e):
             print('           %s' % e)
 
 # The launcher configuration (classpath, main class, JVM options) decides what the jars run
 # with, so it must match byte for byte as well.
-cfgs = sorted(k for k in set(fa) | set(fb) if k.startswith('lib/app/') and k.endswith('.cfg'))
+def cfg_map(found):
+    out = {}
+    for k, p in found.items():
+        if k.startswith('lib/app/') and k.endswith('.cfg'):
+            out[k.replace('lib/app/PGPony.bin.cfg', 'lib/app/PGPony.cfg')] = (k, p)
+    return out
+
+def cfg_text(path):
+    with open(path, 'rb') as f:
+        return HASHED_IN_TEXT.sub('.jar', f.read().decode('utf-8', 'replace').replace('\r\n', '\n')).encode()
+
+ca, cb = cfg_map(fa), cfg_map(fb)
+cfgs = sorted(set(ca) | set(cb))
 for c in cfgs:
-    if c not in fa or c not in fb:
-        print('MISSING  %s (only in %s)' % (c, 'A' if c in fa else 'B'))
+    if c not in ca or c not in cb:
+        print('MISSING  %s (only in %s)' % ((ca.get(c) or cb.get(c))[0], 'A' if c in ca else 'B'))
         bad += 1
-    elif file_digest(fa[c]) != file_digest(fb[c]):
-        print('DIFFERS  %s' % c)
+        continue
+    (ka, pa), (kb, pb) = ca[c], cb[c]
+    label = ka if ka == kb else '%s (B: %s)' % (ka, os.path.basename(kb))
+    if cfg_text(pa) != cfg_text(pb):
+        print('DIFFERS  %s' % label)
         bad += 1
     else:
-        print('same     %s' % c)
+        print('same     %s' % label)
 
 if show_all:
     print('')
     print('Other files (informational):')
     for k in sorted(set(fa) | set(fb)):
-        if k in jars or k in cfgs:
+        if k.startswith('lib/app/') and (k.endswith('.jar') or k.endswith('.cfg')):
             continue
         if k not in fa or k not in fb:
             print('  only in %s: %s' % ('A' if k in fa else 'B', k))
