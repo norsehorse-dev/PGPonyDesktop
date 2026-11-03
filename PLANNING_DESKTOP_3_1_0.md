@@ -67,6 +67,9 @@ for large files (item 23), own-key re-import (item 24, #78), SHA-1 User ID bindi
 key certification (item 31), trust levels and Don't use (item 10), offline primary keys (item 22). Already on
 desktop: keytocard, per-file encryption, Clear All Data emptying Recently Deleted (Android item 33 is that bug).
 
+Nov 2: done as a full vendor sync to the PGPonyAndroid `v4.7.3` tag (vendor/README.md). The engine for every
+item above is in; the desktop UI for items 24, 27, 31, 10 and 22 is still to do. Item 23 is wired (3f).
+
 ## 3a. Blank GTK file chooser on some Linux launches (#12)
 
 Origin: #12 (antiX Linux 26.1). The file chooser opens blank with "drawing failure ... error occurred in
@@ -233,18 +236,20 @@ with an OS-held key (Q2), if that is adopted.
 
 ### 3e.4 Platforms
 
-- Windows: the release job also zips the app image (`createDistributable`) with an empty `PGPony-data` as
-  `PGPony-windows-portable.zip`.
+- Windows: the release job zips the installed msi image (both launchers, same files as the msi) with a
+  `PGPony-data` folder as `PGPony-windows-portable.zip`, then unzips it, runs `pgpony-cli list-keys` and fails
+  if anything appears in `%APPDATA%\PGPony` or the Java preferences key in the registry.
 - Linux: no new file. The tarball and AppImage gain the folder check; the docs say to make `PGPony-data` beside
   them. (A portable tarball with the folder inside would be a third Linux tarball for one empty folder.)
-- macOS: `PGPony-macOS-portable.zip` and `PGPony-macOS-intel-portable.zip`, each the notarized, stapled
-  `PGPony.app` plus an empty `PGPony-data`. Gatekeeper runs a quarantined app from a hidden read-only copy (App
-  Translocation), so `jpackage.app-path` points into `/private/var/folders/...`. PGPony asks the Security
-  framework for the original location (`SecTranslocateIsTranslocatedURL` and
-  `SecTranslocateCreateOriginalPathForURL`, as Sparkle does) and looks for `PGPony-data` there. That call needs
-  JNA, a new dependency pinned in `gradle/verification-metadata.xml` (3c's libtss2 route would need it too). If
-  that fails, it says so and explains how to clear the quarantine, never falling back to the host's Application
-  Support in silence. exFAT drives get AppleDouble `._` files beside the data; harmless.
+- macOS: `PGPony-macOS-portable.zip` and `PGPony-macOS-intel-portable.zip`, each the notarized app plus an empty
+  `PGPony-data`, made from the release dmgs by `packaging/release/make-portable-macos.sh` (stapled again as an
+  app, Gatekeeper-checked). Gatekeeper runs a quarantined app from a hidden read-only copy (App
+  Translocation), so `jpackage.app-path` points into `/private/var/folders/...`. The hidden copy is a nullfs
+  mount of the original, so PGPony reads the mount table (`/sbin/mount`) for the original location and looks for
+  `PGPony-data` there. No native code and no new dependency (the Security framework route would have needed JNA).
+  If the lookup fails the app cannot tell whether portable was meant: it says so on stderr with the
+  `xattr -dr com.apple.quarantine` fix and runs as an ordinary install. exFAT drives get AppleDouble `._` files
+  beside the data; harmless.
 
 ### 3e.5 Secret keys on the drive
 
@@ -284,6 +289,18 @@ files. Leaving no trace on the host is a different product (Tails).
 - Linux (Debian VM): tarball and AppImage on an exFAT stick, the same flow, and `~/.local/share/pgpony` and
   `~/.java` stay absent.
 
+## 3f. ML-DSA signing of large files (#14) (S, done)
+
+#14: encrypting and signing a large file with an ML-DSA key failed with "ML-DSA signing reads the whole file
+into memory and is limited to 512 MB", the same bug Android fixed in 4.7.0 item 23. With the 4.7.3 engine the
+composite signature hashes the content as it streams: `EncryptOps.encryptStream` passes the composite signer, so
+single files and folders no longer buffer (the 512 MB limit and its string are gone), detached signing uses
+`CompositeDocumentSigner.signDetachedStream`, and detached verify streams the content for composite and classical
+signatures alike (it used to read the whole file for both). On decrypt the engine now returns the streamed
+composite signature (`DecryptStreamResult.compositeStreamed`) instead of the content bytes; `SignatureSummary`
+grades it through `CompositeSignerGate.verifyStreamed`, or a good signature would read "signed by a key not held".
+Tests: `MlDsaFileStreamingTest` (file, folder, detached, tamper; a gated 600 MB run passes with a 256 MB heap).
+
 ## 4. Questions for Kevin
 
 - Q1. While PGPony is locked, should the ssh-agent and git shim refuse (and say "PGPony is locked"), keep working
@@ -307,3 +324,5 @@ Rev 0 seed with the duress PIN request. Goes to Rev 1 when Q1 to Q3 are answered
 Oct 23: section 3b added (remaining translation gaps; every language, Russian included, is already complete).
 Oct 23: section 3c added (keys generated in the TPM / Secure Enclave, user request), with Q5 and Q6.
 Nov 1: section 3e added (portable mode, user request): all three platforms, 3.1.0, unprotected secret keys refused; Q7.
+Nov 2: section 3 synced (vendor at v4.7.3), 3f added and done (#14), 3e built (portable mode; translocation by
+mount table instead of JNA).
