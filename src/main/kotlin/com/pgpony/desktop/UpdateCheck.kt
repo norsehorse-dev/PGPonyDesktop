@@ -212,6 +212,15 @@ fun UpdateSection(state: DesktopState) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+    // 3.1.0 (plan 3e.3): a portable copy updates by replacing the app, never its data folder.
+    if (status == UpdateCheck.Status.Available && PortableMode.active) {
+        Spacer(Modifier.height(Spacing.Small))
+        Text(
+            tr("d_settings_updates_portable_hint"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 
     Spacer(Modifier.height(Spacing.Medium))
 

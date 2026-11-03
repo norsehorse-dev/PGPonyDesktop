@@ -732,7 +732,6 @@
     <string name="d_err_recipient_unusable">PGPony\'nin şifreleyebileceği bir anahtar yok, bu yüzden hiçbir şey şifrelenmedi: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · imzalı, anahtar doğrulanmadı</string>
     <string name="d_file_sig_invalid"> · imza GEÇERSİZ</string>
-    <string name="d_file_err_composite_too_large">ML-DSA imzalama dosyanın tamamını belleğe okur ve 512 MB ile sınırlıdır. Daha küçük bir dosya imzalayın veya klasik bir imzalama anahtarı seçin.</string>
     <string name="d_file_verify_ok_unconfirmed">İmzalı, anahtar doğrulanmadı: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Şifresi çözüldü · imzalı, anahtar doğrulanmadı</string>
     <string name="d_edit_err_public_only">Bu işlem gizli anahtarı gerektiriyor, ancak anahtarlığınızda yalnızca açık anahtar var.</string>
@@ -971,4 +970,20 @@
     <string name="d_pair_err_not_backup">%1$s bir PGPony yedek dosyası değil.</string>
     <string name="d_settings_tray_icon">PGPony simgesini menü çubuğunda veya sistem tepsisinde göster</string>
     <string name="d_settings_tray_icon_note">Anahtar süresi hatırlatmaları ve izlenen klasör bildirimleri bu simge üzerinden gösterilir; simge gizliyken görünmezler.</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">Bu PGPony kopyası taşınabilir bir sürücüden çalışır ve yalnızca parola ifadesi olan gizli anahtarları saklar.</string>
+    <string name="d_portable_err_keygen_passphrase">Bu PGPony kopyası taşınabilir bir sürücüden çalışır ve yalnızca parola ifadesi olan gizli anahtarları saklar. Bu anahtarı oluşturmak için bir parola ifadesi girin.</string>
+    <string name="d_gen_portable_passphrase_required">Parola ifadesi gereklidir: bu kopya taşınabilir bir sürücüden çalışır ve sürücüyü eline geçiren herkes parola ifadesi olmayan bir anahtarı kullanabilir.</string>
+    <string name="d_portable_protect_title">Bu gizli anahtarı koru</string>
+    <string name="d_portable_protect_body">%1$s, parola ifadesi olmayan bir gizli anahtar içeriyordu. Bu PGPony kopyası taşınabilir bir sürücüden çalışır ve sürücüyü eline geçiren herkes korumasız bir anahtarı kullanabileceği için yalnızca parola ifadesi olan gizli anahtarları saklar. Gizli anahtarı eklemek için bir parola ifadesi belirleyin veya yalnızca açık anahtarı tutun.</string>
+    <string name="d_portable_protect_passphrase">Yeni parola ifadesi</string>
+    <string name="d_portable_protect_confirm">Parola ifadesini tekrarlayın</string>
+    <string name="d_portable_protect_mismatch">Parola ifadeleri eşleşmiyor.</string>
+    <string name="d_portable_protect_add">Koru ve ekle</string>
+    <string name="d_portable_protect_skip">Yalnızca açık anahtar</string>
+    <string name="d_portable_protect_failed">Gizli anahtar korunamadı, bu nedenle yalnızca açık anahtar tutuldu.</string>
+    <string name="d_status_portable_secret_added">%1$s için gizli anahtar eklendi ve yeni parola ifadesiyle korundu</string>
+    <string name="d_status_portable_secret_skipped">%1$s için yalnızca açık anahtar tutuldu</string>
+    <string name="d_about_portable_label">Taşınabilir, veri klasörü</string>
+    <string name="d_settings_updates_portable_hint">Bu taşınabilir bir kopyadır: taşınabilir sürümü indirin ve uygulamayı onunla değiştirin. PGPony-data klasörünü silmeyin.</string>
 </resources>

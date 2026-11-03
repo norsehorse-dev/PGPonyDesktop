@@ -786,7 +786,6 @@
     <string name="d_err_recipient_unusable">Нет ключа, для которого PGPony может зашифровать, поэтому ничего не зашифровано: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · подписано, ключ не проверен</string>
     <string name="d_file_sig_invalid"> · подпись НЕДЕЙСТВИТЕЛЬНА</string>
-    <string name="d_file_err_composite_too_large">Подпись ML-DSA загружает весь файл в память и ограничена 512 МБ. Подпишите файл меньшего размера или выберите классический ключ подписи.</string>
     <string name="d_file_verify_ok_unconfirmed">Подписано, ключ не проверен: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Расшифровано · подписано, ключ не проверен</string>
     <string name="d_edit_err_public_only">Для этого нужен закрытый ключ, а в связке ключей есть только открытый.</string>
@@ -1027,4 +1026,20 @@
     <string name="d_pair_err_not_backup">%1$s: не является файлом резервной копии PGPony.</string>
     <string name="d_settings_tray_icon">Показывать значок PGPony в строке меню или в системном трее</string>
     <string name="d_settings_tray_icon_note">Напоминания об истечении срока ключей и уведомления отслеживаемых папок показываются через этот значок, поэтому, пока он скрыт, они не появляются.</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">Эта копия PGPony запущена с переносного накопителя и хранит только закрытые ключи, защищённые парольной фразой.</string>
+    <string name="d_portable_err_keygen_passphrase">Эта копия PGPony запущена с переносного накопителя и хранит только закрытые ключи, защищённые парольной фразой. Введите парольную фразу, чтобы создать этот ключ.</string>
+    <string name="d_gen_portable_passphrase_required">Нужна парольная фраза: эта копия запущена с переносного накопителя, и ключом без неё сможет воспользоваться любой, у кого окажется накопитель.</string>
+    <string name="d_portable_protect_title">Защитить этот закрытый ключ</string>
+    <string name="d_portable_protect_body">%1$s: содержит закрытый ключ без парольной фразы. Эта копия PGPony запущена с переносного накопителя, и незащищённым ключом сможет воспользоваться любой, у кого окажется накопитель, поэтому она хранит только закрытые ключи с парольной фразой. Задайте парольную фразу, чтобы добавить закрытый ключ, или оставьте только открытый ключ.</string>
+    <string name="d_portable_protect_passphrase">Новая парольная фраза</string>
+    <string name="d_portable_protect_confirm">Повторите парольную фразу</string>
+    <string name="d_portable_protect_mismatch">Парольные фразы не совпадают.</string>
+    <string name="d_portable_protect_add">Защитить и добавить</string>
+    <string name="d_portable_protect_skip">Только открытый ключ</string>
+    <string name="d_portable_protect_failed">Не удалось защитить закрытый ключ, поэтому сохранён только открытый ключ.</string>
+    <string name="d_status_portable_secret_added">Закрытый ключ для %1$s добавлен и защищён новой парольной фразой</string>
+    <string name="d_status_portable_secret_skipped">Для %1$s сохранён только открытый ключ</string>
+    <string name="d_about_portable_label">Портативная версия, данные в</string>
+    <string name="d_settings_updates_portable_hint">Это портативная копия: скачайте портативную версию и замените ею приложение. Папку PGPony-data сохраните.</string>
 </resources>

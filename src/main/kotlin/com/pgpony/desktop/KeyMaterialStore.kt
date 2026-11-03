@@ -28,7 +28,19 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.SecureRandom
 
-class KeyMaterialStore(private val dir: Path) {
+/** 3.1.0 (plan 3e.5): a secret key without a passphrase, refused in portable mode. */
+class UnprotectedSecretException(val fingerprint: String) :
+    IllegalStateException(tr("d_portable_err_unprotected_secret"))
+
+class KeyMaterialStore(
+    private val dir: Path,
+    /**
+     * 3.1.0 (plan 3e.5): true in portable mode, where every secret key stored must carry a
+     * passphrase. The repository holds an unprotected one back and asks for a passphrase first;
+     * this is the backstop for any path that does not.
+     */
+    private val requireProtectedSecrets: () -> Boolean = { PortableMode.active }
+) {
 
     init {
         OwnerOnlyPaths.createPrivateDirectories(dir)
@@ -39,12 +51,36 @@ class KeyMaterialStore(private val dir: Path) {
     private fun secFile(fingerprint: String): Path = dir.resolve("${norm(fingerprint)}.sec.asc")
 
     fun storePublic(fingerprint: String, armored: String) = write(pubFile(fingerprint), PacketFraming.currentArmor(armored))
-    fun storeSecret(fingerprint: String, armored: String) = write(secFile(fingerprint), PacketFraming.currentArmor(armored))
+    /** True when every stored secret key must carry a passphrase (portable mode). */
+    val requiresProtectedSecrets: Boolean get() = requireProtectedSecrets()
+
+    fun storeSecret(fingerprint: String, armored: String) {
+        if (requireProtectedSecrets() && !isProtected(armored)) throw UnprotectedSecretException(fingerprint)
+        write(secFile(fingerprint), PacketFraming.currentArmor(armored))
+    }
+
+    /**
+     * [storeSecret] without the portable check: only for the moment between storing a held
+     * unprotected secret and protecting it (DesktopKeyRepository.protectHeldSecret).
+     */
+    internal fun storeSecretUnchecked(fingerprint: String, armored: String) =
+        write(secFile(fingerprint), PacketFraming.currentArmor(armored))
+
+    /** Every secret (sub)key that carries material has a passphrase (card and offline stubs pass). */
+    fun isProtected(armored: String): Boolean =
+        runCatching {
+            com.pgpony.android.crypto.SecretKeyCheck.isFullyPassphraseProtected(armored.toByteArray(Charsets.UTF_8))
+        }.getOrDefault(false)
 
     fun loadPublic(fingerprint: String): String? = load(pubFile(fingerprint))
     fun loadSecret(fingerprint: String): String? = load(secFile(fingerprint))
 
     fun hasSecret(fingerprint: String): Boolean = Files.exists(secFile(fingerprint))
+
+    /** Remove the secret half only (3.1.0: undo of a portable passphrase step that failed). */
+    fun deleteSecret(fingerprint: String) {
+        Files.deleteIfExists(secFile(fingerprint))
+    }
 
     fun delete(fingerprint: String) {
         Files.deleteIfExists(pubFile(fingerprint))

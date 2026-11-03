@@ -345,10 +345,54 @@ jobs:
           if ($ci -match  'MISSING from this runtime') { throw 'smartcardio did not resolve at runtime' }
           if ($ci -match  'Usage: pgpony')    { throw 'card-info fell through to the usage text' }
 
+      # 3.1.0 (plan 3e): the portable zip. Taken from the INSTALLED msi image above, so it holds
+      # exactly the files the msi installs (both launchers, the jlink runtime), plus the
+      # PGPony-data folder that switches portable mode on. Compress-Archive drops empty folders,
+      # so the folder carries a short README.
+      - name: Build the portable zip
+        shell: pwsh
+        run: |
+          $img = 'C:\Program Files\PGPony'
+          $stage = Join-Path $env:RUNNER_TEMP 'portable'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item -Recurse $img (Join-Path $stage 'PGPony')
+          $data = Join-Path $stage 'PGPony\PGPony-data'
+          New-Item -ItemType Directory -Force -Path $data | Out-Null
+          Set-Content -Path (Join-Path $data 'README.txt') -Encoding utf8 -Value @(
+            'PGPony keeps its keys and settings in this folder while it runs from here.',
+            'Delete or rename the folder and PGPony uses the computer''s own folders again.',
+            'To update, replace the PGPony folder''s other files with the new version and keep this folder.'
+          )
+          Compress-Archive -Path (Join-Path $stage 'PGPony') -DestinationPath PGPony-windows-portable.zip
+          Get-Item PGPony-windows-portable.zip | Format-List Name, Length
+
+      # Portable means nothing lands on the host: run the CLI from an unzipped copy, then check
+      # the keyring is in PGPony-data and that neither %APPDATA%\PGPony nor the Java preferences
+      # key in the registry appeared.
+      - name: Verify the portable zip keeps everything in PGPony-data
+        shell: pwsh
+        run: |
+          $appdata = Join-Path $env:APPDATA 'PGPony'
+          $prefsKey = 'HKCU:\Software\JavaSoft\Prefs\app'
+          if (Test-Path $appdata) { Remove-Item -Recurse -Force $appdata }
+          if (Test-Path $prefsKey) { Remove-Item -Recurse -Force $prefsKey }
+          $try = Join-Path $env:RUNNER_TEMP 'portable-try'
+          Expand-Archive PGPony-windows-portable.zip -DestinationPath $try
+          $cli = Join-Path $try 'PGPony\pgpony-cli.exe'
+          $out = & $cli list-keys 2>&1 | Out-String
+          Write-Host "portable list-keys -> '$($out.Trim())'"
+          $db = Join-Path $try 'PGPony\PGPony-data\pgpony.db'
+          if (-not (Test-Path $db)) { throw "the portable copy did not keep its keyring in PGPony-data" }
+          if (Test-Path $appdata) { throw "the portable copy wrote to $appdata" }
+          if (Test-Path $prefsKey) { throw "the portable copy wrote Java preferences to the registry" }
+          Write-Host 'portable: keyring in PGPony-data, nothing in APPDATA or the registry'
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: msi
-          path: PGPony-windows.msi
+          path: |
+            PGPony-windows.msi
+            PGPony-windows-portable.zip
 
   draft:
     name: Open the draft release
@@ -374,6 +418,7 @@ jobs:
           mv artifacts/linux-aarch64/PGPony-linux-aarch64.tar.gz dist/
           mv artifacts/linux-aarch64/PGPony-aarch64.AppImage dist/
           mv artifacts/msi/PGPony-windows.msi dist/
+          mv artifacts/msi/PGPony-windows-portable.zip dist/
           ls -l dist
           ( cd dist && sha256sum * ) | tee CI-SHA256SUMS
 
@@ -420,6 +465,7 @@ jobs:
             dist/PGPony-linux-aarch64.tar.gz \
             dist/PGPony-aarch64.AppImage \
             dist/PGPony-windows.msi \
+            dist/PGPony-windows-portable.zip \
             --repo "${{ github.repository }}" \
             --title "PGPony Desktop ${{ github.ref_name }}" \
             --draft \

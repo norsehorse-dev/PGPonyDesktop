@@ -118,6 +118,8 @@ class DesktopKeyRepository(
         passphrase: String?,
         expirationSeconds: Long? = null
     ): PGPKeyEntity {
+        // 3.1.0 (plan 3e.5): a portable copy stores only keys with a passphrase.
+        if (materials.requiresProtectedSecrets && passphrase.isNullOrEmpty()) error(tr("d_portable_err_keygen_passphrase"))
         if (algorithm.isCompositeSign) {
             return generateCompositeSigningKey(name, email, algorithm, passphrase, expirationSeconds)
         }
@@ -367,6 +369,53 @@ class DesktopKeyRepository(
         pendingFlow.value = pendingFlow.value.filter { !it.fingerprint.equals(fingerprint, true) }
     }
 
+    // ── 3.1.0 (plan 3e.5): unprotected secret keys in portable mode ────────
+    //
+    // Whoever holds the drive holds the keyring, so a portable copy stores a secret key only when
+    // it carries a passphrase. An import that brings one without stores the public key, keeps the
+    // secret here in memory, and the window asks for a passphrase to protect it with. Skipping
+    // leaves the public key only; quitting forgets the secret, since it was never written.
+
+    private val unprotectedFlow = kotlinx.coroutines.flow.MutableStateFlow<List<PendingSecret>>(emptyList())
+
+    /** Secret keys without a passphrase that a portable import held back; the GUI asks for each. */
+    val unprotectedSecrets: kotlinx.coroutines.flow.StateFlow<List<PendingSecret>> get() = unprotectedFlow
+
+    /** False in portable mode for a secret block that is not passphrase-protected throughout. */
+    private fun mayStoreSecret(block: String): Boolean = !materials.requiresProtectedSecrets || materials.isProtected(block)
+
+    private fun holdUnprotected(fingerprint: String, label: String, block: String) {
+        val p = PendingSecret(fingerprint, label, block)
+        unprotectedFlow.value = unprotectedFlow.value.filter { !it.fingerprint.equals(fingerprint, true) } + p
+    }
+
+    /** Leave a held secret out; the key stays public only. */
+    fun dismissUnprotectedSecret(fingerprint: String) {
+        unprotectedFlow.value = unprotectedFlow.value.filter { !it.fingerprint.equals(fingerprint, true) }
+    }
+
+    /**
+     * Protect a held secret with [newPassphrase] and add it to its key. The block is stored, the
+     * row becomes a key pair, and the key's passphrase is changed from none to [newPassphrase]
+     * through the same path as Key Detail's Change passphrase; if that fails nothing stays behind.
+     */
+    suspend fun protectHeldSecret(pending: PendingSecret, newPassphrase: String): Boolean {
+        require(newPassphrase.isNotEmpty())
+        val row = byFingerprint(pending.fingerprint) ?: run { dismissUnprotectedSecret(pending.fingerprint); return false }
+        return try {
+            materials.storeSecretUnchecked(row.fingerprint, pending.block)
+            dao.update(row.copy(isKeyPair = true))
+            DesktopKeyEdits(this).changePassphrase(row.fingerprint, "", newPassphrase)
+            check(materials.isProtected(materials.loadSecret(row.fingerprint).orEmpty()))
+            dismissUnprotectedSecret(pending.fingerprint)
+            true
+        } catch (t: Throwable) {
+            runCatching { materials.deleteSecret(row.fingerprint) }
+            runCatching { dao.update(row.copy(isKeyPair = false)) }
+            false
+        }
+    }
+
     /**
      * Add a waiting secret key with its [passphrase]. The key is added only when the secret
      * unlocks with it and proves to belong to the stored contact (SecretKeyCheck); the result
@@ -580,7 +629,10 @@ class DesktopKeyRepository(
                 val expiresAt = result.publicKeyRing?.publicKey?.validSeconds
                     ?.takeIf { it > 0 }?.let { createdAt + it * 1000L }
                 publicArmor?.let { materials.storePublic(fingerprint, it) }
-                if (result.hasPrivateKey) materials.storeSecret(fingerprint, block)
+                // 3.1.0 (plan 3e.5): in portable mode an unprotected secret waits for a passphrase.
+                val keepSecret = result.hasPrivateKey && mayStoreSecret(block)
+                if (result.hasPrivateKey && !keepSecret) holdUnprotected(fingerprint, result.userID.ifBlank { fingerprint.take(16) }, block)
+                if (keepSecret) materials.storeSecret(fingerprint, block)
                 dao.insert(
                     PGPKeyEntity(
                         id = UUID.randomUUID().toString(),
@@ -589,7 +641,7 @@ class DesktopKeyRepository(
                         userName = name,
                         userEmail = email,
                         algorithm = result.algorithm,
-                        isKeyPair = result.hasPrivateKey,
+                        isKeyPair = keepSecret,
                         createdAt = createdAt,
                         expiresAt = expiresAt,
                         armoredPublicKey = publicArmor
@@ -601,6 +653,10 @@ class DesktopKeyRepository(
             result.hasPrivateKey && !existing.isKeyPair -> {
                 val gate = UpgradeGate(block, secretPassphrase, freshInCall, outcome)
                 gate.check(existing, block.toByteArray(Charsets.UTF_8))?.let { return it }
+                if (!mayStoreSecret(block)) {
+                    holdUnprotected(fingerprint, labelOf(existing), block)
+                    return ImportResolution.ALREADY_IN_KEYRING
+                }
                 materials.storeSecret(fingerprint, block)
                 // 3.0.0 (5d-3): the certificate already held may carry newer self-signatures
                 // (changed preferences, a later expiry) than the key being added; keep the
@@ -762,14 +818,21 @@ class DesktopKeyRepository(
         if (existing != null) {
             if (hasPrivate && !existing.isKeyPair) {
                 gate.check(existing, bytes)?.let { return it }
-                materials.storeSecret(existing.fingerprint, armoredSecret!!)
+                if (!mayStoreSecret(armoredSecret!!)) {
+                    holdUnprotected(existing.fingerprint, labelOf(existing), armoredSecret)
+                    return ImportResolution.ALREADY_IN_KEYRING
+                }
+                materials.storeSecret(existing.fingerprint, armoredSecret)
                 dao.update(existing.copy(isKeyPair = true, armoredPublicKey = armoredPublic))
                 return ImportResolution.UPGRADED_TO_KEY_PAIR
             }
             return ImportResolution.ALREADY_IN_KEYRING
         }
         materials.storePublic(fingerprint, armoredPublic)
-        armoredSecret?.let { materials.storeSecret(fingerprint, it) }
+        // 3.1.0 (plan 3e.5): in portable mode an unprotected secret waits for a passphrase.
+        val keepSecret = armoredSecret != null && mayStoreSecret(armoredSecret)
+        if (armoredSecret != null && !keepSecret) holdUnprotected(fingerprint, userId.ifBlank { fingerprint.take(16) }, armoredSecret)
+        if (keepSecret) materials.storeSecret(fingerprint, armoredSecret!!)
         val parsed = PGPKeyEntity.parseUserID(userId)
         dao.insert(
             PGPKeyEntity(
@@ -779,7 +842,7 @@ class DesktopKeyRepository(
                 userName = parsed.first,
                 userEmail = parsed.second,
                 algorithm = algorithm,
-                isKeyPair = hasPrivate,
+                isKeyPair = keepSecret,
                 createdAt = createdAt,
                 expiresAt = expiresAt,
                 armoredPublicKey = armoredPublic

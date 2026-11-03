@@ -88,6 +88,12 @@ fun AboutDialog(state: DesktopState, onDismiss: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            // 3.1.0 (plan 3e): say where a portable copy keeps its keys and settings.
+            PortableMode.dataDir?.let { dir ->
+                Spacer(Modifier.height(Spacing.Medium))
+                LabeledValue(label = tr("d_about_portable_label"), value = dir.toString(), monospace = true)
+            }
+
             Spacer(Modifier.height(Spacing.Medium))
             // The first thing anyone will be asked for in a bug report, and the last thing a user
             // can be expected to assemble on their own.

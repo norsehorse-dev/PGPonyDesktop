@@ -303,6 +303,25 @@ class DesktopState(private val scope: CoroutineScope) {
         status = tr("d_status_secret_skipped", pending.label)
     }
 
+    /**
+     * 3.1.0 (plan 3e.5): a portable import held back a secret key without a passphrase
+     * (DesktopKeyRepository.unprotectedSecrets); protect it with [passphrase] and add it.
+     */
+    fun protectHeldSecret(pending: PendingSecret, passphrase: String, onDone: (Boolean) -> Unit) = scope.launch {
+        val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            repository.protectHeldSecret(pending, passphrase)
+        }
+        status = if (ok) tr("d_status_portable_secret_added", pending.label) else tr("d_portable_protect_failed")
+        if (!ok) repository.dismissUnprotectedSecret(pending.fingerprint)
+        refresh()
+        onDone(ok)
+    }
+
+    fun dismissUnprotectedSecret(pending: PendingSecret) {
+        repository.dismissUnprotectedSecret(pending.fingerprint)
+        status = tr("d_status_portable_secret_skipped", pending.label)
+    }
+
     /** D2b — full Android generateKey port (incl. pre-cached revocation certificate).
      *  Returns immediately; completion lands in [status]. RSA-4096 can take a while. */
     fun generate(request: KeygenRequest, onDone: (PGPKeyEntity) -> Unit) = scope.launch {
@@ -773,6 +792,9 @@ private fun guiApplication() = application {
             // 3.0.0: a secret key for a held contact, from any import, waits here for its passphrase.
             val waitingSecrets by state.repository.pendingSecrets.collectAsState()
             waitingSecrets.firstOrNull()?.let { SecretUpgradeDialog(state, it) }
+            // 3.1.0 (plan 3e.5): in portable mode, a secret key without a passphrase waits here.
+            val heldSecrets by state.repository.unprotectedSecrets.collectAsState()
+            if (waitingSecrets.isEmpty()) heldSecrets.firstOrNull()?.let { ProtectHeldSecretDialog(state, it) }
         }
     }
 }

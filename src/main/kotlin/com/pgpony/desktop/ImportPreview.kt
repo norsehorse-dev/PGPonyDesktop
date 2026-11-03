@@ -263,3 +263,76 @@ fun SecretUpgradeDialog(state: DesktopState, pending: PendingSecret) {
         }
     )
 }
+
+/**
+ * 3.1.0 (plan 3e.5): [pending] came with a secret key that has no passphrase, and this copy runs
+ * from a portable drive, where anyone holding the drive could use such a key. Set a passphrase to
+ * add the secret key protected, or keep the public key only.
+ */
+@Composable
+fun ProtectHeldSecretDialog(state: DesktopState, pending: PendingSecret) {
+    var pass by remember(pending.fingerprint) { mutableStateOf("") }
+    var confirm by remember(pending.fingerprint) { mutableStateOf("") }
+    var working by remember(pending.fingerprint) { mutableStateOf(false) }
+    val mismatch = confirm.isNotEmpty() && pass != confirm
+    val canAdd = pass.isNotEmpty() && pass == confirm && !working
+
+    BrandDialog(
+        onDismissRequest = { if (!working) state.dismissUnprotectedSecret(pending) },
+        title = tr("d_portable_protect_title"),
+        content = {
+            Column(Modifier.fillMaxWidth()) {
+                Text(tr("d_portable_protect_body", pending.label), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    pending.fingerprint.uppercase().chunked(4).joinToString(" "),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = pass,
+                    onValueChange = { pass = it },
+                    singleLine = true,
+                    enabled = !working,
+                    visualTransformation = PasswordVisualTransformation(),
+                    label = { Text(tr("d_portable_protect_passphrase")) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = { confirm = it },
+                    singleLine = true,
+                    enabled = !working,
+                    isError = mismatch,
+                    visualTransformation = PasswordVisualTransformation(),
+                    label = { Text(tr("d_portable_protect_confirm")) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (mismatch) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        tr("d_portable_protect_mismatch"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = canAdd, onClick = {
+                working = true
+                state.protectHeldSecret(pending, pass) { working = false }
+            }) {
+                Text(if (working) tr("d_common_working") else tr("d_portable_protect_add"))
+            }
+        },
+        dismissButton = {
+            TextButton(enabled = !working, onClick = { state.dismissUnprotectedSecret(pending) }) {
+                Text(tr("d_portable_protect_skip"))
+            }
+        }
+    )
+}

@@ -732,7 +732,6 @@
     <string name="d_err_recipient_unusable">Aucune clé pour laquelle PGPony peut chiffrer, donc rien n\'a été chiffré : %1$s</string>
     <string name="d_file_sig_unconfirmed"> · signé, clé non vérifiée</string>
     <string name="d_file_sig_invalid"> · signature INVALIDE</string>
-    <string name="d_file_err_composite_too_large">La signature ML-DSA charge tout le fichier en mémoire et est limitée à 512 Mo. Signez un fichier plus petit ou choisissez une clé de signature classique.</string>
     <string name="d_file_verify_ok_unconfirmed">Signé, clé non vérifiée : %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Déchiffré · signé, clé non vérifiée</string>
     <string name="d_edit_err_public_only">Cela nécessite la clé privée, et seule la clé publique est dans votre trousseau.</string>
@@ -971,4 +970,20 @@
     <string name="d_pair_err_not_backup">%1$s n\'est pas un fichier de sauvegarde PGPony.</string>
     <string name="d_settings_tray_icon">Afficher l\'icône PGPony dans la barre des menus ou la zone de notification</string>
     <string name="d_settings_tray_icon_note">Les rappels d\'expiration de clés et les alertes des dossiers surveillés passent par cette icône, ils n\'apparaissent donc pas tant qu\'elle est masquée.</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">Cette copie de PGPony s\'exécute depuis un support amovible et n\'enregistre que les clés secrètes protégées par une phrase secrète.</string>
+    <string name="d_portable_err_keygen_passphrase">Cette copie de PGPony s\'exécute depuis un support amovible et n\'enregistre que les clés secrètes protégées par une phrase secrète. Saisissez-en une pour créer cette clé.</string>
+    <string name="d_gen_portable_passphrase_required">Une phrase secrète est obligatoire : cette copie s\'exécute depuis un support amovible, et toute personne qui a ce support entre les mains pourrait utiliser une clé qui n\'en a pas.</string>
+    <string name="d_portable_protect_title">Protéger cette clé secrète</string>
+    <string name="d_portable_protect_body">%1$s contenait une clé secrète sans phrase secrète. Cette copie de PGPony s\'exécute depuis un support amovible, et toute personne qui a ce support entre les mains pourrait utiliser une clé non protégée : elle n\'enregistre donc que les clés secrètes protégées par une phrase secrète. Définissez-en une pour ajouter la clé secrète, ou conservez uniquement la clé publique.</string>
+    <string name="d_portable_protect_passphrase">Nouvelle phrase secrète</string>
+    <string name="d_portable_protect_confirm">Répéter la phrase secrète</string>
+    <string name="d_portable_protect_mismatch">Les phrases secrètes ne correspondent pas.</string>
+    <string name="d_portable_protect_add">Protéger et ajouter</string>
+    <string name="d_portable_protect_skip">Clé publique uniquement</string>
+    <string name="d_portable_protect_failed">La clé secrète n\'a pas pu être protégée, seule la clé publique a donc été conservée.</string>
+    <string name="d_status_portable_secret_added">Clé secrète de %1$s ajoutée et protégée par la nouvelle phrase secrète</string>
+    <string name="d_status_portable_secret_skipped">Seule la clé publique de %1$s a été conservée</string>
+    <string name="d_about_portable_label">Portable, données dans</string>
+    <string name="d_settings_updates_portable_hint">Ceci est une copie portable : téléchargez la version portable et remplacez l\'application par celle-ci. Conservez le dossier PGPony-data.</string>
 </resources>

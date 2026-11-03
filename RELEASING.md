@@ -135,6 +135,23 @@ leaves the result in `~/pgpony-release/PGPony-macOS-intel.dmg`. Run the same `sp
 it as above. The x86_64 app runs on the Apple silicon Mac through Rosetta, which is the smoke
 test available here; nobody has run it on Intel hardware before the first release.
 
+### The macOS portable zips (3.1.0)
+
+Portable mode (PLANNING_DESKTOP_3_1_0.md, 3e) ships as a zip per Mac: the notarized app beside an
+empty `PGPony-data` folder. The script copies the app out of each finished dmg, staples the app
+itself (a zip has no dmg to carry the ticket, and a portable copy may be opened offline), checks it
+with Gatekeeper and zips it:
+
+```sh
+zsh packaging/release/make-portable-macos.sh ~/pgpony-release/PGPony-macOS.dmg ~/pgpony-release/PGPony-macOS-portable.zip
+zsh packaging/release/make-portable-macos.sh ~/pgpony-release/PGPony-macOS-intel.dmg ~/pgpony-release/PGPony-macOS-intel-portable.zip
+```
+
+Both runs must print `accepted` and `source=Notarized Developer ID`. CI builds the Windows portable
+zip itself (from the installed msi image, then checks that nothing lands in `%APPDATA%` or the
+registry). Linux needs no file of its own: the tarball and the AppImage turn portable when a
+`PGPony-data` folder sits beside them.
+
 ## 4. Assemble, sign, publish
 
 Pull CI's two installers down beside your dmg, then sign all three together so `SHA256SUMS`
@@ -148,6 +165,8 @@ gh release download v1.0.3 --repo norsehorse-dev/PGPonyDesktop --dir .
 FILES=(
   PGPony-macOS.dmg
   PGPony-macOS-intel.dmg
+  PGPony-macOS-portable.zip
+  PGPony-macOS-intel-portable.zip
   PGPony-linux.deb
   PGPony-linux-x86_64.tar.gz
   PGPony-x86_64.AppImage
@@ -155,6 +174,7 @@ FILES=(
   PGPony-linux-aarch64.tar.gz
   PGPony-aarch64.AppImage
   PGPony-windows.msi
+  PGPony-windows-portable.zip
 )
 ```
 
@@ -253,13 +273,14 @@ filename made of all three names joined, and every command in this block then fa
 that looks like the files are missing. An array expands to separate words in zsh.
 
 The explicit `-u` is not decoration either: a bare `gpg --detach-sign` failed with "no default
-secret key" during the 1.0.1 cycle. Ten signatures now, not four — check the `gpg --verify`
-loop printed ten `Good signature` lines before going any further.
+secret key" during the 1.0.1 cycle. Thirteen signatures since 3.1.0 (twelve files and
+SHA256SUMS): check the `gpg --verify` loop printed thirteen `Good signature` lines before going
+any further.
 
 Verify before publishing, not after. A signature that does not check out is worse than none.
 
 ```sh
-gh release upload v1.0.3 PGPony-macOS.dmg PGPony-macOS-intel.dmg *.asc SHA256SUMS \
+gh release upload v1.0.3 PGPony-macOS.dmg PGPony-macOS-intel.dmg PGPony-macOS-portable.zip PGPony-macOS-intel-portable.zip *.asc SHA256SUMS \
   --repo norsehorse-dev/PGPonyDesktop
 gh release edit v1.0.3 --draft=false --latest --repo norsehorse-dev/PGPonyDesktop
 ```

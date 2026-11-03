@@ -705,7 +705,6 @@
     <string name="d_err_recipient_unusable">没有 PGPony 可以加密给的密钥，因此未加密任何内容：%1$s</string>
     <string name="d_file_sig_unconfirmed"> · 已签名，密钥未经验证</string>
     <string name="d_file_sig_invalid"> · 签名无效</string>
-    <string name="d_file_err_composite_too_large">ML-DSA 签名需要将整个文件读入内存，上限为 512 MB。请签名较小的文件，或选择一个传统签名密钥。</string>
     <string name="d_file_verify_ok_unconfirmed">已签名，密钥未经验证：%1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">已解密 · 已签名，密钥未经验证</string>
     <string name="d_edit_err_public_only">此操作需要私钥，而你的密钥环中只有公钥。</string>
@@ -943,4 +942,20 @@
     <string name="d_pair_err_not_backup">%1$s 不是 PGPony 备份文件。</string>
     <string name="d_settings_tray_icon">在菜单栏或系统托盘中显示 PGPony 图标</string>
     <string name="d_settings_tray_icon_note">密钥到期提醒和监视文件夹通知通过此图标显示，因此隐藏图标期间不会出现。</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">此 PGPony 从移动存储设备运行，只会存储设有口令的私钥。</string>
+    <string name="d_portable_err_keygen_passphrase">此 PGPony 从移动存储设备运行，只会存储设有口令的私钥。请输入口令以创建此密钥。</string>
+    <string name="d_gen_portable_passphrase_required">必须设置口令：此 PGPony 从移动存储设备运行，没有口令的密钥任何拿到该设备的人都能使用。</string>
+    <string name="d_portable_protect_title">保护此私钥</string>
+    <string name="d_portable_protect_body">%1$s 包含一个没有口令的私钥。此 PGPony 从移动存储设备运行，未受保护的密钥任何拿到该设备的人都能使用，因此它只存储设有口令的私钥。请设置口令以添加该私钥，或只保留公钥。</string>
+    <string name="d_portable_protect_passphrase">新口令</string>
+    <string name="d_portable_protect_confirm">再次输入口令</string>
+    <string name="d_portable_protect_mismatch">两次口令不一致。</string>
+    <string name="d_portable_protect_add">保护并添加</string>
+    <string name="d_portable_protect_skip">仅保留公钥</string>
+    <string name="d_portable_protect_failed">无法保护该私钥，因此只保留了公钥。</string>
+    <string name="d_status_portable_secret_added">已为 %1$s 添加私钥，并用新口令加以保护</string>
+    <string name="d_status_portable_secret_skipped">仅保留了 %1$s 的公钥</string>
+    <string name="d_about_portable_label">便携版，数据位于</string>
+    <string name="d_settings_updates_portable_hint">这是便携版：请下载便携版并用它替换当前应用，保留 PGPony-data 文件夹。</string>
 </resources>

@@ -732,7 +732,6 @@
     <string name="d_err_recipient_unusable">Kein Schlüssel, an den PGPony verschlüsseln kann, daher wurde nichts verschlüsselt: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · signiert, Schlüssel nicht verifiziert</string>
     <string name="d_file_sig_invalid"> · Signatur UNGÜLTIG</string>
-    <string name="d_file_err_composite_too_large">ML-DSA-Signaturen lesen die ganze Datei in den Arbeitsspeicher und sind auf 512 MB begrenzt. Signiere eine kleinere Datei oder wähle einen klassischen Signaturschlüssel.</string>
     <string name="d_file_verify_ok_unconfirmed">Signiert, Schlüssel nicht verifiziert: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Entschlüsselt · signiert, Schlüssel nicht verifiziert</string>
     <string name="d_edit_err_public_only">Dafür wird der private Schlüssel benötigt, in deinem Schlüsselbund ist aber nur der öffentliche.</string>
@@ -971,4 +970,20 @@
     <string name="d_pair_err_not_backup">%1$s ist keine PGPony-Backup-Datei.</string>
     <string name="d_settings_tray_icon">PGPony-Symbol in der Menüleiste bzw. im Infobereich anzeigen</string>
     <string name="d_settings_tray_icon_note">Erinnerungen an ablaufende Schlüssel und Hinweise von überwachten Ordnern laufen über dieses Symbol und erscheinen nicht, solange es ausgeblendet ist.</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">Diese PGPony-Kopie läuft von einem mobilen Laufwerk und speichert nur geheime Schlüssel, die eine Passphrase haben.</string>
+    <string name="d_portable_err_keygen_passphrase">Diese PGPony-Kopie läuft von einem mobilen Laufwerk und speichert nur geheime Schlüssel, die eine Passphrase haben. Gib eine ein, um diesen Schlüssel zu erstellen.</string>
+    <string name="d_gen_portable_passphrase_required">Eine Passphrase ist erforderlich: Diese Kopie läuft von einem mobilen Laufwerk, und wer das Laufwerk in die Hände bekommt, könnte einen Schlüssel ohne Passphrase verwenden.</string>
+    <string name="d_portable_protect_title">Diesen geheimen Schlüssel schützen</string>
+    <string name="d_portable_protect_body">%1$s enthielt einen geheimen Schlüssel ohne Passphrase. Diese PGPony-Kopie läuft von einem mobilen Laufwerk, und wer das Laufwerk in die Hände bekommt, könnte einen ungeschützten Schlüssel verwenden. Deshalb speichert sie nur geheime Schlüssel mit Passphrase. Lege eine fest, um den geheimen Schlüssel hinzuzufügen, oder behalte nur den öffentlichen Schlüssel.</string>
+    <string name="d_portable_protect_passphrase">Neue Passphrase</string>
+    <string name="d_portable_protect_confirm">Passphrase wiederholen</string>
+    <string name="d_portable_protect_mismatch">Die Passphrasen stimmen nicht überein.</string>
+    <string name="d_portable_protect_add">Schützen und hinzufügen</string>
+    <string name="d_portable_protect_skip">Nur öffentlicher Schlüssel</string>
+    <string name="d_portable_protect_failed">Der geheime Schlüssel konnte nicht geschützt werden, daher wurde nur der öffentliche Schlüssel behalten.</string>
+    <string name="d_status_portable_secret_added">Geheimer Schlüssel für %1$s hinzugefügt und mit der neuen Passphrase geschützt</string>
+    <string name="d_status_portable_secret_skipped">Nur den öffentlichen Schlüssel für %1$s behalten</string>
+    <string name="d_about_portable_label">Portabel, Daten in</string>
+    <string name="d_settings_updates_portable_hint">Dies ist eine portable Kopie: Lade die portable Version herunter und ersetze die App damit. Behalte den Ordner PGPony-data.</string>
 </resources>

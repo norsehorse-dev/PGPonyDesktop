@@ -732,7 +732,6 @@
     <string name="d_err_recipient_unusable">Nenhuma chave para a qual o PGPony possa criptografar, então nada foi criptografado: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · assinado, chave não verificada</string>
     <string name="d_file_sig_invalid"> · assinatura INVÁLIDA</string>
-    <string name="d_file_err_composite_too_large">A assinatura ML-DSA lê o arquivo inteiro na memória e está limitada a 512 MB. Assine um arquivo menor ou escolha uma chave de assinatura clássica.</string>
     <string name="d_file_verify_ok_unconfirmed">Assinado, chave não verificada: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Descriptografado · assinado, chave não verificada</string>
     <string name="d_edit_err_public_only">Isso precisa da chave privada, e só a pública está no seu chaveiro.</string>
@@ -971,4 +970,20 @@
     <string name="d_pair_err_not_backup">%1$s não é um arquivo de backup do PGPony.</string>
     <string name="d_settings_tray_icon">Mostrar o ícone do PGPony na barra de menus ou na bandeja do sistema</string>
     <string name="d_settings_tray_icon_note">Os lembretes de chaves expirando e os avisos das pastas monitoradas aparecem por este ícone, então não são exibidos enquanto ele estiver oculto.</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">Esta cópia do PGPony roda a partir de uma unidade portátil e só armazena chaves secretas que tenham frase-senha.</string>
+    <string name="d_portable_err_keygen_passphrase">Esta cópia do PGPony roda a partir de uma unidade portátil e só armazena chaves secretas que tenham frase-senha. Digite uma para criar esta chave.</string>
+    <string name="d_gen_portable_passphrase_required">É necessária uma frase-senha: esta cópia roda a partir de uma unidade portátil, e qualquer pessoa com a unidade em mãos poderia usar uma chave sem frase-senha.</string>
+    <string name="d_portable_protect_title">Proteger esta chave secreta</string>
+    <string name="d_portable_protect_body">%1$s veio com uma chave secreta sem frase-senha. Esta cópia do PGPony roda a partir de uma unidade portátil, e qualquer pessoa com a unidade em mãos poderia usar uma chave desprotegida, por isso ela só armazena chaves secretas com frase-senha. Defina uma para adicionar a chave secreta ou mantenha apenas a chave pública.</string>
+    <string name="d_portable_protect_passphrase">Nova frase-senha</string>
+    <string name="d_portable_protect_confirm">Repita a frase-senha</string>
+    <string name="d_portable_protect_mismatch">As frases-senha não coincidem.</string>
+    <string name="d_portable_protect_add">Proteger e adicionar</string>
+    <string name="d_portable_protect_skip">Apenas chave pública</string>
+    <string name="d_portable_protect_failed">Não foi possível proteger a chave secreta, então apenas a chave pública foi mantida.</string>
+    <string name="d_status_portable_secret_added">Chave secreta de %1$s adicionada e protegida com a nova frase-senha</string>
+    <string name="d_status_portable_secret_skipped">Apenas a chave pública de %1$s foi mantida</string>
+    <string name="d_about_portable_label">Portátil, dados em</string>
+    <string name="d_settings_updates_portable_hint">Esta é uma cópia portátil: baixe a versão portátil e substitua o app por ela. Mantenha a pasta PGPony-data.</string>
 </resources>

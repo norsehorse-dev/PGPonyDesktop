@@ -22,7 +22,11 @@ private val PGPONY_VERBS = setOf(
 )
 private val CLI_VERBS = setOf("selftest", "version", "--version", "gui", "open", "help", "--help", "-h") + PGPONY_VERBS
 
-fun main(args: Array<String>) {
+fun main(argv: Array<String>) {
+    // 3.1.0 (plan 3e): portable mode (a PGPony-data folder beside the app, or --data-dir). First
+    // of all, before the JDK's Preferences class loads: it reads the factory property once. The
+    // --data-dir option is taken out of the arguments every face of the binary sees.
+    val args = PortableMode.apply(argv)
     // 3.0.0 (5c): under Flatpak, the JVM defaults the sandbox needs (preferences beside the app's
     // data, the bundled pcsc-lite). First of all: the JDK reads them once, on first use.
     Flatpak.apply()

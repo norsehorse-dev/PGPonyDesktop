@@ -127,7 +127,9 @@ fun GenerateKeyDialog(
     // Android item 3: the email is optional; a non-blank one still has to look like an address.
     val emailOk = email.isBlank() || email.contains("@")
     val passMatch = passphrase == confirm
-    val canGenerate = !busy && name.isNotBlank() && emailOk && passMatch
+    // 3.1.0 (plan 3e.5): a portable copy stores only keys with a passphrase.
+    val canGenerate = !busy && name.isNotBlank() && emailOk && passMatch &&
+        (!PortableMode.active || passphrase.isNotEmpty())
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -231,7 +233,7 @@ fun GenerateKeyDialog(
                 if (passphrase.isBlank()) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        tr("d_gen_no_passphrase_warning"),
+                        if (PortableMode.active) tr("d_gen_portable_passphrase_required") else tr("d_gen_no_passphrase_warning"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )

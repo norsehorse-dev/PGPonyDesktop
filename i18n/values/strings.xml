@@ -852,7 +852,6 @@
     <string name="d_err_recipient_unusable">No key PGPony can encrypt to, so nothing was encrypted: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · signed, key not verified</string>
     <string name="d_file_sig_invalid"> · signature INVALID</string>
-    <string name="d_file_err_composite_too_large">ML-DSA signing reads the whole file into memory and is limited to 512 MB. Sign a smaller file, or pick a classical signing key.</string>
     <string name="d_file_verify_ok_unconfirmed">Signed, key not verified: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">Decrypted · signed, key not verified</string>
     <string name="d_edit_err_public_only">This needs the private key, and only the public key is in your keyring.</string>
@@ -1102,4 +1101,20 @@
     <string name="d_pair_err_not_backup">%1$s is not a PGPony backup file.</string>
     <string name="d_settings_tray_icon">Show the PGPony icon in the menu bar or system tray</string>
     <string name="d_settings_tray_icon_note">Key expiry reminders and watch-folder alerts are shown through this icon, so they don\'t appear while it is hidden.</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">This copy of PGPony runs from a portable drive and only stores secret keys that have a passphrase.</string>
+    <string name="d_portable_err_keygen_passphrase">This copy of PGPony runs from a portable drive and only stores secret keys that have a passphrase. Enter one to create this key.</string>
+    <string name="d_gen_portable_passphrase_required">A passphrase is required: this copy runs from a portable drive, and anyone holding the drive could use a key without one.</string>
+    <string name="d_portable_protect_title">Protect this secret key</string>
+    <string name="d_portable_protect_body">%1$s came with a secret key that has no passphrase. This copy of PGPony runs from a portable drive, and anyone holding the drive could use an unprotected key, so it only stores secret keys with a passphrase. Set one to add the secret key, or keep the public key only.</string>
+    <string name="d_portable_protect_passphrase">New passphrase</string>
+    <string name="d_portable_protect_confirm">Repeat the passphrase</string>
+    <string name="d_portable_protect_mismatch">The passphrases don\'t match.</string>
+    <string name="d_portable_protect_add">Protect and add</string>
+    <string name="d_portable_protect_skip">Public key only</string>
+    <string name="d_portable_protect_failed">The secret key could not be protected, so only the public key was kept.</string>
+    <string name="d_status_portable_secret_added">Secret key for %1$s added, protected with the new passphrase</string>
+    <string name="d_status_portable_secret_skipped">Kept only the public key for %1$s</string>
+    <string name="d_about_portable_label">Portable, data in</string>
+    <string name="d_settings_updates_portable_hint">This is a portable copy: download the portable version and replace the app with it. Keep the PGPony-data folder.</string>
 </resources>

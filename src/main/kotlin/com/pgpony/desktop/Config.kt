@@ -31,8 +31,16 @@ object Config {
      * every start so an install made with the default umask is fixed too. It holds the database
      * (contacts, notes, trust, revocation certificates) next to the key files. Windows keeps the
      * per-user ACL of %APPDATA%.
+     *
+     * 3.1.0 (plan 3e): in portable mode it is the PGPony-data folder beside the app, or the
+     * --data-dir folder (PortableMode). On FAT32 and exFAT the owner-only step does nothing.
      */
     val dataDir: Path by lazy {
+        PortableMode.dataDir?.let { dir ->
+            OwnerOnlyPaths.createPrivateDirectories(dir)
+            OwnerOnlyPaths.restrictTree(dir)
+            return@lazy dir
+        }
         val home = System.getProperty("user.home")
         val os = System.getProperty("os.name").lowercase()
         val dir: Path = when {
@@ -62,6 +70,29 @@ object Config {
     /** Armored key material, one file per key half (KeyMaterialStore). */
     val keysDir: Path get() = dataDir.resolve("keys")
 
-    /** D15 — the ssh-agent's Unix socket lives here, 0700 dir / 0600 socket (SshAgentService). */
-    val agentDir: Path get() = dataDir.resolve("agent")
+    /**
+     * D15: the ssh-agent's Unix socket lives here, 0700 dir / 0600 socket (SshAgentService).
+     * 3.1.0 (plan 3e.3): in portable mode the data folder may be on FAT32 or exFAT, which cannot
+     * hold a Unix socket, so the socket goes in an owner-only folder under the host's temp
+     * directory, made once per run and removed on exit.
+     */
+    val agentDir: Path
+        get() = if (PortableMode.active) portableAgentDir else dataDir.resolve("agent")
+
+    private val portableAgentDir: Path by lazy {
+        val dir = if (OwnerOnlyPaths.posix()) {
+            java.nio.file.Files.createTempDirectory(
+                "pgpony-agent",
+                java.nio.file.attribute.PosixFilePermissions.asFileAttribute(
+                    java.nio.file.attribute.PosixFilePermissions.fromString("rwx------")
+                )
+            )
+        } else java.nio.file.Files.createTempDirectory("pgpony-agent")
+        Runtime.getRuntime().addShutdownHook(Thread({
+            runCatching {
+                java.nio.file.Files.walk(dir).use { s -> s.sorted(Comparator.reverseOrder()).forEach { java.nio.file.Files.deleteIfExists(it) } }
+            }
+        }, "pgpony-agent-cleanup"))
+        dir
+    }
 }

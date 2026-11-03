@@ -705,7 +705,6 @@
     <string name="d_err_recipient_unusable">PGPony が暗号化に使える鍵がないため、何も暗号化されませんでした: %1$s</string>
     <string name="d_file_sig_unconfirmed"> · 署名あり、鍵は未確認</string>
     <string name="d_file_sig_invalid"> · 署名が無効です</string>
-    <string name="d_file_err_composite_too_large">ML-DSA 署名はファイル全体をメモリに読み込むため、512 MB までに制限されています。より小さいファイルに署名するか、従来型の署名鍵を選んでください。</string>
     <string name="d_file_verify_ok_unconfirmed">署名あり、鍵は未確認: %1$s &lt;%2$s&gt; · %3$s</string>
     <string name="d_crypto_banner_decrypted_unconfirmed">復号しました · 署名あり、鍵は未確認</string>
     <string name="d_edit_err_public_only">この操作には秘密鍵が必要ですが、鍵束には公開鍵しかありません。</string>
@@ -943,4 +942,20 @@
     <string name="d_pair_err_not_backup">%1$s は PGPony のバックアップファイルではありません。</string>
     <string name="d_settings_tray_icon">メニューバーまたはシステムトレイに PGPony のアイコンを表示する</string>
     <string name="d_settings_tray_icon_note">鍵の有効期限のお知らせと監視フォルダーの通知はこのアイコンから表示されるため、非表示の間は表示されません。</string>
+    <!-- 3.1.0 (plan 3e): portable mode -->
+    <string name="d_portable_err_unprotected_secret">この PGPony はポータブルドライブから実行されているため、パスフレーズのある秘密鍵しか保存しません。</string>
+    <string name="d_portable_err_keygen_passphrase">この PGPony はポータブルドライブから実行されているため、パスフレーズのある秘密鍵しか保存しません。この鍵を作成するにはパスフレーズを入力してください。</string>
+    <string name="d_gen_portable_passphrase_required">パスフレーズが必要です。この PGPony はポータブルドライブから実行されており、パスフレーズのない鍵はドライブを手にした人なら誰でも使えてしまいます。</string>
+    <string name="d_portable_protect_title">この秘密鍵を保護</string>
+    <string name="d_portable_protect_body">%1$s にはパスフレーズのない秘密鍵が含まれていました。この PGPony はポータブルドライブから実行されており、保護されていない鍵はドライブを手にした人なら誰でも使えてしまうため、パスフレーズのある秘密鍵しか保存しません。パスフレーズを設定して秘密鍵を追加するか、公開鍵だけを残してください。</string>
+    <string name="d_portable_protect_passphrase">新しいパスフレーズ</string>
+    <string name="d_portable_protect_confirm">パスフレーズを確認</string>
+    <string name="d_portable_protect_mismatch">パスフレーズが一致しません。</string>
+    <string name="d_portable_protect_add">保護して追加</string>
+    <string name="d_portable_protect_skip">公開鍵のみ</string>
+    <string name="d_portable_protect_failed">秘密鍵を保護できなかったため、公開鍵だけを残しました。</string>
+    <string name="d_status_portable_secret_added">%1$s の秘密鍵を追加し、新しいパスフレーズで保護しました</string>
+    <string name="d_status_portable_secret_skipped">%1$s の公開鍵だけを残しました</string>
+    <string name="d_about_portable_label">ポータブル版、データの保存先</string>
+    <string name="d_settings_updates_portable_hint">これはポータブル版です。ポータブル版をダウンロードして、今のアプリと置き換えてください。PGPony-data フォルダーはそのまま残してください。</string>
 </resources>
