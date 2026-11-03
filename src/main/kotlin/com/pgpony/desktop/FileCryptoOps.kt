@@ -110,17 +110,10 @@ class FileCryptoOps(
         var tmp: Path? = null
         try {
             tmp = Files.createTempFile(outParent, ".pgpony-enc", ".tmp")
-            if (plan.needsBuffering) {
-                // A composite ML-DSA signature has no streaming signer in the engine; the file
-                // is read whole, as Android does (4.5.3), up to a fixed ceiling.
-                if (total > EncryptOps.COMPOSITE_BUFFER_LIMIT) error(tr("d_file_err_composite_too_large"))
-                val data = ProgressInputStream(source.stream, total, isCancelled, onProgress).use { it.readAllBytes() }
-                Files.write(tmp, encryptOps.encryptBytes(plan, data, signerPassphrase, armor, file.name))
-            } else {
-                ProgressInputStream(source.stream, total, isCancelled, onProgress).use { input ->
-                    Files.newOutputStream(tmp).use { output ->
-                        encryptOps.encryptStream(plan, input, output, signerPassphrase, armor, file.name)
-                    }
+            // 3.1.0 (#14): every signer kind streams, a composite ML-DSA signer included.
+            ProgressInputStream(source.stream, total, isCancelled, onProgress).use { input ->
+                Files.newOutputStream(tmp).use { output ->
+                    encryptOps.encryptStream(plan, input, output, signerPassphrase, armor, file.name)
                 }
             }
         } catch (t: Throwable) {
@@ -182,17 +175,10 @@ class FileCryptoOps(
         }, "pgpony-tar-encrypt").apply { isDaemon = true; start() }
 
         try {
-            if (plan.needsBuffering) {
-                // Composite ML-DSA signer: the tar is built in memory under the same ceiling as
-                // a single file (the engine has no streaming composite signer).
-                if (total > EncryptOps.COMPOSITE_BUFFER_LIMIT) error(tr("d_file_err_composite_too_large"))
-                val data = ProgressInputStream(piped, total, isCancelled, onProgress).use { it.readAllBytes() }
-                Files.write(tmp, encryptOps.encryptBytes(plan, data, signerPassphrase, armor, tarName))
-            } else {
-                ProgressInputStream(piped, total, isCancelled, onProgress).use { input ->
-                    Files.newOutputStream(tmp).use { output ->
-                        encryptOps.encryptStream(plan, input, output, signerPassphrase, armor, tarName)
-                    }
+            // 3.1.0 (#14): the tar streams through a composite ML-DSA signer too.
+            ProgressInputStream(piped, total, isCancelled, onProgress).use { input ->
+                Files.newOutputStream(tmp).use { output ->
+                    encryptOps.encryptStream(plan, input, output, signerPassphrase, armor, tarName)
                 }
             }
         } catch (t: Throwable) {
@@ -550,12 +536,11 @@ class FileCryptoOps(
             val info = repo.loadCompositeKeyInfo(signer.fingerprint, signerPassphrase?.toCharArray())
                 ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
             val secret = info.compositeSecret ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
-            if (Files.size(file) > EncryptOps.COMPOSITE_BUFFER_LIMIT) error(tr("d_file_err_composite_too_large"))
-            val data = Files.readAllBytes(file)
-            if (armor) com.pgpony.android.crypto.pqc.CompositeDocumentSigner
-                .signDetachedArmored(info.suite, secret, info.fingerprint, data).toByteArray(Charsets.UTF_8)
-            else com.pgpony.android.crypto.pqc.CompositeDocumentSigner
-                .signDetached(info.suite, secret, info.fingerprint, data)
+            // 3.1.0 (#14): hashed as it is read, so the file size no longer matters.
+            Files.newInputStream(file).use { input ->
+                com.pgpony.android.crypto.pqc.CompositeDocumentSigner
+                    .signDetachedStream(info.suite, secret, info.fingerprint, input, armor)
+            }
         } else {
             val ring = repo.loadSecretKeyRing(signerFingerprint)
                 ?: error(tr("d_file_err_signing_key", signerFingerprint.take(16)))
@@ -690,16 +675,17 @@ class FileCryptoOps(
 
     suspend fun verifyFileDetached(signatureFile: Path, contentFile: Path): FileOutcome = try {
         val sigBytes = Files.readAllBytes(signatureFile)
-        val contentBytes = Files.readAllBytes(contentFile)
-        // Composite ML-DSA (RFC 9980) detached signatures verify whole-document; BouncyCastle
-        // cannot parse them, so try the composite path first and fall back to VerifyService.
-        val result = DesktopCompositeVerify.verifyDetached(repo, sigBytes, contentBytes)
-            ?: run {
-                val publicRings = repo.allKeys().mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
-                contentBytes.inputStream().use { content ->
-                    VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
-                }
+        // Composite ML-DSA (RFC 9980) detached signatures: BouncyCastle cannot parse them, so the
+        // composite path goes first and VerifyService takes the rest. 3.1.0 (#14): both read the
+        // content as a stream; it used to be read whole.
+        val result = Files.newInputStream(contentFile).use { content ->
+            DesktopCompositeVerify.verifyDetachedStream(repo, sigBytes, content)
+        } ?: run {
+            val publicRings = repo.allKeys().mapNotNull { repo.loadPublicKeyRing(it.fingerprint) }
+            Files.newInputStream(contentFile).use { content ->
+                VerifyService.shared.verifyDetachedStream(sigBytes, content, publicRings)
             }
+        }
         when (result) {
             is VerificationResult.Verified -> {
                 // 3.0.0 (Android 4.5.3, #57): valid, but say so when the signer key is unconfirmed.

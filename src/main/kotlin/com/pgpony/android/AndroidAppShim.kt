@@ -33,8 +33,17 @@ object PGPonyApp {
         R.string.trust_level_unverified_description -> "Added but not vetted — proceed with caution"
         R.string.trust_level_verified_description -> "Fingerprint compared via a trusted channel"
         R.string.trust_level_ultimate_description -> "Your own key, or one you fully control"
+        R.string.trust_level_dont_use_name -> "Don't use"
+        R.string.trust_level_dont_use_description -> "Compromised or retired; PGPony asks before encrypting to it or signing with it"
         else -> ""
     }
+
+    /**
+     * 3.1.0 (Android 4.7.0 sync): the vendored crypto/SigningSubkeyPins.kt keeps its pins file in
+     * the app's files directory. On the desktop that is the data folder, so the pins live beside
+     * the keyring and follow it (portable mode included).
+     */
+    val filesDir: java.io.File get() = com.pgpony.desktop.Config.dataDir.toFile()
 }
 
 /** Desktop stand-in for the generated Android R class — only the ids the vendored code uses. */
@@ -48,5 +57,7 @@ object R {
         const val trust_level_unverified_description = 1006
         const val trust_level_verified_description = 1007
         const val trust_level_ultimate_description = 1008
+        const val trust_level_dont_use_name = 1009
+        const val trust_level_dont_use_description = 1010
     }
 }

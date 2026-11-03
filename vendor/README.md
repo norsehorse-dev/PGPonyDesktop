@@ -41,10 +41,24 @@ Verbatim copies from `PGPonyAndroid/app/src/main/java/com/pgpony/android/`:
   interop artifacts). Synced D5/D6; compiled into the desktop `test` source set, gates
   (`-DrunInterop`, `-DiosSecPass`) preserved.
 
-Last sync: 2026-09-30 (desktop 3.0.0, F1 for phones): the pair tree added. Every other tree was
+Last sync: 2026-11-02 (desktop 3.1.0), every tree from the PGPonyAndroid `v4.7.3` tag with
+`tools/sync-vendor.sh` and `tools/sync-strings.sh`, no exceptions. It brings the 4.7.0 to 4.7.3 engine
+(plan section 3) and supersedes the scoped 3.0.3 sync below: every file is now the tag's whole file.
+Desktop-side changes it needed:
+- `data/AppReset.kt` (4.7.x Clear All Data: Context, WorkManager, the Android repository) is excluded;
+  the desktop has `ClearAllData.kt`.
+- `AndroidAppShim.kt` gained the two `trust_level_dont_use_*` strings (the new `TrustLevel.DONT_USE`)
+  and `PGPonyApp.filesDir`, which `crypto/SigningSubkeyPins.kt` reaches for; on the desktop that is
+  `Config.dataDir`, so the pins live beside the keyring (and on the drive in portable mode).
+- The desktop-made fixture `gnupg448/signed.asc` (SopLibrePgpV5Test, 3.0.3) is not upstream, so the sync
+  removed it from `app-test-resources/`; it now lives in `src/test/resources/gnupg448/`.
+- `CertificationService.kt`, `card/KeyToCardService.kt` and the other 4.7.x additions compile here; the
+  desktop UI does not call them yet (plan section 3).
+
+Earlier: 2026-09-30 (desktop 3.0.0, F1 for phones): the pair tree added. Every other tree was
 byte-identical to the PGPonyAndroid working tree before it, so the sync changed nothing else.
 
-Scoped sync for 3.0.3 (2026-10-28): PGPony Android 4.7.3, LibrePGP v5 keys (GnuPG and Kleopatra's
+Scoped sync for 3.0.3 (2026-10-28), superseded by the 3.1.0 sync above: PGPony Android 4.7.3, LibrePGP v5 keys (GnuPG and Kleopatra's
 Ed448 primary with an X448 encryption subkey). Taken from the PGPonyAndroid working tree ahead of its
 v4.7.3 tag, which did not exist yet: a recorded exception to the tag rule, and for the second list
 below to "verbatim" as well.
@@ -112,6 +126,7 @@ excluded file's name (D1 Fix1).
 | `network/HttpClientFactory.kt` | Context-typed client cache | Desktop twin `src/…/network/DesktopHttpClientFactory.kt` (same object, signature-keyed cache, ktor Android engine + SOCKS) |
 | `network/ProxyPrefs.kt` | SharedPreferences | Desktop twin `src/…/network/DesktopProxyPrefs.kt` (java.util.prefs; MODE_ORBOT = local Tor daemon; prefsOverride test hook) |
 | `keyserver/KeyServerDirectory.kt` | Context + DataStore | Desktop twin `src/…/keyserver/DesktopKeyServerDirectory.kt` (declares `KeyServer` verbatim + the directory over java.util.prefs; no serversFlow — every caller uses readOnce) |
+| `data/AppReset.kt` | 4.7.x Clear All Data: Context, WorkManager, the Android repository | Desktop counterpart `src/…/desktop/ClearAllData.kt` |
 | `data/PgpSubkeyEntity.kt` | Not in `PGPDatabase.entities` — Android-side vestige | Follows upstream if it ever rejoins the schema |
 | `data/RoomMigrations.kt`, `data/migrations/**` | `SupportSQLiteDatabase` is Android-only; fresh desktop DBs create at v7 | Future desktop schema bumps join the chain KMP-style |
 | `data/repository/**` | Android KeyRepository (SharedPreferences seam) | Desktop twin `src/…/desktop/DesktopKeyRepository.kt`; grows toward full parity D2b/D2c |

@@ -133,7 +133,9 @@ class RevocationService private constructor() {
             )
 
         // 1. Unlock the private key (an Argon2 S2K outside the policy is
-        //    refused before any KDF runs).
+        //    refused before any KDF runs). 4.7.0 (item 22): an offline
+        //    primary has no secret to sign the revocation with.
+        OfflineStub.requireSecret(secretKey)
         enforceArgon2Policy(secretKey.s2K)
         val privateKey = try {
             val decryptor = com.pgpony.android.crypto.SecretKeyUnlock.decryptor(passphrase)
@@ -281,6 +283,7 @@ class RevocationService private constructor() {
             )
         }
 
+        OfflineStub.requireSecret(primary) // 4.7.0 (item 22)
         enforceArgon2Policy(primary.s2K)
         val privateKey = try {
             val decryptor = com.pgpony.android.crypto.SecretKeyUnlock.decryptor(passphrase)

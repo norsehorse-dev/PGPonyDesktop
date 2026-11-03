@@ -11,13 +11,22 @@ package com.pgpony.android.crypto.card
 sealed class OpenPgpCardException(message: String, cause: Throwable? = null) :
     Exception(message, cause) {
 
-    /** SELECT failed or the AID isn't an OpenPGP application. */
-    class NotAnOpenPgpCard(message: String = "This card is not an OpenPGP card") :
-        OpenPgpCardException(message)
+    /** SELECT failed or the AID isn't an OpenPGP application. [sw] is the
+     *  status word SELECT returned, when it got that far. */
+    class NotAnOpenPgpCard(
+        message: String = "This card is not an OpenPGP card",
+        val sw: Int? = null,
+        /** 4.7.0 (item 29, #43): SELECT got no status word back at all. */
+        val noResponse: Boolean = false
+    ) : OpenPgpCardException(message)
 
     /** Tag/IO error while talking to the card (link dropped, removed mid-op). */
-    class Communication(message: String, cause: Throwable? = null) :
-        OpenPgpCardException(message, cause)
+    class Communication(
+        message: String,
+        cause: Throwable? = null,
+        /** 4.7.0 (item 29): the reply was shorter than a status word. */
+        val shortResponse: Boolean = false
+    ) : OpenPgpCardException(message, cause)
 
     /** The card left the field before the operation completed. */
     class TagLost(message: String = "Card moved away — hold it still and try again", cause: Throwable? = null) :
@@ -60,6 +69,23 @@ sealed class OpenPgpCardException(message: String, cause: Throwable? = null) :
             "Wrong PIN — $triesRemaining ${if (triesRemaining == 1) "try" else "tries"} remaining"
         else
             "Wrong PIN — no tries remaining; the PIN is now blocked"
+    )
+
+    /**
+     * 4.7.0 (item 13): the ADMIN PIN (PW3) was wrong, kept apart from
+     * [WrongPin] so the screen can name it: a blocked admin PIN needs a card
+     * reset, a blocked user PIN only the admin PIN.
+     */
+    class WrongAdminPin(val triesRemaining: Int) : OpenPgpCardException(
+        "Wrong admin PIN. Tries remaining: $triesRemaining"
+    )
+
+    /**
+     * 4.7.0 RC4 (item 13): a slot chosen for a move already holds a different
+     * key and the user did not ask to replace it. Raised before any PIN is sent.
+     */
+    class SlotsOccupied : OpenPgpCardException(
+        "A chosen slot on this security key already holds another key"
     )
 
     /** A response was structurally invalid (bad TLV, short data, etc.). */

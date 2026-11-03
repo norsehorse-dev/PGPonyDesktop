@@ -111,10 +111,18 @@ class OpenPgpCardSession(private val transport: CardTransport) {
             data = OpenPgpCard.AID_PREFIX,
             le = 256
         )
-        val resp = transmit(cmd, throwOnError = false)
+        // 4.7.0 (item 29, #43): a Nitrokey 3 over NFC answers SELECT with
+        // nothing at all on current firmware, not with a status word.
+        val resp = try {
+            transmit(cmd, throwOnError = false)
+        } catch (e: OpenPgpCardException.Communication) {
+            if (!e.shortResponse) throw e
+            throw OpenPgpCardException.NotAnOpenPgpCard(e.message ?: "", noResponse = true)
+        }
         if (!resp.isSuccess) {
             throw OpenPgpCardException.NotAnOpenPgpCard(
-                "SELECT OpenPGP application failed (${resp.swHex()})"
+                "SELECT OpenPGP application failed (${resp.swHex()})",
+                sw = resp.sw
             )
         }
     }
@@ -259,6 +267,47 @@ class OpenPgpCardSession(private val transport: CardTransport) {
                 data = value
             )
         )
+    }
+
+    /**
+     * 4.7.0 (item 13, #71): import a private key into a slot, PUT DATA with
+     * odd INS 0xDB and P1P2 3FFF, [extendedHeaderList] being the 0x4D
+     * Extended Header List (KeyToCard.extendedHeaderList), which names the
+     * slot. Requires PW3 (admin) verified and the slot's algorithm attributes
+     * set to match. A list longer than 255 octets goes out with command
+     * chaining (sendCommand). The caller wipes [extendedHeaderList] afterwards.
+     */
+    fun importPrivateKey(extendedHeaderList: ByteArray) {
+        transmit(
+            CommandApdu(
+                cla = 0x00,
+                ins = OpenPgpCard.INS_PUT_DATA_ODD,
+                p1 = 0x3F,
+                p2 = 0xFF,
+                data = extendedHeaderList
+            )
+        )
+    }
+
+    /** 4.7.0 (item 13): the raw algorithm attributes of [slot] (GET DATA C1/C2/C3), or null. */
+    fun readAlgorithmAttributes(slot: CardSlot): ByteArray? {
+        val tag = when (slot) {
+            CardSlot.SIGNATURE -> OpenPgpCard.DO_ALGORITHM_ATTRIBUTES_SIG
+            CardSlot.DECRYPTION -> OpenPgpCard.DO_ALGORITHM_ATTRIBUTES_DEC
+            CardSlot.AUTHENTICATION -> OpenPgpCard.DO_ALGORITHM_ATTRIBUTES_AUTH
+        }
+        // Read from the Application Related Data, which every card returns;
+        // a GET DATA of C1 to C3 on its own is not supported everywhere.
+        val resp = transmit(
+            CommandApdu(
+                cla = 0x00,
+                ins = OpenPgpCard.INS_GET_DATA,
+                p1 = (OpenPgpCard.DO_APPLICATION_RELATED_DATA ushr 8) and 0xFF,
+                p2 = OpenPgpCard.DO_APPLICATION_RELATED_DATA and 0xFF,
+                le = 256
+            )
+        )
+        return runCatching { Tlv.findRecursive(resp.data, tag)?.value }.getOrNull()?.takeIf { it.isNotEmpty() }
     }
 
     /** Set the algorithm-attributes DO for [slot] (PUT DATA 0xC1/0xC2/0xC3). */
@@ -701,34 +750,48 @@ class OpenPgpCardSession(private val transport: CardTransport) {
 
         // 0x10 is the ISO 7816-4 command-chaining bit in the CLA byte.
         val chainBit = 0x10
-        val chunks = command.data.asList().chunked(255)
+        // 4.7.0 (item 13): chunks are array copies, wiped once sent, since a
+        // key import's private key bytes go through here.
+        val total = command.data.size
         var resp = ResponseApdu(ByteArray(0), 0x90, 0x00)
-        for ((index, chunk) in chunks.withIndex()) {
-            val isLast = index == chunks.lastIndex
-            resp = sendRaw(
-                CommandApdu(
-                    cla = if (isLast) command.cla else command.cla or chainBit,
-                    ins = command.ins,
-                    p1 = command.p1,
-                    p2 = command.p2,
-                    data = chunk.toByteArray(),
-                    le = if (isLast) command.le else null
+        var offset = 0
+        while (offset < total) {
+            val end = minOf(offset + 255, total)
+            val isLast = end == total
+            val chunk = command.data.copyOfRange(offset, end)
+            try {
+                resp = sendRaw(
+                    CommandApdu(
+                        cla = if (isLast) command.cla else command.cla or chainBit,
+                        ins = command.ins,
+                        p1 = command.p1,
+                        p2 = command.p2,
+                        data = chunk,
+                        le = if (isLast) command.le else null
+                    )
                 )
-            )
+            } finally {
+                java.util.Arrays.fill(chunk, 0)
+            }
             // A non-final chunk must be acknowledged with 0x9000. If the card
             // rejects mid-chain, stop and surface that status to transmit().
             if (!isLast && !resp.isSuccess) return resp
+            offset = end
         }
         return resp
     }
 
     private fun sendRaw(command: CommandApdu): ResponseApdu {
+        val bytes = command.toBytes()
         val raw = try {
-            transport.transceive(command.toBytes())
+            transport.transceive(bytes)
         } catch (e: OpenPgpCardException) {
             throw e
         } catch (e: Exception) {
             throw OpenPgpCardException.Communication("Card communication failed: ${e.message}", e)
+        } finally {
+            // 4.7.0 (item 13): the encoded command may carry a PIN or key bytes.
+            java.util.Arrays.fill(bytes, 0)
         }
         return ResponseApdu.parse(raw)
     }

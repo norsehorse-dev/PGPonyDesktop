@@ -318,6 +318,7 @@
     <!-- RC3 §J (#16): Sign File / Verify stream the picked file from disk; these cover the two remaining failure shapes. -->
     <string name="sign_verify_error_file_unreadable">Seçilen dosya okunamadı. Dosyayı yeniden seçin.</string>
     <string name="verify_file_error_sig_not_signature">Bu dosya ayrık imza olamayacak kadar büyük. İmzalanan içeriği değil, .asc veya .sig dosyasını seçin.</string>
+    <string name="verify_error_signature_damaged">İmza bloğu bozuk olduğu için doğrulanamıyor. İmza dosyasının yeni bir kopyasını alın.</string>
     <string name="sign_file_save_button">Dosyalar\'a Kaydet</string>
     <string name="encrypt_mode_password">Parola</string>
 
@@ -692,6 +693,9 @@
     <!-- ── Preview card ─────────────────────────────────────────────── -->
     <string name="import_preview_type_key_pair">Anahtar Çifti (Açık + Gizli)</string>
     <string name="import_preview_type_public_only">Yalnızca Açık Anahtar</string>
+    <string name="import_preview_type_key_pair_offline_primary">Anahtar Çifti (Çevrimdışı Birincil)</string>
+    <string name="import_preview_offline_primary_note">Bu dosya alt anahtarların gizli kısımlarını içeriyor, birincil anahtarınkini içermiyor; gpg --export-secret-subkeys dosyayı bu şekilde yazar. Alt anahtarlar her zamanki gibi çalışır; anahtarı düzenlemek için birincil anahtar gerekir.</string>
+    <string name="import_preview_offline_primary_note_card">Birincil anahtarın gizli kısmı bu dosyada değil, bir donanım anahtarında. Alt anahtarlar her zamanki gibi çalışır; anahtarı düzenlemek için donanım anahtarı gerekir.</string>
     <string name="import_preview_detail_user_label">Kullanıcı</string>
     <string name="import_preview_detail_user_empty">(yok)</string>
     <string name="import_preview_detail_fingerprint_label">Parmak İzi</string>
@@ -719,6 +723,8 @@
     <string name="import_duplicate_view_key">Anahtarı Görüntüle</string>
     <string name="import_result_merged">Bu anahtar zaten anahtarlığınızdaydı. Daha yeni anahtar malzemesiyle güncellendi.</string>
     <string name="import_result_already_in_keyring">Bu anahtar zaten anahtarlığınızda.</string>
+    <string name="import_result_own_key_updated">Anahtar çiftiniz bu kopyadaki daha yeni öz imzalarla güncellendi (tercihler, son kullanma tarihi veya bağlamalar).</string>
+    <string name="import_duplicate_own_key_note">Bu sizin anahtar çiftiniz. İçe aktarma yalnızca sizdekilerden daha yeni öz imzaları ekler ve bu kopyada böyle bir imza yok.</string>
 
     <!-- ── Confirm/cancel buttons (preview card) ────────────────────── -->
     <string name="import_button_upgrade_key">Anahtarı Yükselt</string>
@@ -798,6 +804,44 @@
     <string name="kd_vm_refresh_failed_format">Anahtar sunucusundan yenileme başarısız: %1$s</string>
     <string name="key_detail_userids_title">Kullanıcı Kimlikleri</string>
     <string name="key_detail_userids_primary">BİRİNCİL</string>
+    <string name="key_detail_userid_weak_hash_badge">Zayıf hash</string>
+    <string name="key_detail_userid_weak_hash_note">Artık güvenli kabul edilmeyen SHA-1 ile bağlanmış. Ad korunur, ancak bu anahtarı doğrulanmış yapmaz.</string>
+    <string name="key_detail_offline_primary_title">Çevrimdışı birincil anahtar</string>
+    <string name="key_detail_offline_primary_body">Birincil anahtarın gizli kısmı bu cihazda değil. Burada saklanan alt anahtarlar her zamanki gibi çalışır. Kullanıcı Kimliklerini, alt anahtarları veya son kullanma tarihini değiştirmek ve anahtarı geçersiz kılmak için birincil anahtar gerekir: bu değişiklikleri birincil anahtarın saklandığı yerde yapın, ardından anahtarı buraya yeniden içe aktarın.</string>
+    <string name="key_detail_offline_primary_body_card">Birincil anahtarın gizli kısmı bu cihazda değil, bir donanım anahtarında. Burada saklanan alt anahtarlar her zamanki gibi çalışır. Kullanıcı Kimliklerini, alt anahtarları veya son kullanma tarihini değiştirmek ve anahtarı geçersiz kılmak için donanım anahtarı gerekir: bu değişiklikleri GnuPG\'de yapın, ardından anahtarı buraya yeniden içe aktarın.</string>
+    <string name="key_detail_action_certify">Onayla…</string>
+    <string name="certify_sheet_title">Bu anahtarı onayla</string>
+    <string name="certify_sheet_subtitle">Onaylamak, bu anahtarın seçtiğiniz her Kullanıcı Kimliğinde adı geçen kişiye ait olduğunu kontrol ettiğinizi bildirir. Önce tam parmak izini anahtarın sahibiyle karşılaştırın.</string>
+    <string name="certify_userids_label">Onaylanacak Kullanıcı Kimlikleri</string>
+    <string name="certify_certifier_label">Onaylayan anahtar</string>
+    <string name="certify_level_label">Ne kadar dikkatli kontrol ettiniz</string>
+    <string name="certify_level_no_claim">Beyan yok</string>
+    <string name="certify_level_persona">Kontrol edilmedi</string>
+    <string name="certify_level_casual">Basit kontrol</string>
+    <string name="certify_level_positive">Dikkatli kontrol</string>
+    <string name="certify_expiry_label">Onayın son kullanma tarihi</string>
+    <string name="certify_local_only_label">Yalnızca yerel</string>
+    <string name="certify_local_only_hint">Bu cihazda kalır. Anahtar paylaşıldığında, dışa aktarıldığında, yüklendiğinde veya eşlendiğinde asla dahil edilmez.</string>
+    <string name="certify_fingerprint_confirm">Bu parmak izini sahibinin kopyasıyla karşılaştırdım</string>
+    <string name="certify_apply">Onayla</string>
+    <string name="certify_failed">Bu anahtar onaylanamadı</string>
+    <string name="certify_done_title">Anahtar onaylandı</string>
+    <string name="certify_done_body">Başkalarının onayınızı görebilmesi için onaylanan anahtarı sahibine geri gönderin. keys.openpgp.org başka kişilerin yaptığı onayları kaldırır, bu yüzden anahtarı doğrudan veya başka bir anahtar sunucusu üzerinden gönderin.</string>
+    <string name="certify_done_body_local">Yerel onayınız bu cihazda kalır.</string>
+    <string name="certify_done_mark_verified">Doğrulanmış olarak işaretle</string>
+    <string name="passphrase_hold_channel_name">E-posta uygulamaları için hatırlanan parola ifadesi</string>
+    <string name="passphrase_hold_title">PGPony bir parola ifadesini hatırlıyor</string>
+    <string name="passphrase_hold_text">E-posta uygulamaları tekrar sormadan bunu kullanabilir. Şimdi unutmak için Temizle düğmesine dokunun.</string>
+    <string name="passphrase_hold_clear">Temizle</string>
+    <string name="key_detail_cert_by">Onaylayan: %1$s</string>
+    <string name="key_detail_cert_unknown_issuer">%1$s anahtarı, anahtarlığınızda yok</string>
+    <string name="key_detail_cert_local">yerel</string>
+    <string name="key_detail_cert_revoked">geçersiz kılındı</string>
+    <string name="key_detail_cert_expired">süresi doldu</string>
+    <string name="key_detail_cert_failed">doğrulanamıyor</string>
+    <string name="key_detail_cert_revoke_title">Onayınız geri çekilsin mi?</string>
+    <string name="key_detail_cert_revoke_body_local">%1$s için yerel onayınız bu cihazdan kaldırılır.</string>
+    <string name="key_detail_cert_revoke_body">%1$s için onayınızı geçersiz kılan bir kayıt anahtara eklenir. Başkalarının da görmesi için anahtarı yeniden paylaşın.</string>
 
     <!-- ── 4.2.0 RC3 workstream I (#29): add/revoke/promote User IDs ── -->
     <string name="key_detail_userids_make_primary">Birincil Yap</string>
@@ -917,6 +961,12 @@
     <string name="recycle_bin_restore">Geri Yükle</string>
     <string name="recycle_bin_delete_now">Kalıcı olarak sil</string>
     <string name="recycle_bin_deleted_on">Silinme: %1$s</string>
+    <!-- 4.6.4 (#58): time left before a deleted key is destroyed -->
+    <plurals name="recycle_bin_days_left">
+        <item quantity="one">%1$d gün kaldı</item>
+        <item quantity="other">%1$d gün kaldı</item>
+    </plurals>
+    <string name="recycle_bin_less_than_a_day_left">Bir günden az kaldı</string>
     <string name="recycle_bin_purge_confirm_body">Bu anahtar kalıcı olarak yok edilsin mi? Bu işlem geri alınamaz.</string>
     <string name="recycle_bin_empty_confirm_body">Çöp kutusundaki tüm anahtarlar kalıcı olarak yok edilsin mi? Bu işlem geri alınamaz.</string>
     <string name="recycle_bin_restored">Anahtar geri yüklendi</string>
@@ -1024,6 +1074,11 @@
     <string name="trust_level_unverified_description">Eklendi ancak incelenmedi, dikkatli olun</string>
     <string name="trust_level_verified_description">Parmak izi güvenilir bir kanal üzerinden karşılaştırıldı</string>
     <string name="trust_level_ultimate_description">Kendi anahtarınız veya tamamen sizin kontrolünüzdeki bir anahtar</string>
+    <string name="trust_level_dont_use_name">Kullanım dışı</string>
+    <string name="trust_level_dont_use_description">Ele geçirilmiş veya kullanımdan kaldırılmış; PGPony bu anahtara şifrelemeden veya bu anahtarla imzalamadan önce onay ister</string>
+    <string name="dont_use_confirm_title">\"Kullanım dışı\" olarak işaretli bir anahtar kullanılsın mı?</string>
+    <string name="dont_use_confirm_body">\"Kullanım dışı\" olarak işaretli: %1$s. Yine de devam edilsin mi?</string>
+    <string name="dont_use_confirm_continue">Yine de kullan</string>
 
     <!-- ── TrustLevelSheet ──────────────────────────────────────────── -->
     <string name="trust_sheet_title">Güven Düzeyi</string>
@@ -1240,6 +1295,7 @@
     <string name="contacts_trust_unverified_cd">Doğrulanmamış</string>
     <string name="contacts_trust_verified_cd">Doğrulanmış</string>
     <string name="contacts_trust_ultimate_cd">Mutlak güven</string>
+    <string name="contacts_trust_dont_use_cd">Kullanım dışı</string>
 
     <!-- ── Row icons ────────────────────────────────────────────────── -->
     <string name="contacts_linked_cd">Bağlı</string>
@@ -1330,6 +1386,7 @@
          ════════════════════════════════════════════════════════════════ -->
     <string name="verify_banner_verified_title">Doğrulandı</string>
     <string name="verify_banner_verified_unconfirmed_title">İmzalı, anahtar doğrulanmadı</string>
+    <string name="verify_banner_verified_dont_use_title">İmzalı, anahtar \"Kullanım dışı\" olarak işaretli</string>
     <string name="verify_banner_invalid_title">İmza geçersiz</string>
     <string name="verify_banner_unknown_signer_title">Bilinmeyen imzalayan</string>
     <string name="verify_banner_unknown_signer_lookup_cd">İmzalayanı ara</string>
@@ -1477,7 +1534,6 @@
          another app. Mirrors the iOS PGPonyAction extension.
     -->
     <string name="share_target_activity_label">PGPony Hızlı İşlem</string>
-    <string name="share_encrypt_text_label">PGPony ile şifrele</string>
     <string name="share_target_dismiss_cd">Kapat</string>
 
     <!-- Root / classification screen -->
@@ -1756,7 +1812,7 @@
     <!-- Key expiration editing -->
     <string name="key_detail_expiry_edit">Son kullanma tarihini düzenle</string>
     <string name="key_detail_expiry_sheet_title">Son kullanma tarihini düzenle</string>
-    <string name="key_detail_expiry_sheet_subtitle">%1$s için yeni bir son kullanma tarihi belirleyin. Bu işlem anahtarı ve alt anahtarlarını yeniden imzalar; parmak izi aynı kalır.</string>
+    <string name="key_detail_expiry_sheet_subtitle">%1$s için yeni bir son kullanma tarihi belirleyin. Bu işlem birincil anahtarı yeniden imzalar. Alt anahtarlar kendi tarihlerini korur ve parmak izi aynı kalır.</string>
     <string name="key_detail_expiry_custom">Özel tarih</string>
     <string name="key_detail_expiry_pick_date">Tarih seç</string>
     <string name="key_detail_expiry_passphrase_label">Anahtar parola ifadesi (ayarlıysa)</string>
@@ -1833,6 +1889,8 @@
     <string name="settings_card_pin_cache_countdown_format">PIN hatırlanıyor. Temizlenmesine kalan süre: %1$s</string>
     <string name="settings_card_pin_cache_none_held">Şu anda hatırlanan bir PIN yok.</string>
     <string name="settings_card_pin_cache_clear">Şimdi temizle</string>
+    <string name="settings_passphrase_cache_cleared_toast">Hatırlanan parola ifadeleri temizlendi</string>
+    <string name="settings_card_pin_cache_cleared_toast">Kart PIN\'i temizlendi</string>
     <!-- 4.0.0 Phase 9 (G9): "Until I clear it" PIN cache mode -->
     <string name="settings_card_pin_cache_until_cleared">Ben temizleyene kadar</string>
     <string name="settings_session_until_locked">Telefon kilitlenene kadar</string>
@@ -1842,7 +1900,7 @@
     <string name="settings_passphrase_cache_title">Anahtar parola ifadelerini hatırla</string>
     <string name="settings_passphrase_cache_subtitle">Bağlı uygulamalar için yazılan parola ifadelerini seçilen süre boyunca bellekte tutar. Asla diske kaydedilmez; yanlış bir parola ifadesi girildiğinde veya uygulama kapatıldığında temizlenir.</string>
     <string name="settings_passphrase_cache_countdown_format">Parola ifadesi hatırlanıyor. Temizlenmesine kalan süre: %1$s</string>
-    <string name="settings_passphrase_cache_none_held">Şu anda hatırlanan bir parola ifadesi yok.</string>
+    <string name="settings_passphrase_cache_none_held">PGPony kendisi hiçbirini hatırlamıyor. E-posta ve diğer bağlı uygulamalar için girilen parola ifadeleri ayrı tutulur ve Şimdi temizle bunları da unutur.</string>
     <string name="settings_passphrase_cache_held_until_cleared">Parola ifadesi, siz temizleyene kadar hatırlanıyor.</string>
     <!-- 4.0.0 Phase 9b: settings parity (clear inputs, pubkey comment, licenses) -->
     <string name="settings_clear_inputs_title">Şifrelemeden sonra girdileri temizle</string>
@@ -1872,6 +1930,7 @@
     <string name="settings_share_format_subtitle">Paylaş düğmesinin şifreli veya imzalı bir sonucu nasıl paketleyeceği.</string>
     <!-- 3.1.0 Phase 8 Fix1: file import read error -->
     <string name="keyring_error_file_read">Dosya okunamadı. Dosyayı yerel depolamaya (Dosyalar uygulaması) kaydedip yeniden içe aktarmayı deneyin.</string>
+    <string name="keyring_error_file_too_large">Bu dosya bir anahtar olamayacak kadar büyük. .asc, .gpg veya .pgp anahtar dosyasını seçin.</string>
     <!-- 3.1.0 Phase 8 Fix2: file import diagnostic -->
     <string name="keyring_error_parse_diag">Dosyadan anahtar okunamadı. \"%2$s\" ile başlayan %1$d bayt alındı</string>
     <!-- 3.1.0 Phase 8 Fix3: richer file import diagnostic -->
@@ -1902,7 +1961,21 @@
     <string name="provider_keypicker_empty">Anahtarlığınızda henüz kullanılabilir anahtar yok. Önce PGPony\'de bir anahtar çifti oluşturun veya içe aktarın.</string>
     <!-- 4.0.0 Succession Phase P2a-2: provider passphrase prompt -->
     <string name="provider_passphrase_title">İmzalama anahtarının kilidini aç</string>
-    <string name="provider_passphrase_body_format">Bu mesajı imzalamak için %1$s anahtarının parola ifadesini girin. PGPony bunu yalnızca bu cihazda 5 dakika boyunca hatırlar.</string>
+    <string name="provider_passphrase_title_decrypt">Şifre çözme anahtarının kilidini aç</string>
+    <string name="provider_passphrase_title_ssh">SSH anahtarının kilidini aç</string>
+    <string name="provider_passphrase_action_sign">Bu mesajı imzalamak için %1$s anahtarının parola ifadesini girin.</string>
+    <string name="provider_passphrase_action_decrypt">Bu mesajın şifresini çözmek için %1$s anahtarının parola ifadesini girin.</string>
+    <string name="provider_passphrase_action_ssh">SSH ile oturum açmak için %1$s anahtarının parola ifadesini girin.</string>
+    <plurals name="provider_passphrase_keep_minutes">
+        <item quantity="one">PGPony bunu yalnızca bu cihazda %1$d dakika boyunca hatırlar.</item>
+        <item quantity="other">PGPony bunu yalnızca bu cihazda %1$d dakika boyunca hatırlar.</item>
+    </plurals>
+    <plurals name="provider_passphrase_keep_hours">
+        <item quantity="one">PGPony bunu yalnızca bu cihazda %1$d saat boyunca hatırlar.</item>
+        <item quantity="other">PGPony bunu yalnızca bu cihazda %1$d saat boyunca hatırlar.</item>
+    </plurals>
+    <string name="provider_passphrase_keep_until_cleared">PGPony bunu yalnızca bu cihazda, Ayarlar\'dan temizleyene kadar hatırlar.</string>
+    <string name="provider_passphrase_keep_until_locked">PGPony bunu yalnızca bu cihazda, telefon kilitlenene kadar hatırlar.</string>
     <string name="provider_passphrase_wrong">Yanlış parola ifadesi. Yeniden deneyin.</string>
     <string name="provider_passphrase_hint">Parola ifadesi</string>
     <string name="provider_passphrase_change_key">Farklı bir anahtarla imzala</string>
@@ -2120,10 +2193,10 @@
     <string name="share_target_action_import_encrypt_subtitle">Parmak izini kontrol edin, ardından \"Bu anahtara şifrele\" düğmesine dokunun</string>
     <string name="share_target_action_verify">İmzayı doğrula</string>
     <string name="share_target_action_verify_subtitle">Kimin imzaladığını görün. Bu mesaj imzalı, şifreli değil</string>
+    <string name="share_target_action_encrypt_all">Tümünü şifrele</string>
+    <string name="share_target_action_encrypt_all_subtitle">PGP bloğu dahil paylaşılan metnin tamamını kırpıp şifrelemek için Şifrele ekranında aç</string>
     <string name="share_target_action_sign">İmzala veya şifrele ve imzala</string>
     <string name="share_target_action_sign_subtitle">Bu metni PGPony\'nin Şifrele ekranında açın</string>
-    <string name="share_target_action_encrypt_other">Diğer metni şifrele</string>
-    <string name="share_target_action_encrypt_other_subtitle">PGP bloğuyla birlikte paylaşılan metni şifreleyin</string>
     <string name="share_target_decrypt_result_unknown_signer">Anahtarlığınızda bulunmayan bir anahtarla imzalandı</string>
     <!-- 4.6.0 (item 16): SSH authentication -->
     <string name="ssh_cardop_body">PGPony, donanım anahtarınızın kimlik doğrulama yuvasıyla bir SSH oturum açma işlemini imzalayacak. Kart PIN\'ini girin, ardından anahtarı telefonunuzun arkasına yaklaştırın.</string>
@@ -2513,6 +2586,15 @@
     <string name="err_secret_mpi_truncated">gizli MPI kesik</string>
     <string name="err_security_key_was_disconnected_plug_back">Güvenlik anahtarının bağlantısı kesildi. Yeniden takıp tekrar deneyin.</string>
     <string name="err_select_openpgp_application_failed">SELECT OpenPGP uygulaması başarısız oldu (%1$s)</string>
+    <string name="err_malformed_signed_message">İmzalı mesaj bozuk biçimli ve açılmadı.</string>
+    <string name="err_nfc_openpgp_unavailable">Bu anahtar OpenPGP uygulamasını NFC üzerinden açmadı. Nitrokey 3 dahil bazı anahtarlar NFC üzerinden OpenPGP\'yi kapatır. Anahtarınızda USB varsa takın ve tekrar deneyin.</string>
+    <string name="err_offline_primary_sign">Birincil anahtarın gizli kısmı bu cihazda değil (çevrimdışı birincil). İmzalamak için bir imzalama alt anahtarı kullanın.</string>
+    <string name="err_signing_keys_expired">Bu anahtar çiftindeki tüm imzalama anahtarlarının süresi dolmuş veya iptal edilmiş</string>
+    <string name="err_offline_primary_edit">Birincil anahtarın gizli kısmı bu cihazda değil (çevrimdışı birincil). Bu değişikliği birincil anahtarın saklandığı yerde yapın, ardından anahtarı buraya yeniden içe aktarın.</string>
+    <string name="err_provider_recipient_dont_use">Alıcı anahtarı PGPony\'de \"Kullanım dışı\" olarak işaretli: %1$s. Bu anahtara şifrelemek için PGPony\'de güven düzeyini değiştirin.</string>
+    <string name="err_provider_signer_dont_use">İmzalama anahtarı PGPony\'de \"Kullanım dışı\" olarak işaretli. E-posta uygulamanızda başka bir imzalama anahtarı seçin veya PGPony\'de bu anahtarın güven düzeyini değiştirin.</string>
+    <string name="err_certify_certifier">Bu anahtar başka anahtarları onaylayamaz</string>
+    <string name="err_certify_target">Bu anahtar burada onaylanamaz</string>
     <string name="err_session_key_block_too_short">oturum anahtarı bloğu çok kısa</string>
     <string name="err_session_key_checksum_mismatch">oturum anahtarı sağlama toplamı eşleşmiyor</string>
     <string name="err_short_form_apdu_data_limited_255">Kısa biçimli APDU verisi 255 baytla sınırlıdır (gelen: %1$s). Daha büyük yükler için komut zincirleme kullanın veya extended = true ayarlayın.</string>
@@ -2606,4 +2688,424 @@
     <string name="err_wrapped_session_key_length_out_range">sarmalanmış oturum anahtarı uzunluğu aralık dışında</string>
     <string name="err_wrong_pin_no_tries_remaining_pin">Yanlış PIN. Deneme hakkı kalmadı; PIN artık bloke</string>
     <string name="err_wrong_pin_remaining">Yanlış PIN. Kalan deneme: %1$s</string>
+    <!-- 4.6.3: pair with another device (docs/PAIRING_PROTOCOL.md) -->
+    <string name="pair_menu">Başka bir cihazla eşle</string>
+    <string name="pair_settings_subtitle">Anahtarları veya tam yedeği aynı ağdaki PGPony Desktop\'a ya da başka bir telefona taşıyın.</string>
+    <string name="pair_title">Başka bir cihazla eşle</string>
+    <string name="pair_back_cd">Geri</string>
+    <string name="pair_intro">Anahtarları veya tam yedeği bu telefon ile aynı ağdaki PGPony Desktop ya da başka bir telefon arasında taşıyın. Bir cihaz bekler, diğeri bağlanır ve iki ekrandaki kodu karşılaştırırsınız. Bu ekrandan çıktığınızda hiçbir şey saklanmaz.</string>
+    <string name="pair_offline">Eşleme yerel ağınızı kullanır ve Çevrimdışı mod açık. Eşlemek için Ayarlar\'dan Çevrimdışı modu kapatın.</string>
+    <string name="pair_host">Diğer cihazı bekle</string>
+    <string name="pair_join">Diğer cihaza bağlan</string>
+    <string name="pair_host_waiting">Diğer cihazda Bağlan\'ı seçin ve bu kodu tarayın ya da aşağıdaki adresi yazın.</string>
+    <string name="pair_invite_cd">Eşleme QR kodu</string>
+    <string name="pair_host_closes">Bu pencere %1$s saatine kadar açık kalır.</string>
+    <string name="pair_copy_invite">Daveti kopyala</string>
+    <string name="pair_no_address">Bu telefonun başka bir cihazın ulaşabileceği Wi-Fi veya Ethernet adresi yok. Diğer cihazla aynı ağa katılıp tekrar deneyin.</string>
+    <string name="pair_join_intro">Diğer cihazda Bekle\'yi seçin. Ardından gösterdiği QR kodunu tarayın ya da adresini yazın.</string>
+    <string name="pair_scan">QR kodu tara</string>
+    <string name="pair_join_label">Diğer cihazda gösterilen adres</string>
+    <string name="pair_bad_address">Adresi ve bağlantı noktasını gösterildiği gibi yazın, örneğin 192.168.1.20:49152.</string>
+    <string name="pair_bad_invite">Bu davet okunamıyor. Tekrar tarayın ya da adresi yazın.</string>
+    <string name="pair_connect">Bağlan</string>
+    <string name="pair_working">İşleniyor…</string>
+    <string name="pair_peer_address">Diğer cihazın adresi: %1$s</string>
+    <string name="pair_host_connected">%1$s adresindeki bir cihaz bağlandı. Eşleme hazırlanıyor…</string>
+    <string name="pair_compare_body">Diğer cihaz aynı kodu gösteriyor mu? Kodlar farklıysa iki cihazın arasında biri olabilir. Farklı\'yı seçip baştan başlayın.</string>
+    <string name="pair_codes_match">Aynı kod</string>
+    <string name="pair_codes_differ">Farklı</string>
+    <string name="pair_waiting_other">Diğer cihaz bekleniyor…</string>
+    <string name="pair_compare_host_body">Diğer cihazın gösterdiği kodu yazın. Kod göstermiyor ya da hata gösteriyorsa İptal\'i seçin: onun yerine başka bir cihaz bağlanmış olabilir.</string>
+    <string name="pair_typed_code_label">Diğer cihazda gösterilen kod</string>
+    <string name="pair_typed_code_confirm">Eşle</string>
+    <string name="pair_typed_code_wrong">Bu kod eşleşmiyor. Diğer ekranı kontrol edip tekrar yazın.</string>
+    <string name="pair_compare_host_own">Diğer cihaz kendi kodunu bununla karşılaştırır:</string>
+    <string name="pair_cancel">İptal</string>
+    <string name="pair_paired_with">%1$s ile eşlendi</string>
+    <string name="pair_paired_unnamed">Diğer cihazla eşlendi</string>
+    <string name="pair_send_heading">Diğer cihaza gönder</string>
+    <string name="pair_group_keypairs">Anahtar çiftleri</string>
+    <string name="pair_group_public">Açık anahtarlar</string>
+    <string name="pair_group_backup">Her şey</string>
+    <string name="pair_item_backup">Tam yedek</string>
+    <string name="pair_transfer_pass_note">Seçtiğiniz bazı anahtar çiftlerinin parola ifadesi yok. Bunlar bu aktarım parola ifadesiyle korunarak gider ve diğer cihazın bunları kullanmak için bu ifadeye ihtiyacı vardır.</string>
+    <string name="pair_transfer_pass">Aktarım parola ifadesi</string>
+    <string name="pair_transfer_pass_repeat">Aktarım parola ifadesini tekrarlayın</string>
+    <string name="pair_send">Gönder</string>
+    <string name="pair_biometric_title">Özel anahtarları gönder</string>
+    <string name="pair_biometric_subtitle">Anahtar çiftleri veya bir yedek bu telefondan çıkmadan önce siz olduğunuzu doğrulayın.</string>
+    <string name="pair_waiting_answer">Diğer cihazın kabul etmesi bekleniyor…</string>
+    <string name="pair_sending">%1$s gönderiliyor…</string>
+    <string name="pair_receiving">%1$s alınıyor: %%%2$d</string>
+    <string name="pair_backup_code_tell">Bu kurtarma kodunu diğer cihazın kullanıcısına söyleyin. Yedeği orada açmak için gereklidir.</string>
+    <string name="pair_copy">Kopyala</string>
+    <string name="pair_incoming_heading">%1$s şunları göndermek istiyor:</string>
+    <string name="pair_incoming_heading_unnamed">Diğer cihaz şunları göndermek istiyor:</string>
+    <string name="pair_kind_keypair">%1$s (anahtar çifti)</string>
+    <string name="pair_kind_public">%1$s (açık anahtar)</string>
+    <string name="pair_incoming_fingerprint">Parmak izi %1$s</string>
+    <string name="pair_backup_code_label">Diğer cihazda gösterilen kurtarma kodu</string>
+    <string name="pair_accept">Seçilenleri kabul et</string>
+    <string name="pair_decline">Reddet</string>
+    <string name="pair_received_public">Diğer cihazdan gelen bu açık anahtar eklensin mi?</string>
+    <string name="pair_received_keypair">Diğer cihazdan gelen bu anahtar çifti eklensin mi?</string>
+    <string name="pair_received_in_keyring">Bu anahtar zaten anahtarlığınızda. Eklemek yeni olan her şeyi birleştirir.</string>
+    <string name="pair_received_backup">Diğer cihazdan gelen yedek geri yüklensin mi? Anahtarları anahtarlığınıza eklenir. Güven düzeyleri ve ayarlar ondan alınmaz.</string>
+    <string name="pair_received_add">Ekle</string>
+    <string name="pair_received_restore">Geri yükle</string>
+    <string name="pair_received_skip">Atla</string>
+    <string name="pair_skipped_reason">diğer kullanıcı tarafından atlandı</string>
+    <string name="pair_import_added">anahtarlığınıza eklendi</string>
+    <string name="pair_import_updated">anahtarlığınızda güncellendi</string>
+    <string name="pair_import_already">zaten anahtarlığınızda</string>
+    <string name="pair_ended">Oturum sona erdi. Anahtarları silindi.</string>
+    <string name="pair_again">Baştan başla</string>
+    <string name="pair_fail_refused">Diğer cihaz kodların farklı olduğunu söyledi. Hiçbir şey eşlenmedi.</string>
+    <string name="pair_fail_you_refused">Kodların farklı olduğunu söylediniz, bu yüzden hiçbir şey eşlenmedi. Bunu beklemiyorsanız ağınızda başka kimse olmadığını kontrol edip baştan başlayın.</string>
+    <string name="pair_fail_you_cancelled">Eşlemeyi iptal ettiniz, bu yüzden hiçbir şey eşlenmedi.</string>
+    <string name="pair_fail_typed_wrong">Yazdığınız kod eşleşmedi, bu yüzden hiçbir şey eşlenmedi. Doğru yazdıysanız iki cihazın arasında biri olabilir. Baştan başlayın.</string>
+    <string name="pair_fail_handshake">Eşleme doğrulanamadı. Hiçbir şey eşlenmedi; baştan başlayın.</string>
+    <string name="pair_fail_timeout">Diğer cihaz yanıt vermeyi bıraktı.</string>
+    <string name="pair_fail_version">Diğer cihazda farklı eşleme yapan bir PGPony var. İkisini de güncelleyip baştan başlayın.</string>
+    <string name="pair_fail_protocol">Diğer taraf bir PGPony eşleme penceresi değil ya da beklenmeyen bir şey gönderdi.</string>
+    <string name="pair_fail_closed">Bağlantı kesildi.</string>
+    <string name="pair_fail_window_taken">Diğer cihaz bağlantıyı reddetti veya kesti. Eşleme penceresini başka bir cihaz almış olabilir. Diğer cihazda iptal edip yeni bir pencere açın.</string>
+    <string name="pair_err_window_expired">Eşleme penceresi başka bir cihaz bağlanmadan kapandı.</string>
+    <string name="pair_err_export">%1$s dışa aktarılamadı.</string>
+    <string name="pair_err_needs_passphrase">%1$s için parola ifadesi yok. Göndermek için bir aktarım parola ifadesi girin.</string>
+    <string name="pair_err_too_large">%1$s göndermek için çok büyük.</string>
+    <string name="pair_err_import">%1$s içe aktarılamadı.</string>
+    <string name="pair_err_backup_code">Diğer cihazda gösterilen kurtarma kodunu girin.</string>
+    <string name="pair_err_no_fingerprint">%1$s parmak izi olmadan sunuldu.</string>
+    <string name="pair_err_not_one_key">%1$s tam olarak bir anahtar içermiyor.</string>
+    <string name="pair_err_wrong_key">%1$s sunulan anahtar değil.</string>
+    <string name="pair_err_secret_in_public">%1$s açık anahtar olarak sunuldu ancak gizli bir anahtar içeriyor.</string>
+    <string name="pair_err_no_secret">%1$s anahtar çifti olarak sunuldu ancak gizli anahtar içermiyor.</string>
+    <string name="pair_err_unprotected">%1$s parola ifadesi olmayan bir gizli anahtar içeriyor.</string>
+    <string name="pair_err_not_backup">%1$s bir PGPony yedek dosyası değil.</string>
+    <string name="pair_rows_sent">Gönderildi</string>
+    <string name="pair_rows_received">Alındı</string>
+    <string name="pair_row_waiting">Diğer cihazın eklemesi bekleniyor…</string>
+    <string name="pair_row_added_on">%1$s üzerinde eklendi</string>
+    <string name="pair_row_added_on_unnamed">Diğer cihaza eklendi</string>
+    <string name="pair_row_skipped_on">%1$s üzerinde atlandı</string>
+    <string name="pair_row_skipped_on_unnamed">Diğer cihazda atlandı</string>
+    <string name="pair_row_declined">Diğer cihaz kabul etmedi</string>
+    <string name="pair_row_failed">İçe aktarılmadı: %1$s</string>
+    <string name="pair_row_failed_plain">İçe aktarılmadı</string>
+    <string name="pair_row_no_answer">Oturum bitmeden yanıt gelmedi</string>
+    <string name="pair_row_skipped_here">Atlandı</string>
+    <string name="pair_done">Bitti</string>
+    <string name="pair_finished_title">Eşleme tamamlandı</string>
+    <string name="pair_finished_by_peer">Diğer cihaz oturumu sonlandırdı.</string>
+    <string name="pair_tally_sent">Gönderilen</string>
+    <string name="pair_tally_received">Alınan</string>
+    <string name="pair_tally_skipped">Atlanan</string>
+    <string name="pair_tally_failed">Başarısız</string>
+    <string name="pair_tally_unanswered">Yanıt yok</string>
+    <string name="pair_view_key">Anahtarı göster</string>
+    <string name="pair_view_keyring">Anahtarlığı göster</string>
+    <string name="pair_close">Kapat</string>
+    <plurals name="pair_restore_summary">
+        <item quantity="one">%1$d anahtar eklendi veya güncellendi</item>
+        <item quantity="other">%1$d anahtar eklendi veya güncellendi</item>
+    </plurals>
+
+    <!-- 4.7.0 RC3 and earlier gaps, translated Oct 2026 -->
+    <string name="batch_output_title">Birden fazla dosya</string>
+    <string name="batch_output_package">Tek paket</string>
+    <string name="batch_output_package_subtitle">Tüm dosyalar ve mesaj, tek bir dosyada birlikte şifrelenir</string>
+    <string name="batch_output_each">Her dosya ayrı ayrı</string>
+    <string name="batch_output_each_subtitle">Dosya başına bir çıktı; bir klasöre kaydedilir veya birlikte paylaşılır</string>
+    <string name="batch_op_encrypt">Şifrele</string>
+    <string name="batch_op_encrypt_sign">Şifrele ve imzala</string>
+    <string name="batch_op_sign_only">Yalnızca imzala</string>
+    <string name="batch_op_sign_only_subtitle">Her dosya için ayrık bir .sig. Dosyaların kendisi olduğu gibi kalır.</string>
+    <string name="batch_card_signing_unavailable">Her dosyayı donanım anahtarıyla imzalamak, her dosya için ayrı bir dokunuş gerektirir. İmzalayan kimlik bölümünde bir yazılım anahtarı seçin veya Tek paket seçeneğini kullanın.</string>
+    <string name="batch_error_no_files">En az bir dosya ekleyin.</string>
+    <string name="batch_error_pick_signer">Dosyaları imzalamak için İmzalayan kimlik bölümünde bir anahtar seçin.</string>
+    <string name="batch_error_no_matching_key">PGPony\'de saklanan anahtarların hiçbiri bu dosyanın şifresini çözemiyor. Dosya bir donanım anahtarına şifrelenmişse şifresini ayrı olarak çözün.</string>
+    <string name="batch_item_failed_unknown">Bu dosya işlenemedi.</string>
+    <string name="batch_item_cancelled">İptal edildi</string>
+    <string name="batch_item_skipped_passphrase">Atlandı: parola ifadesi girilmedi</string>
+    <string name="batch_save_failed_item">Bu dosya klasöre yazılamadı.</string>
+    <string name="batch_save_folder_unusable">PGPony bu klasöre yazamıyor. Başka bir klasör seçin.</string>
+    <string name="batch_saved_summary_format">%2$d dosyadan %1$d tanesi klasöre kaydedildi.</string>
+    <string name="batch_title_encrypting">Dosyalar şifreleniyor</string>
+    <string name="batch_title_signing">Dosyalar imzalanıyor</string>
+    <string name="batch_title_decrypting">Dosyaların şifresi çözülüyor</string>
+    <string name="batch_title_done_format">%2$d dosyadan %1$d tanesi tamamlandı</string>
+    <string name="batch_progress_file_format">Dosya %1$d / %2$d</string>
+    <string name="batch_passphrase_prompt">Parola ifadesini girin. Bu toplu işlemdeki her dosya için kullanılır.</string>
+    <string name="batch_passphrase_label">Parola ifadesi</string>
+    <string name="batch_passphrase_continue">Devam et</string>
+    <string name="batch_passphrase_skip">Kalanları atla</string>
+    <string name="batch_item_output_format">Çıktı: %1$s</string>
+    <string name="batch_item_saved_format">%1$s olarak kaydedildi</string>
+    <string name="batch_save_to_folder">Bir klasöre kaydet</string>
+    <string name="batch_share_all">Tümünü paylaş</string>
+    <string name="batch_share_chooser">Dosyaları paylaş</string>
+    <string name="batch_share_failed">Dosyalar paylaşılamadı.</string>
+    <string name="batch_status_pending">Bekliyor</string>
+    <string name="batch_status_done">Tamamlandı</string>
+    <string name="batch_status_failed">Başarısız</string>
+    <string name="share_files_choice_title">Bu dosyaların bazıları şifreli</string>
+    <string name="share_files_choice_message">%2$d dosyadan %1$d tanesi şifreli mesaj. Bunların şifresi çözülsün mü, yoksa tüm dosyalar tek paket olarak mı şifrelensin?</string>
+    <string name="share_files_choice_decrypt_format">%1$d dosyanın şifresini çöz</string>
+    <string name="share_files_choice_encrypt">Tümünü şifrele</string>
+    <string name="save_progress_saving">Kaydediliyor…</string>
+    <string name="save_progress_bytes_format">Kaydediliyor: %1$s / %2$s</string>
+    <string name="save_cancelled">Kaydetme iptal edildi. Yarım kalan dosya silindi.</string>
+    <string name="save_failed_generic">Dosya kaydedilemedi. Yeniden deneyin veya başka bir konum seçin.</string>
+    <string name="save_failed_no_space">Dosyayı kaydetmek için yeterli boş alan yok.</string>
+    <string name="save_toast_saved_format">Kaydedildi: %1$s</string>
+    <string name="save_toast_failed_format">Kaydedilemedi: %1$s</string>
+    <string name="save_batch_item_cancelled">Kaydedilmedi: kaydetme iptal edildi.</string>
+    <plurals name="import_result_subkeys_added">
+        <item quantity="one">%1$d alt anahtar eklendi.</item>
+        <item quantity="other">%1$d alt anahtar eklendi.</item>
+    </plurals>
+    <string name="import_preview_left_out_title">Dışarıda bırakılan veya kullanılamayan alt anahtarlar</string>
+    <string name="import_preview_left_out_row_format">%1$s %2$s: %3$s</string>
+    <string name="subkey_issue_weak_hash">Şubat 2023 sınırından sonra SHA-1 ile bağlanmış</string>
+    <string name="subkey_issue_no_binding">Geçerli bağlama imzası yok</string>
+    <string name="subkey_issue_no_back_signature">Geçerli geri imzası olmayan imzalama alt anahtarı</string>
+    <string name="subkey_issue_revoked">Geçersiz kılındı</string>
+    <string name="subkey_issue_expired">Süresi doldu</string>
+    <string name="key_detail_subkey_secret_on_device">Gizli kısım bu cihazda</string>
+    <string name="key_detail_subkey_secret_offline">Gizli kısım çevrimdışı (gpg stub)</string>
+    <string name="key_detail_subkey_secret_on_card">Gizli kısım bir kartta</string>
+    <string name="key_detail_subkey_secret_not_present">Bu cihazda gizli kısım yok</string>
+    <string name="provider_review_title">Alıcıları gözden geçirin</string>
+    <string name="provider_review_intro">PGPony\'de bu mesajın bazı alıcıları için kullanılabilir anahtar yok. Mesajın şifreleneceği anahtarları seçin veya taslağınıza dönmek için iptal edin.</string>
+    <string name="provider_review_missing_format">%1$s: PGPony\'de anahtar yok</string>
+    <string name="provider_review_dont_use_format">%1$s: \"Kullanım dışı\" olarak işaretli</string>
+    <string name="provider_review_dont_use_hint">\"Kullanım dışı\" olarak işaretlenen anahtarlar sunulmaz. Bunlardan birine şifrelemek için PGPony\'de güven düzeyini değiştirin.</string>
+    <string name="provider_review_no_keys">PGPony\'de seçilebilecek anahtar yok. Önce alıcının açık anahtarını PGPony\'ye içe aktarın.</string>
+    <string name="provider_review_confirm">Seçilenlere şifrele</string>
+    <string name="err_provider_review_key_unusable">Bu mesaj için seçilen bir anahtar kullanılamıyor: %1$s. Mesajı yeniden gönderin ve alıcıları PGPony\'de seçin.</string>
+    <string name="import_method_github">GitHub</string>
+    <string name="import_github_label">GitHub kullanıcısı</string>
+    <string name="import_github_placeholder">kullanıcı adı</string>
+    <string name="import_github_fetch_button">Anahtarları getir</string>
+    <string name="import_github_help">PGPony, bu kullanıcının GitHub hesabına eklediği OpenPGP anahtarlarını (github.com/username.gpg) proxy ayarınız üzerinden getirir. Her parmak izini kontrol edip Anahtarı İçe Aktar\'a dokunana kadar hiçbir şey eklenmez.</string>
+    <string name="import_github_error_invalid">Bu bir GitHub kullanıcı adı değil. Kullanıcı adı 1 ile 39 arasında harf, rakam veya art arda gelmeyen kısa çizgilerden oluşur; kısa çizgiyle başlayamaz ve bitemez.</string>
+    <string name="import_github_error_no_keys_format">GitHub\'da %1$s için OpenPGP anahtarı yok.</string>
+    <string name="import_github_error_not_found_format">%1$s adında bir GitHub kullanıcısı yok.</string>
+    <string name="import_github_error_unreadable_format">GitHub %1$s için yanıt verdi, ancak PGPony\'nin okuyabileceği bir açık anahtar döndürmedi.</string>
+    <string name="applock_pin_field_label">PIN</string>
+    <string name="applock_pin_confirm_label">PIN\'i onaylayın</string>
+    <string name="applock_new_pin_label">Yeni PIN</string>
+    <string name="applock_wrong_pin">Yanlış PIN.</string>
+    <string name="applock_wait_format">Çok fazla yanlış PIN. %1$d sn sonra yeniden deneyin.</string>
+    <string name="applock_unavailable">PGPony PIN ayarlarını okuyamıyor; bu yüzden PIN\'i denetleyemiyor ve kilitli kalıyor.</string>
+    <string name="applock_check_failed">PIN denetlenemedi. Yeniden deneyin.</string>
+    <string name="applock_reset_button">PGPony\'yi sil ve baştan başla</string>
+    <string name="applock_reset_confirm_title">PGPony\'deki her şey silinsin mi?</string>
+    <string name="applock_reset_confirm_message">Bu işlem, Son Silinenler dahil PGPony\'deki tüm anahtarları, tüm ayarları ve uygulama onaylarını siler; Tüm Verileri Temizle ile aynıdır. Donanım güvenlik anahtarındaki anahtarlara ve PGPony dışına kaydedilmiş yedeklere dokunulmaz. Bu işlem geri alınamaz.</string>
+    <string name="applock_reset_confirm_button">Sil</string>
+    <string name="applock_fingerprint_reset_notice">Bu telefondaki parmak izleri değiştiği için parmak iziyle kilit açma kapatıldı. PIN\'inizi kullanın. Ayarlar\'dan yeniden açabilirsiniz.</string>
+    <string name="applock_use_fingerprint">Parmak izi kullan</string>
+    <string name="applock_method_title">Kilit yöntemi</string>
+    <string name="applock_method_device">Cihaz kilidi</string>
+    <string name="applock_method_pin">PGPony PIN\'i</string>
+    <string name="applock_method_dialog_message">Cihaz kilidi, telefonunuzun parmak izini veya ekran kilidini kullanır. PGPony PIN\'i, yalnızca PGPony\'nin sorduğu 6 ila 16 haneli ayrı bir PIN\'dir ve bir zorlama PIN\'i de olabilir.</string>
+    <string name="applock_set_pin_title">PGPony PIN\'i belirleyin</string>
+    <string name="applock_set_pin_message">6 ila 16 hane seçin. PGPony bunun yalnızca bir hash değerini saklar ve unutulan bir PIN\'i kurtaramaz.</string>
+    <string name="applock_change_pin_title">PIN\'i değiştir</string>
+    <string name="applock_change_pin_subtitle">Yeni bir PGPony PIN\'i seçin</string>
+    <string name="applock_verify_title">PGPony PIN\'inizi girin</string>
+    <string name="applock_verify_message">Uygulama kilidini değiştirmek için mevcut PIN\'inizi girin.</string>
+    <string name="applock_pin_format_error">6 ila 16 hane kullanın.</string>
+    <string name="applock_pin_mismatch">PIN\'ler eşleşmiyor.</string>
+    <string name="applock_pin_same_as_duress">PIN, zorlama PIN\'inden farklı olmalıdır.</string>
+    <string name="applock_duress_same_as_pin">Zorlama PIN\'i, PIN\'inizden farklı olmalıdır.</string>
+    <string name="applock_duress_title">Zorlama PIN\'i</string>
+    <string name="applock_duress_off">Kapalı</string>
+    <string name="applock_duress_on">Açık</string>
+    <string name="applock_duress_info_title">Zorlama PIN\'i ayarlayın</string>
+    <string name="applock_duress_info_message">Zorlama PIN\'i, biri sizi PGPony\'yi açmaya zorladığında kullanılan ikinci bir PIN\'dir. Kilit ekranında girildiğinde Son Silinenler dahil PGPony\'deki tüm anahtarları; tüm ayarlar, uygulama onayları ve hatırlanan parola ifadeleriyle birlikte siler ve PGPony yeni yüklenmiş gibi açılır. Ekranda bunun olduğunu gösteren hiçbir şey yoktur.\n\nBu işlem geri alınamaz. Zorlama PIN\'ini girerek asla test etmeyin: bu her şeyi siler.</string>
+    <string name="applock_not_touched">Dokunulmayanlar: donanım güvenlik anahtarındaki anahtarlar (kendi PIN\'i vardır), PGPony dışına kaydettiğiniz yedekler ve PIN girilmeden önce alınmış bir telefon depolama kopyası.</string>
+    <string name="applock_duress_set_title">Bir zorlama PIN\'i seçin</string>
+    <string name="applock_duress_remove_title">Zorlama PIN\'i kaldırılsın mı?</string>
+    <string name="applock_duress_remove_message">PGPony PIN\'iniz kalır. Eski zorlama PIN\'i bundan sonra yanlış PIN sayılır.</string>
+    <string name="applock_duress_remove_button">Kaldır</string>
+    <string name="applock_fingerprint_title">Parmak iziyle kilidi aç</string>
+    <string name="applock_fingerprint_subtitle">PIN yerine parmak izine izin ver</string>
+    <string name="applock_fingerprint_advice_title">Parmak iziyle kilit açma kapatılsın mı?</string>
+    <string name="applock_fingerprint_advice_message">Bir parmak zorla kullandırılabilir ve zorlama PIN\'i yalnızca sizden PIN istendiğinde işe yarar. Parmak iziyle kilit açma kapalıyken PGPony yalnızca PIN\'i sorar. Önerilir.</string>
+    <string name="applock_fingerprint_advice_turn_off">Kapat</string>
+    <string name="applock_fingerprint_advice_keep">Açık kalsın</string>
+    <string name="applock_wipe_after_title">Yanlış PIN\'lerden sonra sil</string>
+    <string name="applock_wipe_after_off">Kapalı</string>
+    <string name="applock_wipe_after_format">%1$d yanlış PIN\'den sonra</string>
+    <string name="applock_wipe_after_message">Arka arkaya bu sayıda yanlış PIN girildiğinde PGPony, zorlama PIN\'inin yaptığı gibi her şeyi siler. Doğru bir PIN sayacı sıfırlar. Bu işlem geri alınamaz.</string>
+
+    <!-- 4.7.0 RC4, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 45, #85): a User ID with many certifications shows the first three, then this row. -->
+    <plurals name="key_detail_cert_show_all">
+        <item quantity="one">%1$d onayın tümünü göster</item>
+        <item quantity="other">%1$d onayın tümünü göster</item>
+    </plurals>
+    <string name="key_detail_cert_show_fewer">Daha az göster</string>
+
+    <!-- 4.7.0 RC4 (item 48, #79): which key made a signature and which key decrypted, by 16-digit key ID. -->
+    <string name="verify_signing_key_format">İmzalama anahtarı %1$s</string>
+    <string name="verify_signing_subkey_format">%2$s anahtarının imzalama alt anahtarı %1$s</string>
+    <string name="encdec_decrypted_with_subkey_format">Şifresi şu anahtarla çözüldü: %1$s, alt anahtar %2$s</string>
+
+    <!-- 4.7.0 RC4 (item 46, #82): Key Details, choose which signing subkey a key pair signs with. -->
+    <string name="key_detail_signing_subkey_title">İmzalamada kullanılacak anahtar</string>
+    <string name="key_detail_signing_subkey_help">Burada bir alt anahtar seçmediğiniz sürece PGPony en yeni geçerli imzalama alt anahtarıyla imzalar. Seçilen alt anahtar geçerli olduğu sürece kullanılır; süresi dolduğunda veya geçersiz kılındığında imzalama otomatik seçime geri döner.</string>
+    <string name="key_detail_signing_subkey_automatic">Otomatik</string>
+    <string name="key_detail_signing_subkey_automatic_format">Otomatik (şu anda %1$s)</string>
+    <string name="key_detail_signing_subkey_option_format">Alt anahtar %1$s, %2$s, oluşturulma: %3$s</string>
+    <string name="key_detail_signing_subkey_primary_format">Birincil anahtar %1$s, %2$s</string>
+    <string name="key_detail_signing_subkey_pin_unusable">Seçtiğiniz alt anahtar artık imzalayamıyor, bu yüzden PGPony otomatik seçimle imzalıyor.</string>
+
+    <!-- 4.7.0 RC4 (item 47, #78): re-importing your own key pair with secret keys under a new passphrase. -->
+    <string name="import_replace_secrets_title">Bu dosyadaki gizli anahtarları kullan</string>
+    <plurals name="import_replace_secrets_body">
+        <item quantity="one">Bu anahtar çifti PGPony\'de zaten var. Bu dosyadaki %1$d gizli anahtar, saklanandan farklı şekilde korunuyor, örneğin gpg\'de bir parola ifadesi değişikliğinden sonra. Onu bu dosyadakiyle değiştirin ve bundan sonra bu dosyanın parola ifadesini kullanın.</item>
+        <item quantity="other">Bu anahtar çifti PGPony\'de zaten var. Bu dosyadaki %1$d gizli anahtar, saklananlardan farklı şekilde korunuyor, örneğin gpg\'de bir parola ifadesi değişikliğinden sonra. Bunları bu dosyadakilerle değiştirin ve bundan sonra bu dosyanın parola ifadesini kullanın.</item>
+    </plurals>
+    <string name="import_replace_secrets_passphrase_label">Bu dosyanın parola ifadesi</string>
+    <string name="import_replace_secrets_passphrase_help">Dosyadaki her gizli anahtarın kilidi bununla açılabilmelidir. Dosyanın parola ifadesi yoksa boş bırakın.</string>
+    <plurals name="import_result_secrets_replaced">
+        <item quantity="one">%1$d gizli anahtar değiştirildi.</item>
+        <item quantity="other">%1$d gizli anahtar değiştirildi.</item>
+    </plurals>
+    <string name="err_replace_secrets_passphrase">Parola ifadesi, bu dosyada %1$s için bulunan gizli anahtarların hepsinin kilidini açmadı. Saklanan gizli anahtarlar korundu ve hiçbir şey içe aktarılmadı.</string>
+    <string name="err_replace_secrets_unproven">Bu dosyadaki gizli anahtarların %1$s anahtarına ait olduğu doğrulanamadı. Saklanan gizli anahtarlar korundu ve hiçbir şey içe aktarılmadı.</string>
+
+    <!-- 4.7.0 RC4 security key work, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 28, #36, #43): the card prompt a mail app opens also takes a key plugged in over USB. -->
+    <string name="provider_cardop_usb_hint">USB üzerinden takılan bir anahtar da çalışır: PIN\'i girin, ardından \"USB anahtarını kullan\" düğmesine dokunun.</string>
+    <string name="provider_cardop_use_usb">USB anahtarını kullan</string>
+    <string name="provider_cardop_wrong_pin_usb">Yanlış PIN. %1$d deneme hakkı kaldı. PIN\'i kontrol edin ve yeniden deneyin.</string>
+    <string name="provider_cardop_usb_lost">Anahtar çıkarıldı. Yeniden takın ve tekrar deneyin.</string>
+
+    <!-- 4.7.0 RC4 (item 34, #43): keys whose secret is on a security key (generated on it, or paired with it). -->
+    <string name="key_detail_type_key_pair_on_card">Güvenlik anahtarındaki anahtar çifti</string>
+    <string name="key_detail_primary_on_card">Birincil anahtar: güvenlik anahtarının imza yuvasında; imzalama ve onaylama işlemlerini orada yapar.</string>
+
+    <!-- 4.7.0 RC4 (item 31, card): certifying with a key whose primary is on a security key. -->
+    <string name="certify_no_certifier_card">Anahtar çiftlerinizin hiçbiri burada onaylama yapamaz. Onaylamak için birincil anahtarı onaylama yapabilen ve gizli kısmı bu cihazda veya bir güvenlik anahtarında bulunan bir anahtar çifti gerekir. ML-DSA anahtarları henüz onaylama yapamaz.</string>
+    <string name="certify_card_hint">Onayla düğmesine dokunduktan sonra güvenlik anahtarını telefona yaklaştırın veya takın.</string>
+    <string name="err_certify_card_mismatch">Bu güvenlik anahtarı, onaylamak için seçilen anahtarı içermiyor</string>
+
+    <!-- 4.7.0 RC4 (item 13, #71): Move to Security Key, like gpg's keytocard. -->
+    <string name="move_to_card_menu">Güvenlik anahtarına taşı</string>
+    <string name="move_to_card_title">Bir güvenlik anahtarına taşı</string>
+    <string name="move_to_card_intro">Bu anahtar çiftinin anahtarlarını, gpg\'nin keytocard komutunun yaptığı gibi bir OpenPGP güvenlik anahtarının yuvalarına yazar. Ardından güvenlik anahtarı bu anahtarlarla imzalar ve şifre çözer.</string>
+    <string name="move_to_card_nothing">Bu anahtar çiftinin hiçbir anahtarı bir güvenlik anahtarına taşınamaz.</string>
+    <string name="move_to_card_slot_signature">İmza yuvası</string>
+    <string name="move_to_card_slot_decryption">Şifre çözme yuvası</string>
+    <string name="move_to_card_slot_authentication">Kimlik doğrulama yuvası</string>
+    <string name="move_to_card_slot_leave">Bu yuvayı olduğu gibi bırak</string>
+    <string name="move_to_card_key_primary_format">Birincil anahtar, %1$s, %2$s</string>
+    <string name="move_to_card_key_subkey_format">Alt anahtar, %1$s, %2$s</string>
+    <string name="move_to_card_one_slot_each">Her yuva için farklı bir anahtar seçin.</string>
+    <string name="move_to_card_refused_title">Güvenlik anahtarına taşınamayan anahtarlar:</string>
+    <string name="move_to_card_refused_v6">v6 anahtarları OpenPGP güvenlik anahtarlarına sığmaz</string>
+    <string name="move_to_card_refused_rsa_size">yalnızca RSA 2048, 3072 ve 4096 taşınabilir</string>
+    <string name="move_to_card_refused_curve">bu eğri henüz desteklenmiyor</string>
+    <string name="move_to_card_refused_algorithm">bu anahtar türü taşınamaz</string>
+    <string name="move_to_card_backup_body">Güvenlik anahtarındaki bir anahtar oradan bir daha kopyalanamaz. Anahtarlar güvenlik anahtarıyla birlikte kaybolmasın diye önce bu anahtar çiftinin bir yedeğini kaydedin.</string>
+    <string name="move_to_card_backup_action">Önce bir yedek kaydet</string>
+    <string name="move_to_card_backup_confirm">Bu anahtar çiftinin bir yedeği bende var</string>
+    <string name="move_to_card_remove_label">Taşınan anahtarları bu telefondan kaldır</string>
+    <string name="move_to_card_remove_hint">gpg\'de olduğu gibi telefon yalnızca anahtarların güvenlik anahtarında olduğuna dair bir not tutar ve bundan sonra güvenlik anahtarını kullanır. Burada da bir kopya tutmak için bunu kapatın.</string>
+    <string name="move_to_card_remove_unavailable">Yalnızca bu anahtar çiftinin her alt anahtarı güvenlik anahtarına gittiğinde. Birincil anahtar, gpg\'de olduğu gibi bu telefonda kalabilir. Aksi hâlde burada bir kopya kalır ve telefon onu kullanmaya devam eder.</string>
+    <string name="move_to_card_wrong_admin_pin">Yanlış yönetici PIN\'i. %1$d deneme hakkı kaldı. Hiç kalmadığında güvenlik anahtarının sıfırlanması gerekir.</string>
+    <string name="move_to_card_wrong_user_pin">Yanlış kullanıcı PIN\'i. %1$d deneme hakkı kaldı. Güvenlik anahtarına hiçbir şey yazılmadı.</string>
+    <string name="move_to_card_replace_confirm">Seçilen yuvalarda zaten bulunan anahtarları değiştir</string>
+    <string name="move_to_card_slots_occupied">Güvenlik anahtarının seçtiğiniz yuvalarından birinde zaten farklı bir anahtar var, bu yüzden hiçbir şey yazılmadı. Üzerine yazmak için \"Seçilen yuvalarda zaten bulunan anahtarları değiştir\" seçeneğini işaretleyin ve Taşı düğmesine yeniden dokunun.</string>
+    <string name="move_to_card_admin_pin">Güvenlik anahtarının yönetici PIN\'i</string>
+    <string name="move_to_card_user_pin">Güvenlik anahtarının kullanıcı PIN\'i</string>
+    <string name="move_to_card_pins_hint">Yönetici PIN\'i anahtarları yazar. Kullanıcı PIN\'i ardından her yuva için bir kez kullanılır; böylece telefonda herhangi bir şey değişmeden önce güvenlik anahtarının bu anahtarlarla imzaladığı ve şifre çözdüğü kontrol edilir.</string>
+    <string name="move_to_card_action">Taşı</string>
+    <string name="move_to_card_waiting">Güvenlik anahtarını telefona yaklaştırın veya takın ve bu işlem bitene kadar orada tutun.</string>
+    <string name="move_to_card_failed">Anahtarlar güvenlik anahtarına taşınamadı</string>
+    <string name="move_to_card_done_title">Anahtarlar taşındı</string>
+    <plurals name="move_to_card_done_removed">
+        <item quantity="one">%1$d anahtar artık güvenlik anahtarında ve bu telefondan kaldırıldı.</item>
+        <item quantity="other">%1$d anahtar artık güvenlik anahtarında ve bu telefondan kaldırıldı.</item>
+    </plurals>
+    <plurals name="move_to_card_done_kept">
+        <item quantity="one">%1$d anahtar artık güvenlik anahtarında. Bu telefonda bir kopya kalır ve telefon onu kullanmaya devam eder.</item>
+        <item quantity="other">%1$d anahtar artık güvenlik anahtarında. Bu telefonda bir kopya kalır ve telefon onu kullanmaya devam eder.</item>
+    </plurals>
+    <string name="err_card_expiry_primary_missing">Birincil anahtar bu güvenlik anahtarının imza yuvasında değil, bu yüzden son kullanma tarihi onunla değiştirilemez</string>
+    <string name="err_move_to_card_unsupported">Bu güvenlik anahtarı seçilen anahtarlardan birini tutamaz. Başka bir anahtar veya yuva seçin.</string>
+    <string name="err_move_to_card_check_failed">Anahtarlar yazıldıktan sonra güvenlik anahtarı kontrolü geçemedi, bu yüzden bu telefonda hiçbir şey değiştirilmedi. Güvenlik anahtarındaki anahtarlara güvenmeyin.</string>
+    <!-- 4.7.0 RC5, translated Oct 2026 -->
+    <string name="key_detail_expiry_sheet_title_subkey">Alt anahtarın son kullanma tarihini düzenle</string>
+    <string name="key_detail_expiry_sheet_subtitle_subkey">%1$s alt anahtarı için yeni bir son kullanma tarihi belirleyin. Birincil anahtar ve diğer alt anahtarlar kendi tarihlerini korur.</string>
+    <string name="key_detail_expiry_also_subkeys">Hâlâ geçerli olan alt anahtarlara da uygula</string>
+    <string name="key_detail_expiry_also_subkeys_hint">Süresi dolmuş ve geçersiz kılınmış alt anahtarlar kendi tarihlerini korur.</string>
+    <string name="key_detail_subkey_change_expiry">Son kullanma tarihini düzenle…</string>
+    <string name="key_detail_card_no_cert_title">Açık anahtar gerekli</string>
+    <string name="key_detail_card_no_cert_body">Bu güvenlik anahtarı gizli anahtarları tutuyor, ancak anahtarın geri kalanını, yani Kullanıcı Kimliklerini ve imzalarını tutmuyor. Eşleşen açık anahtarı (bir dışa aktarım, bir yedek veya anahtar sunucusundaki bir kopya) içe aktarın; PGPony onu bu güvenlik anahtarıyla eşleştirir, böylece onunla imzalayabilir ve şifre çözebilirsiniz.</string>
+    <!-- 4.7.0 RC5 batch 2, translated Oct 2026 -->
+    <string name="key_detail_key_id_copied">Anahtar kimliği kopyalandı</string>
+    <string name="key_detail_copy_key_id_cd">Anahtar kimliğini kopyala</string>
+    <string name="key_detail_detail_usage">Kullanım</string>
+    <string name="key_detail_cert_trust_full">güvenilir tanıtıcı, derinlik %1$d</string>
+    <string name="key_detail_cert_trust_partial">kısmen güvenilir tanıtıcı, derinlik %1$d</string>
+    <string name="key_detail_cert_trust_amount">güven %1$d, derinlik %2$d</string>
+    <string name="key_detail_cert_trust_limited">bazı Kullanıcı Kimlikleriyle sınırlı</string>
+    <string name="key_detail_last_checked_found_format">%1$s, %2$s üzerinde bulundu</string>
+    <string name="key_detail_last_checked_not_found_format">%1$s, %2$s üzerinde yok</string>
+    <string name="kd_vm_check_found_on">Bu anahtar, %1$s üzerinde yayımlanmış.</string>
+    <string name="kd_vm_check_not_found_on">Bu anahtar, %1$s üzerinde bulunamadı.</string>
+    <string name="key_detail_cert_look_up">Ara</string>
+    <string name="certifier_lookup_title">Onaylayanı ara</string>
+    <string name="certifier_lookup_found_body">Bu anahtarı içe aktarmak onu anahtarlığınıza ekler, böylece onayı doğrulanabilir. Bu işlem anahtarın kimliğini teyit etmez, yalnızca matematiksel doğruluğu denetler. Bu anahtara güvenmeden önce kime ait olduğunu kontrol edin.</string>
+    <string name="certifier_lookup_not_found_title">Onaylayan bulunamadı</string>
+    <string name="certifier_lookup_not_found_body_format">Yapılandırdığınız anahtar sunucularının hiçbirinde %1$s için anahtar bulunamadı. Onaylayan, anahtarını yayımlamamış olabilir.</string>
+    <string name="certifier_lookup_imported_body">Onaylayanın bu anahtardaki onayları yeniden doğrulanır.</string>
+    <string name="key_detail_refresh_sigs_menu">Öz imzaları yenile</string>
+    <string name="key_detail_refresh_sigs_title">Öz imzaları yenile</string>
+    <string name="key_detail_refresh_sigs_body">Bu anahtarın Kullanıcı Kimliklerini ve alt anahtar bağlamalarını SHA-256 ile yeniden imzalar. Tüm son kullanma tarihleri olduğu gibi kalır. Bağlaması SHA-1 kullandığı için dışarıda kalmış bir alt anahtar, gizli anahtarı bu telefondaysa geri gelir. Başkalarının yeni imzaları alması için ardından anahtarı yayımlayın.</string>
+    <string name="key_detail_refresh_sigs_action">Yenile</string>
+    <string name="key_detail_refresh_sigs_done">Öz imzalar yenilendi.</string>
+    <plurals name="key_detail_refresh_sigs_done_restored">
+        <item quantity="one">Öz imzalar yenilendi. %1$d alt anahtar geri geldi.</item>
+        <item quantity="other">Öz imzalar yenilendi. %1$d alt anahtar geri geldi.</item>
+    </plurals>
+    <!-- 4.7.0 RC5 batch 3, translated Oct 2026 -->
+    <string name="keyring_select_menu">Anahtarları seç</string>
+    <string name="keyring_select_done_cd">Seçimi bitir</string>
+    <string name="keyring_select_all_cd">Tümünü seç</string>
+    <string name="keyring_export_selected_cd">Açık anahtarları dışa aktar</string>
+    <string name="keyring_export_selected_copied">Açık anahtarlar kopyalandı</string>
+    <plurals name="keyring_selected_count">
+        <item quantity="one">%1$d seçili</item>
+        <item quantity="other">%1$d seçili</item>
+    </plurals>
+    <plurals name="keyring_export_selected_label">
+        <item quantity="one">%1$d açık anahtar</item>
+        <item quantity="other">%1$d açık anahtar</item>
+    </plurals>
+    <!-- 4.7.0 RC6, translated Oct 2026 -->
+    <string name="key_detail_expiry_confirm_title">Son kullanma tarihi değiştirilsin mi?</string>
+    <string name="key_detail_expiry_confirm_current">Mevcut son kullanma tarihi: %1$s</string>
+    <string name="key_detail_expiry_confirm_new">Yeni son kullanma tarihi: %1$s</string>
+    <string name="key_detail_expiry_confirm_subkey_only">Yalnızca %1$s alt anahtarının bağlaması yeniden imzalanır.</string>
+    <plurals name="key_detail_expiry_confirm_user_ids">
+        <item quantity="one">%1$d Kullanıcı Kimliği yeniden imzalanır.</item>
+        <item quantity="other">%1$d Kullanıcı Kimliği yeniden imzalanır.</item>
+    </plurals>
+    <plurals name="key_detail_expiry_confirm_subkeys">
+        <item quantity="one">Hâlâ geçerli olan %1$d alt anahtar da yeniden imzalanır.</item>
+        <item quantity="other">Hâlâ geçerli olan %1$d alt anahtar da yeniden imzalanır.</item>
+    </plurals>
+    <string name="key_detail_expiry_confirm_publish">Başkaları yeni tarihi ancak siz anahtarı yayımladıktan sonra görür.</string>
+    <string name="key_detail_expiry_confirm_action">Son kullanma tarihini değiştir</string>
+    <string name="key_detail_resign_biometric_title">Yeni imzaları onaylayın</string>
+    <string name="key_detail_resign_biometric_subtitle">Bu anahtarı yeniden imzalamak için kimliğinizi doğrulayın</string>
+    <string name="provider_review_included_format">%1$s için zaten dahil edildi</string>
+    <!-- 4.7.0 RC7, translated Oct 2026 -->
+    <string name="exchange_qr_too_large_inline">Bu anahtar bir QR kodu için çok büyük. Bunun yerine aşağıdaki Anahtarı Kopyala\'yı veya Yükle\'yi kullanın.</string>
 </resources>

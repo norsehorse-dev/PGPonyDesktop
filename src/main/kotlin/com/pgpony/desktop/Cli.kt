@@ -128,13 +128,9 @@ object Cli {
             if (plan.compositeInSeipdV1) {
                 err("warning: the ML-DSA signature goes to a v4 recipient; PGPony reads it, GnuPG reports an error and Thunderbird cannot open the message")
             }
-            if (plan.needsBuffering) {
-                ops.encryptBytes(plan, bytes, pass, armor, fileName(input))
-            } else {
-                val bout = java.io.ByteArrayOutputStream()
-                ops.encryptStream(plan, bytes.inputStream(), bout, pass, armor, fileName(input))
-                bout.toByteArray()
-            }
+            val bout = java.io.ByteArrayOutputStream()
+            ops.encryptStream(plan, bytes.inputStream(), bout, pass, armor, fileName(input))
+            bout.toByteArray()
         }
         writeAll(outPath, out)
         ExitCode.OK

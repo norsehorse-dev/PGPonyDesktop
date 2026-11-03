@@ -206,6 +206,12 @@ class ArmorCommentStore private constructor(context: Context) {
         recache()
     }
 
+    /** 4.7.0 (item 32): back to the defaults, for the app reset (Clear All Data, duress wipe). */
+    suspend fun clearAll() {
+        ds.edit { it.clear() }
+        recache()
+    }
+
     /** One-shot read of the current (toggle, raw text) pair. */
     suspend fun snapshot(): Pair<Boolean, String> {
         val prefs = ds.data.first()

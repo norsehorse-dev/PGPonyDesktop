@@ -151,7 +151,7 @@ object KeyResponse {
     /** Binary OpenPGP data from [body], or null when it is neither binary
      *  OpenPGP nor armor made only of PUBLIC KEY BLOCKs. */
     private fun decode(body: ByteArray): ByteArray? {
-        if (body[0].toInt() and 0x80 != 0) return body
+        if ((body[0].toInt() and 0x80) != 0) return body
         val text = String(body, Charsets.UTF_8)
         val begins = Regex("-----BEGIN PGP ([A-Z ,/0-9]+)-----").findAll(text).toList()
         if (begins.isEmpty()) return null

@@ -260,6 +260,11 @@ class KeyServerDirectory private constructor(private val appContext: Context) {
 
     suspend fun resetToDefaults() = save(DEFAULTS)
 
+    /** 4.7.0 (item 32): drop the stored list (the defaults apply again), for the app reset. */
+    suspend fun clearAll() {
+        appContext.keyServerDataStore.edit { it.clear() }
+    }
+
     private suspend fun update(transform: (KeyServer) -> KeyServer) {
         save(readOnce().map(transform))
     }

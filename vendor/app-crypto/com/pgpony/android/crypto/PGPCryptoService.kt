@@ -258,6 +258,9 @@ data class DecryptStreamResult(
     val compositeInline: Boolean = false,
     val compositeInlineBytes: ByteArray? = null,
     val compositeClaimedSignerFp: String? = null,
+    /** 4.7.0 (item 23): a composite inline message read as it streamed; graded
+     *  with CompositeSignerGate.verifyStreamed instead of [compositeInlineBytes]. */
+    val compositeStreamed: com.pgpony.android.crypto.pqc.CompositeInlineStreamReader.Result? = null,
     /** 4.7.0 (#64, SOP): see [DecryptResult.signaturePackets]. */
     val signaturePackets: List<ByteArray> = emptyList(),
     /** 3.0.0 (5d-3): see [DecryptResult.signerWeakKey]. */
@@ -265,7 +268,10 @@ data class DecryptStreamResult(
     /** See [DecryptResult.signingKeyFingerprint]. */
     val signingKeyFingerprint: String? = null,
     /** See [DecryptResult.signerPrimaryFingerprint]. */
-    val signerPrimaryFingerprint: String? = null
+    val signerPrimaryFingerprint: String? = null,
+    /** 4.7.0 (item 48, #79): see [DecryptResult.decryptingKeyIdRaw]; set on
+     *  the classical public-key path. */
+    val decryptingKeyIdRaw: Long? = null
 )
 
 
@@ -276,7 +282,10 @@ data class ImportResult(
     val hasPrivateKey: Boolean,
     val creationDate: Date,
     val publicKeyRing: PGPPublicKeyRing?,
-    val secretKeyRing: PGPSecretKeyRing?
+    val secretKeyRing: PGPSecretKeyRing?,
+    /** 4.7.0 (item 22): set when the primary's secret is not in the data
+     *  (GnuPG offline primary, or divert-to-card); null otherwise. */
+    val primaryStub: OfflineStub.Kind? = null
 )
 
 // ── Crypto Service ─────────────────────────────────────────────────────
@@ -286,7 +295,11 @@ data class SigningKeyOption(
     val keyId: Long,
     val keyIdHex: String,
     val isPrimary: Boolean,
-    val algorithmLabel: String
+    val algorithmLabel: String,
+    /** 4.7.0 (item 46): hex uppercase, what a Use for signing pin stores. */
+    val fingerprint: String = "",
+    /** 4.7.0 (item 46): creation time, epoch ms, shown in the chooser. */
+    val createdAt: Long = 0L
 )
 
 /** item 13 (#36): one encryption-key choice for a recipient's subkey picker;
@@ -779,11 +792,30 @@ class PGPCryptoService private constructor() {
             KeyPolicy.requireAcceptableProtection(secretRing)
             val masterKey = secretRing.publicKey
             val fingerprint = fingerprintHex(masterKey)
-            val userID = masterKey.userIDs.asSequence().firstOrNull() ?: "Unknown"
+            val userID = UserIdService.shared.shownUserId(masterKey) ?: "Unknown" // 4.7.0 (item 52)
             val publicRing = PGPPublicKeyRing(
                 secretRing.publicKeys.asSequence().map { it }.toList()
             )
             val algorithm = detectAlgorithm(masterKey, publicRing)
+
+            // 4.7.0 (item 22): a block in which every secret key is a stub (a
+            // gpg export of a card key, say) holds no secret at all, so it
+            // imports as the public key it is.
+            if (OfflineStub.allStubs(secretRing)) {
+                val sanitized = PGPPublicKeyRing(
+                    ByteArrayInputStream(CertificateBindings.sanitized(publicRing.encoded)),
+                    JcaKeyFingerprintCalculator()
+                )
+                return ImportResult(
+                    fingerprint = fingerprint,
+                    userID = userID,
+                    algorithm = detectAlgorithm(sanitized.publicKey, sanitized),
+                    hasPrivateKey = false,
+                    creationDate = masterKey.creationTime,
+                    publicKeyRing = sanitized,
+                    secretKeyRing = null
+                )
+            }
 
             return ImportResult(
                 fingerprint = fingerprint,
@@ -792,7 +824,8 @@ class PGPCryptoService private constructor() {
                 hasPrivateKey = true,
                 creationDate = masterKey.creationTime,
                 publicKeyRing = publicRing,
-                secretKeyRing = secretRing
+                secretKeyRing = secretRing,
+                primaryStub = OfflineStub.primaryKind(secretRing)
             )
         } catch (e: KeyPolicy.RefusedProtection) {
             throw PGPCryptoError.ImportFailed(e.message ?: "refused key protection")
@@ -809,7 +842,7 @@ class PGPCryptoService private constructor() {
             )
             val masterKey = publicRing.publicKey
             val fingerprint = fingerprintHex(masterKey)
-            val userID = masterKey.userIDs.asSequence().firstOrNull() ?: "Unknown"
+            val userID = UserIdService.shared.shownUserId(masterKey) ?: "Unknown" // 4.7.0 (item 52)
             val algorithm = detectAlgorithm(masterKey, publicRing)
 
             return ImportResult(
@@ -848,12 +881,13 @@ class PGPCryptoService private constructor() {
             )
             return ImportResult(
                 fingerprint = fingerprintHex(masterKey),
-                userID = masterKey.userIDs.asSequence().firstOrNull() ?: "Unknown",
+                userID = UserIdService.shared.shownUserId(masterKey) ?: "Unknown", // 4.7.0 (item 52)
                 algorithm = detectAlgorithm(masterKey, publicRing),
                 hasPrivateKey = true,
                 creationDate = masterKey.creationTime,
                 publicKeyRing = publicRing,
-                secretKeyRing = secretRing
+                secretKeyRing = secretRing,
+                primaryStub = OfflineStub.primaryKind(secretRing)
             )
         } catch (e: KeyPolicy.RefusedProtection) {
             throw PGPCryptoError.ImportFailed(e.message ?: "refused key protection")
@@ -865,7 +899,7 @@ class PGPCryptoService private constructor() {
             val masterKey = publicRing.publicKey
             return ImportResult(
                 fingerprint = fingerprintHex(masterKey),
-                userID = masterKey.userIDs.asSequence().firstOrNull() ?: "Unknown",
+                userID = UserIdService.shared.shownUserId(masterKey) ?: "Unknown", // 4.7.0 (item 52)
                 algorithm = detectAlgorithm(masterKey, publicRing),
                 hasPrivateKey = false,
                 creationDate = masterKey.creationTime,
@@ -905,7 +939,10 @@ class PGPCryptoService private constructor() {
      * not re-encrypt it without knowing that passphrase anyway.
      */
     fun isPassphraseProtected(secretKeyRing: PGPSecretKeyRing): Boolean =
-        secretKeyRing.secretKey.s2KUsage != 0
+        // 4.7.0 (item 22): read the first key that has material. A stub
+        // primary carries S2K usage 255 whatever its subkeys use.
+        secretKeyRing.secretKeys.asSequence().firstOrNull { !OfflineStub.isStub(it) }
+            ?.let { it.s2KUsage != 0 } ?: false
 
     /**
      * RC4 O5 (#16, CertainBot): export an UNPROTECTED secret ring
@@ -923,7 +960,18 @@ class PGPCryptoService private constructor() {
             .get(org.bouncycastle.bcpg.HashAlgorithmTags.SHA1)
         // 4.6.0 (item 17.6): calibrated SHA-256 S2K, not SHA-1 at 65,536 octets.
         val encryptor = S2kPolicy.v4EncryptorBuilder().build(exportPassphrase.toCharArray())
-        val protectedRing = PGPSecretKeyRing.copyWithNewPassword(secretKeyRing, null, encryptor)
+        // 4.7.0 (item 22): per key. A stub (offline primary, card) is kept
+        // byte for byte: the ring-level copy would re-encrypt a divert-to-card
+        // stub's serial as if it were key material. A key already under a
+        // passphrase keeps its own (it cannot be unlocked here). The SHA-1
+        // checksum gives S2K usage 254, as documented above.
+        var protectedRing = secretKeyRing
+        for (key in secretKeyRing.secretKeys.asSequence().toList()) {
+            if (OfflineStub.isStub(key) || key.s2KUsage != 0) continue
+            protectedRing = PGPSecretKeyRing.insertSecretKey(
+                protectedRing, org.bouncycastle.openpgp.PGPSecretKey.copyWithNewPassword(key, null, encryptor, digest)
+            )
+        }
         return exportArmoredPrivateKey(protectedRing)
     }
 
@@ -981,6 +1029,9 @@ class PGPCryptoService private constructor() {
         val keys = secretKeyRing.secretKeys.asSequence().toList()
         var ring = secretKeyRing
         for (key in keys) {
+            // 4.7.0 (item 22): a stub has no secret to re-protect; it stays
+            // byte for byte, so the key still goes back into gpg as sec#.
+            if (OfflineStub.isStub(key)) continue
             enforceArgon2Policy(key.s2K)
             val reprotected = when {
                 // Strip: null encryptor removes protection (BC handles v4, v6,
@@ -1342,7 +1393,7 @@ class PGPCryptoService private constructor() {
                 sigGen.generateOnePassVersion(false).encode(compOut)
             } else if (signingSecretKey != null) {
                 val signingKey = pickSigningSecretKey(signingSecretKey, signingKeyId)
-                    ?: throw SigningError.NoSigningKey()
+                    ?: throw noSigningKeyError(signingSecretKey)
                 enforceArgon2Policy(signingKey.s2K)
                 val privateKey = try {
                     signingKey.extractPrivateKey(
@@ -1484,13 +1535,27 @@ class PGPCryptoService private constructor() {
         // item 14 (#56): v4 Ed25519 + algo-35 interop recipients. Not BC rings, so
         // they travel their own channel (raw public material + v4 fingerprint) and
         // force SEIPDv2, exactly as in encrypt().
-        v4Algo35Recipients: List<com.pgpony.android.crypto.pqc.V4Algo35Recipient> = emptyList()
+        v4Algo35Recipients: List<com.pgpony.android.crypto.pqc.V4Algo35Recipient> = emptyList(),
+        // 4.7.0 (item 23, #73): a composite ML-DSA signer, as in encrypt(). The
+        // composite signature hashes the content as it streams, so encrypt and
+        // sign no longer reads the whole file into memory. Unlocked by the
+        // caller (the secret is raw material); [compositeSignInSeipdV1] = false
+        // leaves the signature out when some recipient forces SEIPDv1.
+        compositeSignSuite: com.pgpony.android.crypto.pqc.CompositeSignSuite? = null,
+        compositeSignSecret: ByteArray? = null,
+        compositeSignerFingerprint: ByteArray? = null,
+        compositeSignInSeipdV1: Boolean = true
     ) {
+        val compositeRequested = compositeSignSuite != null && compositeSignSecret != null &&
+            compositeSignerFingerprint != null
         // 1) Build the signer FIRST. Software: unlock up front (clean
         //    output guarantee). Card: the content-signer defers the tap
         //    to getSignature() at the very end.
         var sigGen: PonySigGen? = null
-        if (cardSession != null && cardSigningPublicKey != null && cardPin != null) {
+        if (compositeRequested) {
+            // Composite signing goes through compositeInline below; no
+            // classical signer stands in for it.
+        } else if (cardSession != null && cardSigningPublicKey != null && cardPin != null) {
             sigGen = PonySigGen(
                 CardPGPContentSignerBuilder(cardSession, cardPin, cardSigningPublicKey),
                 cardSigningPublicKey
@@ -1504,7 +1569,7 @@ class PGPCryptoService private constructor() {
             sigGen.setHashedSubpackets(cardSubpackets.generate())
         } else if (signingSecretKey != null) {
             val signingKey = pickSigningSecretKey(signingSecretKey, signingKeyId)
-                ?: throw SigningError.NoSigningKey()
+                ?: throw noSigningKeyError(signingSecretKey)
             enforceArgon2Policy(signingKey.s2K)
             val privateKey = try {
                 signingKey.extractPrivateKey(
@@ -1634,6 +1699,13 @@ class PGPCryptoService private constructor() {
                 compGen?.open(encryptedOut) ?: encryptedOut
 
             sigGen?.generateOnePassVersion(false)?.encode(signAndLitOut)
+            // 4.7.0 (item 23): the composite one-pass packet, same placement.
+            val compositeInline = if (compositeRequested && (allRecipientsV6 || compositeSignInSeipdV1)) {
+                com.pgpony.android.crypto.pqc.CompositeDocumentSigner.InlineStream(
+                    compositeSignSuite!!, compositeSignSecret!!, compositeSignerFingerprint!!
+                )
+            } else null
+            compositeInline?.let { signAndLitOut.write(it.onePassPacket()) }
 
             // Partial-length literal: the buffer overload streams without
             // a declared total size.
@@ -1654,9 +1726,11 @@ class PGPCryptoService private constructor() {
                 if (n < 0) break
                 litOut.write(buf, 0, n)
                 sigGen?.update(buf, 0, n)
+                compositeInline?.update(buf, 0, n)
             }
             litOut.close()
             litGen.close()
+            compositeInline?.let { signAndLitOut.write(it.signaturePacket()) }
 
             // The card tap happens HERE (getSignature) — after the fast
             // AES pass, so the card was connected only briefly.
@@ -2052,7 +2126,8 @@ class PGPCryptoService private constructor() {
                         hasSignature = true,
                         compositeInline = true,
                         compositeInlineBytes = plainBytes,
-                        compositeClaimedSignerFp = claimedFp
+                        compositeClaimedSignerFp = claimedFp,
+                        filename = com.pgpony.android.crypto.pqc.CompositeDocumentVerifier.inlineFilename(plainBytes)
                     )
                 }
                 return processDecryptedContent(
@@ -2217,6 +2292,7 @@ class PGPCryptoService private constructor() {
             var decryptedStream: java.io.InputStream? = null
             var pbeData: PGPPBEEncryptedData? = null
             var sawWildcardPkesk = false
+            var decryptingKeyId: Long? = null
 
             // 4.1.2 (issue #33): the composite (PQC) trial was only ever
             // wired into [decrypt], so a file encrypted to an ML-KEM key
@@ -2317,6 +2393,7 @@ class PGPCryptoService private constructor() {
                 resolvePkesk(pkesks, secretKeyRings, passphrase)?.let { match ->
                     decryptedStream = match.stream
                     integrityObj = match.data
+                    decryptingKeyId = match.decryptingKeyID
                 }
                 if (decryptedStream == null && pbeData != null) {
                     if (passphrase.isNullOrEmpty()) throw PGPCryptoError.PassphraseRequired()
@@ -2387,7 +2464,7 @@ class PGPCryptoService private constructor() {
             }
             // Only now may held plaintext reach the consumer.
             hold?.releaseTo(output)
-            return result
+            return if (decryptingKeyId != null) result.copy(decryptingKeyIdRaw = decryptingKeyId) else result
             } finally {
                 hold?.discard()
             }
@@ -2558,10 +2635,10 @@ class PGPCryptoService private constructor() {
      * so a composite inline signed message would fail to verify (or fail to
      * open) on the file-decrypt and OpenPGP-API paths even though [decrypt]
      * (text) handles it. This sniffs a bounded head: if the inner content is a
-     * composite inline message it is buffered (composite payloads are produced
-     * buffered and bounded by [SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES]), the
-     * literal is written to [output], and the composite fields are surfaced for
-     * the caller to verify against the stored composite public key. A classical
+     * composite inline message it is read as it streams (4.7.0 item 23,
+     * CompositeInlineStreamReader), the literal written to [output] and the
+     * signatures with their digests surfaced for the caller to grade against
+     * the stored composite certificates. A classical
      * message keeps the true streaming path untouched: the head is read from a
      * mark/reset buffer and, on a miss, streaming continues from the same bytes
      * with no full-message buffering.
@@ -2588,47 +2665,35 @@ class PGPCryptoService private constructor() {
         if (!looksComposite) {
             return streamDecryptedContent(JcaPGPObjectFactory(bin), verificationKeys, output) { counted.count }
         }
-        // Composite inline: buffer the whole inner content (bounded), then route
-        // to the composite verifier, mirroring [decrypt]'s parsePlain.
-        val cap = SecurityLimits.MAX_MESSAGE_PLAINTEXT_BYTES
-        val bufOut = java.io.ByteArrayOutputStream()
-        val chunk = ByteArray(1 shl 16)
-        var total = 0L
-        var n = bin.read(chunk)
-        while (n >= 0) {
-            total += n
-            if (total > cap)
-                throw PGPCryptoError.ResourceLimitExceeded("decrypted message exceeds size cap")
-            bufOut.write(chunk, 0, n)
-            n = bin.read(chunk)
+        // 4.7.0 (item 23, #73): read the composite inline message as it
+        // streams. The literal content goes to [output] through the same size
+        // and expansion bounds as the classical path while each one-pass
+        // packet's hash is updated; the signatures are graded by the caller
+        // (CompositeSignerGate.verifyStreamed). This used to buffer the whole
+        // content under MAX_MESSAGE_PLAINTEXT_BYTES, so a large file signed
+        // with an ML-DSA key could not be opened.
+        val sink = ContentWalker.StreamSink(output) { counted.count }
+        val streamed = try {
+            com.pgpony.android.crypto.pqc.CompositeInlineStreamReader.read(bin) { b, off, len -> sink.write(b, off, len) }
+        } catch (e: com.pgpony.android.crypto.pqc.CompositeInlineStreamReader.Malformed) {
+            throw PGPCryptoError.DecryptionFailed("Malformed signed message")
+        } catch (e: java.util.zip.ZipException) {
+            throw PGPCryptoError.DecryptionFailed("Malformed signed message")
+        } catch (e: java.io.EOFException) {
+            throw PGPCryptoError.DecryptionFailed("Malformed signed message")
         }
-        // The same grammar check [decrypt] applies before its composite test.
-        val plainBytes = plaintextChecked(bufOut.toByteArray())
-        if (!V.isCompositeInline(plainBytes)) {
-            // Head matched a composite one-pass packet but the full message is
-            // not a valid composite inline (e.g. truncated): fall back to the
-            // classical parse over the buffered bytes so content is never
-            // silently dropped.
-            return streamDecryptedContent(
-                JcaPGPObjectFactory(java.io.ByteArrayInputStream(plainBytes)),
-                verificationKeys, output
-            )
-        }
-        val content = V.inlineContent(plainBytes)
-            ?: throw PGPCryptoError.DecryptionFailed("No literal data in composite inline message")
-        output.write(content)
-        val claimedFp = V.claimedSignerOfInline(plainBytes)
         return DecryptStreamResult(
-            bytesWritten = content.size.toLong(),
-            filename = null,
+            bytesWritten = streamed.bytesWritten,
+            filename = streamed.filename,
             signatureVerified = false,
             signerKeyID = null,
             hasSignature = true,
             signatureKeyIDRaw = null,
             signerStatus = SignerStatus.NONE,
             compositeInline = true,
-            compositeInlineBytes = plainBytes,
-            compositeClaimedSignerFp = claimedFp
+            compositeInlineBytes = null,
+            compositeClaimedSignerFp = streamed.claimedSignerFp,
+            compositeStreamed = streamed
         )
     }
 
@@ -2860,7 +2925,7 @@ class PGPCryptoService private constructor() {
     ): ByteArray {
         try {
             val signingKey = pickSigningSecretKey(secretKeyRing)
-                ?: throw SigningError.NoSigningKey()
+                ?: throw noSigningKeyError(secretKeyRing)
             enforceArgon2Policy(signingKey.s2K)
             val privateKey = signingKey.extractPrivateKey(
                 org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyDecryptorBuilder(
@@ -3212,38 +3277,56 @@ class PGPCryptoService private constructor() {
      * and is correct for any key whose signing capability lives on a subkey.
      * BC has no isSigningKey() (unlike isEncryptionKey), so capability comes from
      * SubkeyCapability, which reads each key's KEY_FLAGS self/binding signature.
+     *
+     * 4.7.0 (item 39, #83): only keys that are valid signers now count, and a
+     * newer signing subkey wins over an older one; see [signingSecretKeys].
      */
     internal fun pickSigningSecretKey(ring: PGPSecretKeyRing, preferredKeyId: Long? = null): PGPSecretKey? {
-        // §4.5 (#22): honor a user-chosen signing subkey when it is a
-        // signing-capable key on this ring; otherwise fall back to the
-        // automatic pick (first signing subkey, else the primary).
-        if (preferredKeyId != null) {
-            signingSecretKeys(ring).firstOrNull { it.keyID == preferredKeyId }?.let { return it }
-        }
-        var primaryCandidate: PGPSecretKey? = null
-        val iterator = ring.secretKeys
-        while (iterator.hasNext()) {
-            val secretKey = iterator.next()
-            val pub = secretKey.publicKey
-            if (KeyPolicy.isWeak(pub, ring.publicKey)) continue // 3.0.0 (5d-3): weak keys are read-only
-            val caps = SubkeyCapability.fromPgpPublicKey(pub, detectAlgorithm(pub), pub.isMasterKey)
-            if (SubkeyCapability.hasCapability(caps, SubkeyCapability.Sign)) {
-                if (!pub.isMasterKey) return secretKey       // prefer a signing subkey
-                if (primaryCandidate == null) primaryCandidate = secretKey
-            }
-        }
-        return primaryCandidate
+        // §4.5 (#22): honor a user-chosen signing subkey when it is one of the
+        // usable signing keys on this ring; otherwise the automatic pick.
+        // 4.7.0 (item 39, #83): a chosen subkey that has since expired or been
+        // revoked is no longer in that list, so it falls back to the automatic pick.
+        val keys = signingSecretKeys(ring)
+        if (preferredKeyId != null) keys.firstOrNull { it.keyID == preferredKeyId }?.let { return it }
+        return keys.firstOrNull()
     }
 
-    /** §4.5 (#22): every signing-capable secret key in [ring], the first
-     *  entry being the one [pickSigningSecretKey] auto-selects (signing
-     *  subkeys in ring order, then the primary if it can sign). */
-    internal fun signingSecretKeys(ring: PGPSecretKeyRing): List<PGPSecretKey> {
+    /**
+     * §4.5 (#22): every signing-capable secret key in [ring] that may make a
+     * new signature, in the order [pickSigningSecretKey] prefers them: signing
+     * subkeys newest first, then the primary if it can sign.
+     *
+     * 4.7.0 (item 39, #83): each key must be a valid signer now by the
+     * certificate's own self-signatures (CertificateBindings signerValidityAt):
+     * a subkey bound by its newest binding, back-signed, unrevoked and
+     * unexpired. Before this the first Sign-capable subkey in ring order was
+     * used, so a key whose old signing subkey had expired signed with it. When
+     * the whole key has expired (the primary itself), nothing is valid; the
+     * "Allow expired keys" gate upstream has already decided that case, so the
+     * keys that are only expired are offered, newest first. A primary that is
+     * still valid with every signing subkey expired or revoked yields none. A
+     * certificate the analyser cannot read keeps the plain capability pick.
+     */
+    internal fun signingSecretKeys(ring: PGPSecretKeyRing, applyPin: Boolean = true): List<PGPSecretKey> {
+        val automatic = automaticSigningSecretKeys(ring)
+        if (!applyPin || automatic.size < 2) return automatic
+        // 4.7.0 (item 46, #82): a subkey the owner chose on Key Details goes
+        // first while it is still in this list (a valid signer).
+        val primaryFp = org.bouncycastle.util.encoders.Hex.toHexString(ring.publicKey.fingerprint)
+        val pin = runCatching { SigningSubkeyPins.pinnedFor(primaryFp) }.getOrNull()
+        return SigningSubkeyPins.applyPin(automatic, pin) {
+            org.bouncycastle.util.encoders.Hex.toHexString(it.publicKey.fingerprint)
+        }
+    }
+
+    /** Item 39's pick order without the owner's pin (item 46). */
+    private fun automaticSigningSecretKeys(ring: PGPSecretKeyRing): List<PGPSecretKey> {
         val subs = mutableListOf<PGPSecretKey>()
         var primary: PGPSecretKey? = null
         val it = ring.secretKeys
         while (it.hasNext()) {
             val sk = it.next()
+            if (OfflineStub.isStub(sk)) continue // 4.7.0 (item 22): no secret here
             val pub = sk.publicKey
             if (KeyPolicy.isWeak(pub, ring.publicKey)) continue // 3.0.0 (5d-3): weak keys are read-only
             val caps = SubkeyCapability.fromPgpPublicKey(pub, detectAlgorithm(pub), pub.isMasterKey)
@@ -3251,20 +3334,52 @@ class PGPCryptoService private constructor() {
                 if (pub.isMasterKey) primary = sk else subs.add(sk)
             }
         }
-        return if (primary != null) subs + primary else subs
+        val ordered = subs.sortedByDescending { it.publicKey.creationTime.time } + listOfNotNull(primary)
+        val report = signingReport(ring) ?: return ordered
+        val now = System.currentTimeMillis()
+        fun validity(sk: PGPSecretKey) = report.signerValidityAt(SignerEvaluator.fpHex(sk.publicKey), now)
+        val valid = ordered.filter { validity(it) == CertificateBindings.SignerValidity.VALID }
+        if (valid.isNotEmpty()) return valid
+        val wholeKeyExpired = report.signerValidityAt(SignerEvaluator.fpHex(ring.publicKey), now) ==
+            CertificateBindings.SignerValidity.EXPIRED
+        return if (wholeKeyExpired) ordered.filter { validity(it) == CertificateBindings.SignerValidity.EXPIRED } else emptyList()
+    }
+
+    /** 4.7.0 (item 39): the binding report for [ring]'s public half, or null
+     *  when the analyser cannot vouch for it (unsupported primary algorithm). */
+    private fun signingReport(ring: PGPSecretKeyRing): CertificateBindings.Report? =
+        runCatching { CertificateBindings.analyze(PGPPublicKeyRing(ring.publicKeys.asSequence().toList())) }
+            .getOrNull()?.takeIf { it.supported }
+
+    /** 4.7.0 (item 22): the error when [ring] has no usable signing key. A
+     *  ring whose only Sign-capable key is a stub (an offline primary) says
+     *  so, rather than claiming the key cannot sign at all. 4.7.0 (item 39):
+     *  a ring that has signing keys, all of them expired or revoked, says that. */
+    internal fun noSigningKeyError(ring: PGPSecretKeyRing): SigningError {
+        fun canSign(sk: PGPSecretKey) = SubkeyCapability.hasCapability(
+            SubkeyCapability.fromPgpPublicKey(sk.publicKey, detectAlgorithm(sk.publicKey), sk.publicKey.isMasterKey),
+            SubkeyCapability.Sign
+        )
+        val keys = ring.secretKeys.asSequence().toList()
+        val liveSigner = keys.any { !OfflineStub.isStub(it) && !KeyPolicy.isWeak(it.publicKey, ring.publicKey) && canSign(it) }
+        if (liveSigner) return SigningError.SigningKeysExpired()
+        val stubSigner = keys.any { OfflineStub.isStub(it) && canSign(it) }
+        return if (stubSigner) SigningError.OfflinePrimary() else SigningError.NoSigningKey()
     }
 
     /** §4.5 (#22): display-ready signing-key choices for [ring]; first entry
      *  is the automatic pick. Size < 2 for the common single-signing-key
      *  case, where the UI shows no picker. */
-    internal fun signingKeyOptions(ring: PGPSecretKeyRing): List<SigningKeyOption> =
-        signingSecretKeys(ring).map { sk ->
+    internal fun signingKeyOptions(ring: PGPSecretKeyRing, applyPin: Boolean = true): List<SigningKeyOption> =
+        signingSecretKeys(ring, applyPin).map { sk ->
             val pub = sk.publicKey
             SigningKeyOption(
                 keyId = pub.keyID,
                 keyIdHex = String.format("%016X", pub.keyID),
                 isPrimary = pub.isMasterKey,
-                algorithmLabel = detectAlgorithm(pub).displayName
+                algorithmLabel = detectAlgorithm(pub).displayName,
+                fingerprint = org.bouncycastle.util.encoders.Hex.toHexString(pub.fingerprint).uppercase(),
+                createdAt = pub.creationTime.time
             )
         }
 
@@ -3341,6 +3456,9 @@ class PGPCryptoService private constructor() {
         var sawUnlockFailure = false
 
         fun attempt(obj: PGPPublicKeyEncryptedData, secretKey: PGPSecretKey): PkeskMatch? {
+            // 4.7.0 (item 22): a stub (offline primary, card) has nothing to
+            // unlock here, so it is neither a candidate nor a locked key.
+            if (OfflineStub.isStub(secretKey)) return null
             // 4.0.4's guard, moved in here and made non-fatal: a locked key
             // must not abort the scan, because a later candidate may open
             // the packet without any passphrase at all. If none does, the

@@ -539,6 +539,9 @@ pgpony.app</string>
     <!-- ── Preview card ─────────────────────────────────────────────── -->
     <string name="import_preview_type_key_pair">鍵ペア（公開鍵 + 秘密鍵）</string>
     <string name="import_preview_type_public_only">公開鍵のみ</string>
+    <string name="import_preview_type_key_pair_offline_primary">鍵ペア（主鍵はオフライン）</string>
+    <string name="import_preview_offline_primary_note">gpg --export-secret-subkeys で書き出したファイルと同じく、このファイルにはサブキーの秘密鍵が含まれていますが、主鍵の秘密鍵は含まれていません。サブキーは通常どおり使えますが、鍵の編集には主鍵が必要です。</string>
+    <string name="import_preview_offline_primary_note_card">主鍵の秘密鍵はこのファイルではなく、ハードウェアキーにあります。サブキーは通常どおり使えますが、鍵の編集にはハードウェアキーが必要です。</string>
     <string name="import_preview_detail_user_label">ユーザー</string>
     <string name="import_preview_detail_user_empty">(なし)</string>
     <string name="import_preview_detail_fingerprint_label">フィンガープリント</string>
@@ -696,6 +699,11 @@ pgpony.app</string>
     <string name="trust_level_unverified_description">追加されましたが未検証 — 慎重に進めてください</string>
     <string name="trust_level_verified_description">フィンガープリントを信頼できる経路で照合済み</string>
     <string name="trust_level_ultimate_description">自身の鍵、または完全に管理している鍵</string>
+    <string name="trust_level_dont_use_name">使用しない</string>
+    <string name="trust_level_dont_use_description">漏洩または廃止された鍵。この鍵宛ての暗号化やこの鍵での署名の前に PGPony が確認します</string>
+    <string name="dont_use_confirm_title">「使用しない」に設定された鍵を使用しますか？</string>
+    <string name="dont_use_confirm_body">「使用しない」に設定されています: %1$s。続行しますか？</string>
+    <string name="dont_use_confirm_continue">このまま使用</string>
 
     <!-- ── TrustLevelSheet ──────────────────────────────────────────── -->
     <string name="trust_sheet_title">信頼レベル</string>
@@ -950,6 +958,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="contacts_trust_unverified_cd">未確認</string>
     <string name="contacts_trust_verified_cd">確認済み</string>
     <string name="contacts_trust_ultimate_cd">最高の信頼レベル</string>
+    <string name="contacts_trust_dont_use_cd">使用しない</string>
 
     <!-- ── Row icons ────────────────────────────────────────────────── -->
     <string name="contacts_linked_cd">リンク済み</string>
@@ -1278,6 +1287,8 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="settings_card_pin_cache_countdown_format">PINを記憶中 — %1$s後に消去</string>
     <string name="settings_card_pin_cache_none_held">現在記憶されているPINはありません。</string>
     <string name="settings_card_pin_cache_clear">今すぐ消去</string>
+    <string name="settings_passphrase_cache_cleared_toast">記憶していたパスフレーズを消去しました</string>
+    <string name="settings_card_pin_cache_cleared_toast">カードPINを消去しました</string>
     <!-- 3.1.0 Phase 8 (E4/E5) — email send + sign by default -->
     <string name="result_send_email_button">メールで送信</string>
     <string name="settings_sign_by_default_title">デフォルトで署名</string>
@@ -1295,6 +1306,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="settings_share_format_subtitle">共有ボタンが暗号化または署名された結果をどのように扱うか。</string>
     <!-- 3.1.0 Phase 8 Fix1 — file import read error -->
     <string name="keyring_error_file_read">ファイルを読み取れませんでした。ローカルストレージ（ファイルアプリ）に保存してから、もう一度インポートしてください。</string>
+    <string name="keyring_error_file_too_large">このファイルは鍵としては大きすぎます。.asc、.gpg、.pgp の鍵ファイルを選んでください。</string>
     <!-- 3.1.0 Phase 8 Fix2 — file import diagnostic -->
     <string name="keyring_error_parse_diag">Couldn\'t read a key from the file — got %1$d bytes starting with \"%2$s\"</string>
     <!-- 3.1.0 Phase 8 Fix3 — richer file import diagnostic -->
@@ -1458,6 +1470,8 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="import_paste_from_clipboard">クリップボードから貼り付け</string>
     <string name="import_preview_source_keyserver">鍵サーバーで見つかりました</string>
     <string name="import_result_already_in_keyring">この鍵はすでに鍵束にあります。</string>
+    <string name="import_result_own_key_updated">このコピーに含まれる新しい自己署名（設定、有効期限、バインディング）で鍵ペアを更新しました。</string>
+    <string name="import_duplicate_own_key_note">これはあなたの鍵ペアです。インポートでは手元の自己署名より新しいものだけが追加されますが、このコピーには新しいものがありません。</string>
     <string name="import_result_merged">この鍵はすでに鍵束にありました。新しい鍵データで更新しました。</string>
     <string name="kd_vm_refresh_failed_format">鍵サーバーからの更新に失敗しました: %1$s</string>
     <string name="kd_vm_refresh_merged">更新しました。鍵サーバーの新しいデータでこの鍵を更新しました。</string>
@@ -1476,9 +1490,47 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="key_detail_expiry_failed">有効期限を更新できませんでした。もう一度お試しください。</string>
     <string name="key_detail_expiry_passphrase_label">鍵のパスフレーズ（設定している場合）</string>
     <string name="key_detail_expiry_pick_date">日付を選択</string>
-    <string name="key_detail_expiry_sheet_subtitle">%1$s の新しい有効期限を設定します。鍵とサブ鍵が再署名されますが、フィンガープリントは変わりません。</string>
+    <string name="key_detail_expiry_sheet_subtitle">%1$s の新しい有効期限を設定します。主鍵が再署名されます。サブキーはそれぞれの有効期限を保ち、フィンガープリントは変わりません。</string>
     <string name="key_detail_expiry_sheet_title">有効期限を編集</string>
     <string name="key_detail_userids_primary">プライマリ</string>
+    <string name="key_detail_userid_weak_hash_badge">弱いハッシュ</string>
+    <string name="key_detail_userid_weak_hash_note">SHA-1 で紐付けられていますが、SHA-1 はもう安全とは見なされていません。名前は保持されますが、これで鍵が確認済みになるわけではありません。</string>
+    <string name="key_detail_offline_primary_title">オフラインの主鍵</string>
+    <string name="key_detail_offline_primary_body">主鍵の秘密鍵はこのデバイスにありません。ここにあるサブキーは通常どおり使えます。ユーザー ID、サブキー、有効期限の変更と鍵の失効には主鍵が必要です。主鍵を保管している場所で変更してから、この鍵をもう一度ここにインポートしてください。</string>
+    <string name="key_detail_offline_primary_body_card">主鍵の秘密鍵はこのデバイスではなく、ハードウェアキーにあります。ここにあるサブキーは通常どおり使えます。ユーザー ID、サブキー、有効期限の変更と鍵の失効にはハードウェアキーが必要です。GnuPG で変更してから、この鍵をもう一度ここにインポートしてください。</string>
+    <string name="key_detail_action_certify">認証…</string>
+    <string name="certify_sheet_title">この鍵を認証</string>
+    <string name="certify_sheet_subtitle">認証すると、選んだ各ユーザー ID に記載された人物がこの鍵の持ち主であることを確認した、と表明することになります。先にフィンガープリント全体を持ち主と照合してください。</string>
+    <string name="certify_userids_label">認証するユーザー ID</string>
+    <string name="certify_certifier_label">認証に使う鍵</string>
+    <string name="certify_level_label">確認の程度</string>
+    <string name="certify_level_no_claim">表明しない</string>
+    <string name="certify_level_persona">未確認</string>
+    <string name="certify_level_casual">簡単に確認</string>
+    <string name="certify_level_positive">入念に確認</string>
+    <string name="certify_expiry_label">認証の有効期限</string>
+    <string name="certify_local_only_label">ローカルのみ</string>
+    <string name="certify_local_only_hint">このデバイスに保存されます。鍵を共有、エクスポート、アップロード、ペアリングしても含まれることはありません。</string>
+    <string name="certify_fingerprint_confirm">このフィンガープリントを持ち主の控えと照合しました</string>
+    <string name="certify_apply">認証</string>
+    <string name="certify_failed">この鍵を認証できませんでした</string>
+    <string name="certify_done_title">鍵を認証しました</string>
+    <string name="certify_done_body">他の人があなたの認証を見られるように、認証した鍵を持ち主に送り返してください。keys.openpgp.org は他の人による認証を破棄するため、直接送るか、別の鍵サーバー経由で送ってください。</string>
+    <string name="certify_done_body_local">ローカルの認証はこのデバイス内に保持されます。</string>
+    <string name="certify_done_mark_verified">確認済みにする</string>
+    <string name="passphrase_hold_channel_name">メールアプリ用に保持中のパスフレーズ</string>
+    <string name="passphrase_hold_title">PGPony がパスフレーズを保持しています</string>
+    <string name="passphrase_hold_text">メールアプリは再入力なしでこのパスフレーズを使用できます。今すぐ消去するには「消去」をタップしてください。</string>
+    <string name="passphrase_hold_clear">消去</string>
+    <string name="key_detail_cert_by">%1$s による認証</string>
+    <string name="key_detail_cert_unknown_issuer">キーリングにない鍵 %1$s</string>
+    <string name="key_detail_cert_local">ローカル</string>
+    <string name="key_detail_cert_revoked">失効済み</string>
+    <string name="key_detail_cert_expired">期限切れ</string>
+    <string name="key_detail_cert_failed">検証に失敗</string>
+    <string name="key_detail_cert_revoke_title">認証を取り消しますか？</string>
+    <string name="key_detail_cert_revoke_body_local">%1$s に対するローカルの認証をこのデバイスから削除します。</string>
+    <string name="key_detail_cert_revoke_body">%1$s に対する認証の失効が鍵に追加されます。他の人にも伝わるよう、鍵をもう一度共有してください。</string>
     <string name="key_detail_userids_title">ユーザー ID</string>
     <string name="key_refresh_notif_expired_body">鍵サーバーによると %1$s の鍵は期限切れです。</string>
     <string name="key_refresh_notif_expired_title">鍵が期限切れになりました</string>
@@ -1575,9 +1627,21 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="provider_keypicker_for_format">%1$s 用</string>
     <string name="provider_keypicker_none">鍵なし — 署名しない</string>
     <string name="provider_keypicker_title">署名鍵を選択</string>
-    <string name="provider_passphrase_body_format">このメッセージに署名するには %1$s のパスフレーズを入力してください。PGPony はこの端末上でのみ 5 分間記憶します。</string>
     <string name="provider_passphrase_hint">パスフレーズ</string>
     <string name="provider_passphrase_title">署名鍵のロックを解除</string>
+    <string name="provider_passphrase_title_decrypt">復号鍵のロックを解除</string>
+    <string name="provider_passphrase_title_ssh">SSH 鍵のロックを解除</string>
+    <string name="provider_passphrase_action_sign">このメッセージに署名するには %1$s のパスフレーズを入力してください。</string>
+    <string name="provider_passphrase_action_decrypt">このメッセージを復号するには %1$s のパスフレーズを入力してください。</string>
+    <string name="provider_passphrase_action_ssh">SSH でログインするには %1$s のパスフレーズを入力してください。</string>
+    <plurals name="provider_passphrase_keep_minutes">
+        <item quantity="other">PGPony はこの端末上でのみ %1$d 分間記憶します。</item>
+    </plurals>
+    <plurals name="provider_passphrase_keep_hours">
+        <item quantity="other">PGPony はこの端末上でのみ %1$d 時間記憶します。</item>
+    </plurals>
+    <string name="provider_passphrase_keep_until_cleared">PGPony はこの端末上でのみ、設定で消去するまで記憶します。</string>
+    <string name="provider_passphrase_keep_until_locked">PGPony はこの端末上でのみ、端末がロックされるまで記憶します。</string>
     <string name="provider_passphrase_unlock">ロック解除</string>
     <string name="provider_passphrase_wrong">パスフレーズが違います。もう一度お試しください。</string>
     <string name="publish_action">公開</string>
@@ -1725,6 +1789,11 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="recycle_bin_restore">復元</string>
     <string name="recycle_bin_delete_now">完全に削除</string>
     <string name="recycle_bin_deleted_on">削除日 %1$s</string>
+    <!-- 4.6.4 (#58): time left before a deleted key is destroyed -->
+    <plurals name="recycle_bin_days_left">
+        <item quantity="other">残り %1$d 日</item>
+    </plurals>
+    <string name="recycle_bin_less_than_a_day_left">残り 1 日未満</string>
     <string name="recycle_bin_purge_confirm_body">この鍵を完全に削除しますか？元に戻せません。</string>
     <string name="recycle_bin_empty_confirm_body">ゴミ箱内のすべての鍵を完全に削除しますか？元に戻せません。</string>
     <string name="recycle_bin_restored">鍵を復元しました</string>
@@ -1814,7 +1883,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="settings_more_passpony_subtitle">パスもパスフレーズも、ポケットの中に</string>
     <string name="settings_more_ponyfamily_subtitle">ファミリー全アプリは pony.norsehor.se で</string>
     <string name="settings_more_ponyfamily_title">Ponyアプリすべて</string>
-    <string name="settings_desktop_title">PGPony for Desktop</string>
+    <string name="settings_desktop_title">PGPony デスクトップ版</string>
     <string name="settings_desktop_subtitle">macOS、Linux、Windows 向けの OpenPGP。</string>
     <string name="update_channel_name">アップデート</string>
     <string name="update_channel_description">新しいサイドロード版が利用可能になると通知します。</string>
@@ -1832,12 +1901,13 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="settings_more_vaultpony_subtitle">VeraCrypt互換の暗号化ボールトを、すべて端末内で</string>
     <string name="settings_passphrase_cache_countdown_format">パスフレーズを記憶中 – %1$s 後に消去</string>
     <string name="settings_passphrase_cache_held_until_cleared">消去するまでパスフレーズを記憶します。</string>
-    <string name="settings_passphrase_cache_none_held">現在記憶されているパスフレーズはありません。</string>
+    <string name="settings_passphrase_cache_none_held">PGPony 本体が記憶しているパスフレーズはありません。メールアプリなど連携アプリ用に入力したパスフレーズは別に保持されており、「今すぐ消去」でそれらも消去されます。</string>
     <string name="settings_passphrase_cache_subtitle">連携アプリ向けに入力したパスフレーズを、選んだ時間だけメモリに保持します。ディスクには保存されず、誤ったパスフレーズやアプリ終了で消去されます。</string>
     <string name="settings_passphrase_cache_title">鍵のパスフレーズを記憶</string>
     <string name="sign_file_save_button">ファイルに保存</string>
     <string name="sign_verify_error_file_unreadable">選択したファイルを読み取れませんでした。もう一度選択してください。</string>
     <string name="verify_file_error_sig_not_signature">このファイルは分離署名にしては大きすぎます。署名対象ではなく .asc または .sig ファイルを選択してください。</string>
+    <string name="verify_error_signature_damaged">署名ブロックが壊れているため検証できません。署名ファイルを新しく入手し直してください。</string>
 
     <!-- 4.2.0 RC4 workstream O8: strings added by O3/O5. -->
     <string name="key_detail_fallbacks_strict_title">有効なフォールバックのみ使用</string>
@@ -1946,7 +2016,6 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="key_detail_subkey_remove_biometric_subtitle">認証してこのサブキーを削除します</string>
     <string name="kd_vm_status_subkey_removed">サブキーを削除しました</string>
     <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
-    <string name="share_encrypt_text_label">PGPonyで暗号化</string>
     <string name="bundle_result_section_email">メールとして送信</string>
     <string name="bundle_result_section_file">ファイルとして送信</string>
     <string name="settings_argon2_title">より強力なパスフレーズ保護（Argon2）</string>
@@ -2026,10 +2095,10 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="share_target_action_import_encrypt_subtitle">フィンガープリントを確認して「この鍵に暗号化」をタップ</string>
     <string name="share_target_action_verify">署名を検証</string>
     <string name="share_target_action_verify_subtitle">署名者を確認します。このメッセージは署名済みで、暗号化されていません</string>
+    <string name="share_target_action_encrypt_all">すべて暗号化</string>
+    <string name="share_target_action_encrypt_all_subtitle">PGP ブロックを含む共有テキスト全体を暗号化画面で開き、整えてから暗号化</string>
     <string name="share_target_action_sign">署名、または暗号化して署名</string>
     <string name="share_target_action_sign_subtitle">このテキストを PGPony の暗号化画面で開きます</string>
-    <string name="share_target_action_encrypt_other">残りのテキストを暗号化</string>
-    <string name="share_target_action_encrypt_other_subtitle">PGP ブロックと一緒に共有されたテキストを暗号化します</string>
     <string name="share_target_decrypt_result_unknown_signer">キーリングにないキーで署名されています</string>
     <!-- 4.6.0 (item 16): SSH authentication -->
     <string name="ssh_cardop_body">PGPony はハードウェアキーの認証スロットで SSH ログインに署名します。カードの PIN を入力してから、キーをスマートフォンの背面にかざしてください。</string>
@@ -2080,6 +2149,7 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
         <item quantity="other">ほかに %1$d 個の鍵が含まれています。これらもインポートされます:</item>
     </plurals>
     <string name="verify_banner_verified_unconfirmed_title">署名済み、鍵は未検証</string>
+    <string name="verify_banner_verified_dont_use_title">署名済み、鍵は「使用しない」に設定</string>
     <string name="restore_settings_ask">このバックアップにはプロキシと鍵サーバーの設定も含まれています。適用しますか？ 復元によって既存のプロキシがオフになることはなく、信頼レベルは復元されません。</string>
     <string name="restore_settings_apply">設定を適用</string>
     <string name="restore_settings_skip">現在の設定を維持</string>
@@ -2426,6 +2496,15 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="err_secret_mpi_truncated">秘密 MPI が途中で切れています</string>
     <string name="err_security_key_was_disconnected_plug_back">セキュリティキーが切断されました。差し込み直して、もう一度お試しください。</string>
     <string name="err_select_openpgp_application_failed">OpenPGP アプリケーションの SELECT に失敗しました (%1$s)</string>
+    <string name="err_malformed_signed_message">署名済みメッセージの形式が正しくないため、開きませんでした。</string>
+    <string name="err_nfc_openpgp_unavailable">この鍵は NFC 経由で OpenPGP アプリケーションを開きませんでした。Nitrokey 3 など一部の鍵は、NFC 経由では OpenPGP を無効にしています。鍵に USB がある場合は、接続してもう一度お試しください。</string>
+    <string name="err_offline_primary_sign">主鍵の秘密鍵がこのデバイスにありません（オフラインの主鍵）。署名用サブキーで署名してください。</string>
+    <string name="err_signing_keys_expired">この鍵ペアの署名用の鍵はすべて期限切れか失効しています</string>
+    <string name="err_offline_primary_edit">主鍵の秘密鍵がこのデバイスにありません（オフラインの主鍵）。主鍵を保管している場所でこの変更を行ってから、この鍵をもう一度ここにインポートしてください。</string>
+    <string name="err_provider_recipient_dont_use">受信者の鍵は PGPony で「使用しない」に設定されています: %1$s。この鍵宛てに暗号化するには、PGPony で信頼レベルを変更してください。</string>
+    <string name="err_provider_signer_dont_use">署名鍵は PGPony で「使用しない」に設定されています。メールアプリで別の署名鍵を選択するか、PGPony で信頼レベルを変更してください。</string>
+    <string name="err_certify_certifier">この鍵では他の鍵を認証できません</string>
+    <string name="err_certify_target">この鍵はここでは認証できません</string>
     <string name="err_session_key_block_too_short">セッション鍵ブロックが短すぎます</string>
     <string name="err_session_key_checksum_mismatch">セッション鍵のチェックサムが一致しません</string>
     <string name="err_short_form_apdu_data_limited_255">短形式 APDU のデータは 255 バイトまでです (%1$s バイトでした)。より大きなペイロードにはコマンドチェーンを使うか、extended = true を設定してください。</string>
@@ -2519,4 +2598,414 @@ PGPony は、古い OpenPGP 実装との相互運用性のために従来の RSA
     <string name="err_wrapped_session_key_length_out_range">ラップされたセッション鍵の長さが範囲外です</string>
     <string name="err_wrong_pin_no_tries_remaining_pin">PIN が間違っています。残り試行回数がなく、PIN はブロックされました</string>
     <string name="err_wrong_pin_remaining">PIN が間違っています。残り試行回数: %1$s</string>
+    <!-- 4.6.3: pair with another device (docs/PAIRING_PROTOCOL.md) -->
+    <string name="pair_menu">別のデバイスとペアリング</string>
+    <string name="pair_settings_subtitle">同じネットワーク上の PGPony Desktop や別のスマートフォンへ、鍵や完全なバックアップを移します。</string>
+    <string name="pair_title">別のデバイスとペアリング</string>
+    <string name="pair_back_cd">戻る</string>
+    <string name="pair_intro">このスマートフォンと、同じネットワーク上の PGPony Desktop や別のスマートフォンとの間で、鍵や完全なバックアップを移します。一方のデバイスが待機し、もう一方が接続して、両方の画面でコードを照合します。この画面を離れると何も残りません。</string>
+    <string name="pair_offline">ペアリングにはローカルネットワークを使いますが、オフラインモードがオンになっています。ペアリングするには設定でオフラインモードをオフにしてください。</string>
+    <string name="pair_host">相手のデバイスを待つ</string>
+    <string name="pair_join">相手のデバイスに接続</string>
+    <string name="pair_host_waiting">相手のデバイスで「接続」を選び、このコードをスキャンするか、下のアドレスを入力してください。</string>
+    <string name="pair_invite_cd">ペアリング用 QR コード</string>
+    <string name="pair_host_closes">この受付は %1$s まで開いています。</string>
+    <string name="pair_copy_invite">招待をコピー</string>
+    <string name="pair_no_address">このスマートフォンには、他のデバイスから届く Wi-Fi やイーサネットのアドレスがありません。相手のデバイスと同じネットワークに接続して、もう一度お試しください。</string>
+    <string name="pair_join_intro">相手のデバイスで「待つ」を選んでください。表示された QR コードをスキャンするか、そのアドレスを入力します。</string>
+    <string name="pair_scan">QR コードをスキャン</string>
+    <string name="pair_join_label">相手のデバイスに表示されたアドレス</string>
+    <string name="pair_bad_address">表示どおりにアドレスとポートを入力してください(例: 192.168.1.20:49152)。</string>
+    <string name="pair_bad_invite">この招待を読み取れません。もう一度スキャンするか、アドレスを入力してください。</string>
+    <string name="pair_connect">接続</string>
+    <string name="pair_working">処理中…</string>
+    <string name="pair_peer_address">相手のデバイスのアドレス: %1$s</string>
+    <string name="pair_host_connected">%1$s のデバイスが接続しました。ペアリングを準備しています…</string>
+    <string name="pair_compare_body">相手のデバイスにも同じコードが表示されていますか?コードが違う場合、2 台の間に誰かがいる可能性があります。「違う」を選んで、最初からやり直してください。</string>
+    <string name="pair_codes_match">同じコード</string>
+    <string name="pair_codes_differ">違う</string>
+    <string name="pair_waiting_other">相手のデバイスを待っています…</string>
+    <string name="pair_compare_host_body">相手のデバイスに表示されたコードを入力してください。コードが表示されていない、またはエラーが表示されている場合は「キャンセル」を選んでください。別のデバイスが代わりに接続した可能性があります。</string>
+    <string name="pair_typed_code_label">相手のデバイスに表示されたコード</string>
+    <string name="pair_typed_code_confirm">ペアリング</string>
+    <string name="pair_typed_code_wrong">コードが一致しません。相手の画面を確認して、もう一度入力してください。</string>
+    <string name="pair_compare_host_own">相手のデバイスは自分のコードをこのコードと照合します:</string>
+    <string name="pair_cancel">キャンセル</string>
+    <string name="pair_paired_with">%1$s とペアリングしました</string>
+    <string name="pair_paired_unnamed">相手のデバイスとペアリングしました</string>
+    <string name="pair_send_heading">相手のデバイスへ送信</string>
+    <string name="pair_group_keypairs">鍵ペア</string>
+    <string name="pair_group_public">公開鍵</string>
+    <string name="pair_group_backup">すべて</string>
+    <string name="pair_item_backup">完全なバックアップ</string>
+    <string name="pair_transfer_pass_note">選んだ鍵ペアの一部にはパスフレーズがありません。それらはこの転送用パスフレーズで保護されて送られ、相手のデバイスで使うにはこのパスフレーズが必要です。</string>
+    <string name="pair_transfer_pass">転送用パスフレーズ</string>
+    <string name="pair_transfer_pass_repeat">転送用パスフレーズ(確認)</string>
+    <string name="pair_send">送信</string>
+    <string name="pair_biometric_title">秘密鍵を送信</string>
+    <string name="pair_biometric_subtitle">鍵ペアやバックアップがこのスマートフォンから送られる前に、本人確認を行います。</string>
+    <string name="pair_waiting_answer">相手のデバイスが受け入れるのを待っています…</string>
+    <string name="pair_sending">%1$s を送信中…</string>
+    <string name="pair_receiving">%1$s を受信中: %2$d%%</string>
+    <string name="pair_backup_code_tell">相手のデバイスの利用者にこのリカバリーコードを伝えてください。バックアップを開くのに必要です。</string>
+    <string name="pair_copy">コピー</string>
+    <string name="pair_incoming_heading">%1$s から送信の申し出:</string>
+    <string name="pair_incoming_heading_unnamed">相手のデバイスから送信の申し出:</string>
+    <string name="pair_kind_keypair">%1$s(鍵ペア)</string>
+    <string name="pair_kind_public">%1$s(公開鍵)</string>
+    <string name="pair_incoming_fingerprint">フィンガープリント %1$s</string>
+    <string name="pair_backup_code_label">相手のデバイスに表示されたリカバリーコード</string>
+    <string name="pair_accept">選択したものを受け入れる</string>
+    <string name="pair_decline">断る</string>
+    <string name="pair_received_public">相手のデバイスからのこの公開鍵を追加しますか?</string>
+    <string name="pair_received_keypair">相手のデバイスからのこの鍵ペアを追加しますか?</string>
+    <string name="pair_received_in_keyring">この鍵はすでに鍵束にあります。追加すると新しい内容が統合されます。</string>
+    <string name="pair_received_backup">相手のデバイスからのバックアップを復元しますか?その鍵が鍵束に追加されます。信頼レベルと設定は引き継がれません。</string>
+    <string name="pair_received_add">追加</string>
+    <string name="pair_received_restore">復元</string>
+    <string name="pair_received_skip">スキップ</string>
+    <string name="pair_skipped_reason">相手の利用者がスキップしました</string>
+    <string name="pair_import_added">鍵束に追加しました</string>
+    <string name="pair_import_updated">鍵束で更新しました</string>
+    <string name="pair_import_already">すでに鍵束にあります</string>
+    <string name="pair_ended">セッションは終了しました。その鍵は消去されています。</string>
+    <string name="pair_again">やり直す</string>
+    <string name="pair_fail_refused">相手のデバイスはコードが違うと答えました。ペアリングは行われていません。</string>
+    <string name="pair_fail_you_refused">コードが違うと答えたため、ペアリングは行われていません。想定外の場合は、ネットワーク上に他の人がいないか確認して、やり直してください。</string>
+    <string name="pair_fail_you_cancelled">ペアリングをキャンセルしたため、ペアリングは行われていません。</string>
+    <string name="pair_fail_typed_wrong">入力したコードが一致しなかったため、ペアリングは行われていません。正しく入力した場合、2 台の間に誰かがいる可能性があります。やり直してください。</string>
+    <string name="pair_fail_handshake">ペアリングを検証できませんでした。ペアリングは行われていません。やり直してください。</string>
+    <string name="pair_fail_timeout">相手のデバイスが応答しなくなりました。</string>
+    <string name="pair_fail_version">相手のデバイスの PGPony はペアリング方式が異なります。両方を更新してやり直してください。</string>
+    <string name="pair_fail_protocol">相手は PGPony のペアリング受付ではないか、想定外のものを送ってきました。</string>
+    <string name="pair_fail_closed">接続が切れました。</string>
+    <string name="pair_fail_window_taken">相手のデバイスが接続を拒否したか切断しました。別のデバイスがペアリング受付を使った可能性があります。相手のデバイスでキャンセルし、新しい受付を開いてください。</string>
+    <string name="pair_err_window_expired">他のデバイスが接続する前にペアリング受付が閉じました。</string>
+    <string name="pair_err_export">%1$s をエクスポートできませんでした。</string>
+    <string name="pair_err_needs_passphrase">%1$s にはパスフレーズがありません。送信するには転送用パスフレーズを入力してください。</string>
+    <string name="pair_err_too_large">%1$s は大きすぎて送信できません。</string>
+    <string name="pair_err_import">%1$s をインポートできませんでした。</string>
+    <string name="pair_err_backup_code">相手のデバイスに表示されたリカバリーコードを入力してください。</string>
+    <string name="pair_err_no_fingerprint">%1$s はフィンガープリントなしで申し出られました。</string>
+    <string name="pair_err_not_one_key">%1$s には鍵がちょうど 1 つ含まれていません。</string>
+    <string name="pair_err_wrong_key">%1$s は申し出された鍵ではありません。</string>
+    <string name="pair_err_secret_in_public">%1$s は公開鍵として申し出されましたが、秘密鍵を含んでいます。</string>
+    <string name="pair_err_no_secret">%1$s は鍵ペアとして申し出されましたが、秘密鍵を含んでいません。</string>
+    <string name="pair_err_unprotected">%1$s にはパスフレーズのない秘密鍵が含まれています。</string>
+    <string name="pair_err_not_backup">%1$s は PGPony のバックアップファイルではありません。</string>
+    <string name="pair_rows_sent">送信済み</string>
+    <string name="pair_rows_received">受信済み</string>
+    <string name="pair_row_waiting">相手のデバイスが追加するのを待っています…</string>
+    <string name="pair_row_added_on">%1$s に追加されました</string>
+    <string name="pair_row_added_on_unnamed">相手のデバイスに追加されました</string>
+    <string name="pair_row_skipped_on">%1$s でスキップされました</string>
+    <string name="pair_row_skipped_on_unnamed">相手のデバイスでスキップされました</string>
+    <string name="pair_row_declined">相手のデバイスが受け入れませんでした</string>
+    <string name="pair_row_failed">インポートされませんでした: %1$s</string>
+    <string name="pair_row_failed_plain">インポートされませんでした</string>
+    <string name="pair_row_no_answer">セッション終了までに応答がありませんでした</string>
+    <string name="pair_row_skipped_here">スキップしました</string>
+    <string name="pair_done">完了</string>
+    <string name="pair_finished_title">ペアリングが終了しました</string>
+    <string name="pair_finished_by_peer">相手のデバイスがセッションを終了しました。</string>
+    <string name="pair_tally_sent">送信</string>
+    <string name="pair_tally_received">受信</string>
+    <string name="pair_tally_skipped">スキップ</string>
+    <string name="pair_tally_failed">失敗</string>
+    <string name="pair_tally_unanswered">応答なし</string>
+    <string name="pair_view_key">鍵を表示</string>
+    <string name="pair_view_keyring">鍵束を表示</string>
+    <string name="pair_close">閉じる</string>
+    <plurals name="pair_restore_summary">
+        <item quantity="other">%1$d 個の鍵を追加または更新しました</item>
+    </plurals>
+
+    <!-- 4.7.0 RC3 and earlier gaps, translated Oct 2026 -->
+    <string name="batch_output_title">複数のファイル</string>
+    <string name="batch_output_package">1つのパッケージ</string>
+    <string name="batch_output_package_subtitle">すべてのファイルとメッセージをまとめて1つのファイルに暗号化します</string>
+    <string name="batch_output_each">ファイルごとに個別に</string>
+    <string name="batch_output_each_subtitle">ファイルごとに1つずつ出力し、フォルダーに保存するか、まとめて共有します</string>
+    <string name="batch_op_encrypt">暗号化</string>
+    <string name="batch_op_encrypt_sign">暗号化して署名</string>
+    <string name="batch_op_sign_only">署名のみ</string>
+    <string name="batch_op_sign_only_subtitle">ファイルごとに分離署名（.sig）を作成します。ファイル自体は変更されません。</string>
+    <string name="batch_card_signing_unavailable">ハードウェアキーでファイルごとに署名すると、ファイルのたびにタップが必要になります。「署名する鍵」でソフトウェア鍵を選ぶか、「1つのパッケージ」を使ってください。</string>
+    <string name="batch_error_no_files">ファイルを少なくとも1つ追加してください。</string>
+    <string name="batch_error_pick_signer">ファイルに署名するには、「署名する鍵」で鍵を選んでください。</string>
+    <string name="batch_error_no_matching_key">PGPony に保存されているどの鍵でも、このファイルは復号できません。ハードウェアキー宛てに暗号化されている場合は、このファイルだけを個別に復号してください。</string>
+    <string name="batch_item_failed_unknown">このファイルを処理できませんでした。</string>
+    <string name="batch_item_cancelled">キャンセル済み</string>
+    <string name="batch_item_skipped_passphrase">スキップ: パスフレーズが入力されませんでした</string>
+    <string name="batch_save_failed_item">このファイルをフォルダーに書き込めませんでした。</string>
+    <string name="batch_save_folder_unusable">PGPony はそのフォルダーに書き込めません。別のフォルダーを選んでください。</string>
+    <string name="batch_saved_summary_format">%2$d 件中 %1$d 件のファイルをフォルダーに保存しました。</string>
+    <string name="batch_title_encrypting">ファイルを暗号化中</string>
+    <string name="batch_title_signing">ファイルに署名中</string>
+    <string name="batch_title_decrypting">ファイルを復号中</string>
+    <string name="batch_title_done_format">%2$d 件中 %1$d 件のファイルが完了</string>
+    <string name="batch_progress_file_format">ファイル %1$d / %2$d</string>
+    <string name="batch_passphrase_prompt">パスフレーズを入力してください。今回処理するすべてのファイルに使用されます。</string>
+    <string name="batch_passphrase_label">パスフレーズ</string>
+    <string name="batch_passphrase_continue">続ける</string>
+    <string name="batch_passphrase_skip">残りをスキップ</string>
+    <string name="batch_item_output_format">出力: %1$s</string>
+    <string name="batch_item_saved_format">%1$s として保存しました</string>
+    <string name="batch_save_to_folder">フォルダーに保存</string>
+    <string name="batch_share_all">すべて共有</string>
+    <string name="batch_share_chooser">ファイルを共有</string>
+    <string name="batch_share_failed">ファイルを共有できませんでした。</string>
+    <string name="batch_status_pending">待機中</string>
+    <string name="batch_status_done">完了</string>
+    <string name="batch_status_failed">失敗</string>
+    <string name="share_files_choice_title">一部のファイルは暗号化されています</string>
+    <string name="share_files_choice_message">%2$d 件のファイルのうち %1$d 件は暗号化されたメッセージです。それらを復号しますか？ それとも、すべてのファイルを1つのパッケージとして暗号化しますか？</string>
+    <string name="share_files_choice_decrypt_format">%1$d 件を復号</string>
+    <string name="share_files_choice_encrypt">すべて暗号化</string>
+    <string name="save_progress_saving">保存中…</string>
+    <string name="save_progress_bytes_format">保存中: %1$s / %2$s</string>
+    <string name="save_cancelled">保存をキャンセルしました。未完成のファイルは削除されました。</string>
+    <string name="save_failed_generic">ファイルを保存できませんでした。もう一度お試しいただくか、別の保存先を選んでください。</string>
+    <string name="save_failed_no_space">ファイルを保存するための空き容量が足りません。</string>
+    <string name="save_toast_saved_format">%1$s を保存しました</string>
+    <string name="save_toast_failed_format">%1$s を保存できませんでした</string>
+    <string name="save_batch_item_cancelled">保存されていません: 保存がキャンセルされました。</string>
+    <plurals name="import_result_subkeys_added">
+    <item quantity="other">%1$d 個のサブキーを追加しました。</item>
+</plurals>
+    <string name="import_preview_left_out_title">除外されたサブキーまたは使用できないサブキー</string>
+    <string name="import_preview_left_out_row_format">%1$s %2$s: %3$s</string>
+    <string name="subkey_issue_weak_hash">2023年2月の期限後に SHA-1 で紐付けられています</string>
+    <string name="subkey_issue_no_binding">有効なバインディング署名がありません</string>
+    <string name="subkey_issue_no_back_signature">有効なバック署名がない署名サブキー</string>
+    <string name="subkey_issue_revoked">失効済み</string>
+    <string name="subkey_issue_expired">期限切れ</string>
+    <string name="key_detail_subkey_secret_on_device">秘密鍵はこのデバイス上にあります</string>
+    <string name="key_detail_subkey_secret_offline">秘密鍵はオフライン（gpg スタブ）</string>
+    <string name="key_detail_subkey_secret_on_card">秘密鍵はカード上にあります</string>
+    <string name="key_detail_subkey_secret_not_present">このデバイスに秘密鍵はありません</string>
+    <string name="provider_review_title">受信者を確認</string>
+    <string name="provider_review_intro">このメッセージの一部の受信者について、PGPony には使用できる鍵がありません。暗号化に使う鍵を選ぶか、キャンセルして下書きに戻ってください。</string>
+    <string name="provider_review_missing_format">%1$s: PGPony に鍵がありません</string>
+    <string name="provider_review_dont_use_format">%1$s: 「使用しない」に設定されています</string>
+    <string name="provider_review_dont_use_hint">「使用しない」に設定された鍵は候補に表示されません。その鍵に暗号化するには、PGPony で信頼レベルを変更してください。</string>
+    <string name="provider_review_no_keys">PGPony に選択できる鍵がありません。先に PGPony で受信者の公開鍵をインポートしてください。</string>
+    <string name="provider_review_confirm">選択した鍵に暗号化</string>
+    <string name="err_provider_review_key_unusable">このメッセージ用に選んだ鍵は使用できません: %1$s。メッセージをもう一度送信し、PGPony で受信者を選んでください。</string>
+    <string name="import_method_github">GitHub</string>
+    <string name="import_github_label">GitHub ユーザー</string>
+    <string name="import_github_placeholder">ユーザー名</string>
+    <string name="import_github_fetch_button">鍵を取得</string>
+    <string name="import_github_help">PGPony は、このユーザーが GitHub アカウントに追加した OpenPGP 鍵（github.com/username.gpg）を、プロキシ設定を通して取得します。各フィンガープリントを確認して「鍵をインポート」をタップするまで、何も追加されません。</string>
+    <string name="import_github_error_invalid">有効な GitHub のユーザー名ではありません。ユーザー名は 1 から 39 文字の英字、数字、または単独のハイフンで構成され、先頭と末尾にはハイフンを使えません。</string>
+    <string name="import_github_error_no_keys_format">%1$s の OpenPGP 鍵は GitHub にありません。</string>
+    <string name="import_github_error_not_found_format">%1$s という GitHub ユーザーは存在しません。</string>
+    <string name="import_github_error_unreadable_format">GitHub から %1$s についての応答はありましたが、PGPony が読み取れる公開鍵は含まれていませんでした。</string>
+    <string name="applock_pin_field_label">PIN</string>
+    <string name="applock_pin_confirm_label">PIN を確認</string>
+    <string name="applock_new_pin_label">新しい PIN</string>
+    <string name="applock_wrong_pin">PIN が正しくありません。</string>
+    <string name="applock_wait_format">PIN の誤入力が多すぎます。%1$d 秒後にもう一度お試しください。</string>
+    <string name="applock_unavailable">PGPony は PIN の設定を読み取れないため、PIN を確認できず、ロックされたままになります。</string>
+    <string name="applock_check_failed">PIN を確認できませんでした。もう一度お試しください。</string>
+    <string name="applock_reset_button">PGPony を消去して最初からやり直す</string>
+    <string name="applock_reset_confirm_title">PGPony のすべてを消去しますか？</string>
+    <string name="applock_reset_confirm_message">PGPony 内のすべての鍵（「最近削除した項目」を含む）と、すべての設定およびアプリの承認を削除します。「すべてのデータを削除」と同じ処理です。ハードウェアキー上の鍵と、PGPony の外に保存したバックアップには影響しません。元に戻せません。</string>
+    <string name="applock_reset_confirm_button">消去</string>
+    <string name="applock_fingerprint_reset_notice">このスマートフォンに登録された指紋が変更されたため、指紋によるロック解除をオフにしました。PIN を使用してください。設定から再びオンにできます。</string>
+    <string name="applock_use_fingerprint">指紋を使用</string>
+    <string name="applock_method_title">ロック方法</string>
+    <string name="applock_method_device">デバイスのロック解除</string>
+    <string name="applock_method_pin">PGPony PIN</string>
+    <string name="applock_method_dialog_message">「デバイスのロック解除」では、スマートフォンの指紋または画面ロックを使用します。PGPony PIN は PGPony だけが求める 6 から 16 桁の別の PIN で、強要時 PIN も設定できます。</string>
+    <string name="applock_set_pin_title">PGPony PIN を設定</string>
+    <string name="applock_set_pin_message">6 から 16 桁の数字を選んでください。PGPony は PIN のハッシュのみを保存するため、忘れた PIN を復元することはできません。</string>
+    <string name="applock_change_pin_title">PIN を変更</string>
+    <string name="applock_change_pin_subtitle">新しい PGPony PIN を選択</string>
+    <string name="applock_verify_title">PGPony PIN を入力</string>
+    <string name="applock_verify_message">アプリのロックを変更するには、現在の PIN を入力してください。</string>
+    <string name="applock_pin_format_error">6 から 16 桁の数字を使用してください。</string>
+    <string name="applock_pin_mismatch">PIN が一致しません。</string>
+    <string name="applock_pin_same_as_duress">PIN は強要時 PIN と異なるものにしてください。</string>
+    <string name="applock_duress_same_as_pin">強要時 PIN は通常の PIN と異なるものにしてください。</string>
+    <string name="applock_duress_title">強要時 PIN</string>
+    <string name="applock_duress_off">オフ</string>
+    <string name="applock_duress_on">オン</string>
+    <string name="applock_duress_info_title">強要時 PIN を設定</string>
+    <string name="applock_duress_info_message">強要時 PIN は、PGPony を開くよう誰かに強要されたときに使う 2 つ目の PIN です。ロック画面で入力すると、PGPony 内のすべての鍵（「最近削除した項目」を含む）が、すべての設定、アプリの承認、保持中のパスフレーズとともに消去され、PGPony はインストール直後の状態で開きます。この処理が行われたことは画面上に一切表示されません。\n\nこれは元に戻せません。強要時 PIN を入力して試すことは絶対にしないでください。すべてが消去されます。</string>
+    <string name="applock_not_touched">影響を受けないもの: ハードウェアキー上の鍵（キー独自の PIN もそのまま残ります）、PGPony の外に保存したバックアップ、PIN の入力前に取得されたスマートフォンのストレージのコピー。</string>
+    <string name="applock_duress_set_title">強要時 PIN を選択</string>
+    <string name="applock_duress_remove_title">強要時 PIN を削除しますか？</string>
+    <string name="applock_duress_remove_message">PGPony PIN はそのまま残ります。以前の強要時 PIN は、誤った PIN として扱われます。</string>
+    <string name="applock_duress_remove_button">削除</string>
+    <string name="applock_fingerprint_title">指紋でロック解除</string>
+    <string name="applock_fingerprint_subtitle">PIN の代わりに指紋でのロック解除を許可します</string>
+    <string name="applock_fingerprint_advice_title">指紋によるロック解除をオフにしますか？</string>
+    <string name="applock_fingerprint_advice_message">指は無理やり押し当てられる可能性があります。また、強要時 PIN が役立つのは PIN を求められた場合だけです。指紋によるロック解除をオフにすると、PGPony は PIN のみを求めます。おすすめの設定です。</string>
+    <string name="applock_fingerprint_advice_turn_off">オフにする</string>
+    <string name="applock_fingerprint_advice_keep">オンのままにする</string>
+    <string name="applock_wipe_after_title">PIN の誤入力で消去</string>
+    <string name="applock_wipe_after_off">オフ</string>
+    <string name="applock_wipe_after_format">%1$d 回の誤入力後</string>
+    <string name="applock_wipe_after_message">PIN を連続してこの回数だけ間違えると、PGPony は強要時 PIN と同じようにすべてを消去します。正しい PIN を入力すると回数はリセットされます。これは元に戻せません。</string>
+
+    <!-- 4.7.0 RC4, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 45, #85): a User ID with many certifications shows the first three, then this row. -->
+    <plurals name="key_detail_cert_show_all">
+        <item quantity="other">%1$d 件の認証をすべて表示</item>
+    </plurals>
+    <string name="key_detail_cert_show_fewer">表示を減らす</string>
+
+    <!-- 4.7.0 RC4 (item 48, #79): which key made a signature and which key decrypted, by 16-digit key ID. -->
+    <string name="verify_signing_key_format">署名鍵 %1$s</string>
+    <string name="verify_signing_subkey_format">鍵 %2$s の署名サブキー %1$s</string>
+    <string name="encdec_decrypted_with_subkey_format">%1$s のサブキー %2$s で復号しました</string>
+
+    <!-- 4.7.0 RC4 (item 46, #82): Key Details, choose which signing subkey a key pair signs with. -->
+    <string name="key_detail_signing_subkey_title">署名に使用</string>
+    <string name="key_detail_signing_subkey_help">ここで選択しない限り、PGPony は有効な署名サブキーのうち最も新しいもので署名します。選択したサブキーは有効な間使用されます。期限切れになるか失効すると、署名は自動選択に戻ります。</string>
+    <string name="key_detail_signing_subkey_automatic">自動</string>
+    <string name="key_detail_signing_subkey_automatic_format">自動 (現在は%1$s)</string>
+    <string name="key_detail_signing_subkey_option_format">サブキー %1$s、%2$s、作成日 %3$s</string>
+    <string name="key_detail_signing_subkey_primary_format">主鍵 %1$s、%2$s</string>
+    <string name="key_detail_signing_subkey_pin_unusable">選択したサブキーは署名に使えなくなったため、PGPony は自動選択で署名します。</string>
+
+    <!-- 4.7.0 RC4 (item 47, #78): re-importing your own key pair with secret keys under a new passphrase. -->
+    <string name="import_replace_secrets_title">このファイルの秘密鍵を使用</string>
+    <plurals name="import_replace_secrets_body">
+        <item quantity="other">PGPony にはこの鍵ペアがすでにあります。このファイル内の %1$d 個の秘密鍵は、保存されている秘密鍵とは保護方法が異なります。たとえば gpg でパスフレーズを変更した後などです。保存されている秘密鍵をこのファイルのものに置き換え、今後はこのファイルのパスフレーズを使用します。</item>
+    </plurals>
+    <string name="import_replace_secrets_passphrase_label">このファイルのパスフレーズ</string>
+    <string name="import_replace_secrets_passphrase_help">このパスフレーズで、ファイル内のすべての秘密鍵のロックを解除できる必要があります。ファイルにパスフレーズがない場合は空欄のままにしてください。</string>
+    <plurals name="import_result_secrets_replaced">
+        <item quantity="other">%1$d 個の秘密鍵を置き換えました。</item>
+    </plurals>
+    <string name="err_replace_secrets_passphrase">%1$s について、このパスフレーズでは、このファイル内の秘密鍵のロックをすべて解除することはできませんでした。保存されている秘密鍵はそのまま残り、何もインポートされませんでした。</string>
+    <string name="err_replace_secrets_unproven">このファイル内の秘密鍵が %1$s の秘密鍵であることを確認できませんでした。保存されている秘密鍵はそのまま残り、何もインポートされませんでした。</string>
+
+    <!-- 4.7.0 RC4 security key work, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 28, #36, #43): the card prompt a mail app opens also takes a key plugged in over USB. -->
+    <string name="provider_cardop_usb_hint">USB で接続したキーも使えます。PIN を入力してから「USB キーを使用」をタップしてください。</string>
+    <string name="provider_cardop_use_usb">USB キーを使用</string>
+    <string name="provider_cardop_wrong_pin_usb">PIN が違います。残り %1$d 回です。PIN を確認して、もう一度お試しください。</string>
+    <string name="provider_cardop_usb_lost">キーが取り外されました。差し込み直して、もう一度お試しください。</string>
+
+    <!-- 4.7.0 RC4 (item 34, #43): keys whose secret is on a security key (generated on it, or paired with it). -->
+    <string name="key_detail_type_key_pair_on_card">セキュリティキー上の鍵ペア</string>
+    <string name="key_detail_primary_on_card">主鍵: セキュリティキーの署名スロットにあり、そこで署名と鍵の認証を行います。</string>
+
+    <!-- 4.7.0 RC4 (item 31, card): certifying with a key whose primary is on a security key. -->
+    <string name="certify_no_certifier_card">ここで認証できる鍵ペアがありません。認証するには、主鍵で認証でき、その秘密鍵がこのデバイス上またはセキュリティキー上にある鍵ペアが必要です。ML-DSA 鍵はまだ認証できません。</string>
+    <string name="certify_card_hint">「認証」をタップした後、セキュリティキーをスマートフォンにかざすか、差し込んでください。</string>
+    <string name="err_certify_card_mismatch">このセキュリティキーには、認証に使うよう選んだ鍵が入っていません</string>
+
+    <!-- 4.7.0 RC4 (item 13, #71): Move to Security Key, like gpg's keytocard. -->
+    <string name="move_to_card_menu">セキュリティキーに移動</string>
+    <string name="move_to_card_title">セキュリティキーへの移動</string>
+    <string name="move_to_card_intro">gpg の keytocard と同じように、この鍵ペアの鍵を OpenPGP セキュリティキーのスロットに書き込みます。以後は、セキュリティキーがそれらの鍵で署名と復号を行います。</string>
+    <string name="move_to_card_nothing">この鍵ペアには、セキュリティキーに移せる鍵がありません。</string>
+    <string name="move_to_card_slot_signature">署名スロット</string>
+    <string name="move_to_card_slot_decryption">復号スロット</string>
+    <string name="move_to_card_slot_authentication">認証スロット</string>
+    <string name="move_to_card_slot_leave">このスロットはそのままにする</string>
+    <string name="move_to_card_key_primary_format">主鍵、%1$s、%2$s</string>
+    <string name="move_to_card_key_subkey_format">サブキー、%1$s、%2$s</string>
+    <string name="move_to_card_one_slot_each">スロットごとに別の鍵を選んでください。</string>
+    <string name="move_to_card_refused_title">セキュリティキーに移せない鍵:</string>
+    <string name="move_to_card_refused_v6">v6 鍵は OpenPGP セキュリティキーに格納できません</string>
+    <string name="move_to_card_refused_rsa_size">移動できるのは RSA 2048、3072、4096 のみです</string>
+    <string name="move_to_card_refused_curve">この曲線にはまだ対応していません</string>
+    <string name="move_to_card_refused_algorithm">この種類の鍵は移動できません</string>
+    <string name="move_to_card_backup_body">セキュリティキー上の鍵は、そこから再びコピーして取り出すことができません。セキュリティキーと一緒に鍵を失わないよう、先にこの鍵ペアのバックアップを保存してください。</string>
+    <string name="move_to_card_backup_action">先にバックアップを保存</string>
+    <string name="move_to_card_backup_confirm">この鍵ペアのバックアップがあります</string>
+    <string name="move_to_card_remove_label">移動した鍵をこのスマートフォンから削除</string>
+    <string name="move_to_card_remove_hint">gpg と同じく、スマートフォンには鍵がセキュリティキー上にあるという記録だけが残り、以後はセキュリティキーを使用します。ここにもコピーを残すには、これをオフにしてください。</string>
+    <string name="move_to_card_remove_unavailable">この鍵ペアのすべてのサブキーをセキュリティキーに移す場合のみ利用できます。gpg と同じく、主鍵はこのスマートフォンに残してもかまいません。それ以外の場合はこのスマートフォンにコピーが残り、引き続きそのコピーが使われます。</string>
+    <string name="move_to_card_wrong_admin_pin">管理者 PIN が違います。残り %1$d 回です。残り回数がなくなると、セキュリティキーを初期化する必要があります。</string>
+    <string name="move_to_card_wrong_user_pin">ユーザー PIN が違います。残り %1$d 回です。セキュリティキーには何も書き込まれていません。</string>
+    <string name="move_to_card_replace_confirm">選択したスロットにすでにある鍵を置き換える</string>
+    <string name="move_to_card_slots_occupied">セキュリティキーの選択したスロットのいずれかに別の鍵がすでに入っているため、何も書き込まれていません。上書きするには、「選択したスロットにすでにある鍵を置き換える」をオンにしてから、もう一度「移動」をタップしてください。</string>
+    <string name="move_to_card_admin_pin">セキュリティキーの管理者 PIN</string>
+    <string name="move_to_card_user_pin">セキュリティキーのユーザー PIN</string>
+    <string name="move_to_card_pins_hint">管理者 PIN で鍵を書き込みます。その後、スマートフォン上で何かを変更する前に、セキュリティキーがそれらの鍵で署名と復号を行えることを確かめるため、ユーザー PIN をスロットごとに 1 回使用します。</string>
+    <string name="move_to_card_action">移動</string>
+    <string name="move_to_card_waiting">セキュリティキーをスマートフォンにかざすか差し込み、完了するまでそのままにしてください。</string>
+    <string name="move_to_card_failed">鍵をセキュリティキーに移動できませんでした</string>
+    <string name="move_to_card_done_title">鍵を移動しました</string>
+    <plurals name="move_to_card_done_removed">
+        <item quantity="other">%1$d 個の鍵が現在セキュリティキー上にあり、このスマートフォンからは削除されました。</item>
+    </plurals>
+    <plurals name="move_to_card_done_kept">
+        <item quantity="other">%1$d 個の鍵が現在セキュリティキー上にあります。このスマートフォンにもコピーが残り、引き続きそのコピーが使われます。</item>
+    </plurals>
+    <string name="err_card_expiry_primary_missing">主鍵がこのセキュリティキーの署名スロットにないため、このセキュリティキーでは有効期限を変更できません</string>
+    <string name="err_move_to_card_unsupported">このセキュリティキーには、選択した鍵のうち 1 つを格納できません。別の鍵またはスロットを選んでください。</string>
+    <string name="err_move_to_card_check_failed">鍵の書き込み後にセキュリティキーが確認に合格しなかったため、このスマートフォン上では何も変更されていません。セキュリティキー上の鍵には頼らないでください。</string>
+
+    <!-- 4.7.0 RC5, translated Oct 2026 -->
+    <string name="key_detail_expiry_sheet_title_subkey">サブキーの有効期限を編集</string>
+    <string name="key_detail_expiry_sheet_subtitle_subkey">サブキー %1$s の新しい有効期限を設定します。主鍵とほかのサブキーの有効期限は変わりません。</string>
+    <string name="key_detail_expiry_also_subkeys">まだ有効なサブキーにも設定する</string>
+    <string name="key_detail_expiry_also_subkeys_hint">期限切れまたは失効済みのサブキーは、有効期限が変わりません。</string>
+    <string name="key_detail_subkey_change_expiry">有効期限を編集…</string>
+    <string name="key_detail_card_no_cert_title">公開鍵が必要です</string>
+    <string name="key_detail_card_no_cert_body">このセキュリティキーには秘密鍵が入っていますが、鍵のそれ以外の部分、つまりユーザー ID と署名は入っていません。対応する公開鍵（エクスポートしたもの、バックアップ、または鍵サーバー上のコピー）をインポートすると、PGPony がそれをこのセキュリティキーとペアリングし、署名と復号に使えるようになります。</string>
+
+    <!-- 4.7.0 RC5 batch 2, translated Oct 2026 -->
+    <string name="key_detail_key_id_copied">鍵 ID をコピーしました</string>
+    <string name="key_detail_copy_key_id_cd">鍵 ID をコピー</string>
+    <string name="key_detail_detail_usage">用途</string>
+    <string name="key_detail_cert_trust_full">信頼された紹介者、深さ %1$d</string>
+    <string name="key_detail_cert_trust_partial">部分的に信頼された紹介者、深さ %1$d</string>
+    <string name="key_detail_cert_trust_amount">信頼度 %1$d、深さ %2$d</string>
+    <string name="key_detail_cert_trust_limited">一部のユーザー ID に限定</string>
+    <string name="key_detail_last_checked_found_format">%1$s、%2$s で見つかりました</string>
+    <string name="key_detail_last_checked_not_found_format">%1$s、%2$s にはありません</string>
+    <string name="kd_vm_check_found_on">この鍵は %1$s に公開されています。</string>
+    <string name="kd_vm_check_not_found_on">この鍵は %1$s で見つかりませんでした。</string>
+    <string name="key_detail_cert_look_up">検索</string>
+    <string name="certifier_lookup_title">認証者を検索</string>
+    <string name="certifier_lookup_found_body">インポートすると、この鍵が鍵束に追加され、その認証を検証できるようになります。ただし、これで確認されるのは数学的な正当性だけで、鍵の身元は確認されません。この鍵に頼る前に、誰の鍵なのかを確認してください。</string>
+    <string name="certifier_lookup_not_found_title">認証者が見つかりません</string>
+    <string name="certifier_lookup_not_found_body_format">設定済みのどの鍵サーバーでも %1$s の鍵は見つかりませんでした。認証者が鍵を公開していない可能性があります。</string>
+    <string name="certifier_lookup_imported_body">インポートした鍵がこの鍵に付けた認証が再検証されます。</string>
+    <string name="key_detail_refresh_sigs_menu">自己署名を更新</string>
+    <string name="key_detail_refresh_sigs_title">自己署名を更新</string>
+    <string name="key_detail_refresh_sigs_body">この鍵のユーザー ID とサブキーのバインディングを SHA-256 で署名し直します。有効期限はすべてそのままです。バインディングに SHA-1 が使われていたために除外されたサブキーは、その秘密鍵がこのスマートフォンにあれば復活します。他の人が新しい署名を受け取れるよう、終わったら鍵を公開してください。</string>
+    <string name="key_detail_refresh_sigs_action">更新</string>
+    <string name="key_detail_refresh_sigs_done">自己署名を更新しました。</string>
+    <plurals name="key_detail_refresh_sigs_done_restored">
+        <item quantity="other">自己署名を更新しました。%1$d 個のサブキーが復活しました。</item>
+    </plurals>
+    <!-- 4.7.0 RC5 batch 3, translated Oct 2026 -->
+    <string name="keyring_select_menu">鍵を選択</string>
+    <string name="keyring_select_done_cd">選択を終了</string>
+    <string name="keyring_select_all_cd">すべて選択</string>
+    <string name="keyring_export_selected_cd">公開鍵をエクスポート</string>
+    <string name="keyring_export_selected_copied">公開鍵をコピーしました</string>
+    <plurals name="keyring_selected_count">
+        <item quantity="other">%1$d 件選択中</item>
+    </plurals>
+    <plurals name="keyring_export_selected_label">
+        <item quantity="other">公開鍵 %1$d 件</item>
+    </plurals>
+    <!-- 4.7.0 RC6, translated Oct 2026 -->
+    <string name="key_detail_expiry_confirm_title">有効期限を変更しますか？</string>
+    <string name="key_detail_expiry_confirm_current">現在の有効期限: %1$s</string>
+    <string name="key_detail_expiry_confirm_new">新しい有効期限: %1$s</string>
+    <string name="key_detail_expiry_confirm_subkey_only">サブキー %1$s のバインディングだけが再署名されます。</string>
+    <plurals name="key_detail_expiry_confirm_user_ids">
+        <item quantity="other">%1$d 件のユーザー ID が再署名されます。</item>
+    </plurals>
+    <plurals name="key_detail_expiry_confirm_subkeys">
+        <item quantity="other">まだ有効な %1$d 件のサブキーも再署名されます。</item>
+    </plurals>
+    <string name="key_detail_expiry_confirm_publish">他の人が新しい日付を確認できるのは、鍵を公開した後です。</string>
+    <string name="key_detail_expiry_confirm_action">有効期限を変更</string>
+    <string name="key_detail_resign_biometric_title">新しい署名を確認</string>
+    <string name="key_detail_resign_biometric_subtitle">この鍵を再署名するには認証してください</string>
+    <string name="provider_review_included_format">%1$s によりすでに含まれています</string>
+    <!-- 4.7.0 RC7, translated Oct 2026 -->
+    <string name="exchange_qr_too_large_inline">この鍵は QR コードには大きすぎます。代わりに下の「鍵をコピー」または「アップロード」をお使いください。</string>
 </resources>

@@ -144,7 +144,9 @@ class SecretKeyA2Test {
         val stubPlain = offlinePrimary(plain)
         val stubRing = PGPSecretKeyRing(ByteArrayInputStream(stubPlain), JcaKeyFingerprintCalculator())
         assertTrue("precondition: primary is a stub", stubRing.secretKey.isPrivateKeyEmpty)
-        assertTrue("the old primary-only test says protected", svc.isPassphraseProtected(stubRing))
+        // 4.7.0 (item 22): protection is read from the first key with material,
+        // so a stub primary over unprotected subkeys no longer reads as protected.
+        assertFalse("a stub primary does not make the ring protected", svc.isPassphraseProtected(stubRing))
         assertFalse(SecretKeyCheck.isFullyPassphraseProtected(stubPlain))
         assertTrue(SecretKeyCheck.isFullyPassphraseProtected(offlinePrimary(prot)))
         assertEquals(SecretKeyCheck.Protection.STUB, CertificateBindings.packets(stubPlain).first().let {

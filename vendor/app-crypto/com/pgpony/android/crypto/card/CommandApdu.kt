@@ -60,20 +60,25 @@ data class CommandApdu(
         }
         require(le == null || le in 0..256) { "Le out of short-form range: $le" }
 
-        val out = ArrayList<Byte>(5 + data.size + 1)
-        out.add((cla and 0xFF).toByte())
-        out.add((ins and 0xFF).toByte())
-        out.add((p1 and 0xFF).toByte())
-        out.add((p2 and 0xFF).toByte())
+        // 4.7.0 (item 13): one exactly sized array, no boxed list, so a key
+        // import's bytes exist in one place the caller can wipe.
+        val size = 4 + (if (data.isNotEmpty()) 1 + data.size else 0) + (if (le != null) 1 else 0)
+        val out = ByteArray(size)
+        out[0] = (cla and 0xFF).toByte()
+        out[1] = (ins and 0xFF).toByte()
+        out[2] = (p1 and 0xFF).toByte()
+        out[3] = (p2 and 0xFF).toByte()
+        var i = 4
         if (data.isNotEmpty()) {
-            out.add((data.size and 0xFF).toByte())   // Lc
-            for (b in data) out.add(b)
+            out[i++] = (data.size and 0xFF).toByte()   // Lc
+            System.arraycopy(data, 0, out, i, data.size)
+            i += data.size
         }
         if (le != null) {
             // 256 → 0x00 short-form "max"
-            out.add((if (le == 256) 0x00 else le and 0xFF).toByte())
+            out[i] = (if (le == 256) 0x00 else le and 0xFF).toByte()
         }
-        return out.toByteArray()
+        return out
     }
 
     /**

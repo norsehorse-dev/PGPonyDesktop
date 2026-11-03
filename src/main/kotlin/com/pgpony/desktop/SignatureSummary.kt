@@ -130,15 +130,24 @@ object SignatureSummary {
             signerStatus = r.signerStatus.takeUnless { r.compositeInline && r.compositeInlineBytes != null }
         )
 
-    /** A streaming decrypt (binary files, CLI). */
-    suspend fun ofStream(repo: DesktopKeyRepository, r: DecryptStreamResult): Summary =
-        of(
+    /**
+     * A streaming decrypt (binary files, CLI). 3.1.0 (Android 4.7.0 item 23, #14): the engine no
+     * longer buffers a composite-signed message to hand back its bytes; it hashes the content as
+     * it streams and returns [DecryptStreamResult.compositeStreamed], graded here.
+     */
+    suspend fun ofStream(repo: DesktopKeyRepository, r: DecryptStreamResult): Summary {
+        val streamed = r.compositeStreamed
+        if (r.compositeInline && streamed != null) {
+            return fromVerification(repo, DesktopCompositeVerify.verifyStreamed(repo, streamed))
+        }
+        return of(
             repo, r.signatureVerified, r.hasSignature, r.signerKeyID, r.signatureKeyIDRaw,
             r.compositeInline, r.compositeInlineBytes, r.compositeClaimedSignerFp,
             weakKey = r.signerWeakKey,
             signerFingerprint = r.signerPrimaryFingerprint,
             signerStatus = r.signerStatus.takeUnless { r.compositeInline && r.compositeInlineBytes != null }
         )
+    }
 
     /**
      * A smart-card decrypt, graded by the engine like the software path. The signer is the

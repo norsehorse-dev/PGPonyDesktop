@@ -67,6 +67,20 @@ object DesktopCompositeVerify {
         return toResult(rows, CompositeSignerGate.verifyDetached(certs, sigPacket, data), null)
     }
 
+    /**
+     * 3.1.0 (Android 4.7.0 item 23, #14): [verifyDetached] over content read from [content] as it
+     * streams, so a large file is never held in memory. Null when [signature] is not composite;
+     * [content] is not read then. Does not close [content].
+     */
+    suspend fun verifyDetachedStream(
+        repo: DesktopKeyRepository, signature: ByteArray, content: java.io.InputStream
+    ): VerificationResult? {
+        val sigPacket = runCatching { CompositeDocumentVerifier.rawSignaturePacket(signature) }.getOrNull() ?: return null
+        if (!CompositeDocumentVerifier.isCompositeSignature(sigPacket)) return null
+        val (rows, certs) = certificates(repo)
+        return toResult(rows, CompositeSignerGate.verifyDetachedStream(certs, sigPacket, content), null)
+    }
+
     /** Detached armored signature pasted as text over [data]. Null when it is not composite. */
     suspend fun verifyDetached(
         repo: DesktopKeyRepository, armoredSig: String, data: ByteArray
@@ -95,6 +109,18 @@ object DesktopCompositeVerify {
      * the engine hands back as DecryptResult.compositeInlineBytes because BouncyCastle cannot
      * parse it. [claimedFp] is kept for callers; the gate takes issuer subpackets as hints only.
      */
+    /**
+     * 3.1.0 (Android 4.7.0 item 23, #14): the composite inline signature of a message the engine
+     * decrypted as a stream. The content was hashed as it was written out
+     * (DecryptStreamResult.compositeStreamed), so it is graded from the digests.
+     */
+    suspend fun verifyStreamed(
+        repo: DesktopKeyRepository, streamed: com.pgpony.android.crypto.pqc.CompositeInlineStreamReader.Result
+    ): VerificationResult {
+        val (rows, certs) = certificates(repo)
+        return toResult(rows, CompositeSignerGate.verifyStreamed(certs, streamed), null)
+    }
+
     @Suppress("UNUSED_PARAMETER")
     suspend fun verifyInlineBytes(
         repo: DesktopKeyRepository, inlineBytes: ByteArray, claimedFp: String?

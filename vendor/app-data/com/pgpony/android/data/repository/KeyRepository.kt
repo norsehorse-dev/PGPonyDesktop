@@ -13,6 +13,7 @@ import android.content.SharedPreferences
 import com.pgpony.android.crypto.KeyAlgorithm
 import com.pgpony.android.crypto.KeyExpirationService
 import com.pgpony.android.crypto.PGPCryptoService
+import com.pgpony.android.crypto.CertificationService
 import com.pgpony.android.crypto.ClassicalSubkeyGen
 import com.pgpony.android.crypto.GranularSubkeySpec
 import com.pgpony.android.crypto.V6SubkeyGen
@@ -31,6 +32,10 @@ import org.bouncycastle.openpgp.PGPPublicKeyRing
 import org.bouncycastle.openpgp.PGPSecretKeyRing
 import java.util.UUID
 
+/** 4.7.0 (item 31): the two certification failures the UI can show. */
+internal const val CERTIFY_CERTIFIER_MESSAGE = "This key cannot certify other keys"
+internal const val CERTIFY_TARGET_MESSAGE = "This key cannot be certified here"
+
 sealed class KeyRepoError(message: String) : Exception(message) {
     class AlreadyExists(fp: String) : KeyRepoError("Key $fp already exists in keyring")
     class NotFound(fp: String) : KeyRepoError("Key $fp not found")
@@ -48,6 +53,24 @@ sealed class KeyRepoError(message: String) : Exception(message) {
      */
     class SecretNotProven(val fingerprint: String, val match: SecretKeyCheck.SecretMatch) :
         KeyRepoError(secretNotProvenMessage(fingerprint, match))
+    /**
+     * 4.7.0 (item 47, #78): Use the secret keys from this file was chosen, and
+     * the file's secret keys did not all unlock with the passphrase given, or
+     * did not prove to be this key's. Nothing was imported.
+     */
+    class SecretsNotReplaced(val fingerprint: String, val match: SecretKeyCheck.SecretMatch) :
+        KeyRepoError(secretsNotReplacedMessage(fingerprint, match))
+}
+
+/** English text for [KeyRepoError.SecretsNotReplaced]. */
+private fun secretsNotReplacedMessage(fp: String, match: SecretKeyCheck.SecretMatch): String {
+    val short = fp.takeLast(8).uppercase()
+    return when (match) {
+        SecretKeyCheck.SecretMatch.NEEDS_PASSPHRASE, SecretKeyCheck.SecretMatch.WRONG_PASSPHRASE ->
+            "The passphrase did not unlock every secret key in this file for $short. The stored secret keys were kept and nothing was imported."
+        else ->
+            "The secret keys in this file could not be confirmed as the ones for $short. The stored secret keys were kept and nothing was imported."
+    }
 }
 
 /** English text for [KeyRepoError.SecretNotProven], one sentence per reason. */
@@ -122,10 +145,21 @@ data class ImportPreview(
      *  keep the Import button enabled for the pairing case. */
     val willPairWithCard: Boolean = false,
     val armoredText: String,
+    /** 4.7.0 (item 22): the primary's secret is not in the data (an offline
+     *  primary, or a divert-to-card stub); null when it is. */
+    val primaryStub: com.pgpony.android.crypto.OfflineStub.Kind? = null,
     /** 4.6.0 (item 17.9): every OTHER key the same text holds. The commit
      *  imports all of them, so the preview must show all of them; a noisy
      *  paste can no longer slip a second key in behind the one reviewed. */
-    val additionalKeys: List<PreviewKey> = emptyList()
+    val additionalKeys: List<PreviewKey> = emptyList(),
+    /** 4.7.0 (item 40, #82): subkeys of this key that the import leaves out
+     *  or that cannot be used, each with why (SubkeyAdmission.Issue). */
+    val leftOutSubkeys: List<com.pgpony.android.crypto.SubkeyAdmission.LeftOut> = emptyList(),
+    /** 4.7.0 (item 47, #78): how many secret keys of your key pair this file
+     *  holds under different protection than the stored ones (a changed
+     *  passphrase, or the same one re-protected by gpg's export). The preview
+     *  offers to use them; nothing changes unless that is chosen. */
+    val replaceableSecrets: Int = 0
 ) {
     /** Last 8 hex chars, uppercased — same convention as PGPKeyEntity.shortFingerprint. */
     val shortFingerprint: String get() = fingerprint.takeLast(8).uppercase()
@@ -154,7 +188,16 @@ enum class ImportResolution {
 /** Entity + resolution pair returned by [KeyRepository.importArmoredKeyDetailed]. */
 data class ImportOutcome(
     val entity: PGPKeyEntity,
-    val resolution: ImportResolution
+    val resolution: ImportResolution,
+    /** 4.7.0 (item 24, #78): newer self-signatures of a key pair's owner taken
+     *  from the import (preferences, expiry or bindings changed elsewhere). */
+    val selfSignaturesApplied: Int = 0,
+    /** 4.7.0 (item 40, #82): subkeys a re-import of your own key pair added
+     *  (bound by the primary, missing from the stored key). */
+    val subkeysAdded: Int = 0,
+    /** 4.7.0 (item 47, #78): held secret keys replaced by the file's, when
+     *  Use the secret keys from this file was chosen. */
+    val secretsReplaced: Int = 0
 )
 
 class KeyRepository(
@@ -284,6 +327,7 @@ class KeyRepository(
             userEmail = parsed.second,
             algorithm = algorithm,
             isKeyPair = true,
+            trustLevel = TrustLevel.ULTIMATE,
             createdAt = System.currentTimeMillis(),
             expiresAt = expiresAtMs,
             armoredPublicKey = result.armoredPublicKey,
@@ -345,6 +389,7 @@ class KeyRepository(
             userEmail = parsed.second,
             algorithm = algorithm,
             isKeyPair = true,
+            trustLevel = TrustLevel.ULTIMATE,
             createdAt = System.currentTimeMillis(),
             expiresAt = expiresAtMs,
             armoredPublicKey = armoredPublic,
@@ -402,6 +447,7 @@ class KeyRepository(
             userEmail = parsed.second,
             algorithm = KeyAlgorithm.MLKEM768_X25519_V4,
             isKeyPair = true,
+            trustLevel = TrustLevel.ULTIMATE,
             createdAt = System.currentTimeMillis(),
             expiresAt = expiresAtMs,
             armoredPublicKey = armoredPublic,
@@ -453,6 +499,7 @@ class KeyRepository(
             userEmail = parsed.second,
             algorithm = KeyAlgorithm.V6_ED25519,
             isKeyPair = true,
+            trustLevel = TrustLevel.ULTIMATE,
             createdAt = System.currentTimeMillis(),
             expiresAt = expiresAtMs,
             armoredPublicKey = crypto.exportArmoredPublicKey(publicRing),
@@ -505,7 +552,10 @@ class KeyRepository(
      */
     private class SecretUpgrade(
         val passphrase: CharArray? = null,
-        val sameImport: Set<String> = emptySet()
+        val sameImport: Set<String> = emptySet(),
+        /** 4.7.0 (item 47, #78): replace held secrets that the file protects
+         *  differently, proven with [passphrase] first. */
+        val replaceSecrets: Boolean = false
     )
 
     /**
@@ -748,6 +798,38 @@ class KeyRepository(
     }
 
     private suspend fun previewSingle(armoredText: String): ImportPreview? {
+        val preview = previewSingleBase(armoredText) ?: return null
+        // 4.7.0 (item 40, #82): list the subkeys the import drops (no valid
+        // binding, a SHA-1 binding after the cutoff, no back-signature on a
+        // signing subkey) or cannot use (revoked, expired), read from the
+        // incoming octets as they are, before anything is sanitized.
+        val leftOut: List<com.pgpony.android.crypto.SubkeyAdmission.LeftOut> =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                runCatching {
+                    com.pgpony.android.crypto.SubkeyAdmission.leftOut(CompositeSigPacket.dearmor(armoredText))
+                }.getOrDefault(emptyList())
+            }
+        val withLeftOut = if (leftOut.isEmpty()) preview else preview.copy(leftOutSubkeys = leftOut)
+        // 4.7.0 (item 47, #78): your own key pair's secrets under new protection.
+        val replaceable = if (preview.isDuplicate && preview.hasPrivateKey) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                runCatching { replaceableSecretCount(preview.fingerprint, armoredText) }.getOrDefault(0)
+            }
+        } else 0
+        return if (replaceable > 0) withLeftOut.copy(replaceableSecrets = replaceable) else withLeftOut
+    }
+
+    /** 4.7.0 (item 47): see [ImportPreview.replaceableSecrets]. */
+    private suspend fun replaceableSecretCount(fingerprint: String, armoredText: String): Int {
+        val existing = dedup.findExisting(fingerprint) ?: return 0
+        if (!existing.isKeyPair || existing.isCardBacked || existing.algorithm.isCompositeSign) return 0
+        val stored = store.loadPrivateKey(existing.fingerprint) ?: return 0
+        if (CompositeKeyFacade.isCompositePrimary(stored) || CompositeKeyFacade.hasV4Algo35Subkey(stored)) return 0
+        val incoming = crypto.importArmoredKey(armoredText).secretKeyRing?.encoded ?: return 0
+        return com.pgpony.android.crypto.SubkeyAdmission.replaceableSecrets(stored, incoming).size
+    }
+
+    private suspend fun previewSingleBase(armoredText: String): ImportPreview? {
         compositeImportPreview(armoredText)?.let { return it }
         v4Algo35ImportPreview(armoredText)?.let { return it }
         return try {
@@ -774,7 +856,8 @@ class KeyRepository(
                 isDuplicate = existing != null,
                 willUpgradeToKeyPair = willUpgrade,
                 willPairWithCard = willPairWithCard,
-                armoredText = armoredText
+                armoredText = armoredText,
+                primaryStub = importResult.primaryStub
             )
         } catch (e: Exception) {
             null
@@ -826,6 +909,17 @@ class KeyRepository(
         secretPassphrase: CharArray?
     ): ImportOutcome = importDetailedWith(armoredText, fromAutocrypt, SecretUpgrade(passphrase = secretPassphrase))
 
+    /**
+     * 4.7.0 (item 47, #78): import [armoredText] and, for your own key pair,
+     * replace the stored secret keys that the file protects differently with
+     * the file's, so the passphrase becomes the one the file was exported
+     * with. [secretPassphrase] must unlock every secret key in the file (null
+     * for a file without a passphrase); otherwise
+     * [KeyRepoError.SecretsNotReplaced] and nothing changes.
+     */
+    suspend fun importReplacingSecrets(armoredText: String, secretPassphrase: CharArray?): ImportOutcome =
+        importDetailedWith(armoredText, false, SecretUpgrade(passphrase = secretPassphrase, replaceSecrets = true))
+
     private suspend fun importDetailedWith(
         armoredText: String,
         fromAutocrypt: Boolean,
@@ -853,7 +947,13 @@ class KeyRepository(
         // Check for duplicate — normalized fingerprint identity via
         // the dedup service (exact DAO hit fast path, case/format
         // variant scan fallback).
+        // 4.7.0 (item 54, #71): a card scanned before its key was imported is a
+        // placeholder keyed by the Signature slot's fingerprint, which is a
+        // subkey's when the primary stayed off the card. Pair onto it by any of
+        // its slots, taking the key's real primary fingerprint.
         val existing = dedup.findExisting(importResult.fingerprint)
+            ?: importResult.publicKeyRing?.let { cardPlaceholderFor(it) }
+                ?.let { placeholder -> placeholder.copy(fingerprint = importResult.fingerprint) }
         if (existing != null) {
             // HW Phase 1.5 — pair a real public key onto a card-backed
             // record. A card scanned in Phase 1 is stored as identity +
@@ -912,26 +1012,58 @@ class KeyRepository(
             // carries nothing to merge — the secret-upgrade path above
             // only fires for public-only rows, matching iOS
             // (resolveDuplicate never touches secret material).
+            // 4.7.0 (item 47, #78): prove the file's secrets before anything changes.
+            val replaceTargets: Set<String> =
+                if (upgrade.replaceSecrets && existing.isKeyPair && !existing.isCardBacked &&
+                    importResult.secretKeyRing != null
+                ) {
+                    replaceTargetsFor(existing, importResult.secretKeyRing, upgrade)
+                } else emptySet()
             val dupPub = importResult.publicKeyRing
                 ?: return ImportOutcome(existing, ImportResolution.ALREADY_IN_KEYRING)
             val dupExpiresAtMs = dupPub.publicKey?.let { key ->
                 val validSec = key.getValidSeconds()
                 if (validSec > 0) (key.creationTime.time + validSec * 1000) else null
             }
-            val (resolved, resolution) = dedup.resolveDuplicate(
+            val detailed = dedup.resolveDuplicateDetailed(
                 existing = existing,
                 newPublicRing = dupPub,
                 newArmoredPublicKey = crypto.exportArmoredPublicKey(dupPub),
                 newExpiresAtMs = dupExpiresAtMs
             )
+            val resolution = detailed.resolution
+            // 4.7.0 (item 40, #82): your own secret export with subkeys added
+            // in gpg since adds those subkeys (public part into the
+            // certificate here, secret or stub by the graft below). A
+            // public-only re-import adds none (item 24).
+            val withSubkeys: Pair<PGPKeyEntity, Int> =
+                if (existing.isKeyPair && !existing.isCardBacked && importResult.secretKeyRing != null &&
+                    importResult.publicKeyRing != null
+                ) {
+                    addBoundSubkeysFromSecretImport(detailed.entity, importResult.publicKeyRing, importResult.secretKeyRing, upgrade)
+                } else Pair(detailed.entity, 0)
+            val resolved = withSubkeys.first
+            val subkeysAdded = withSubkeys.second
+            // 4.7.0 (item 22): your own key pair re-imported with a subkey
+            // whose secret the stored ring lacks (one added in gpg where the
+            // offline primary is kept) brings that secret in too.
+            val grafted = if (existing.isKeyPair && !existing.isCardBacked) {
+                importResult.secretKeyRing?.let { graftNewSecretSubkeys(existing.fingerprint, it) } ?: 0
+            } else 0
+            val replaced = if (replaceTargets.isNotEmpty()) {
+                replaceStoredSecrets(existing.fingerprint, importResult.secretKeyRing!!, replaceTargets, upgrade.passphrase)
+            } else 0
             return ImportOutcome(
                 resolved,
-                when (resolution) {
-                    KeyDeduplicationService.DuplicateResolution.ALREADY_IN_KEYRING ->
+                when {
+                    grafted > 0 || subkeysAdded > 0 || replaced > 0 -> ImportResolution.MERGED_NEW_MATERIAL
+                    resolution == KeyDeduplicationService.DuplicateResolution.ALREADY_IN_KEYRING ->
                         ImportResolution.ALREADY_IN_KEYRING
-                    KeyDeduplicationService.DuplicateResolution.MERGED_NEW_MATERIAL ->
-                        ImportResolution.MERGED_NEW_MATERIAL
-                }
+                    else -> ImportResolution.MERGED_NEW_MATERIAL
+                },
+                selfSignaturesApplied = detailed.selfSignaturesApplied,
+                subkeysAdded = subkeysAdded,
+                secretsReplaced = replaced
             )
         }
 
@@ -1087,6 +1219,87 @@ class KeyRepository(
     }
 
     /**
+     * 4.7.0 RC4 (item 13, #71): after Move to Security Key wrote and checked
+     * [movedFingerprints] of the key pair [fingerprint] on the card
+     * ([cardInfo], read after the write).
+     *
+     * With [removeFromPhone], and only when the move covered every key whose
+     * secret is on the phone, those secrets become divert-to-card stubs
+     * (gpg's `sec>`/`ssb>`) and the key becomes a key on a card (isKeyPair
+     * false, isCardBacked true), like one generated on a card. 4.7.0 (item 55):
+     * when every subkey moved and the primary stayed, the key stays a key pair
+     * linked to the card (gpg's `sec` + `ssb>`): signing and decrypting go to
+     * the card, and the primary here certifies and edits the key. Anything
+     * else keeps the key a software key pair, untouched, with the card holding
+     * a copy. Returns the row and whether the secrets left the phone.
+     *
+     * Either way, other keys linked to this card stop claiming the slots that
+     * were just written.
+     */
+    suspend fun finishKeyToCard(
+        fingerprint: String,
+        cardInfo: CardInfo,
+        movedFingerprints: List<String>,
+        removeFromPhone: Boolean
+    ): Pair<PGPKeyEntity, Boolean> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val entity = dao.getByFingerprint(fingerprint) ?: throw KeyRepoError.NotFound(fingerprint)
+        val moved = movedFingerprints.map { it.uppercase() }.toSet()
+        releaseCardSlots(cardInfo, except = entity.id)
+        if (!removeFromPhone) return@withContext Pair(entity, false)
+        val stored = loadSecretKeyRing(fingerprint) ?: throw KeyRepoError.NotFound(fingerprint)
+        val aid = com.pgpony.android.crypto.card.KeyToCard.hexToBytes(cardInfo.aidHex)
+        var ring = stored
+        for (sk in stored.secretKeys.asSequence().toList()) {
+            val fp = org.bouncycastle.util.encoders.Hex.toHexString(sk.publicKey.fingerprint).uppercase()
+            if (fp !in moved) continue
+            ring = PGPSecretKeyRing.insertSecretKey(ring, com.pgpony.android.crypto.card.KeyToCard.divertToCardStub(sk, aid))
+        }
+        // 4.7.0 (item 55, #71): every subkey moved and the primary stayed (gpg's
+        // sec + ssb>): the key stays a key pair, linked to the card, which signs
+        // and decrypts; the primary here certifies and edits the key.
+        val primaryStays = ring.secretKeys.asSequence().all { sk ->
+            if (sk.isMasterKey) !com.pgpony.android.crypto.OfflineStub.isStub(sk)
+            else com.pgpony.android.crypto.OfflineStub.isStub(sk)
+        }
+        val allMoved = com.pgpony.android.crypto.OfflineStub.allStubs(ring)
+        if (!allMoved && !primaryStays) return@withContext Pair(entity, false)
+        store.storePrivateKey(fingerprint, ring.encoded)
+        runCatching { com.pgpony.android.session.InAppPassphraseCache.clear(fingerprint) }
+        val updated = entity.copy(
+            isKeyPair = !allMoved,
+            isCardBacked = true,
+            cardSerial = cardInfo.serialHex,
+            cardAid = cardInfo.aidHex,
+            cardManufacturer = cardInfo.manufacturerName,
+            cardSigFingerprint = cardInfo.fingerprintFor(com.pgpony.android.crypto.card.CardSlot.SIGNATURE),
+            cardDecFingerprint = cardInfo.fingerprintFor(com.pgpony.android.crypto.card.CardSlot.DECRYPTION),
+            cardAuthFingerprint = cardInfo.fingerprintFor(com.pgpony.android.crypto.card.CardSlot.AUTHENTICATION)
+        )
+        dao.update(updated)
+        Pair(updated, true)
+    }
+
+    /**
+     * Other keys linked to the card in [cardInfo] drop any slot fingerprint
+     * the card no longer reports for that slot (it now holds another key).
+     */
+    private suspend fun releaseCardSlots(cardInfo: CardInfo, except: String) {
+        val sig = cardInfo.fingerprintFor(com.pgpony.android.crypto.card.CardSlot.SIGNATURE)
+        val dec = cardInfo.fingerprintFor(com.pgpony.android.crypto.card.CardSlot.DECRYPTION)
+        val auth = cardInfo.fingerprintFor(com.pgpony.android.crypto.card.CardSlot.AUTHENTICATION)
+        fun still(mine: String?, card: String?) = mine?.takeIf { card != null && it.equals(card, ignoreCase = true) }
+        for (other in dao.getAllKeys()) {
+            if (other.id == except || !other.isCardBacked || other.cardSerial != cardInfo.serialHex) continue
+            val changed = other.copy(
+                cardSigFingerprint = still(other.cardSigFingerprint, sig),
+                cardDecFingerprint = still(other.cardDecFingerprint, dec),
+                cardAuthFingerprint = still(other.cardAuthFingerprint, auth)
+            )
+            if (changed != other) dao.update(changed)
+        }
+    }
+
+    /**
      * Persist a key just generated ON a card (Phase B1). [publicKeyBinary] is the
      * assembled transferable public key from CardKeygenService; [cardInfo] is the
      * post-generation card state (carrying the new fingerprints). The generated
@@ -1101,7 +1314,14 @@ class KeyRepository(
             ?: throw KeyRepoError.StorageFailed("Generated key produced no public key ring")
         val armored = crypto.exportArmoredPublicKey(ring)
         importCardKeyInternal(cardInfo)
-        return importArmoredKey(armored)
+        val stored = importArmoredKey(armored)
+        // 4.7.0 (item 49, #75): a key pair made in PGPony is the owner's own, so it
+        // starts at Ultimate like the software keys generateKey stores. Only the
+        // first default is raised; a level the owner already set is kept.
+        if (stored.trustLevel != TrustLevel.UNKNOWN && stored.trustLevel != TrustLevel.UNVERIFIED) return stored
+        val raised = stored.copy(trustLevel = TrustLevel.ULTIMATE)
+        dao.update(raised)
+        return raised
     }
 
     /**
@@ -1140,6 +1360,18 @@ class KeyRepository(
      * card's slot fingerprints are all subkeys. Linear over the keyring
      * (import-time only; keyrings are small).
      */
+    /** 4.7.0 (item 54): a scanned card's placeholder row (card-backed, no
+     *  certificate yet) whose slot fingerprints include a key of [ring]. */
+    private suspend fun cardPlaceholderFor(ring: PGPPublicKeyRing): PGPKeyEntity? {
+        val ringFps = ring.publicKeys.asSequence()
+            .map { org.bouncycastle.util.encoders.Hex.toHexString(it.fingerprint).uppercase() }.toSet()
+        return getAllKeys().firstOrNull { e ->
+            e.isCardBacked && e.armoredPublicKey == null &&
+                listOfNotNull(e.cardSigFingerprint, e.cardDecFingerprint, e.cardAuthFingerprint)
+                    .any { it.uppercase() in ringFps }
+        }
+    }
+
     private suspend fun findEntityBySubkeyFingerprint(
         fingerprints: List<String>
     ): PGPKeyEntity? {
@@ -1154,6 +1386,12 @@ class KeyRepository(
         }
         return null
     }
+
+    /** The algorithm a card's slots name: the Signature slot's, else the first
+     *  slot that maps to one. Null when no slot maps. */
+    private fun cardAlgorithm(cardInfo: CardInfo): KeyAlgorithm? =
+        cardInfo.slotFor(com.pgpony.android.crypto.card.CardSlot.SIGNATURE)?.algorithm
+            ?: cardInfo.slots.firstOrNull { it.algorithm != null }?.algorithm
 
     private suspend fun importCardKeyInternal(cardInfo: CardInfo): PGPKeyEntity {
         val primaryFp = cardInfo.primaryFingerprint
@@ -1179,7 +1417,16 @@ class KeyRepository(
         val existing = dao.getByFingerprint(primaryFp)
             ?: findEntityBySubkeyFingerprint(listOfNotNull(sigFp, decFp, authFp))
         if (existing != null) {
+            // 4.7.1 (#102): a row first stored with a wrong algorithm (a card on a
+            // curve PGPony did not map fell back to Ed25519 + Cv25519) is put
+            // right by scanning the card again: from the certificate when there
+            // is one, else from the card's own slot attributes.
+            val algorithm = loadPublicKeyRing(existing.fingerprint)
+                ?.let { ring -> ring.publicKey?.let { crypto.detectAlgorithm(it, ring) } }
+                ?: (if (existing.armoredPublicKey == null) cardAlgorithm(cardInfo) else null)
+                ?: existing.algorithm
             val linked = existing.copy(
+                algorithm = algorithm,
                 isCardBacked = true,
                 cardSerial = cardInfo.serialHex,
                 cardAid = cardInfo.aidHex,
@@ -1189,14 +1436,20 @@ class KeyRepository(
                 cardAuthFingerprint = authFp
             )
             dao.update(linked)
+            // 4.7.0 (item 54): a placeholder from an earlier scan of this card
+            // (before the key was imported) is a duplicate once the card links
+            // to the real key.
+            for (other in getAllKeys()) {
+                if (other.id != linked.id && other.isCardBacked && other.armoredPublicKey == null &&
+                    other.cardSerial == cardInfo.serialHex
+                ) dao.delete(other)
+            }
             return linked
         }
 
         // Fresh card-backed contact row. No SecureKeyStore writes — the
         // private key lives on the card and there's no cert to cache yet.
-        val algorithm = cardInfo.slotFor(com.pgpony.android.crypto.card.CardSlot.SIGNATURE)?.algorithm
-            ?: cardInfo.slots.firstOrNull { it.algorithm != null }?.algorithm
-            ?: KeyAlgorithm.ED25519_CV25519
+        val algorithm = cardAlgorithm(cardInfo) ?: KeyAlgorithm.ED25519_CV25519
 
         val label = "${cardInfo.manufacturerName} hardware key"
         val entity = PGPKeyEntity(
@@ -1378,7 +1631,8 @@ class KeyRepository(
         // #26 (RC4): parse threads the passphrase to unlock a protected signing
         // key. A wrong passphrase propagates (the sign path maps it to a retry);
         // a locked key with no passphrase yields Info with a null compositeSecret.
-        return CompositeKeyFacade.parse(data, passphrase)
+        // 4.7.0 (item 26): every caller signs, so unlock the signing key too.
+        return CompositeKeyFacade.parse(data, passphrase, unlockSigner = true)
     }
 
     /**
@@ -1416,6 +1670,23 @@ class KeyRepository(
     }
 
     // ── Export ──────────────────────────────────────────────────────────
+
+    /**
+     * 4.7.0 (item 63, #93): several public keys in one armored block, as
+     * `gpg --export --armor` writes them (the keys' binary certificates one
+     * after another). Keys that cannot be exported are left out; null when
+     * none can.
+     */
+    fun exportPublicKeysArmored(fingerprints: List<String>): String? {
+        val out = java.io.ByteArrayOutputStream()
+        fingerprints.distinct().forEach { fp -> exportPublicKeyBytes(fp)?.let { out.write(it) } }
+        if (out.size() == 0) return null
+        return CompositeSigPacket.armor(
+            "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+            "-----END PGP PUBLIC KEY BLOCK-----",
+            out.toByteArray()
+        )
+    }
 
     fun exportArmoredPublicKey(fingerprint: String): String? {
         // Composite keys must use the raw-bytes path: BouncyCastle either
@@ -1571,6 +1842,374 @@ class KeyRepository(
         }
     }
 
+    /**
+     * 4.7.0 (item 22): graft the secret subkeys of [incoming] that the stored
+     * secret ring of [fingerprint] lacks, or holds only as a stub. Only a
+     * subkey the stored certificate (already merged and sanitized by the
+     * duplicate path) binds is taken, with that bound public part, and a
+     * secret already held is never replaced. Returns how many were added.
+     * 4.7.0 (item 40, #82): the rules live in SubkeyAdmission.graftSecrets,
+     * which also takes a stub for a subkey the ring does not hold at all (a
+     * subkey just added whose secret gpg exported as a stub), so the stored
+     * ring matches the certificate and exports back to gpg as `ssb#`.
+     */
+    private fun graftNewSecretSubkeys(fingerprint: String, incoming: org.bouncycastle.openpgp.PGPSecretKeyRing): Int =
+        runCatching {
+            val storedBytes = store.loadPrivateKey(fingerprint) ?: return@runCatching 0
+            if (CompositeKeyFacade.isCompositePrimary(storedBytes) || CompositeKeyFacade.hasV4Algo35Subkey(storedBytes)) {
+                return@runCatching 0
+            }
+            val calc = org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator()
+            val stored = org.bouncycastle.openpgp.PGPSecretKeyRing(storedBytes, calc)
+            val certificate = org.bouncycastle.openpgp.PGPPublicKeyRing(
+                store.loadPublicKey(fingerprint) ?: return@runCatching 0, calc
+            )
+            val grafted: Pair<org.bouncycastle.openpgp.PGPSecretKeyRing, Int> =
+                com.pgpony.android.crypto.SubkeyAdmission.graftSecrets(stored, incoming, certificate)
+            if (grafted.second > 0) store.storePrivateKey(fingerprint, grafted.first.encoded)
+            grafted.second
+        }.getOrDefault(0)
+
+    /**
+     * 4.7.0 (item 47, #78): the keys of [existing] whose secret [incoming]
+     * protects differently, once [incoming] is proven to unlock with the
+     * passphrase given and to hold this key's material (SecretKeyCheck, every
+     * secret in the file). Throws [KeyRepoError.SecretsNotReplaced] when it is
+     * not; an empty set when there is nothing to replace.
+     */
+    private suspend fun replaceTargetsFor(
+        existing: PGPKeyEntity,
+        incoming: PGPSecretKeyRing,
+        upgrade: SecretUpgrade
+    ): Set<String> {
+        val stored = store.loadPrivateKey(existing.fingerprint) ?: return emptySet()
+        if (CompositeKeyFacade.isCompositePrimary(stored) || CompositeKeyFacade.hasV4Algo35Subkey(stored)) return emptySet()
+        val incomingBytes = incoming.encoded
+        val targets = com.pgpony.android.crypto.SubkeyAdmission.replaceableSecrets(stored, incomingBytes)
+        if (targets.isEmpty()) return emptySet()
+        val storedPublic = store.loadPublicKey(existing.fingerprint)
+            ?: throw KeyRepoError.SecretsNotReplaced(existing.fingerprint, SecretKeyCheck.SecretMatch.UNREADABLE)
+        val match = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { SecretKeyCheck.checkSecretForPublic(incomingBytes, storedPublic, upgrade.passphrase) }
+                .getOrDefault(SecretKeyCheck.SecretMatch.UNREADABLE)
+        }
+        if (match != SecretKeyCheck.SecretMatch.OK) throw KeyRepoError.SecretsNotReplaced(existing.fingerprint, match)
+        return targets
+    }
+
+    /**
+     * 4.7.0 (item 47, #78): put the file's secrets for [targets] in place of
+     * the stored ones, under the stored (already merged) certificate's public
+     * parts, and point the passphrase recovery wrap at the new passphrase, as
+     * Change Passphrase does. Returns how many were replaced.
+     */
+    private fun replaceStoredSecrets(
+        fingerprint: String,
+        incoming: PGPSecretKeyRing,
+        targets: Set<String>,
+        passphrase: CharArray?
+    ): Int {
+        val calc = org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator()
+        val stored = PGPSecretKeyRing(store.loadPrivateKey(fingerprint) ?: return 0, calc)
+        val certificate = PGPPublicKeyRing(store.loadPublicKey(fingerprint) ?: return 0, calc)
+        val (ring, replaced) = com.pgpony.android.crypto.SubkeyAdmission.replaceSecrets(stored, incoming, certificate, targets)
+        if (replaced == 0) return 0
+        store.storePrivateKey(fingerprint, ring.encoded)
+        refreshRecovery(fingerprint, passphrase?.let { String(it) })
+        runCatching { com.pgpony.android.session.InAppPassphraseCache.clear(fingerprint) }
+        return replaced
+    }
+
+    /**
+     * 4.7.0 (item 40, #82): add to the stored certificate of [entity] every
+     * subkey of [incomingPublic] it lacks and that the primary verifiably
+     * binds (SubkeyAdmission.newBoundSubkeys), when the import carries secret
+     * material ([incomingSecret]) that is proven to be this key's, by the same
+     * check that upgrades a contact to a key pair (a protected secret without
+     * a passphrase passes on its structure, as there). Not proven, or nothing
+     * new: unchanged. Returns the row (its cached armor updated) and how many
+     * subkeys were added; their secrets are grafted afterwards.
+     */
+    private suspend fun addBoundSubkeysFromSecretImport(
+        entity: PGPKeyEntity,
+        incomingPublic: PGPPublicKeyRing,
+        incomingSecret: PGPSecretKeyRing,
+        upgrade: SecretUpgrade
+    ): Pair<PGPKeyEntity, Int> {
+        val none: Pair<PGPKeyEntity, Int> = Pair(entity, 0)
+        val storedSecret = store.loadPrivateKey(entity.fingerprint) ?: return none
+        if (CompositeKeyFacade.isCompositePrimary(storedSecret) || CompositeKeyFacade.hasV4Algo35Subkey(storedSecret)) {
+            return none
+        }
+        val storedPublic = store.loadPublicKey(entity.fingerprint) ?: return none
+        val incomingBytes = incomingPublic.encoded
+        val candidates: List<com.pgpony.android.crypto.CertificateBindings.SubkeyState> =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                runCatching {
+                    com.pgpony.android.crypto.SubkeyAdmission.newBoundSubkeys(
+                        storedPublic, incomingBytes, incomingHasSecret = true
+                    )
+                }.getOrDefault(emptyList())
+            }
+        if (candidates.isEmpty()) return none
+        if (!secretProvenForReimport(entity, incomingSecret.encoded, storedPublic, upgrade)) return none
+        val merged = com.pgpony.android.crypto.SubkeyAdmission.withSubkeys(
+            storedPublic, incomingBytes, candidates.map { it.fingerprintHex.uppercase() }.toSet()
+        )
+        val added = com.pgpony.android.crypto.SubkeyAdmission.subkeyFingerprints(merged).size -
+            com.pgpony.android.crypto.SubkeyAdmission.subkeyFingerprints(storedPublic).size
+        if (added <= 0) return none
+        // The merged octets must still read as a certificate before they replace the stored one.
+        val ring = runCatching {
+            PGPPublicKeyRing(merged, org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator())
+        }.getOrNull() ?: return none
+        store.storePublicKey(entity.fingerprint, merged)
+        val armored: String? = armoredAsStored(
+            entity.fingerprint,
+            runCatching { crypto.exportArmoredPublicKey(ring) }.getOrNull() ?: entity.armoredPublicKey
+        )
+        val updated = entity.copy(armoredPublicKey = armored ?: entity.armoredPublicKey)
+        dao.update(updated)
+        return Pair(updated, added)
+    }
+
+    /** 4.7.0 (item 40): [secretBytes] is proven to hold the secret of the
+     *  stored key pair [existing] (SecretKeyCheck, as KEYSTORE-4), without
+     *  throwing: an unproven secret only means no subkeys are added. */
+    private suspend fun secretProvenForReimport(
+        existing: PGPKeyEntity,
+        secretBytes: ByteArray,
+        storedPublic: ByteArray,
+        upgrade: SecretUpgrade
+    ): Boolean {
+        if (KeyDeduplicationService.normalize(existing.fingerprint) in upgrade.sameImport) return true
+        val match: SecretKeyCheck.SecretMatch = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { SecretKeyCheck.checkSecretForPublic(secretBytes, storedPublic, upgrade.passphrase) }
+                .getOrDefault(SecretKeyCheck.SecretMatch.UNREADABLE)
+        }
+        return match == SecretKeyCheck.SecretMatch.OK ||
+            (match == SecretKeyCheck.SecretMatch.NEEDS_PASSPHRASE && upgrade.passphrase == null)
+    }
+
+    /** 4.7.0 (item 40, #82): where each subkey's secret is in the stored
+     *  secret ring of [fingerprint], by subkey fingerprint (Key Details). */
+    fun subkeySecretLocations(fingerprint: String): Map<String, com.pgpony.android.crypto.SubkeyAdmission.SecretLocation> =
+        runCatching { com.pgpony.android.crypto.SubkeyAdmission.secretLocations(store.loadPrivateKey(fingerprint)) }
+            .getOrDefault(emptyMap())
+
+    // ── 4.7.0 (item 31, #79): certifying other people's keys ────────────
+
+    /** One certification of a User ID on a key, with the issuer's row when
+     *  the issuer is in the keyring. [isMine]: made by one of your key pairs. */
+    data class CertificationRow(
+        val certification: com.pgpony.android.crypto.CertificationService.Certification,
+        val issuer: PGPKeyEntity?
+    ) {
+        // 4.7.0 RC4 (item 31): a key on a card is yours too.
+        val isMine: Boolean get() = issuer?.isOwnKey == true
+    }
+
+    /** True when [entity] is a public key this device can certify: not your
+     *  own, not a card record, and a certificate Bouncy Castle reads. */
+    fun canBeCertified(entity: PGPKeyEntity): Boolean =
+        !entity.isKeyPair && !entity.isCardBacked && !entity.algorithm.isCompositeSign &&
+            loadPublicKeyRing(entity.fingerprint) != null
+
+    /** Your key pairs that can certify [targetFingerprint] now: software,
+     *  classical, unrevoked, unexpired, not marked Don't use, with the
+     *  primary's secret here and the Certify capability. */
+    suspend fun certifierChoices(targetFingerprint: String): List<PGPKeyEntity> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            // 4.7.0 (item 55): a key pair whose subkeys are on a card certifies
+            // with the primary here (canCertify refuses a stub primary).
+            val software = getAllKeys().filter {
+                it.isKeyPair && !it.isRevoked && !it.isExpired &&
+                    it.trustLevel != TrustLevel.DONT_USE && !it.algorithm.isCompositeSign &&
+                    !it.fingerprint.equals(targetFingerprint, ignoreCase = true)
+            }.filter { e ->
+                loadSecretKeyRing(e.fingerprint)?.let { com.pgpony.android.crypto.CertificationService.canCertify(it) } == true
+            }
+            software + cardCertifierChoices(targetFingerprint).filter { c -> software.none { it.id == c.id } }
+        }
+
+    /** 4.7.0 RC4 (item 31): your keys whose certifying primary is on a card's signature slot. */
+    private suspend fun cardCertifierChoices(targetFingerprint: String): List<PGPKeyEntity> =
+        getAllKeys().filter {
+            it.isCardBacked && !it.isKeyPair && it.primaryOnCard && !it.isRevoked && !it.isExpired &&
+                it.trustLevel != TrustLevel.DONT_USE && !it.algorithm.isCompositeSign &&
+                !it.fingerprint.equals(targetFingerprint, ignoreCase = true)
+        }.filter { e ->
+            loadPublicKeyRing(e.fingerprint)?.let { com.pgpony.android.crypto.CertificationService.canCertifyOnCard(it) } == true
+        }
+
+    /**
+     * Certify [userIds] on [targetFingerprint] with [certifierFingerprint].
+     * An exportable certification goes into the stored certificate (and its
+     * cached armor), so sharing the key carries it; a local-only one is kept
+     * in the key's local-certification blob and never leaves the device. A
+     * newer certification by the same key replaces its older local one.
+     */
+    suspend fun certifyKey(
+        targetFingerprint: String,
+        certifierFingerprint: String,
+        passphrase: String?,
+        userIds: List<String>,
+        level: com.pgpony.android.crypto.CertificationService.Level,
+        expirySeconds: Long?,
+        exportable: Boolean
+    ): Unit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val svc = com.pgpony.android.crypto.CertificationService
+        val target = dao.getByFingerprint(targetFingerprint) ?: throw KeyRepoError.NotFound(targetFingerprint)
+        if (!canBeCertified(target)) throw CertificationService.CertifyError(CERTIFY_TARGET_MESSAGE)
+        val ring = loadPublicKeyRing(targetFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_TARGET_MESSAGE)
+        val certifier = loadSecretKeyRing(certifierFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+        val made = try {
+            svc.certify(certifier, passphrase, ring, userIds, level, expirySeconds, exportable)
+        } catch (e: CertificationService.CertifyError) {
+            throw CertificationService.CertifyError(
+                if (e.message == CERTIFY_CERTIFIER_MESSAGE) CERTIFY_CERTIFIER_MESSAGE else CERTIFY_TARGET_MESSAGE
+            )
+        }
+        keepCertifications(target, ring, certifier.publicKey, made, userIds, exportable)
+    }
+
+    /**
+     * 4.7.0 RC4 (item 31): store certifications [made] on the card by the key
+     * [certifierFingerprint] (signed in the card operation), the same way
+     * [certifyKey] stores its own.
+     */
+    suspend fun storeCardCertifications(
+        targetFingerprint: String,
+        certifierFingerprint: String,
+        made: List<com.pgpony.android.crypto.CertificationService.Made>,
+        userIds: List<String>,
+        exportable: Boolean
+    ): Unit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val target = dao.getByFingerprint(targetFingerprint) ?: throw KeyRepoError.NotFound(targetFingerprint)
+        if (!canBeCertified(target)) throw CertificationService.CertifyError(CERTIFY_TARGET_MESSAGE)
+        val ring = loadPublicKeyRing(targetFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_TARGET_MESSAGE)
+        val certifier = loadPublicKeyRing(certifierFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+        // The card's slot fingerprint is a label the card stores; each
+        // signature has to verify under the certifier's primary before it is kept.
+        if (!made.all { verifiesBy(it, certifier.publicKey, ring.publicKey) }) {
+            throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+        }
+        keepCertifications(target, ring, certifier.publicKey, made, userIds, exportable)
+    }
+
+    private fun verifiesBy(
+        made: com.pgpony.android.crypto.CertificationService.Made,
+        signer: org.bouncycastle.openpgp.PGPPublicKey,
+        target: org.bouncycastle.openpgp.PGPPublicKey
+    ): Boolean = runCatching {
+        made.signature.init(org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider(), signer)
+        made.signature.verifyCertification(made.userId, target)
+    }.getOrDefault(false)
+
+    /** An exportable certification goes into the certificate, a local one into its blob. */
+    private suspend fun keepCertifications(
+        target: PGPKeyEntity,
+        ring: PGPPublicKeyRing,
+        certifierPrimary: org.bouncycastle.openpgp.PGPPublicKey,
+        made: List<com.pgpony.android.crypto.CertificationService.Made>,
+        userIds: List<String>,
+        exportable: Boolean
+    ) {
+        val svc = com.pgpony.android.crypto.CertificationService
+        val targetFingerprint = target.fingerprint
+        if (exportable) {
+            val updated = svc.withSignatures(ring, made)
+            store.storePublicKey(targetFingerprint, updated.encoded)
+            dao.update(target.copy(armoredPublicKey = armoredAsStored(targetFingerprint, crypto.exportArmoredPublicKey(updated))))
+        } else {
+            val mine = certifierPrimary.fingerprint
+            val kept = svc.decodeLocal(store.loadLocalCertifications(targetFingerprint)).filterNot { m ->
+                m.userId in userIds && issuedByKey(m.signature, mine, certifierPrimary.keyID)
+            }
+            store.storeLocalCertifications(targetFingerprint, svc.encodeLocal(kept + made))
+        }
+    }
+
+    /**
+     * 4.7.0 RC4 (item 31): add a certification revocation [made] on the card
+     * (signed in the card operation) to [targetFingerprint]'s certificate.
+     */
+    suspend fun storeCardCertificationRevocation(
+        targetFingerprint: String,
+        certifierFingerprint: String,
+        made: com.pgpony.android.crypto.CertificationService.Made
+    ): Unit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val svc = com.pgpony.android.crypto.CertificationService
+        val target = dao.getByFingerprint(targetFingerprint) ?: throw KeyRepoError.NotFound(targetFingerprint)
+        val ring = loadPublicKeyRing(targetFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_TARGET_MESSAGE)
+        val certifier = loadPublicKeyRing(certifierFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+        if (!verifiesBy(made, certifier.publicKey, ring.publicKey)) throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+        val updated = svc.withSignatures(ring, listOf(made))
+        store.storePublicKey(targetFingerprint, updated.encoded)
+        dao.update(target.copy(armoredPublicKey = armoredAsStored(targetFingerprint, crypto.exportArmoredPublicKey(updated))))
+    }
+
+    /**
+     * Withdraw your certification of [userId] on [targetFingerprint]. A
+     * local-only one is simply removed from this device. An exportable one is
+     * revoked with a 0x30 by [certifierFingerprint], added to the certificate,
+     * so the key needs sharing again for others to see it.
+     */
+    suspend fun revokeCertification(
+        targetFingerprint: String,
+        certifierFingerprint: String,
+        passphrase: String?,
+        userId: String,
+        localOnly: Boolean
+    ): Unit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val svc = com.pgpony.android.crypto.CertificationService
+        if (localOnly) {
+            // Removing a local one signs nothing, so a key on a card (no secret here) can do it too.
+            val certifierPublic = loadPublicKeyRing(certifierFingerprint)?.publicKey
+                ?: throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+            val kept = svc.decodeLocal(store.loadLocalCertifications(targetFingerprint)).filterNot { m ->
+                m.userId == userId && issuedByKey(m.signature, certifierPublic.fingerprint, certifierPublic.keyID)
+            }
+            store.storeLocalCertifications(targetFingerprint, svc.encodeLocal(kept))
+            return@withContext
+        }
+        val certifier = loadSecretKeyRing(certifierFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_CERTIFIER_MESSAGE)
+        val target = dao.getByFingerprint(targetFingerprint) ?: throw KeyRepoError.NotFound(targetFingerprint)
+        val ring = loadPublicKeyRing(targetFingerprint) ?: throw CertificationService.CertifyError(CERTIFY_TARGET_MESSAGE)
+        val made = svc.revoke(certifier, passphrase, ring, userId)
+        val updated = svc.withSignatures(ring, listOf(made))
+        store.storePublicKey(targetFingerprint, updated.encoded)
+        dao.update(target.copy(armoredPublicKey = armoredAsStored(targetFingerprint, crypto.exportArmoredPublicKey(updated))))
+    }
+
+    /** Every third-party certification of [fingerprint]'s User IDs, the
+     *  local-only ones included, with each issuer's row when held. */
+    suspend fun certificationsOf(fingerprint: String): List<CertificationRow> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val ring = loadPublicKeyRing(fingerprint) ?: return@withContext emptyList()
+            val all = getAllKeys()
+            val local = com.pgpony.android.crypto.CertificationService.decodeLocal(store.loadLocalCertifications(fingerprint))
+            fun entityFor(fp: String?, keyId: Long): PGPKeyEntity? =
+                all.firstOrNull { e -> fp != null && e.fingerprint.equals(fp, ignoreCase = true) }
+                    ?: all.firstOrNull { e -> e.longKeyId.equals(String.format("%016X", keyId), ignoreCase = true) }
+            val certs = com.pgpony.android.crypto.CertificationService.certifications(ring, local) { fp, keyId ->
+                entityFor(fp, keyId)?.let { loadPublicKeyRing(it.fingerprint)?.publicKey }
+            }
+            certs.map { CertificationRow(it, entityFor(it.issuerFingerprint, it.issuerKeyId)) }
+        }
+
+    private fun issuedByKey(sig: org.bouncycastle.openpgp.PGPSignature, fingerprint: ByteArray, keyId: Long): Boolean {
+        val fp = sig.hashedSubPackets?.issuerFingerprint?.fingerprint ?: sig.unhashedSubPackets?.issuerFingerprint?.fingerprint
+        return if (fp != null) fp.contentEquals(fingerprint) else sig.keyID == keyId
+    }
+
+    /** 4.7.0 (item 22): the kind of stub [fingerprint]'s stored primary is
+     *  (offline, or divert-to-card), or null when its secret is stored here. */
+    fun primaryStubKind(fingerprint: String): com.pgpony.android.crypto.OfflineStub.Kind? {
+        val ring = loadSecretKeyRing(fingerprint) ?: return null
+        return com.pgpony.android.crypto.OfflineStub.primaryKind(ring)
+    }
+
     /** RC4 O5: whether the stored secret ring carries its own passphrase. */
     fun isPrivateKeyPassphraseProtected(fingerprint: String): Boolean {
         // #26 (RC4): composite signing keys are not BC rings; read their
@@ -1654,10 +2293,41 @@ class KeyRepository(
     suspend fun purgeKey(entity: PGPKeyEntity) {
         com.pgpony.android.data.RemovedUserIdStore.clear(entity.fingerprint)
         com.pgpony.android.data.KeyPublicationStore.clear(entity.fingerprint)
+        com.pgpony.android.data.KeyServerCheckStore.clear(entity.fingerprint) // 4.7.0 (item 60)
         store.deleteKeys(entity.fingerprint)
         fallbackDao?.deleteAllReferencing(entity.fingerprint)
         signingDefaultsDao?.deleteFor(entity.fingerprint)
+        runCatching { com.pgpony.android.crypto.SigningSubkeyPins.clear(entity.fingerprint) } // 4.7.0 (item 46)
         dao.purgeById(entity.id)
+    }
+
+    /**
+     * 4.7.0 (item 46, #82): the signing keys of the key pair [fingerprint] that
+     * may sign now, in the automatic order (newest valid subkey first), for the
+     * Use for signing chooser on Key Details. Empty for a key without a usable
+     * software secret.
+     */
+    suspend fun signingSubkeyChoices(fingerprint: String): List<com.pgpony.android.crypto.SigningKeyOption> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                loadSecretKeyRing(fingerprint)?.let { crypto.signingKeyOptions(it, applyPin = false) }
+            }.getOrNull().orEmpty()
+        }
+
+    /**
+     * 4.7.0 (item 33): Clear All Data. Before this, the reset deleted only live
+     * keys (getAllKeys is `deletedAt IS NULL`), so keys in Recently Deleted kept
+     * their rows and secret material and came back in the bin after the reset.
+     * Purges live and binned keys alike, then wipes the secure store wholesale.
+     */
+    suspend fun clearAllKeys() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            dao.getAllKeys().forEach { deleteKey(it) }
+            dao.getDeletedKeys().forEach { purgeKey(it) }
+        } finally {
+            // Whatever a single delete did, the store goes.
+            store.wipeAll()
+        }
     }
 
     /** Empty the bin. */
@@ -1710,6 +2380,25 @@ class KeyRepository(
             }
             if (live == entity.expiresAt) return@withContext entity
             val corrected = entity.copy(expiresAt = live)
+            dao.update(corrected)
+            corrected
+        }
+
+    /**
+     * 4.7.0 (item 52): keep the identity a key shows (userID, userName,
+     * userEmail) on the ring's primary User ID ([UserIdService.shownUserId]).
+     * Keys imported before 4.7.0 took the first User ID in ring order, which
+     * could be revoked; this corrects them when Key Details opens, like
+     * [reconcilePrimaryExpiry].
+     */
+    suspend fun reconcileShownUserId(entity: PGPKeyEntity): PGPKeyEntity =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (entity.algorithm.isCompositeSign) return@withContext entity
+            val ring = loadPublicKeyRing(entity.fingerprint) ?: return@withContext entity
+            val shown = UserIdService.shared.shownUserId(ring.publicKey) ?: return@withContext entity
+            if (shown == entity.userID) return@withContext entity
+            val parsed = PGPKeyEntity.parseUserID(shown)
+            val corrected = entity.copy(userID = shown, userName = parsed.first, userEmail = parsed.second)
             dao.update(corrected)
             corrected
         }
@@ -1824,9 +2513,14 @@ class KeyRepository(
         // further to check them with here.
         val primary = loadPublicKeyRing(fingerprint)?.publicKey ?: return PublishPayload.Ready(armored)
         val flagged = UserIdService.shared.primaryFlaggedLiveUserIds(primary)
+        // 4.7.0 (item 52): a shown User ID that is revoked or no longer on the
+        // key is a stale label (fixed by reconcileShownUserId), not a second
+        // primary; one flagged live User ID is unambiguous to a key server.
+        val shownIsLive = shownUserId in primary.userIDs.asSequence().toList() &&
+            !UserIdService.shared.isRevoked(primary, shownUserId)
         val ok = when (flagged.size) {
             0 -> true
-            1 -> flagged[0] == shownUserId
+            1 -> flagged[0] == shownUserId || !shownIsLive
             else -> false
         }
         return if (ok) PublishPayload.Ready(armored) else PublishPayload.NeedsRepair(flagged, shownUserId)
@@ -1999,7 +2693,9 @@ class KeyRepository(
         if (!entity.isKeyPair) {
             throw KeyRepoError.InvalidSubkey("Cannot revoke a subkey on a public-only key")
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw KeyRepoError.InvalidSubkey("Subkeys can't be revoked on a card-backed key from here")
         }
         val targetHex = subkeyFingerprint.uppercase()
@@ -2096,7 +2792,9 @@ class KeyRepository(
         if (!entity.isKeyPair) {
             throw KeyRepoError.InvalidSubkey("Cannot remove a subkey from a public-only key")
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw KeyRepoError.InvalidSubkey("Subkeys can't be removed from a card-backed key from here")
         }
         val targetHex = subkeyFingerprint.uppercase()
@@ -2191,15 +2889,21 @@ class KeyRepository(
      * ExpirationError on crypto failure (passphrase, etc.).
      */
     /** 4.6.0 (item 11): stamps lastLocalEditAt once the edit has been stored. */
-    suspend fun setKeyExpirationSoftware(fingerprint: String, expiresAtEpochSeconds: Long?, passphrase: String?) =
+    suspend fun setKeyExpirationSoftware(
+        fingerprint: String,
+        expiresAtEpochSeconds: Long?,
+        passphrase: String?,
+        target: KeyExpirationService.Target = KeyExpirationService.Target.Primary()
+    ) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            setKeyExpirationSoftwareEdit(fingerprint, expiresAtEpochSeconds, passphrase).also { stampLocalEdit(fingerprint) }
+            setKeyExpirationSoftwareEdit(fingerprint, expiresAtEpochSeconds, passphrase, target).also { stampLocalEdit(fingerprint) }
         }
 
     private suspend fun setKeyExpirationSoftwareEdit(
         fingerprint: String,
         expiresAtEpochSeconds: Long?,
-        passphrase: String?
+        passphrase: String?,
+        target: KeyExpirationService.Target
     ) {
         val entity = dao.getByFingerprint(fingerprint)
             ?: throw KeyRepoError.NotFound(fingerprint)
@@ -2208,7 +2912,9 @@ class KeyRepository(
                 "Cannot edit expiration on a public-only key — the private key is required to re-sign."
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw KeyExpirationService.ExpirationError.UnsupportedKey(
                 "This key lives on a hardware key — use the card flow to edit its expiration."
             )
@@ -2226,12 +2932,16 @@ class KeyRepository(
             secretRing = secRing,
             publicRing = pubRing,
             expiresAtEpochSeconds = expiresAtEpochSeconds,
-            passphrase = passphrase
+            passphrase = passphrase,
+            target = target
         )
         // 4.6.0 (item 19 follow-up): the ML-KEM bindings Bouncy Castle cannot
         // see are made first, so a failure leaves the stored key untouched.
-        val v4Bindings = v4Algo35Bindings(fingerprint, secRing, passphrase, expiresAtEpochSeconds)
-        persistExpiration(entity, updated.publicRing, updated.secretRing, expiresAtEpochSeconds)
+        // 4.7.0 (item 53, #86): only with Primary(currentSubkeys), and only for
+        // the ones valid now, like the other subkeys.
+        val v4Bindings = if ((target as? KeyExpirationService.Target.Primary)?.currentSubkeys == true)
+            v4Algo35Bindings(fingerprint, secRing, passphrase, expiresAtEpochSeconds) else emptyList()
+        persistExpiration(entity, updated.publicRing, updated.secretRing, expiresAtEpochSeconds, target)
         if (v4Bindings.isNotEmpty()) {
             applyV4Algo35Edits(fingerprint) { raw ->
                 v4Bindings.fold(raw) { acc, (body, sig) ->
@@ -2240,6 +2950,30 @@ class KeyRepository(
             }
         }
     }
+
+    /**
+     * 4.7.0 (item 51, #86): re-sign a software key pair's self-signatures with
+     * SHA-256, each keeping its expiry, and bring back subkeys left out only
+     * for a weak-hash binding whose secret is stored (KeyExpirationService
+     * .refreshSelfSignatures). Returns how many subkeys came back.
+     */
+    suspend fun refreshSelfSignatures(fingerprint: String, passphrase: String?): Int =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val entity = dao.getByFingerprint(fingerprint) ?: throw KeyRepoError.NotFound(fingerprint)
+            if (!entity.isKeyPair) {
+                throw KeyExpirationService.ExpirationError.UnsupportedKey(
+                    "Self-signatures can be refreshed only on a key pair whose primary key is on this phone"
+                )
+            }
+            val secRing = loadSecretKeyRing(fingerprint)
+                ?: throw KeyExpirationService.ExpirationError.UnsupportedKey("Secret key ring could not be loaded for $fingerprint")
+            val pubRing = loadPublicKeyRing(fingerprint)
+                ?: throw KeyExpirationService.ExpirationError.UnsupportedKey("Public key ring could not be loaded for $fingerprint")
+            val out = keyExpiration.refreshSelfSignatures(secRing, pubRing, passphrase)
+            persistExpiration(entity, out.rings.publicRing, out.rings.secretRing, null, KeyExpirationService.Target.Refresh)
+            stampLocalEdit(fingerprint)
+            out.restoredSubkeys.size
+        }
 
     /** 4.6.0 (item 19 follow-up): the primary's private key for a hand-built
      *  v4 ML-KEM signature, or the same passphrase errors the caller's flow uses.
@@ -2251,6 +2985,7 @@ class KeyRepository(
         passphrase: String?,
         onFailure: (Boolean) -> Exception
     ): org.bouncycastle.openpgp.PGPPrivateKey = try {
+        com.pgpony.android.crypto.OfflineStub.requireSecret(secRing.secretKey) // 4.7.0 (item 22)
         SecretKeyUnlock.extract(secRing.secretKey, (passphrase ?: "").toCharArray())
             ?: throw onFailure(passphrase.isNullOrEmpty())
     } catch (e: org.bouncycastle.openpgp.PGPException) {
@@ -2266,7 +3001,14 @@ class KeyRepository(
         expiresAtEpochSeconds: Long?
     ): List<Pair<ByteArray, ByteArray>> {
         val raw = store.loadPublicKey(fingerprint) ?: return emptyList()
-        val bodies = com.pgpony.android.crypto.pqc.V4Algo35Edit.publicBodies(raw)
+        // 4.7.0 (item 53): never an expired or revoked one.
+        val now = System.currentTimeMillis()
+        val current = com.pgpony.android.crypto.CertificateBindings.analyze(raw)?.subkeys
+            ?.filter { it.bound && !it.revoked && (it.expiresAtMs == null || now < it.expiresAtMs) }
+            ?.map { it.fingerprintHex.lowercase() }?.toSet() ?: emptySet()
+        val bodies = com.pgpony.android.crypto.pqc.V4Algo35Edit.publicBodies(raw).filter {
+            com.pgpony.android.crypto.util.V4Fingerprint.computeHex(it).lowercase() in current
+        }
         if (bodies.isEmpty()) return emptyList()
         val priv = unlockPrimary(secRing, passphrase) { missing ->
             if (missing) KeyExpirationService.ExpirationError.PassphraseRequired()
@@ -2317,33 +3059,43 @@ class KeyRepository(
      * updated public ring here. No secret ring exists for card keys.
      */
     /** 4.6.0 (item 11): stamps lastLocalEditAt once the edit has been stored. */
-    suspend fun persistCardExpiration(fingerprint: String, updatedPublicRing: org.bouncycastle.openpgp.PGPPublicKeyRing, expiresAtEpochSeconds: Long?) =
+    suspend fun persistCardExpiration(
+        fingerprint: String,
+        updatedPublicRing: org.bouncycastle.openpgp.PGPPublicKeyRing,
+        expiresAtEpochSeconds: Long?,
+        target: KeyExpirationService.Target = KeyExpirationService.Target.Primary()
+    ) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            persistCardExpirationEdit(fingerprint, updatedPublicRing, expiresAtEpochSeconds).also { stampLocalEdit(fingerprint) }
+            persistCardExpirationEdit(fingerprint, updatedPublicRing, expiresAtEpochSeconds, target).also { stampLocalEdit(fingerprint) }
         }
 
     private suspend fun persistCardExpirationEdit(
         fingerprint: String,
         updatedPublicRing: org.bouncycastle.openpgp.PGPPublicKeyRing,
-        expiresAtEpochSeconds: Long?
+        expiresAtEpochSeconds: Long?,
+        target: KeyExpirationService.Target
     ) {
         val entity = dao.getByFingerprint(fingerprint)
             ?: throw KeyRepoError.NotFound(fingerprint)
-        persistExpiration(entity, updatedPublicRing, null, expiresAtEpochSeconds)
+        persistExpiration(entity, updatedPublicRing, null, expiresAtEpochSeconds, target)
     }
 
     private suspend fun persistExpiration(
         entity: PGPKeyEntity,
         publicRing: org.bouncycastle.openpgp.PGPPublicKeyRing,
         secretRing: org.bouncycastle.openpgp.PGPSecretKeyRing?,
-        expiresAtEpochSeconds: Long?
+        expiresAtEpochSeconds: Long?,
+        target: KeyExpirationService.Target
     ) {
         storeEditedPublicKey(entity.fingerprint, publicRing.encoded) // 4.6.0 (item 19)
         secretRing?.let { storeEditedPrivateKey(entity.fingerprint, it.encoded) }
+        // The key's own expiry changes only when the primary was the target.
+        val expiresAt = if (target is KeyExpirationService.Target.Primary)
+            expiresAtEpochSeconds?.let { it * 1000L } else entity.expiresAt
         dao.update(
             entity.copy(
                 armoredPublicKey = armoredAsStored(entity.fingerprint, crypto.exportArmoredPublicKey(publicRing)),
-                expiresAt = expiresAtEpochSeconds?.let { it * 1000L }
+                expiresAt = expiresAt
             )
         )
     }
@@ -2410,7 +3162,9 @@ class KeyRepository(
                 "Cannot add a subkey to a public-only key — the private key is required to sign the binding"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw ClassicalSubkeyGen.SubkeyAddError(
                 "This key lives on a hardware key — subkeys can't be added to a card-backed key from here"
             )
@@ -2508,7 +3262,9 @@ class KeyRepository(
                 "Cannot add a subkey to a public-only key — the private key is required to sign the binding"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw ClassicalSubkeyGen.SubkeyAddError(
                 "This key lives on a hardware key — subkeys can't be added to a card-backed key from here"
             )
@@ -2618,7 +3374,9 @@ class KeyRepository(
                 "Cannot add a subkey to a public-only key — the private key is required to sign the binding"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw ClassicalSubkeyGen.SubkeyAddError(
                 "This key lives on a hardware key — subkeys can't be added to a card-backed key from here"
             )
@@ -2698,7 +3456,9 @@ class KeyRepository(
                 "Cannot add a User ID to a public-only key — the private key is required to sign it"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw UserIdService.UserIdError.UnsupportedKey(
                 "This key lives on a hardware key — User IDs can't be edited on a card-backed key from here"
             )
@@ -2768,7 +3528,9 @@ class KeyRepository(
                 "Cannot edit notations on a public-only key — the private key is required to sign them"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw UserIdService.UserIdError.UnsupportedKey(
                 "Notations can't be edited on a card-backed key from here"
             )
@@ -2803,7 +3565,9 @@ class KeyRepository(
                 "Cannot revoke a User ID on a public-only key — the private key is required to sign the revocation"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw UserIdService.UserIdError.UnsupportedKey(
                 "This key lives on a hardware key — User IDs can't be edited on a card-backed key from here"
             )
@@ -2836,7 +3600,9 @@ class KeyRepository(
                 "Removing a User ID is only supported on your own key pairs"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw UserIdService.UserIdError.UnsupportedKey(
                 "This key lives on a hardware key, so User IDs cannot be edited on a card-backed key from here"
             )
@@ -2900,7 +3666,9 @@ class KeyRepository(
                 "Cannot change the primary User ID on a public-only key — the private key is required to sign it"
             )
         }
-        if (entity.isCardBacked) {
+        // 4.7.0 (item 55, #71): a key pair whose subkeys are on a card keeps its
+        // primary here (gpg sec + ssb>), and the primary signs this edit.
+        if (entity.isCardBacked && !entity.isKeyPair) {
             throw UserIdService.UserIdError.UnsupportedKey(
                 "This key lives on a hardware key — User IDs can't be edited on a card-backed key from here"
             )
@@ -2921,11 +3689,17 @@ class KeyRepository(
     ) {
         storeEditedPublicKey(entity.fingerprint, updated.publicRing.encoded) // 4.6.0 (item 19)
         storeEditedPrivateKey(entity.fingerprint, updated.secretRing.encoded)
-        val parsed = newPrimaryUserId?.let { PGPKeyEntity.parseUserID(it) }
+        // 4.7.0 (item 52): revoking the shown User ID moves the shown identity
+        // to the ring's primary instead of keeping a revoked name.
+        val shown = newPrimaryUserId
+            ?: entity.userID.takeIf { it in updated.publicRing.publicKey.userIDs.asSequence().toList() &&
+                !UserIdService.shared.isRevoked(updated.publicRing.publicKey, it) }
+            ?: UserIdService.shared.shownUserId(updated.publicRing.publicKey)
+        val parsed = shown?.takeIf { it != entity.userID }?.let { PGPKeyEntity.parseUserID(it) }
         dao.update(
             entity.copy(
                 armoredPublicKey = armoredAsStored(entity.fingerprint, crypto.exportArmoredPublicKey(updated.publicRing)),
-                userID = newPrimaryUserId ?: entity.userID,
+                userID = shown ?: entity.userID,
                 userName = parsed?.first ?: entity.userName,
                 userEmail = parsed?.second ?: entity.userEmail
             )

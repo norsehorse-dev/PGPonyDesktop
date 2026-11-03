@@ -14,7 +14,7 @@ class CardDecryptPrimitivesTest {
     private class ScriptedTransport(private val responses: Map<Int, ByteArray>) : CardTransport {
         val sent = mutableListOf<ByteArray>()
         override fun transceive(commandApdu: ByteArray): ByteArray {
-            sent.add(commandApdu)
+            sent.add(commandApdu.copyOf()) // the session wipes the array once sent
             val ins = commandApdu[1].toInt() and 0xFF
             return responses[ins] ?: byteArrayOf(0x6D.toByte(), 0x00)
         }

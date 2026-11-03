@@ -4,6 +4,7 @@
 // just the primary and encryption subkey. That requires rebuilding the signing subkey's binding
 // signature with a fresh embedded 0x19 back-signature. This pins that every key expires and that
 // every rebuilt subkey binding still verifies against the primary.
+// 4.7.0 (item 53, #86): the subkeys follow only when asked (Target.Primary(currentSubkeys)).
 
 package com.pgpony.android.crypto
 
@@ -30,7 +31,9 @@ class KeyExpirationEditTest {
         val publicRing = PGPPublicKeyRing(ByteArrayInputStream(gen.publicKeyData), JcaKeyFingerprintCalculator())
 
         val expiresAt = System.currentTimeMillis() / 1000L + 2L * 365 * 24 * 60 * 60
-        val updated = KeyExpirationService.shared.setExpirationSoftware(secretRing, publicRing, expiresAt, null)
+        val updated = KeyExpirationService.shared.setExpirationSoftware(
+            secretRing, publicRing, expiresAt, null, KeyExpirationService.Target.Primary(currentSubkeys = true)
+        )
         val ring = updated.publicRing
         val primary = ring.publicKey
 

@@ -318,6 +318,7 @@
     <!-- RC3 §J (#16): Sign File / Verify stream the picked file from disk; these cover the two remaining failure shapes. -->
     <string name="sign_verify_error_file_unreadable">无法读取所选文件。请重新选择。</string>
     <string name="verify_file_error_sig_not_signature">该文件太大，不可能是分离签名。请选择 .asc 或 .sig 文件，而不是已签名的内容。</string>
+    <string name="verify_error_signature_damaged">签名块已损坏，无法校验。请重新获取一份签名文件。</string>
     <string name="sign_file_save_button">存储到「文件」</string>
     <string name="encrypt_mode_password">密码</string>
 
@@ -691,6 +692,9 @@
     <!-- ── Preview card ─────────────────────────────────────────────── -->
     <string name="import_preview_type_key_pair">密钥对（公钥 + 私钥）</string>
     <string name="import_preview_type_public_only">仅公钥</string>
+    <string name="import_preview_type_key_pair_offline_primary">密钥对（主钥离线）</string>
+    <string name="import_preview_offline_primary_note">此文件包含子钥的私钥，但不含主钥的私钥，与 gpg --export-secret-subkeys 导出的内容相同。子钥可照常使用；编辑密钥需要主钥。</string>
+    <string name="import_preview_offline_primary_note_card">主钥的私钥位于硬件密钥上，不在此文件中。子钥可照常使用；编辑密钥需要硬件密钥。</string>
     <string name="import_preview_detail_user_label">用户</string>
     <string name="import_preview_detail_user_empty">（无）</string>
     <string name="import_preview_detail_fingerprint_label">指纹</string>
@@ -717,6 +721,8 @@
     <string name="import_duplicate_view_key">查看密钥</string>
     <string name="import_result_merged">此密钥已在你的密钥环中。它已用较新的密钥材料更新。</string>
     <string name="import_result_already_in_keyring">此密钥已在你的密钥环中。</string>
+    <string name="import_result_own_key_updated">你的密钥对已用此副本中较新的自签名（首选项、过期时间或绑定）更新。</string>
+    <string name="import_duplicate_own_key_note">这是你的密钥对。导入只会添加比你现有的更新的自签名，而此副本中没有。</string>
 
     <!-- ── Confirm/cancel buttons (preview card) ────────────────────── -->
     <string name="import_button_upgrade_key">升级密钥</string>
@@ -796,6 +802,44 @@
     <string name="kd_vm_refresh_failed_format">密钥服务器刷新失败：%1$s</string>
     <string name="key_detail_userids_title">用户 ID</string>
     <string name="key_detail_userids_primary">主要</string>
+    <string name="key_detail_userid_weak_hash_badge">弱哈希</string>
+    <string name="key_detail_userid_weak_hash_note">使用 SHA-1 绑定，该算法已不再被视为安全。名称仍会保留，但密钥不会因此变为已验证。</string>
+    <string name="key_detail_offline_primary_title">离线主钥</string>
+    <string name="key_detail_offline_primary_body">主钥的私钥不在此设备上。此处的子钥可照常使用。更改用户 ID、子钥或有效期，以及吊销密钥，都需要主钥：请在保存主钥的地方进行这些更改，然后将密钥重新导入此处。</string>
+    <string name="key_detail_offline_primary_body_card">主钥的私钥位于硬件密钥上，不在此设备上。此处的子钥可照常使用。更改用户 ID、子钥或有效期，以及吊销密钥，都需要硬件密钥：请在 GnuPG 中进行这些更改，然后将密钥重新导入此处。</string>
+    <string name="key_detail_action_certify">认证…</string>
+    <string name="certify_sheet_title">认证此密钥</string>
+    <string name="certify_sheet_subtitle">认证即表明你已确认此密钥属于所选各用户 ID 中列出的人。请先与密钥所有者核对完整指纹。</string>
+    <string name="certify_userids_label">要认证的用户 ID</string>
+    <string name="certify_certifier_label">认证所用密钥</string>
+    <string name="certify_level_label">核实程度</string>
+    <string name="certify_level_no_claim">不作说明</string>
+    <string name="certify_level_persona">未核实</string>
+    <string name="certify_level_casual">简单核实</string>
+    <string name="certify_level_positive">仔细核实</string>
+    <string name="certify_expiry_label">认证有效期</string>
+    <string name="certify_local_only_label">仅限本地</string>
+    <string name="certify_local_only_hint">保存在此设备上。共享、导出、上传或配对密钥时绝不会包含在内。</string>
+    <string name="certify_fingerprint_confirm">我已将此指纹与所有者手中的副本核对过</string>
+    <string name="certify_apply">认证</string>
+    <string name="certify_failed">无法认证此密钥</string>
+    <string name="certify_done_title">已认证密钥</string>
+    <string name="certify_done_body">请将已认证的密钥发回给其所有者，以便其他人看到你的认证。keys.openpgp.org 会丢弃他人所做的认证，因此请直接发送，或通过其他密钥服务器发送。</string>
+    <string name="certify_done_body_local">你的本地认证会保留在此设备上。</string>
+    <string name="certify_done_mark_verified">标记为已验证</string>
+    <string name="passphrase_hold_channel_name">为邮件应用保留的口令</string>
+    <string name="passphrase_hold_title">PGPony 正在保留一个口令</string>
+    <string name="passphrase_hold_text">邮件应用无需再次询问即可使用该口令。点按“清除”可立即清除它。</string>
+    <string name="passphrase_hold_clear">清除</string>
+    <string name="key_detail_cert_by">认证者：%1$s</string>
+    <string name="key_detail_cert_unknown_issuer">不在你密钥环中的密钥 %1$s</string>
+    <string name="key_detail_cert_local">本地</string>
+    <string name="key_detail_cert_revoked">已吊销</string>
+    <string name="key_detail_cert_expired">已过期</string>
+    <string name="key_detail_cert_failed">验证失败</string>
+    <string name="key_detail_cert_revoke_title">要撤回你的认证吗？</string>
+    <string name="key_detail_cert_revoke_body_local">你对 %1$s 的本地认证将从此设备中移除。</string>
+    <string name="key_detail_cert_revoke_body">你对 %1$s 所做认证的吊销将添加到密钥中。请再次共享密钥，让其他人也能看到。</string>
 
     <!-- ── 4.2.0 RC3 workstream I (#29): add/revoke/promote User IDs ── -->
     <string name="key_detail_userids_make_primary">设为主要</string>
@@ -915,6 +959,11 @@
     <string name="recycle_bin_restore">恢复</string>
     <string name="recycle_bin_delete_now">永久删除</string>
     <string name="recycle_bin_deleted_on">删除于 %1$s</string>
+    <!-- 4.6.4 (#58): time left before a deleted key is destroyed -->
+    <plurals name="recycle_bin_days_left">
+        <item quantity="other">剩余 %1$d 天</item>
+    </plurals>
+    <string name="recycle_bin_less_than_a_day_left">剩余不到 1 天</string>
     <string name="recycle_bin_purge_confirm_body">要永久销毁此密钥吗？此操作无法撤销。</string>
     <string name="recycle_bin_empty_confirm_body">要永久销毁「最近删除」中的所有密钥吗？此操作无法撤销。</string>
     <string name="recycle_bin_restored">密钥已恢复</string>
@@ -1022,6 +1071,11 @@
     <string name="trust_level_unverified_description">已添加但未经核实，请谨慎使用</string>
     <string name="trust_level_verified_description">已通过可信渠道比对指纹</string>
     <string name="trust_level_ultimate_description">你自己的密钥，或完全由你掌控的密钥</string>
+    <string name="trust_level_dont_use_name">弃用</string>
+    <string name="trust_level_dont_use_description">已泄露或已停止使用，在向其加密或用其签名前，PGPony 会先请你确认</string>
+    <string name="dont_use_confirm_title">要使用标记为「弃用」的密钥吗？</string>
+    <string name="dont_use_confirm_body">已标记为「弃用」：%1$s。仍要继续吗？</string>
+    <string name="dont_use_confirm_continue">仍然使用</string>
 
     <!-- ── TrustLevelSheet ──────────────────────────────────────────── -->
     <string name="trust_sheet_title">信任级别</string>
@@ -1238,6 +1292,7 @@
     <string name="contacts_trust_unverified_cd">未验证</string>
     <string name="contacts_trust_verified_cd">已验证</string>
     <string name="contacts_trust_ultimate_cd">绝对信任</string>
+    <string name="contacts_trust_dont_use_cd">弃用</string>
 
     <!-- ── Row icons ────────────────────────────────────────────────── -->
     <string name="contacts_linked_cd">已关联</string>
@@ -1328,6 +1383,7 @@
          ════════════════════════════════════════════════════════════════ -->
     <string name="verify_banner_verified_title">已验证</string>
     <string name="verify_banner_verified_unconfirmed_title">已签名，密钥未经验证</string>
+    <string name="verify_banner_verified_dont_use_title">已签名，密钥已标记为「弃用」</string>
     <string name="verify_banner_invalid_title">签名无效</string>
     <string name="verify_banner_unknown_signer_title">未知签名者</string>
     <string name="verify_banner_unknown_signer_lookup_cd">查找签名者</string>
@@ -1475,7 +1531,6 @@
          another app. Mirrors the iOS PGPonyAction extension.
     -->
     <string name="share_target_activity_label">PGPony 快捷操作</string>
-    <string name="share_encrypt_text_label">在 PGPony 中加密</string>
     <string name="share_target_dismiss_cd">关闭</string>
 
     <!-- Root / classification screen -->
@@ -1753,7 +1808,7 @@
     <!-- Key expiration editing -->
     <string name="key_detail_expiry_edit">编辑有效期</string>
     <string name="key_detail_expiry_sheet_title">编辑有效期</string>
-    <string name="key_detail_expiry_sheet_subtitle">为 %1$s 设置新的有效期。这会重新签名该密钥及其子钥，指纹保持不变。</string>
+    <string name="key_detail_expiry_sheet_subtitle">为 %1$s 设置新的有效期。这会重新签名主钥。子钥保留各自的有效期，指纹保持不变。</string>
     <string name="key_detail_expiry_custom">自定义日期</string>
     <string name="key_detail_expiry_pick_date">选择日期</string>
     <string name="key_detail_expiry_passphrase_label">密钥口令（如已设置）</string>
@@ -1830,6 +1885,8 @@
     <string name="settings_card_pin_cache_countdown_format">PIN 已记住。将在 %1$s 后清除</string>
     <string name="settings_card_pin_cache_none_held">当前没有记住的 PIN。</string>
     <string name="settings_card_pin_cache_clear">立即清除</string>
+    <string name="settings_passphrase_cache_cleared_toast">已清除记住的口令</string>
+    <string name="settings_card_pin_cache_cleared_toast">已清除卡 PIN</string>
     <!-- 4.0.0 Phase 9 (G9): "Until I clear it" PIN cache mode -->
     <string name="settings_card_pin_cache_until_cleared">直到我手动清除</string>
     <string name="settings_session_until_locked">直到手机锁定</string>
@@ -1839,7 +1896,7 @@
     <string name="settings_passphrase_cache_title">记住密钥口令</string>
     <string name="settings_passphrase_cache_subtitle">在所选时长内将为已连接应用输入的口令保留在内存中。绝不写入磁盘；输错口令或关闭应用时会被清除。</string>
     <string name="settings_passphrase_cache_countdown_format">口令已记住。将在 %1$s 后清除</string>
-    <string name="settings_passphrase_cache_none_held">当前没有记住的口令。</string>
+    <string name="settings_passphrase_cache_none_held">PGPony 本身没有记住任何口令。为邮件及其他已连接应用输入的口令单独保存，“立即清除”也会清除它们。</string>
     <string name="settings_passphrase_cache_held_until_cleared">口令已记住，直到你手动清除。</string>
     <!-- 4.0.0 Phase 9b: settings parity (clear inputs, pubkey comment, licenses) -->
     <string name="settings_clear_inputs_title">加密后清除输入</string>
@@ -1869,6 +1926,7 @@
     <string name="settings_share_format_subtitle">「共享」按钮打包加密或签名结果的方式。</string>
     <!-- 3.1.0 Phase 8 Fix1: file import read error -->
     <string name="keyring_error_file_read">无法读取该文件。请尝试将其存储到本地存储（「文件」应用）后重新导入。</string>
+    <string name="keyring_error_file_too_large">该文件太大，不可能是密钥。请选择 .asc、.gpg 或 .pgp 密钥文件。</string>
     <!-- 3.1.0 Phase 8 Fix2: file import diagnostic -->
     <string name="keyring_error_parse_diag">无法从文件中读取密钥。读取到 %1$d 字节，开头为「%2$s」</string>
     <!-- 3.1.0 Phase 8 Fix3: richer file import diagnostic -->
@@ -1899,7 +1957,19 @@
     <string name="provider_keypicker_empty">你的密钥环中还没有可用的密钥。请先在 PGPony 中创建或导入一个密钥对。</string>
     <!-- 4.0.0 Succession Phase P2a-2: provider passphrase prompt -->
     <string name="provider_passphrase_title">解锁签名密钥</string>
-    <string name="provider_passphrase_body_format">输入 %1$s 的口令以签名此消息。PGPony 会记住它 5 分钟，且仅限此设备。</string>
+    <string name="provider_passphrase_title_decrypt">解锁解密密钥</string>
+    <string name="provider_passphrase_title_ssh">解锁 SSH 密钥</string>
+    <string name="provider_passphrase_action_sign">输入 %1$s 的口令以签名此消息。</string>
+    <string name="provider_passphrase_action_decrypt">输入 %1$s 的口令以解密此消息。</string>
+    <string name="provider_passphrase_action_ssh">输入 %1$s 的口令以通过 SSH 登录。</string>
+    <plurals name="provider_passphrase_keep_minutes">
+        <item quantity="other">PGPony 会记住它 %1$d 分钟，且仅限此设备。</item>
+    </plurals>
+    <plurals name="provider_passphrase_keep_hours">
+        <item quantity="other">PGPony 会记住它 %1$d 小时，且仅限此设备。</item>
+    </plurals>
+    <string name="provider_passphrase_keep_until_cleared">PGPony 会记住它，直到你在设置中清除，且仅限此设备。</string>
+    <string name="provider_passphrase_keep_until_locked">PGPony 会记住它，直到手机锁定，且仅限此设备。</string>
     <string name="provider_passphrase_wrong">口令错误。请重试。</string>
     <string name="provider_passphrase_hint">口令</string>
     <string name="provider_passphrase_change_key">使用其他密钥签名</string>
@@ -2114,10 +2184,10 @@
     <string name="share_target_action_import_encrypt_subtitle">核对其指纹，然后轻点「向此密钥加密」</string>
     <string name="share_target_action_verify">验证签名</string>
     <string name="share_target_action_verify_subtitle">查看签名者。此消息已签名，但未加密</string>
+    <string name="share_target_action_encrypt_all">全部加密</string>
+    <string name="share_target_action_encrypt_all_subtitle">在加密界面中打开整段共享文本（包括 PGP 块），修剪后加密</string>
     <string name="share_target_action_sign">签名，或加密并签名</string>
     <string name="share_target_action_sign_subtitle">在 PGPony 的「加密」界面中打开此文本</string>
-    <string name="share_target_action_encrypt_other">加密其他文本</string>
-    <string name="share_target_action_encrypt_other_subtitle">加密与 PGP 块一同共享的文本</string>
     <string name="share_target_decrypt_result_unknown_signer">由不在你密钥环中的密钥签名</string>
     <!-- 4.6.0 (item 16): SSH authentication -->
     <string name="ssh_cardop_body">PGPony 将使用你硬件密钥的身份验证槽位为 SSH 登录签名。请输入卡 PIN，然后将密钥贴紧手机背面。</string>
@@ -2502,6 +2572,15 @@
     <string name="err_secret_mpi_truncated">私钥 MPI 被截断</string>
     <string name="err_security_key_was_disconnected_plug_back">硬件密钥已断开连接。请重新插入后重试。</string>
     <string name="err_select_openpgp_application_failed">SELECT OpenPGP 应用失败（%1$s）</string>
+    <string name="err_malformed_signed_message">签名消息格式不正确，因此未打开。</string>
+    <string name="err_nfc_openpgp_unavailable">此密钥未通过 NFC 打开其 OpenPGP 应用。部分密钥（例如 Nitrokey 3）会在 NFC 下关闭 OpenPGP。如果你的密钥支持 USB，请插入后重试。</string>
+    <string name="err_offline_primary_sign">主钥的私钥不在此设备上（离线主钥）。请使用签名子钥进行签名。</string>
+    <string name="err_signing_keys_expired">此密钥对中的所有签名密钥均已过期或被吊销</string>
+    <string name="err_offline_primary_edit">主钥的私钥不在此设备上（离线主钥）。请在保存主钥的地方进行此更改，然后将密钥重新导入此处。</string>
+    <string name="err_provider_recipient_dont_use">收件人密钥在 PGPony 中被标记为「弃用」：%1$s。在 PGPony 中更改其信任级别即可向其加密。</string>
+    <string name="err_provider_signer_dont_use">签名密钥在 PGPony 中被标记为「弃用」。请在邮件应用中选择其他签名密钥，或在 PGPony 中更改其信任级别。</string>
+    <string name="err_certify_certifier">此密钥无法认证其他密钥</string>
+    <string name="err_certify_target">此密钥无法在此处认证</string>
     <string name="err_session_key_block_too_short">会话密钥块过短</string>
     <string name="err_session_key_checksum_mismatch">会话密钥校验和不匹配</string>
     <string name="err_short_form_apdu_data_limited_255">短格式 APDU 数据最多 255 字节（实际为 %1$s）。较大的数据请使用命令链接，或设置 extended = true。</string>
@@ -2595,4 +2674,412 @@
     <string name="err_wrapped_session_key_length_out_range">封装的会话密钥长度超出范围</string>
     <string name="err_wrong_pin_no_tries_remaining_pin">PIN 错误。已没有剩余尝试次数；PIN 现已被锁定</string>
     <string name="err_wrong_pin_remaining">PIN 错误。剩余尝试次数：%1$s</string>
+    <!-- 4.6.3: pair with another device (docs/PAIRING_PROTOCOL.md) -->
+    <string name="pair_menu">与其他设备配对</string>
+    <string name="pair_settings_subtitle">将密钥或完整备份传到同一网络中的 PGPony Desktop 或另一部手机。</string>
+    <string name="pair_title">与其他设备配对</string>
+    <string name="pair_back_cd">返回</string>
+    <string name="pair_intro">在这部手机与同一网络中的 PGPony Desktop 或另一部手机之间传递密钥或完整备份。一台设备等待，另一台连接，然后你在两个屏幕上核对代码。离开此屏幕后不会保留任何内容。</string>
+    <string name="pair_offline">配对需要使用本地网络，而离线模式已开启。请在设置中关闭离线模式后再配对。</string>
+    <string name="pair_host">等待另一台设备</string>
+    <string name="pair_join">连接另一台设备</string>
+    <string name="pair_host_waiting">在另一台设备上选择“连接”，扫描此代码，或输入下方地址。</string>
+    <string name="pair_invite_cd">配对二维码</string>
+    <string name="pair_host_closes">此窗口将保持开放至 %1$s。</string>
+    <string name="pair_copy_invite">复制邀请</string>
+    <string name="pair_no_address">这部手机没有可供其他设备访问的 Wi-Fi 或以太网地址。请连接到与另一台设备相同的网络后重试。</string>
+    <string name="pair_join_intro">在另一台设备上选择“等待”。然后扫描它显示的二维码，或输入它的地址。</string>
+    <string name="pair_scan">扫描二维码</string>
+    <string name="pair_join_label">另一台设备上显示的地址</string>
+    <string name="pair_bad_address">请按显示内容准确输入地址和端口，例如 192.168.1.20:49152。</string>
+    <string name="pair_bad_invite">无法读取此邀请。请重新扫描，或改为输入地址。</string>
+    <string name="pair_connect">连接</string>
+    <string name="pair_working">处理中…</string>
+    <string name="pair_peer_address">另一台设备的地址：%1$s</string>
+    <string name="pair_host_connected">地址为 %1$s 的设备已连接。正在建立配对…</string>
+    <string name="pair_compare_body">另一台设备显示的代码相同吗？如果代码不同，两台设备之间可能有人。请选择“不同”并重新开始。</string>
+    <string name="pair_codes_match">代码相同</string>
+    <string name="pair_codes_differ">不同</string>
+    <string name="pair_waiting_other">正在等待另一台设备…</string>
+    <string name="pair_compare_host_body">请输入另一台设备显示的代码。如果它没有显示代码或显示了错误，请选择“取消”：可能是其他设备抢先连接了。</string>
+    <string name="pair_typed_code_label">另一台设备上显示的代码</string>
+    <string name="pair_typed_code_confirm">配对</string>
+    <string name="pair_typed_code_wrong">代码不匹配。请检查另一块屏幕后重新输入。</string>
+    <string name="pair_compare_host_own">另一台设备会用此代码核对它自己的代码：</string>
+    <string name="pair_cancel">取消</string>
+    <string name="pair_paired_with">已与 %1$s 配对</string>
+    <string name="pair_paired_unnamed">已与另一台设备配对</string>
+    <string name="pair_send_heading">发送到另一台设备</string>
+    <string name="pair_group_keypairs">密钥对</string>
+    <string name="pair_group_public">公钥</string>
+    <string name="pair_group_backup">全部</string>
+    <string name="pair_item_backup">完整备份</string>
+    <string name="pair_transfer_pass_note">你选择的部分密钥对没有口令。它们会在此传输口令的保护下发送，另一台设备需要此口令才能使用它们。</string>
+    <string name="pair_transfer_pass">传输口令</string>
+    <string name="pair_transfer_pass_repeat">再次输入传输口令</string>
+    <string name="pair_send">发送</string>
+    <string name="pair_biometric_title">发送私钥</string>
+    <string name="pair_biometric_subtitle">在密钥对或备份离开这部手机之前，请确认是你本人。</string>
+    <string name="pair_waiting_answer">正在等待另一台设备接受…</string>
+    <string name="pair_sending">正在发送 %1$s…</string>
+    <string name="pair_receiving">正在接收 %1$s：%2$d%%</string>
+    <string name="pair_backup_code_tell">请把此恢复代码告诉另一台设备的使用者。在那里打开备份需要它。</string>
+    <string name="pair_copy">复制</string>
+    <string name="pair_incoming_heading">%1$s 想要发送：</string>
+    <string name="pair_incoming_heading_unnamed">另一台设备想要发送：</string>
+    <string name="pair_kind_keypair">%1$s（密钥对）</string>
+    <string name="pair_kind_public">%1$s（公钥）</string>
+    <string name="pair_incoming_fingerprint">指纹 %1$s</string>
+    <string name="pair_backup_code_label">另一台设备上显示的恢复代码</string>
+    <string name="pair_accept">接受所选项</string>
+    <string name="pair_decline">拒绝</string>
+    <string name="pair_received_public">要添加来自另一台设备的这个公钥吗？</string>
+    <string name="pair_received_keypair">要添加来自另一台设备的这个密钥对吗？</string>
+    <string name="pair_received_in_keyring">此密钥已在你的密钥环中。添加时会合并新的内容。</string>
+    <string name="pair_received_backup">要恢复来自另一台设备的备份吗？其中的密钥会添加到你的密钥环。不会从中带入信任级别和设置。</string>
+    <string name="pair_received_add">添加</string>
+    <string name="pair_received_restore">恢复</string>
+    <string name="pair_received_skip">跳过</string>
+    <string name="pair_skipped_reason">对方已跳过</string>
+    <string name="pair_import_added">已添加到你的密钥环</string>
+    <string name="pair_import_updated">已在你的密钥环中更新</string>
+    <string name="pair_import_already">已在你的密钥环中</string>
+    <string name="pair_ended">会话已结束。其密钥已清除。</string>
+    <string name="pair_again">重新开始</string>
+    <string name="pair_fail_refused">另一台设备表示代码不同。未进行配对。</string>
+    <string name="pair_fail_you_refused">你表示代码不同，因此未进行配对。如果这出乎你的意料，请确认你的网络中没有其他人，然后重新开始。</string>
+    <string name="pair_fail_you_cancelled">你取消了配对，因此未进行配对。</string>
+    <string name="pair_fail_typed_wrong">你输入的代码不匹配，因此未进行配对。如果你输入无误，两台设备之间可能有人。请重新开始。</string>
+    <string name="pair_fail_handshake">无法验证配对。未进行配对；请重新开始。</string>
+    <string name="pair_fail_timeout">另一台设备不再响应。</string>
+    <string name="pair_fail_version">另一台设备上的 PGPony 配对方式不同。请更新两者后重新开始。</string>
+    <string name="pair_fail_protocol">对方不是 PGPony 配对窗口，或发送了意外内容。</string>
+    <string name="pair_fail_closed">连接已断开。</string>
+    <string name="pair_fail_window_taken">另一台设备拒绝或中断了连接。可能有其他设备占用了它的配对窗口。请在另一台设备上取消并打开新窗口。</string>
+    <string name="pair_err_window_expired">在其他设备连接之前，配对窗口已关闭。</string>
+    <string name="pair_err_export">无法导出 %1$s。</string>
+    <string name="pair_err_needs_passphrase">%1$s 没有口令。请输入传输口令后发送。</string>
+    <string name="pair_err_too_large">%1$s 太大，无法发送。</string>
+    <string name="pair_err_import">无法导入 %1$s。</string>
+    <string name="pair_err_backup_code">请输入另一台设备上显示的恢复代码。</string>
+    <string name="pair_err_no_fingerprint">%1$s 提供时没有指纹。</string>
+    <string name="pair_err_not_one_key">%1$s 包含的密钥不是恰好一个。</string>
+    <string name="pair_err_wrong_key">%1$s 不是所提供的密钥。</string>
+    <string name="pair_err_secret_in_public">%1$s 以公钥提供，但包含私钥。</string>
+    <string name="pair_err_no_secret">%1$s 以密钥对提供，但不包含私钥。</string>
+    <string name="pair_err_unprotected">%1$s 包含没有口令的私钥。</string>
+    <string name="pair_err_not_backup">%1$s 不是 PGPony 备份文件。</string>
+    <string name="pair_rows_sent">已发送</string>
+    <string name="pair_rows_received">已接收</string>
+    <string name="pair_row_waiting">正在等待另一台设备添加…</string>
+    <string name="pair_row_added_on">已在 %1$s 上添加</string>
+    <string name="pair_row_added_on_unnamed">已在另一台设备上添加</string>
+    <string name="pair_row_skipped_on">已在 %1$s 上跳过</string>
+    <string name="pair_row_skipped_on_unnamed">已在另一台设备上跳过</string>
+    <string name="pair_row_declined">另一台设备未接受</string>
+    <string name="pair_row_failed">未导入：%1$s</string>
+    <string name="pair_row_failed_plain">未导入</string>
+    <string name="pair_row_no_answer">会话结束前没有回应</string>
+    <string name="pair_row_skipped_here">已跳过</string>
+    <string name="pair_done">完成</string>
+    <string name="pair_finished_title">配对已结束</string>
+    <string name="pair_finished_by_peer">另一台设备结束了会话。</string>
+    <string name="pair_tally_sent">已发送</string>
+    <string name="pair_tally_received">已接收</string>
+    <string name="pair_tally_skipped">已跳过</string>
+    <string name="pair_tally_failed">失败</string>
+    <string name="pair_tally_unanswered">无回应</string>
+    <string name="pair_view_key">查看密钥</string>
+    <string name="pair_view_keyring">查看密钥环</string>
+    <string name="pair_close">关闭</string>
+    <plurals name="pair_restore_summary">
+        <item quantity="other">已添加或更新 %1$d 个密钥</item>
+    </plurals>
+
+    <!-- 4.7.0 RC3 and earlier gaps, translated Oct 2026 -->
+    <string name="batch_output_title">多个文件</string>
+    <string name="batch_output_package">合并为一个包</string>
+    <string name="batch_output_package_subtitle">将所有文件和消息一起加密成一个文件</string>
+    <string name="batch_output_each">每个文件单独处理</string>
+    <string name="batch_output_each_subtitle">每个文件各生成一个输出，可存储到文件夹或一起共享</string>
+    <string name="batch_op_encrypt">加密</string>
+    <string name="batch_op_encrypt_sign">加密并签名</string>
+    <string name="batch_op_sign_only">仅签名</string>
+    <string name="batch_op_sign_only_subtitle">为每个文件生成一个分离的 .sig 签名，文件本身保持不变。</string>
+    <string name="batch_card_signing_unavailable">用硬件密钥逐个签名时，每个文件都需要触摸一次密钥。请在「以此身份签名」中选择软件密钥，或使用「合并为一个包」。</string>
+    <string name="batch_error_no_files">请至少添加一个文件。</string>
+    <string name="batch_error_pick_signer">请在「以此身份签名」中选择一个密钥来签名这些文件。</string>
+    <string name="batch_error_no_matching_key">PGPony 中存储的密钥都无法解密此文件。如果它是向硬件密钥加密的，请单独解密它。</string>
+    <string name="batch_item_failed_unknown">无法处理此文件。</string>
+    <string name="batch_item_cancelled">已取消</string>
+    <string name="batch_item_skipped_passphrase">已跳过：未输入口令</string>
+    <string name="batch_save_failed_item">无法将此文件写入该文件夹。</string>
+    <string name="batch_save_folder_unusable">PGPony 无法写入该文件夹。请选择其他文件夹。</string>
+    <string name="batch_saved_summary_format">已将 %2$d 个文件中的 %1$d 个存储到该文件夹。</string>
+    <string name="batch_title_encrypting">正在加密文件</string>
+    <string name="batch_title_signing">正在签名文件</string>
+    <string name="batch_title_decrypting">正在解密文件</string>
+    <string name="batch_title_done_format">已完成 %1$d/%2$d 个文件</string>
+    <string name="batch_progress_file_format">第 %1$d 个文件，共 %2$d 个</string>
+    <string name="batch_passphrase_prompt">请输入口令。此批次中的每个文件都会使用它。</string>
+    <string name="batch_passphrase_label">口令</string>
+    <string name="batch_passphrase_continue">继续</string>
+    <string name="batch_passphrase_skip">跳过其余文件</string>
+    <string name="batch_item_output_format">输出：%1$s</string>
+    <string name="batch_item_saved_format">已存储为 %1$s</string>
+    <string name="batch_save_to_folder">存储到文件夹</string>
+    <string name="batch_share_all">全部共享</string>
+    <string name="batch_share_chooser">共享文件</string>
+    <string name="batch_share_failed">无法共享这些文件。</string>
+    <string name="batch_status_pending">等待中</string>
+    <string name="batch_status_done">完成</string>
+    <string name="batch_status_failed">失败</string>
+    <string name="share_files_choice_title">其中部分文件已加密</string>
+    <string name="share_files_choice_message">%2$d 个文件中有 %1$d 个是加密消息。要解密这些文件，还是将所有文件加密为一个包？</string>
+    <string name="share_files_choice_decrypt_format">解密 %1$d 个</string>
+    <string name="share_files_choice_encrypt">全部加密</string>
+    <string name="save_progress_saving">正在存储…</string>
+    <string name="save_progress_bytes_format">正在存储 %1$s / %2$s</string>
+    <string name="save_cancelled">已取消存储。未完成的文件已被移除。</string>
+    <string name="save_failed_generic">无法存储该文件。请重试，或选择其他位置。</string>
+    <string name="save_failed_no_space">可用空间不足，无法存储该文件。</string>
+    <string name="save_toast_saved_format">已存储 %1$s</string>
+    <string name="save_toast_failed_format">无法存储 %1$s</string>
+    <string name="save_batch_item_cancelled">未存储：存储已取消。</string>
+    <plurals name="import_result_subkeys_added">
+        <item quantity="other">已添加 %1$d 个子钥。</item>
+    </plurals>
+    <string name="import_preview_left_out_title">被略去或不可用的子钥</string>
+    <string name="import_preview_left_out_row_format">%1$s %2$s：%3$s</string>
+    <string name="subkey_issue_weak_hash">在 2023 年 2 月截止日期之后仍使用 SHA-1 绑定</string>
+    <string name="subkey_issue_no_binding">没有有效的绑定签名</string>
+    <string name="subkey_issue_no_back_signature">签名子钥缺少有效的反向签名</string>
+    <string name="subkey_issue_revoked">已吊销</string>
+    <string name="subkey_issue_expired">已过期</string>
+    <string name="key_detail_subkey_secret_on_device">私钥在此设备上</string>
+    <string name="key_detail_subkey_secret_offline">私钥离线（gpg 存根）</string>
+    <string name="key_detail_subkey_secret_on_card">私钥在卡上</string>
+    <string name="key_detail_subkey_secret_not_present">此设备上没有私钥</string>
+    <string name="provider_review_title">检查收件人</string>
+    <string name="provider_review_intro">对于此消息的部分收件人，PGPony 没有可用的密钥。请选择要加密给哪些密钥，或取消以返回你的草稿。</string>
+    <string name="provider_review_missing_format">%1$s：PGPony 中没有密钥</string>
+    <string name="provider_review_dont_use_format">%1$s：已标记为「弃用」</string>
+    <string name="provider_review_dont_use_hint">标记为「弃用」的密钥不会列出。要加密给这类密钥，请先在 PGPony 中更改其信任级别。</string>
+    <string name="provider_review_no_keys">PGPony 中没有可供选择的密钥。请先在 PGPony 中导入收件人的公钥。</string>
+    <string name="provider_review_confirm">加密给所选密钥</string>
+    <string name="err_provider_review_key_unusable">为此消息选择的某个密钥无法使用：%1$s。请重新发送该消息，并在 PGPony 中选择收件人。</string>
+    <string name="import_method_github">GitHub</string>
+    <string name="import_github_label">GitHub 用户</string>
+    <string name="import_github_placeholder">用户名</string>
+    <string name="import_github_fetch_button">获取密钥</string>
+    <string name="import_github_help">PGPony 会按你的代理设置获取此用户添加到其 GitHub 账户的 OpenPGP 密钥（github.com/username.gpg）。在你核对每个指纹并轻点「导入密钥」之前，不会添加任何内容。</string>
+    <string name="import_github_error_invalid">这不是有效的 GitHub 用户名。用户名由 1 到 39 个字母、数字或单个连字符组成，且不能以连字符开头或结尾。</string>
+    <string name="import_github_error_no_keys_format">%1$s 在 GitHub 上没有 OpenPGP 密钥。</string>
+    <string name="import_github_error_not_found_format">没有名为 %1$s 的 GitHub 用户。</string>
+    <string name="import_github_error_unreadable_format">GitHub 返回了 %1$s 的结果，但其中没有 PGPony 能读取的公钥。</string>
+    <string name="applock_pin_field_label">PIN</string>
+    <string name="applock_pin_confirm_label">确认 PIN</string>
+    <string name="applock_new_pin_label">新 PIN</string>
+    <string name="applock_wrong_pin">PIN 错误。</string>
+    <string name="applock_wait_format">PIN 错误次数过多。请在 %1$d 秒后重试。</string>
+    <string name="applock_unavailable">PGPony 无法读取其 PIN 设置，因此无法校验 PIN，将保持锁定。</string>
+    <string name="applock_check_failed">无法校验 PIN。请重试。</string>
+    <string name="applock_reset_button">抹除 PGPony 并重新开始</string>
+    <string name="applock_reset_confirm_title">要抹除 PGPony 中的所有内容吗？</string>
+    <string name="applock_reset_confirm_message">此操作将删除 PGPony 中的所有密钥（包括「最近删除」中的密钥），以及所有设置和已连接应用的授权，与「清除所有数据」相同。硬件密钥上的密钥和存储在 PGPony 之外的备份不受影响。此操作无法撤销。</string>
+    <string name="applock_reset_confirm_button">抹除</string>
+    <string name="applock_fingerprint_reset_notice">由于此手机上的指纹已更改，指纹解锁已被关闭。请使用你的 PIN。你可以在设置中重新开启它。</string>
+    <string name="applock_use_fingerprint">使用指纹</string>
+    <string name="applock_method_title">锁定方式</string>
+    <string name="applock_method_device">设备解锁</string>
+    <string name="applock_method_pin">PGPony PIN</string>
+    <string name="applock_method_dialog_message">「设备解锁」使用手机的指纹或屏幕锁定。「PGPony PIN」是一个独立的 6 到 16 位数字 PIN，只有 PGPony 会要求输入，并且可以设置胁迫 PIN。</string>
+    <string name="applock_set_pin_title">设置 PGPony PIN</string>
+    <string name="applock_set_pin_message">请设置 6 到 16 位数字。PGPony 只保存它的哈希值，无法找回忘记的 PIN。</string>
+    <string name="applock_change_pin_title">更改 PIN</string>
+    <string name="applock_change_pin_subtitle">设置新的 PGPony PIN</string>
+    <string name="applock_verify_title">输入你的 PGPony PIN</string>
+    <string name="applock_verify_message">请输入当前 PIN 以更改应用锁。</string>
+    <string name="applock_pin_format_error">请使用 6 到 16 位数字。</string>
+    <string name="applock_pin_mismatch">两次输入的 PIN 不一致。</string>
+    <string name="applock_pin_same_as_duress">PIN 必须与胁迫 PIN 不同。</string>
+    <string name="applock_duress_same_as_pin">胁迫 PIN 必须与你的 PIN 不同。</string>
+    <string name="applock_duress_title">胁迫 PIN</string>
+    <string name="applock_duress_off">关闭</string>
+    <string name="applock_duress_on">开启</string>
+    <string name="applock_duress_info_title">设置胁迫 PIN</string>
+    <string name="applock_duress_info_message">胁迫 PIN 是第二个 PIN，用于有人强迫你打开 PGPony 的情况。在锁定屏幕上输入它，会抹除 PGPony 中的所有密钥（包括「最近删除」中的密钥），以及所有设置、已连接应用的授权和已记住的口令，之后 PGPony 会像刚安装时一样打开。屏幕上不会有任何提示表明发生了这一切。\n\n此操作无法撤销。切勿通过输入胁迫 PIN 来测试它：这会抹除所有内容。</string>
+    <string name="applock_not_touched">不受影响的内容：硬件密钥上的密钥（它有自己的 PIN）、你存储在 PGPony 之外的备份，以及在输入 PIN 之前制作的手机存储副本。</string>
+    <string name="applock_duress_set_title">设置胁迫 PIN</string>
+    <string name="applock_duress_remove_title">要移除胁迫 PIN 吗？</string>
+    <string name="applock_duress_remove_message">你的 PGPony PIN 会保留。之后，旧的胁迫 PIN 将被视为错误的 PIN。</string>
+    <string name="applock_duress_remove_button">移除</string>
+    <string name="applock_fingerprint_title">使用指纹解锁</string>
+    <string name="applock_fingerprint_subtitle">允许用指纹代替 PIN</string>
+    <string name="applock_fingerprint_advice_title">要关闭指纹解锁吗？</string>
+    <string name="applock_fingerprint_advice_message">指纹可能被他人强行使用，而胁迫 PIN 只在对方要求你输入 PIN 时才有用。关闭指纹解锁后，PGPony 只会要求输入 PIN。建议关闭。</string>
+    <string name="applock_fingerprint_advice_turn_off">关闭</string>
+    <string name="applock_fingerprint_advice_keep">保持开启</string>
+    <string name="applock_wipe_after_title">PIN 输错多次后抹除</string>
+    <string name="applock_wipe_after_off">关闭</string>
+    <string name="applock_wipe_after_format">输错 %1$d 次 PIN 后</string>
+    <string name="applock_wipe_after_message">连续输错这么多次 PIN 后，PGPony 会像输入胁迫 PIN 时一样抹除所有内容。输入正确的 PIN 会重置计数。此操作无法撤销。</string>
+
+    <!-- 4.7.0 RC4, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 45, #85): a User ID with many certifications shows the first three, then this row. -->
+    <plurals name="key_detail_cert_show_all">
+        <item quantity="other">显示全部 %1$d 条认证</item>
+    </plurals>
+    <string name="key_detail_cert_show_fewer">收起</string>
+
+    <!-- 4.7.0 RC4 (item 48, #79): which key made a signature and which key decrypted, by 16-digit key ID. -->
+    <string name="verify_signing_key_format">签名密钥 %1$s</string>
+    <string name="verify_signing_subkey_format">密钥 %2$s 的签名子钥 %1$s</string>
+    <string name="encdec_decrypted_with_subkey_format">已使用 %1$s（子钥 %2$s）解密</string>
+
+    <!-- 4.7.0 RC4 (item 46, #82): Key Details, choose which signing subkey a key pair signs with. -->
+    <string name="key_detail_signing_subkey_title">用于签名</string>
+    <string name="key_detail_signing_subkey_help">除非你在此选择一个子钥，否则 PGPony 会使用最新的有效签名子钥进行签名。只要所选子钥仍然有效，就会使用它；一旦它过期或被吊销，签名将恢复为自动选择。</string>
+    <string name="key_detail_signing_subkey_automatic">自动</string>
+    <string name="key_detail_signing_subkey_automatic_format">自动（当前为 %1$s）</string>
+    <string name="key_detail_signing_subkey_option_format">子钥 %1$s，%2$s，创建于 %3$s</string>
+    <string name="key_detail_signing_subkey_primary_format">主钥 %1$s，%2$s</string>
+    <string name="key_detail_signing_subkey_pin_unusable">你选择的子钥已无法再签名，因此 PGPony 会按自动选择进行签名。</string>
+
+    <!-- 4.7.0 RC4 (item 47, #78): re-importing your own key pair with secret keys under a new passphrase. -->
+    <string name="import_replace_secrets_title">使用此文件中的私钥</string>
+    <plurals name="import_replace_secrets_body">
+        <item quantity="other">PGPony 已持有此密钥对。此文件中有 %1$d 个私钥的保护方式与已存储的不同，例如在 gpg 中更改口令之后。用此文件中的私钥替换已存储的私钥，并从此改用此文件的口令。</item>
+    </plurals>
+    <string name="import_replace_secrets_passphrase_label">此文件的口令</string>
+    <string name="import_replace_secrets_passphrase_help">文件中的每个私钥都必须能用它解锁。如果文件没有口令，请留空。</string>
+    <plurals name="import_result_secrets_replaced">
+        <item quantity="other">已替换 %1$d 个私钥。</item>
+    </plurals>
+    <string name="err_replace_secrets_passphrase">该口令未能解锁此文件中 %1$s 的所有私钥。已存储的私钥已保留，未导入任何内容。</string>
+    <string name="err_replace_secrets_unproven">无法确认此文件中的私钥就是 %1$s 的私钥。已存储的私钥已保留，未导入任何内容。</string>
+
+    <!-- 4.7.0 RC4 security key work, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 28, #36, #43): the card prompt a mail app opens also takes a key plugged in over USB. -->
+    <string name="provider_cardop_usb_hint">通过 USB 插入的密钥也可使用：输入 PIN，然后轻点「使用 USB 密钥」。</string>
+    <string name="provider_cardop_use_usb">使用 USB 密钥</string>
+    <string name="provider_cardop_wrong_pin_usb">PIN 错误。剩余 %1$d 次尝试。请检查 PIN 后重试。</string>
+    <string name="provider_cardop_usb_lost">密钥已被拔出。请重新插入后重试。</string>
+
+    <!-- 4.7.0 RC4 (item 34, #43): keys whose secret is on a security key (generated on it, or paired with it). -->
+    <string name="key_detail_type_key_pair_on_card">位于硬件密钥上的密钥对</string>
+    <string name="key_detail_primary_on_card">主钥：位于硬件密钥的签名槽位中，在其中进行签名和认证。</string>
+
+    <!-- 4.7.0 RC4 (item 31, card): certifying with a key whose primary is on a security key. -->
+    <string name="certify_no_certifier_card">你的密钥对都无法在此处认证。认证需要一个主钥可以认证的密钥对，且其私钥位于此设备或硬件密钥上。ML-DSA 密钥暂时还不能认证。</string>
+    <string name="certify_card_hint">轻点「认证」后，将硬件密钥贴近手机或将其插入。</string>
+    <string name="err_certify_card_mismatch">此硬件密钥中没有你选择用于认证的密钥</string>
+
+    <!-- 4.7.0 RC4 (item 13, #71): Move to Security Key, like gpg's keytocard. -->
+    <string name="move_to_card_menu">移至硬件密钥</string>
+    <string name="move_to_card_title">移至硬件密钥</string>
+    <string name="move_to_card_intro">将此密钥对中的密钥写入 OpenPGP 硬件密钥的槽位，与 gpg 的 keytocard 做法相同。此后由硬件密钥使用这些密钥进行签名和解密。</string>
+    <string name="move_to_card_nothing">此密钥对中没有可移至硬件密钥的密钥。</string>
+    <string name="move_to_card_slot_signature">签名槽位</string>
+    <string name="move_to_card_slot_decryption">解密槽位</string>
+    <string name="move_to_card_slot_authentication">身份验证槽位</string>
+    <string name="move_to_card_slot_leave">保持此槽位不变</string>
+    <string name="move_to_card_key_primary_format">主钥，%1$s，%2$s</string>
+    <string name="move_to_card_key_subkey_format">子钥，%1$s，%2$s</string>
+    <string name="move_to_card_one_slot_each">请为每个槽位选择不同的密钥。</string>
+    <string name="move_to_card_refused_title">无法移至硬件密钥的密钥：</string>
+    <string name="move_to_card_refused_v6">v6 密钥无法放入 OpenPGP 硬件密钥</string>
+    <string name="move_to_card_refused_rsa_size">只能移动 RSA 2048、3072 和 4096 位密钥</string>
+    <string name="move_to_card_refused_curve">暂不支持此曲线</string>
+    <string name="move_to_card_refused_algorithm">此类密钥无法移动</string>
+    <string name="move_to_card_backup_body">硬件密钥上的密钥无法再从中复制出来。请先存储此密钥对的备份，以免这些密钥随硬件密钥一起丢失。</string>
+    <string name="move_to_card_backup_action">先存储备份</string>
+    <string name="move_to_card_backup_confirm">我已有此密钥对的备份</string>
+    <string name="move_to_card_remove_label">从此手机中移除已移动的密钥</string>
+    <string name="move_to_card_remove_hint">与 gpg 一样，手机只保留一条记录，说明这些密钥位于硬件密钥上，并从此改用硬件密钥。关闭此项可同时在此处保留一份副本。</string>
+    <string name="move_to_card_remove_unavailable">仅当此密钥对的每个子钥都移至硬件密钥时可用。主钥可以留在此手机上，与 gpg 的做法相同。否则此手机上会保留一份副本，手机会继续使用该副本。</string>
+    <string name="move_to_card_wrong_admin_pin">管理员 PIN 错误。剩余 %1$d 次尝试。次数用尽后，必须重置硬件密钥。</string>
+    <string name="move_to_card_wrong_user_pin">用户 PIN 错误。剩余 %1$d 次尝试。未向硬件密钥写入任何内容。</string>
+    <string name="move_to_card_replace_confirm">替换所选槽位中已有的密钥</string>
+    <string name="move_to_card_slots_occupied">硬件密钥在你所选的某个槽位中已存有另一个密钥，因此未写入任何内容。如需覆盖该密钥，请勾选「替换所选槽位中已有的密钥」，然后再次轻点「移动」。</string>
+    <string name="move_to_card_admin_pin">硬件密钥的管理员 PIN</string>
+    <string name="move_to_card_user_pin">硬件密钥的用户 PIN</string>
+    <string name="move_to_card_pins_hint">管理员 PIN 用于写入密钥。之后每个槽位会使用一次用户 PIN，以便在手机上的任何内容发生更改之前，检查硬件密钥能否用这些密钥进行签名和解密。</string>
+    <string name="move_to_card_action">移动</string>
+    <string name="move_to_card_waiting">将硬件密钥贴近手机或将其插入，并保持不动直到操作完成。</string>
+    <string name="move_to_card_failed">无法将密钥移至硬件密钥</string>
+    <string name="move_to_card_done_title">密钥已移动</string>
+    <plurals name="move_to_card_done_removed">
+        <item quantity="other">%1$d 个密钥现已位于硬件密钥上，并已从此手机中移除。</item>
+    </plurals>
+    <plurals name="move_to_card_done_kept">
+        <item quantity="other">%1$d 个密钥现已位于硬件密钥上。此手机上会保留一份副本，手机会继续使用该副本。</item>
+    </plurals>
+    <string name="err_card_expiry_primary_missing">主钥不在此硬件密钥的签名槽位中，因此无法用它更改有效期</string>
+    <string name="err_move_to_card_unsupported">此硬件密钥无法容纳所选密钥中的某一个。请选择其他密钥或槽位。</string>
+    <string name="err_move_to_card_check_failed">写入密钥后，硬件密钥未通过检查，因此此手机上的任何内容均未更改。请勿依赖硬件密钥上的这些密钥。</string>
+    <!-- 4.7.0 RC5, translated Oct 2026 -->
+    <string name="key_detail_expiry_sheet_title_subkey">编辑子钥有效期</string>
+    <string name="key_detail_expiry_sheet_subtitle_subkey">为子钥 %1$s 设置新的有效期。主钥和其他子钥保留各自的有效期。</string>
+    <string name="key_detail_expiry_also_subkeys">同时应用于仍然有效的子钥</string>
+    <string name="key_detail_expiry_also_subkeys_hint">已过期和已吊销的子钥保留各自的有效期。</string>
+    <string name="key_detail_subkey_change_expiry">编辑有效期…</string>
+    <string name="key_detail_card_no_cert_title">需要公钥</string>
+    <string name="key_detail_card_no_cert_body">此硬件密钥存有私钥，但没有密钥的其余部分，即它的用户 ID 和签名。导入匹配的公钥（导出文件、备份或密钥服务器上的副本），PGPony 就会将其与此硬件密钥配对，以便你用它签名和解密。</string>
+    <!-- 4.7.0 RC5 batch 2, translated Oct 2026 -->
+    <string name="key_detail_key_id_copied">密钥 ID 已复制</string>
+    <string name="key_detail_copy_key_id_cd">复制密钥 ID</string>
+    <string name="key_detail_detail_usage">用途</string>
+    <string name="key_detail_cert_trust_full">深度为 %1$d 的可信介绍人</string>
+    <string name="key_detail_cert_trust_partial">深度为 %1$d 的部分可信介绍人</string>
+    <string name="key_detail_cert_trust_amount">信任值 %1$d、深度 %2$d</string>
+    <string name="key_detail_cert_trust_limited">仅限部分用户 ID</string>
+    <string name="key_detail_last_checked_found_format">%1$s，已在 %2$s 上找到</string>
+    <string name="key_detail_last_checked_not_found_format">%1$s，在 %2$s 上未找到</string>
+    <string name="kd_vm_check_found_on">此密钥已发布到 %1$s。</string>
+    <string name="kd_vm_check_not_found_on">在 %1$s 上未找到此密钥。</string>
+    <string name="key_detail_cert_look_up">查找</string>
+    <string name="certifier_lookup_title">查找认证者</string>
+    <string name="certifier_lookup_found_body">导入此密钥会将其添加到你的密钥环，以便检查它所做的认证。该密钥的身份并未因此得到核实，这里只检查数学上的有效性。在依赖它之前，请先确认它属于谁。</string>
+    <string name="certifier_lookup_not_found_title">未找到认证者</string>
+    <string name="certifier_lookup_not_found_body_format">在你配置的所有密钥服务器上均未找到 %1$s 的密钥。认证者可能尚未发布其密钥。</string>
+    <string name="certifier_lookup_imported_body">它对此密钥所做的认证将重新检查。</string>
+    <string name="key_detail_refresh_sigs_menu">刷新自签名</string>
+    <string name="key_detail_refresh_sigs_title">刷新自签名</string>
+    <string name="key_detail_refresh_sigs_body">使用 SHA-256 重新签名此密钥的用户 ID 和子钥绑定。所有有效期保持不变。因绑定使用 SHA-1 而被排除的子钥，如果其私钥在此手机上，将会恢复。完成后请发布此密钥，以便其他人获得新的签名。</string>
+    <string name="key_detail_refresh_sigs_action">刷新</string>
+    <string name="key_detail_refresh_sigs_done">自签名已刷新。</string>
+    <plurals name="key_detail_refresh_sigs_done_restored">
+        <item quantity="other">自签名已刷新。%1$d 个子钥已恢复。</item>
+    </plurals>
+    <!-- 4.7.0 RC5 batch 3, translated Oct 2026 -->
+    <string name="keyring_select_menu">选择密钥</string>
+    <string name="keyring_select_done_cd">退出选择</string>
+    <string name="keyring_select_all_cd">全选</string>
+    <string name="keyring_export_selected_cd">导出公钥</string>
+    <string name="keyring_export_selected_copied">公钥已复制</string>
+    <plurals name="keyring_selected_count">
+        <item quantity="other">已选择 %1$d 个</item>
+    </plurals>
+    <plurals name="keyring_export_selected_label">
+        <item quantity="other">%1$d 个公钥</item>
+    </plurals>
+    <!-- 4.7.0 RC6, translated Oct 2026 -->
+    <string name="key_detail_expiry_confirm_title">要更改有效期吗？</string>
+    <string name="key_detail_expiry_confirm_current">当前有效期：%1$s</string>
+    <string name="key_detail_expiry_confirm_new">新有效期：%1$s</string>
+    <string name="key_detail_expiry_confirm_subkey_only">仅重新签名子钥 %1$s 的绑定。</string>
+    <plurals name="key_detail_expiry_confirm_user_ids">
+        <item quantity="other">将重新签名 %1$d 个用户 ID。</item>
+    </plurals>
+    <plurals name="key_detail_expiry_confirm_subkeys">
+        <item quantity="other">仍然有效的 %1$d 个子钥也将重新签名。</item>
+    </plurals>
+    <string name="key_detail_expiry_confirm_publish">只有在你发布此密钥后，其他人才能看到新的日期。</string>
+    <string name="key_detail_expiry_confirm_action">更改有效期</string>
+    <string name="key_detail_resign_biometric_title">确认新的签名</string>
+    <string name="key_detail_resign_biometric_subtitle">验证身份以重新签名此密钥</string>
+    <string name="provider_review_included_format">已通过 %1$s 包含在内</string>
+    <!-- 4.7.0 RC7, translated Oct 2026 -->
+    <string name="exchange_qr_too_large_inline">此密钥太大，无法生成二维码。请改用下方的「复制密钥」或「上传」。</string>
 </resources>

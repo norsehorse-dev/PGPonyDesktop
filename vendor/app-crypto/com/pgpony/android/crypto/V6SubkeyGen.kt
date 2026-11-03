@@ -68,6 +68,7 @@ object V6SubkeyGen {
         expirationSeconds: Long? = null,
         creationTime: Date = Date()
     ): PGPSecretKeyRing {
+        OfflineStub.requireSecret(secretRing.secretKey) // 4.7.0 (item 22): the binding needs the primary
         val impl = BcOpenPGPImplementation()
         val key = OpenPGPKey(secretRing, impl)
         val pp = (passphrase ?: "").toCharArray()

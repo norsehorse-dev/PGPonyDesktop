@@ -45,7 +45,6 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         val subkeyChoices: Map<String, Long> = emptyMap()
     ) {
         val signs: Boolean get() = classicalSigner != null || (compositeSigner != null && (!compositeInSeipdV1 || keepCompositeInSeipdV1))
-        val needsBuffering: Boolean get() = compositeSigner != null
     }
 
     /**
@@ -109,9 +108,9 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
     )
 
     /**
-     * Streaming encrypt for a classical signer or none. A composite signer has no streaming
-     * path in the engine (Android buffers those too), so callers check [Plan.needsBuffering]
-     * and use [encryptBytes] instead.
+     * Streaming encrypt for any signer kind. 3.1.0 (Android 4.7.0 item 23, #14): a composite
+     * ML-DSA signature hashes the content as it streams, so a large file is no longer read into
+     * memory (it used to be, under a 512 MB ceiling).
      */
     fun encryptStream(
         plan: Plan,
@@ -122,7 +121,6 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
         filename: String?,
         enableCompression: Boolean = true
     ) {
-        require(!plan.needsBuffering) { "composite signers use encryptBytes" }
         crypto.encryptStream(
             input = input,
             output = output,
@@ -133,7 +131,11 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
             armor = armor,
             enableCompression = enableCompression,
             recipientSubkeyChoices = plan.subkeyChoices,
-            v4Algo35Recipients = plan.recipients.v4Algo35
+            v4Algo35Recipients = plan.recipients.v4Algo35,
+            compositeSignSuite = plan.compositeSigner?.suite,
+            compositeSignSecret = plan.compositeSigner?.compositeSecret,
+            compositeSignerFingerprint = plan.compositeSigner?.fingerprint,
+            compositeSignInSeipdV1 = plan.keepCompositeInSeipdV1
         )
     }
 
@@ -176,10 +178,5 @@ class EncryptOps(private val repo: DesktopKeyRepository) {
             val (pq, classical) = targets.partition { receivesPostQuantum(it, choices) }
             return if (pq.isNotEmpty() && classical.isNotEmpty()) classical.map { it.label } else emptyList()
         }
-
-        /** A composite signature over a file or folder is built in memory (the engine has no
-         *  streaming composite signer). Past this size the operation stops with a clear error
-         *  instead of exhausting the heap. */
-        const val COMPOSITE_BUFFER_LIMIT: Long = 512L * 1024 * 1024
     }
 }

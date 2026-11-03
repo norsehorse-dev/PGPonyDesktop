@@ -352,6 +352,34 @@ class UserIdService private constructor() {
             newest?.hashedSubPackets?.isPrimaryUserID == true
         }
 
+    /**
+     * 4.7.0 (item 52): the User ID a key shows as its identity. The live
+     * (not revoked) User ID whose newest self-certification carries the
+     * primary flag, the newest such certification when several do (RFC 9580
+     * 5.2.3.29); else the first live User ID; else the first one. Import used
+     * the first User ID in ring order, which could be a revoked one, so the
+     * key list and the publish check showed a name the key had given up.
+     */
+    fun shownUserId(primary: PGPPublicKey): String? {
+        val uids = primary.userIDs.asSequence().toList()
+        val live = uids.filterNot { isRevoked(primary, it) }
+        var best: String? = null
+        var bestAt: java.util.Date? = null
+        for (uid in live) {
+            var newest: PGPSignature? = null
+            primary.getSignaturesForID(uid)?.forEach { sig ->
+                if (sig.keyID != primary.keyID) return@forEach
+                if (sig.signatureType in PGPSignature.DEFAULT_CERTIFICATION..PGPSignature.POSITIVE_CERTIFICATION) {
+                    if (newest == null || sig.creationTime.after(newest!!.creationTime)) newest = sig
+                }
+            }
+            val cert = newest ?: continue
+            if (cert.hashedSubPackets?.isPrimaryUserID != true) continue
+            if (bestAt == null || cert.creationTime.after(bestAt)) { best = uid; bestAt = cert.creationTime }
+        }
+        return best ?: live.firstOrNull() ?: uids.firstOrNull()
+    }
+
     fun currentPrimaryUserId(primary: PGPPublicKey): String? {
         val uids = primary.userIDs.asSequence().toList()
         for (uid in uids) {
@@ -441,6 +469,8 @@ class UserIdService private constructor() {
         primarySecret: org.bouncycastle.openpgp.PGPSecretKey,
         passphrase: String?
     ): PGPPrivateKey {
+        // 4.7.0 (item 22): an offline primary has no secret to sign with.
+        OfflineStub.requireSecret(primarySecret)
         // An Argon2 S2K outside the policy is refused before any KDF runs.
         enforceArgon2Policy(primarySecret.s2K)
         return try {

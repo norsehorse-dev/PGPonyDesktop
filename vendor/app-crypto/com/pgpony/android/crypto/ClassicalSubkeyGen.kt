@@ -124,6 +124,7 @@ object ClassicalSubkeyGen {
         creationTime: Date = Date()
     ): PGPSecretKeyRing {
         val primarySec = secretRing.secretKey
+        OfflineStub.requireSecret(primarySec) // 4.7.0 (item 22): the binding needs the primary
 
         val decryptor = com.pgpony.android.crypto.SecretKeyUnlock.decryptor(passphrase)
         val checksumCalc = BcPGPDigestCalculatorProvider().get(HashAlgorithmTags.SHA1)
@@ -158,8 +159,17 @@ object ClassicalSubkeyGen {
         }
         val unhashedGen = PGPSignatureSubpacketGenerator()
 
+        // 4.7.0 (item 39): a signing subkey needs the 0x19 back-signature
+        // made by the new subkey itself (RFC 9580 5.2.1); the three-argument
+        // addSubKey left it out, so gpg reported a signing subkey added here as
+        // not cross-certified and PGPony's own binding check did not count it
+        // as a signer. BC embeds the back-signature when given the subkey's
+        // signer builder.
+        val backSigner = if (type.capability == Capability.SIGN) {
+            BcPGPContentSignerBuilder(subKeyPair.publicKey.algorithm, HashAlgorithmTags.SHA256)
+        } else null
         try {
-            gen.addSubKey(subKeyPair, hashedGen.generate(), unhashedGen.generate())
+            gen.addSubKey(subKeyPair, hashedGen.generate(), unhashedGen.generate(), backSigner)
         } catch (e: PGPException) {
             throw SubkeyAddError("Could not bind the new subkey: ${e.message}", e)
         }

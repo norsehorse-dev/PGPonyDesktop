@@ -21,7 +21,12 @@ enum class TrustLevel(val displayName: String, val colorName: String) {
     UNKNOWN("Unknown", "gray"),
     UNVERIFIED("Unverified", "yellow"),
     VERIFIED("Verified", "green"),
-    ULTIMATE("Ultimate", "blue");
+    ULTIMATE("Ultimate", "violet"),
+    // 4.7.0 (item 10, #75): compromised or retired. Encrypting to it or
+    // signing with it asks first; decrypt and verify still work. Stored by
+    // name like the others, so existing rows need no migration. Kept last:
+    // KeyDeduplicationService ranks by ordinal, so a merge keeps Don't use.
+    DONT_USE("Don't use", "red");
 
     // ── A15 preflight fix ──────────────────────────────────────────────
     //
@@ -42,6 +47,7 @@ enum class TrustLevel(val displayName: String, val colorName: String) {
             UNVERIFIED -> app.getString(com.pgpony.android.R.string.trust_level_unverified_name)
             VERIFIED -> app.getString(com.pgpony.android.R.string.trust_level_verified_name)
             ULTIMATE -> app.getString(com.pgpony.android.R.string.trust_level_ultimate_name)
+            DONT_USE -> app.getString(com.pgpony.android.R.string.trust_level_dont_use_name)
         }
     }
 
@@ -52,6 +58,7 @@ enum class TrustLevel(val displayName: String, val colorName: String) {
             UNVERIFIED -> app.getString(com.pgpony.android.R.string.trust_level_unverified_description)
             VERIFIED -> app.getString(com.pgpony.android.R.string.trust_level_verified_description)
             ULTIMATE -> app.getString(com.pgpony.android.R.string.trust_level_ultimate_description)
+            DONT_USE -> app.getString(com.pgpony.android.R.string.trust_level_dont_use_description)
         }
     }
 }
@@ -252,6 +259,22 @@ data class PGPKeyEntity(
         get() = algorithm.isV6
 
     /**
+     * 4.7.0 (item 34, #43): one of the user's own keys, its secret here or on
+     * an OpenPGP card. A card-backed key is stored with isKeyPair false (no
+     * secret in this app), which made a key generated on a card look like a
+     * contact's public key. Use this for how a key is shown; keep [isKeyPair]
+     * for anything that needs the secret on the device.
+     */
+    val isOwnKey: Boolean
+        get() = isKeyPair || isCardBacked
+
+    /** 4.7.0 (item 34): the primary key itself sits in the card's signature slot. */
+    val primaryOnCard: Boolean
+        get() = isCardBacked && cardSigFingerprint?.let {
+            it.filterNot { c -> c.isWhitespace() }.equals(fingerprint.filterNot { c -> c.isWhitespace() }, ignoreCase = true)
+        } == true
+
+    /**
      * The 8-byte (16 hex char) long key ID, version-aware:
      *   • v6 (RFC 9580): the LEADING 16 hex chars of the fingerprint.
      *   • v4 (RFC 4880): the TRAILING 16 hex chars.
@@ -271,6 +294,24 @@ data class PGPKeyEntity(
 
     val formattedFingerprint: String
         get() = fingerprint.uppercase().chunked(4).joinToString(" ")
+
+    /**
+     * 4.7.0 (item 35): the label for picking one of your own keys, so keys
+     * that share a name (one per mail account, say) read apart: "Name
+     * <email>", the email or the name alone when the other is blank, the User
+     * ID when both are, then the short fingerprint for two keys on one
+     * address.
+     */
+    val pickerLabel: String
+        get() {
+            val who = when {
+                userName.isNotBlank() && userEmail.isNotBlank() -> "$userName <$userEmail>"
+                userEmail.isNotBlank() -> userEmail
+                userName.isNotBlank() -> userName
+                else -> userID
+            }
+            return "$who \u00b7 $shortFingerprint"
+        }
 
     val isExpired: Boolean
         get() = expiresAt?.let { it < System.currentTimeMillis() } ?: false

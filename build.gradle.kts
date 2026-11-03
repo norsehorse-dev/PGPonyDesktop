@@ -71,6 +71,7 @@ sourceSets {
             exclude("**/data/SubkeyMigrationService.kt")    // Android-only one-time migration
             exclude("**/data/KeyRefreshService.kt")         // D4 — depends on network layer
             exclude("**/data/PgpSubkeyEntity.kt")           // not in PGPDatabase.entities — vestige
+            exclude("**/data/AppReset.kt")                  // 4.7.x Clear All Data (Context, WorkManager); desktop: ClearAllData.kt
             exclude("**/data/RoomMigrations.kt")            // SupportSQLiteDatabase (Android-only API);
             exclude("**/data/migrations/**")                //   fresh desktop DBs create at v7, no chain
             exclude("**/data/repository/**")                // desktop twin: DesktopKeyRepository

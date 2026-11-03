@@ -72,6 +72,8 @@ object ClearAllData {
         }
         val dir = dataDirOverride ?: Config.dataDir
         Files.deleteIfExists(dir.resolve("watch-rules.json"))
+        // 3.1.0 (Android 4.7.0 item 46): the chosen signing subkeys (vendored SigningSubkeyPins).
+        Files.deleteIfExists(dir.resolve(com.pgpony.android.crypto.SigningSubkeyPins.FILE))
         OwnerOnlyPaths.wipe(dir.resolve("keyring.json"))
         OwnerOnlyPaths.wipe(dir.resolve("keyring.json.migrated"))
         deleteTree(dir.resolve("agent"))

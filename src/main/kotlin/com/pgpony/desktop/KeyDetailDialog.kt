@@ -185,7 +185,10 @@ fun KeyDetailDialog(state: DesktopState, key: PGPKeyEntity, onDismiss: () -> Uni
                 // ── Trust (D2c) ─────────────────────────────────────────
                 Spacer(Modifier.height(10.dp))
                 Label(tr("key_detail_trust_level_label"))
-                TrustLevel.entries.forEach { trust ->
+                // 3.1.0: Android 4.7.0 adds Don't use (item 10), which asks before encrypting to the
+                // key or signing with it. The desktop does not ask yet, so the choice is offered only
+                // to a key that already carries it (from a phone backup or pairing).
+                TrustLevel.entries.filter { it != TrustLevel.DONT_USE || key.trustLevel == it }.forEach { trust ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = key.trustLevel == trust,
@@ -734,6 +737,7 @@ internal fun trustName(trust: TrustLevel): String = when (trust) {
     TrustLevel.UNVERIFIED -> tr("trust_level_unverified_name")
     TrustLevel.VERIFIED -> tr("trust_level_verified_name")
     TrustLevel.ULTIMATE -> tr("trust_level_ultimate_name")
+    TrustLevel.DONT_USE -> tr("trust_level_dont_use_name")
 }
 
 internal fun reasonName(reason: RevocationReason): String = when (reason) {

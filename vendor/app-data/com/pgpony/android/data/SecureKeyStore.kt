@@ -77,6 +77,8 @@ class SecureKeyStore(context: Context) {
         private const val KEY_PREFIX_PUBLIC = "pgpony_key_"
         private const val KEY_SUFFIX_PUBLIC = "_public"
         private const val KEY_SUFFIX_PRIVATE = "_private"
+        // 4.7.0 (item 31): local-only certifications this user made on the key.
+        private const val KEY_SUFFIX_LOCAL_CERTS = "_localcerts"
 
         private const val STORE_DIR = "secure_keystore_v2"
         private const val HW_ALIAS = "pgpony_keystore_v2_hw"
@@ -96,6 +98,10 @@ class SecureKeyStore(context: Context) {
 
         // Legacy store (read-only, for migration).
         private const val LEGACY_PREFS_FILE = "pgpony_secure_keys"
+        // 4.7.0 (item 32): the androidx.security master key that wraps the legacy
+        // store's Tink keysets, deleted by cryptoErase. The value of
+        // MasterKey.DEFAULT_MASTER_KEY_ALIAS, which MasterKey.Builder above uses.
+        private const val LEGACY_MASTER_KEY_ALIAS = "_androidx_security_master_key_"
 
         @Volatile
         private var instance: SecureKeyStore? = null
@@ -436,6 +442,7 @@ class SecureKeyStore(context: Context) {
     // fingerprint <-> blob-name plumbing (names kept for migration parity).
     private fun pubName(fp: String) = "$KEY_PREFIX_PUBLIC$fp$KEY_SUFFIX_PUBLIC"
     private fun privName(fp: String) = "$KEY_PREFIX_PUBLIC$fp$KEY_SUFFIX_PRIVATE"
+    private fun localCertName(fp: String) = "$KEY_PREFIX_PUBLIC$fp$KEY_SUFFIX_LOCAL_CERTS"
 
     private fun readWithMigration(fp: String, name: String): ByteArray? {
         readBlob(fp, name)?.let { return it }
@@ -479,11 +486,34 @@ class SecureKeyStore(context: Context) {
         return readWithMigration(fp, privName(fp))
     }
 
+    /**
+     * 4.7.0 (item 31): the local-only certifications (Exportable Certification
+     * false, gpg's --lsign-key) this user made on [fingerprint]'s key. Kept
+     * apart from the certificate on purpose: nothing that exports, shares,
+     * uploads or pairs a key reads this blob, so a local certification can
+     * never leave the device. Sealed under the key's own DEK like its
+     * certificate; empty [data] removes it.
+     */
+    fun storeLocalCertifications(fingerprint: String, data: ByteArray) {
+        val fp = fingerprint.lowercase()
+        if (data.isEmpty()) {
+            synchronized(lock) { blobFile(localCertName(fp)).delete() }
+            return
+        }
+        writeBlob(fp, localCertName(fp), data)
+    }
+
+    fun loadLocalCertifications(fingerprint: String): ByteArray? {
+        val fp = fingerprint.lowercase()
+        return readBlob(fp, localCertName(fp))
+    }
+
     fun deleteKeys(fingerprint: String) {
         synchronized(lock) {
             val fp = fingerprint.lowercase()
             blobFile(pubName(fp)).delete()
             blobFile(privName(fp)).delete()
+            blobFile(localCertName(fp)).delete()
             envelopeFile(fp).delete()
             legacyPrefs?.let { prefs ->
                 try {
@@ -491,6 +521,64 @@ class SecureKeyStore(context: Context) {
                 } catch (_: Exception) { }
             }
         }
+    }
+
+    /**
+     * 4.7.0 (item 33): Clear All Data. Removes every blob and DEK envelope in
+     * the store, whatever fingerprint it belongs to (live keys, Recently
+     * Deleted, and anything orphaned), drops the legacy store's entries, and
+     * deletes the hardware wrapping key so a file that survives an interrupted
+     * delete can no longer be opened. The next write creates a fresh hardware key.
+     */
+    fun wipeAll() {
+        crossProcess {
+            dir.listFiles()?.forEach { f ->
+                if (f.name != lockFile.name) f.delete()
+            }
+            legacyPrefs?.let { prefs ->
+                try { prefs.edit().clear().apply() } catch (_: Exception) { }
+            }
+            try {
+                val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+                if (ks.containsAlias(HW_ALIAS)) ks.deleteEntry(HW_ALIAS)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not delete hardware key on wipe: ${e.message}")
+            }
+            sawUnrecoverable = false
+            sawRecoverable = false
+        }
+    }
+
+    /**
+     * 4.7.0 (item 32): the duress wipe's first step, also run by Clear All Data
+     * ahead of [wipeAll]. Deletes the Android Keystore key every DEK is wrapped
+     * under ([HW_ALIAS]) and the legacy store's androidx master key, then every
+     * DEK envelope, which also carries the passphrase recovery wraps. After it,
+     * no sealed blob here can be opened, by the hardware path or by a key's
+     * passphrase, even if the rest of the wipe never runs. The blob files
+     * themselves are left for [wipeAll].
+     */
+    fun cryptoErase() {
+        // The Keystore deletes first and outside the cross-process lock, so a
+        // provider write holding that lock cannot delay them.
+        try {
+            val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+            if (ks.containsAlias(HW_ALIAS)) ks.deleteEntry(HW_ALIAS)
+            if (ks.containsAlias(LEGACY_MASTER_KEY_ALIAS)) ks.deleteEntry(LEGACY_MASTER_KEY_ALIAS)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not delete a hardware key on crypto-erase: ${e.message}")
+        }
+        crossProcess {
+            dir.listFiles()?.forEach { f ->
+                if (f.name.endsWith(".dek") || f.name.endsWith(".dek.tmp")) f.delete()
+            }
+        }
+        // The legacy file, raw: its Tink keysets and every value under them.
+        runCatching {
+            appContext.getSharedPreferences(LEGACY_PREFS_FILE, Context.MODE_PRIVATE).edit().clear().commit()
+        }
+        sawUnrecoverable = false
+        sawRecoverable = false
     }
 
     fun hasPublicKey(fingerprint: String): Boolean {

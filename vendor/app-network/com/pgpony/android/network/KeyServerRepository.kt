@@ -84,6 +84,8 @@ class KeyServerRepository {
 
     companion object {
         private const val BASE_URL = "https://keys.openpgp.org"
+        /** 4.7.0 (item 60): the server the fingerprint check asks, by name. */
+        const val CHECK_SERVER_NAME = "keys.openpgp.org"
         // Fix2: diagnostic logging tag — visible via `adb logcat | grep KeyServer`.
         // Used to surface WKD/Hagrid source decisions and upload+verify flow.
         private const val LOG_TAG = "KeyServer"

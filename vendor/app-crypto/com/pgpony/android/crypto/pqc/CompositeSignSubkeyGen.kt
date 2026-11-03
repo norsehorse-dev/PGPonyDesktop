@@ -89,6 +89,7 @@ object CompositeSignSubkeyGen {
         creationTime: Date = Date(),
         expirationSeconds: Long? = null
     ): PGPSecretKeyRing {
+        com.pgpony.android.crypto.OfflineStub.requireSecret(secretRing.secretKey) // 4.7.0 (item 22)
         val primaryPub = secretRing.publicKey
         if (primaryPub.version != 6) {
             throw ClassicalSubkeyGen.SubkeyAddError(

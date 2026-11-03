@@ -325,6 +325,7 @@
     <!-- RC3 §J (#16): Sign File / Verify stream the picked file from disk; these cover the two remaining failure shapes. -->
     <string name="sign_verify_error_file_unreadable">Couldn\'t read the picked file. Pick it again.</string>
     <string name="verify_file_error_sig_not_signature">That file is too large to be a detached signature. Pick the .asc or .sig file, not the signed content.</string>
+    <string name="verify_error_signature_damaged">The signature block is damaged, so it cannot be checked. Get a fresh copy of the signature file.</string>
     <string name="sign_file_save_button">Save to Files</string>
     <string name="encrypt_mode_password">Password</string>
 
@@ -699,6 +700,9 @@
     <!-- ── Preview card ─────────────────────────────────────────────── -->
     <string name="import_preview_type_key_pair">Key Pair (Public + Private)</string>
     <string name="import_preview_type_public_only">Public Key Only</string>
+    <string name="import_preview_type_key_pair_offline_primary">Key Pair (offline primary)</string>
+    <string name="import_preview_offline_primary_note">This file has the subkeys\' secrets but not the primary key\'s, as gpg --export-secret-subkeys writes it. The subkeys work as usual; editing the key needs the primary.</string>
+    <string name="import_preview_offline_primary_note_card">The primary key\'s secret is on a hardware key, not in this file. The subkeys work as usual; editing the key needs the hardware key.</string>
     <string name="import_preview_detail_user_label">User</string>
     <string name="import_preview_detail_user_empty">(none)</string>
     <string name="import_preview_detail_fingerprint_label">Fingerprint</string>
@@ -726,6 +730,9 @@
     <string name="import_duplicate_view_key">View Key</string>
     <string name="import_result_merged">This key was already in your keyring. It has been updated with the newer key material.</string>
     <string name="import_result_already_in_keyring">This key is already in your keyring.</string>
+    <!-- 4.7.0 (item 24, #78): re-importing your own key pair edited elsewhere. -->
+    <string name="import_result_own_key_updated">Your key pair was updated with the newer self-signatures in this copy (preferences, expiry or bindings).</string>
+    <string name="import_duplicate_own_key_note">This is your key pair. An import only adds self-signatures newer than the ones you have, and this copy has none.</string>
 
     <!-- ── Confirm/cancel buttons (preview card) ────────────────────── -->
     <string name="import_button_upgrade_key">Upgrade Key</string>
@@ -805,6 +812,45 @@
     <string name="kd_vm_refresh_failed_format">Keyserver refresh failed: %1$s</string>
     <string name="key_detail_userids_title">User IDs</string>
     <string name="key_detail_userids_primary">Primary</string>
+    <!-- 4.7.0 (item 27, #67): a User ID bound only by a SHA-1 self-signature. -->
+    <string name="key_detail_userid_weak_hash_badge">Weak hash</string>
+    <string name="key_detail_userid_weak_hash_note">Bound with SHA-1, which is no longer considered safe. The name is kept, but it does not make the key verified.</string>
+    <string name="key_detail_offline_primary_title">Offline primary key</string>
+    <string name="key_detail_offline_primary_body">The primary key\'s secret is not on this device. The subkeys stored here work as usual. Changing User IDs, subkeys or expiry, and revoking the key, need the primary: make those changes where it is kept, then import the key here again.</string>
+    <string name="key_detail_offline_primary_body_card">The primary key\'s secret is on a hardware key, not on this device. The subkeys stored here work as usual. Changing User IDs, subkeys or expiry, and revoking the key, need the hardware key: make those changes in GnuPG, then import the key here again.</string>
+    <string name="key_detail_action_certify">Certify…</string>
+    <string name="certify_sheet_title">Certify this key</string>
+    <string name="certify_sheet_subtitle">Certifying says you checked that this key belongs to the person named in each User ID you pick. Compare the full fingerprint with its owner first.</string>
+    <string name="certify_userids_label">User IDs to certify</string>
+    <string name="certify_certifier_label">Certify with</string>
+    <string name="certify_level_label">How carefully you checked</string>
+    <string name="certify_level_no_claim">No claim</string>
+    <string name="certify_level_persona">Not checked</string>
+    <string name="certify_level_casual">Casual check</string>
+    <string name="certify_level_positive">Careful check</string>
+    <string name="certify_expiry_label">Certification expires</string>
+    <string name="certify_local_only_label">Local only</string>
+    <string name="certify_local_only_hint">Kept on this device. Never included when the key is shared, exported, uploaded or paired.</string>
+    <string name="certify_fingerprint_confirm">I compared this fingerprint with the owner\'s copy</string>
+    <string name="certify_apply">Certify</string>
+    <string name="certify_failed">Could not certify this key</string>
+    <string name="certify_done_title">Key certified</string>
+    <string name="certify_done_body">Send the certified key back to its owner so others can see your certification. keys.openpgp.org drops certifications made by other people, so send it directly or through another key server.</string>
+    <string name="certify_done_body_local">Your local certification stays on this device.</string>
+    <string name="certify_done_mark_verified">Mark as Verified</string>
+    <string name="passphrase_hold_channel_name">Passphrase kept for mail apps</string>
+    <string name="passphrase_hold_title">PGPony is keeping a passphrase</string>
+    <string name="passphrase_hold_text">Mail apps can use it without asking again. Tap Clear to forget it now.</string>
+    <string name="passphrase_hold_clear">Clear</string>
+    <string name="key_detail_cert_by">Certified by %1$s</string>
+    <string name="key_detail_cert_unknown_issuer">key %1$s, not in your keyring</string>
+    <string name="key_detail_cert_local">local</string>
+    <string name="key_detail_cert_revoked">revoked</string>
+    <string name="key_detail_cert_expired">expired</string>
+    <string name="key_detail_cert_failed">does not verify</string>
+    <string name="key_detail_cert_revoke_title">Withdraw your certification?</string>
+    <string name="key_detail_cert_revoke_body_local">Your local certification of %1$s is removed from this device.</string>
+    <string name="key_detail_cert_revoke_body">A revocation of your certification of %1$s is added to the key. Share the key again so others see it.</string>
 
     <!-- ── 4.2.0 RC3 workstream I (#29): add/revoke/promote User IDs ── -->
     <string name="key_detail_userids_make_primary">Make Primary</string>
@@ -924,6 +970,12 @@
     <string name="recycle_bin_restore">Restore</string>
     <string name="recycle_bin_delete_now">Delete permanently</string>
     <string name="recycle_bin_deleted_on">Deleted %1$s</string>
+    <!-- 4.6.4 (#58): time left before a deleted key is destroyed -->
+    <plurals name="recycle_bin_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+    <string name="recycle_bin_less_than_a_day_left">Less than a day left</string>
     <string name="recycle_bin_purge_confirm_body">Permanently destroy this key? This cannot be undone.</string>
     <string name="recycle_bin_empty_confirm_body">Permanently destroy every key in the bin? This cannot be undone.</string>
     <string name="recycle_bin_restored">Key restored</string>
@@ -1031,6 +1083,11 @@
     <string name="trust_level_unverified_description">Added but not vetted, proceed with caution</string>
     <string name="trust_level_verified_description">Fingerprint compared via a trusted channel</string>
     <string name="trust_level_ultimate_description">Your own key, or one you fully control</string>
+    <string name="trust_level_dont_use_name">Don\'t use</string>
+    <string name="trust_level_dont_use_description">Compromised or retired; PGPony asks before encrypting to it or signing with it</string>
+    <string name="dont_use_confirm_title">Use a key marked Don\'t use?</string>
+    <string name="dont_use_confirm_body">Marked Don\'t use: %1$s. Continue anyway?</string>
+    <string name="dont_use_confirm_continue">Use anyway</string>
 
     <!-- ── TrustLevelSheet ──────────────────────────────────────────── -->
     <string name="trust_sheet_title">Trust Level</string>
@@ -1247,6 +1304,7 @@
     <string name="contacts_trust_unverified_cd">Unverified</string>
     <string name="contacts_trust_verified_cd">Verified</string>
     <string name="contacts_trust_ultimate_cd">Ultimate trust</string>
+    <string name="contacts_trust_dont_use_cd">Don\'t use</string>
 
     <!-- ── Row icons ────────────────────────────────────────────────── -->
     <string name="contacts_linked_cd">Linked</string>
@@ -1337,6 +1395,7 @@
          ════════════════════════════════════════════════════════════════ -->
     <string name="verify_banner_verified_title">Verified</string>
     <string name="verify_banner_verified_unconfirmed_title">Signed, key not verified</string>
+    <string name="verify_banner_verified_dont_use_title">Signed, key marked Don\'t use</string>
     <string name="verify_banner_invalid_title">Signature invalid</string>
     <string name="verify_banner_unknown_signer_title">Unknown signer</string>
     <string name="verify_banner_unknown_signer_lookup_cd">Look up signer</string>
@@ -1484,7 +1543,6 @@
          another app. Mirrors the iOS PGPonyAction extension.
     -->
     <string name="share_target_activity_label">PGPony Quick Action</string>
-    <string name="share_encrypt_text_label">Encrypt in PGPony</string>
     <string name="share_target_dismiss_cd">Dismiss</string>
 
     <!-- Root / classification screen -->
@@ -1763,7 +1821,7 @@
     <!-- Key expiration editing -->
     <string name="key_detail_expiry_edit">Edit expiration</string>
     <string name="key_detail_expiry_sheet_title">Edit expiration</string>
-    <string name="key_detail_expiry_sheet_subtitle">Set a new expiration for %1$s. This re-signs the key and its subkeys; the fingerprint stays the same.</string>
+    <string name="key_detail_expiry_sheet_subtitle">Set a new expiration for %1$s. This re-signs the primary key. Subkeys keep their own dates, and the fingerprint stays the same.</string>
     <string name="key_detail_expiry_custom">Custom date</string>
     <string name="key_detail_expiry_pick_date">Pick a date</string>
     <string name="key_detail_expiry_passphrase_label">Key passphrase (if set)</string>
@@ -1840,6 +1898,8 @@
     <string name="settings_card_pin_cache_countdown_format">PIN remembered. Clears in %1$s</string>
     <string name="settings_card_pin_cache_none_held">No PIN is currently remembered.</string>
     <string name="settings_card_pin_cache_clear">Clear now</string>
+    <string name="settings_passphrase_cache_cleared_toast">Remembered passphrases cleared</string>
+    <string name="settings_card_pin_cache_cleared_toast">Card PIN cleared</string>
     <!-- 4.0.0 Phase 9 (G9) — "Until I clear it" PIN cache mode -->
     <string name="settings_card_pin_cache_until_cleared">Until I clear it</string>
     <string name="settings_session_until_locked">Until the phone locks</string>
@@ -1849,7 +1909,7 @@
     <string name="settings_passphrase_cache_title">Remember key passphrases</string>
     <string name="settings_passphrase_cache_subtitle">Keep passphrases typed for connected apps in memory for a chosen duration. Never stored on disk; cleared by a wrong passphrase or closing the app.</string>
     <string name="settings_passphrase_cache_countdown_format">Passphrase remembered. Clears in %1$s</string>
-    <string name="settings_passphrase_cache_none_held">No passphrase is currently remembered.</string>
+    <string name="settings_passphrase_cache_none_held">None remembered by PGPony itself. Passphrases typed for mail and other connected apps are kept apart, and Clear now forgets those too.</string>
     <string name="settings_passphrase_cache_held_until_cleared">Passphrase remembered until you clear it.</string>
     <!-- 4.0.0 Phase 9b: settings parity (clear inputs, pubkey comment, licenses) -->
     <string name="settings_clear_inputs_title">Clear inputs after encrypting</string>
@@ -1879,6 +1939,7 @@
     <string name="settings_share_format_subtitle">How the Share button packages an encrypted or signed result.</string>
     <!-- 3.1.0 Phase 8 Fix1 — file import read error -->
     <string name="keyring_error_file_read">Couldn\'t read that file. Try saving it to local storage (Files app) and importing again.</string>
+    <string name="keyring_error_file_too_large">That file is too large to be a key. Pick the .asc, .gpg or .pgp key file.</string>
     <!-- 3.1.0 Phase 8 Fix2 — file import diagnostic -->
     <string name="keyring_error_parse_diag">Couldn\'t read a key from the file. Got %1$d bytes starting with \"%2$s\"</string>
     <!-- 3.1.0 Phase 8 Fix3 — richer file import diagnostic -->
@@ -1909,7 +1970,21 @@
     <string name="provider_keypicker_empty">No usable keys in your keyring yet. Create or import a key pair in PGPony first.</string>
     <!-- 4.0.0 Succession Phase P2a-2 — provider passphrase prompt -->
     <string name="provider_passphrase_title">Unlock signing key</string>
-    <string name="provider_passphrase_body_format">Enter the passphrase for %1$s to sign this message. PGPony remembers it for 5 minutes on this device only.</string>
+    <string name="provider_passphrase_title_decrypt">Unlock decryption key</string>
+    <string name="provider_passphrase_title_ssh">Unlock SSH key</string>
+    <string name="provider_passphrase_action_sign">Enter the passphrase for %1$s to sign this message.</string>
+    <string name="provider_passphrase_action_decrypt">Enter the passphrase for %1$s to decrypt this message.</string>
+    <string name="provider_passphrase_action_ssh">Enter the passphrase for %1$s to sign in with SSH.</string>
+    <plurals name="provider_passphrase_keep_minutes">
+        <item quantity="one">PGPony remembers it for %1$d minute, on this device only.</item>
+        <item quantity="other">PGPony remembers it for %1$d minutes, on this device only.</item>
+    </plurals>
+    <plurals name="provider_passphrase_keep_hours">
+        <item quantity="one">PGPony remembers it for %1$d hour, on this device only.</item>
+        <item quantity="other">PGPony remembers it for %1$d hours, on this device only.</item>
+    </plurals>
+    <string name="provider_passphrase_keep_until_cleared">PGPony remembers it on this device only, until you clear it in Settings.</string>
+    <string name="provider_passphrase_keep_until_locked">PGPony remembers it on this device only, until the phone locks.</string>
     <string name="provider_passphrase_wrong">Wrong passphrase. Try again.</string>
     <string name="provider_passphrase_hint">Passphrase</string>
     <string name="provider_passphrase_change_key">Sign with a different key</string>
@@ -1922,7 +1997,7 @@
     <string name="provider_cardop_pin_hint">Card PIN</string>
     <string name="provider_cardop_pin_needed">Enter the card PIN first, then tap the card again.</string>
     <string name="provider_cardop_waiting">Waiting for the card…</string>
-    <string name="provider_cardop_wrong_pin">Wrong PIN. %1$d tries remaining. Check the PIN and tap the card again.</string>
+    <string name="provider_cardop_wrong_pin">Wrong PIN. Tries remaining: %1$d. Check the PIN and tap the card again.</string>
     <string name="provider_cardop_tag_lost">The card moved away. Hold it still against the phone and try again.</string>
     <string name="provider_cardop_nfc_unavailable">NFC is unavailable or turned off. Enable NFC and try again.</string>
     <string name="provider_cardop_generic_error">The card operation failed. Hold the card still and try again.</string>
@@ -2127,10 +2202,11 @@
     <string name="share_target_action_import_encrypt_subtitle">Check its fingerprint, then tap Encrypt to this key</string>
     <string name="share_target_action_verify">Verify signature</string>
     <string name="share_target_action_verify_subtitle">See who signed it. This message is signed, not encrypted</string>
+    <!-- 4.7.0 (item 3, #58): replaces "Encrypt the other text". -->
+    <string name="share_target_action_encrypt_all">Encrypt all of it</string>
+    <string name="share_target_action_encrypt_all_subtitle">Open the whole shared text, PGP block included, on the Encrypt screen to trim and encrypt</string>
     <string name="share_target_action_sign">Sign, or encrypt and sign</string>
     <string name="share_target_action_sign_subtitle">Open this text on PGPony\'s Encrypt screen</string>
-    <string name="share_target_action_encrypt_other">Encrypt the other text</string>
-    <string name="share_target_action_encrypt_other_subtitle">Encrypt the text shared along with the PGP block</string>
     <string name="share_target_decrypt_result_unknown_signer">Signed by a key that is not in your keyring</string>
     <!-- 4.6.0 (item 16): SSH authentication -->
     <string name="ssh_cardop_body">PGPony will sign an SSH login with your hardware key\'s authentication slot. Enter the card PIN, then hold the key against the back of your phone.</string>
@@ -2520,6 +2596,17 @@
     <string name="err_secret_mpi_truncated">secret MPI truncated</string>
     <string name="err_security_key_was_disconnected_plug_back">The security key was disconnected. Plug it back in and try again.</string>
     <string name="err_select_openpgp_application_failed">SELECT OpenPGP application failed (%1$s)</string>
+    <!-- 4.7.0 (item 29, #43). -->
+    <!-- 4.7.0 (item 23): a composite signed message that streamed in the wrong shape. -->
+    <string name="err_malformed_signed_message">The signed message is malformed and was not opened.</string>
+    <string name="err_nfc_openpgp_unavailable">This key did not open its OpenPGP application over NFC. Some keys, the Nitrokey 3 among them, turn OpenPGP off over NFC. If your key has USB, plug it in and try again.</string>
+    <string name="err_offline_primary_sign">The primary key\'s secret is not on this device (offline primary). Sign with a signing subkey.</string>
+    <string name="err_signing_keys_expired">Every signing key in this key pair has expired or been revoked</string>
+    <string name="err_offline_primary_edit">The primary key\'s secret is not on this device (offline primary). Make this change where the primary key is kept, then import the key here again.</string>
+    <string name="err_provider_recipient_dont_use">Recipient key is marked Don\'t use in PGPony: %1$s. Change its trust level in PGPony to encrypt to it.</string>
+    <string name="err_provider_signer_dont_use">Signing key is marked Don\'t use in PGPony. Pick another signing key in your mail app, or change its trust level in PGPony.</string>
+    <string name="err_certify_certifier">This key cannot certify other keys</string>
+    <string name="err_certify_target">This key cannot be certified here</string>
     <string name="err_session_key_block_too_short">session key block too short</string>
     <string name="err_session_key_checksum_mismatch">session key checksum mismatch</string>
     <string name="err_short_form_apdu_data_limited_255">Short-form APDU data limited to 255 bytes (was %1$s). Use command chaining or set extended = true for larger payloads.</string>
@@ -2613,4 +2700,431 @@
     <string name="err_wrapped_session_key_length_out_range">wrapped session key length out of range</string>
     <string name="err_wrong_pin_no_tries_remaining_pin">Wrong PIN. No tries remaining; the PIN is now blocked</string>
     <string name="err_wrong_pin_remaining">Wrong PIN. Tries remaining: %1$s</string>
+    <!-- 4.6.3: pair with another device (docs/PAIRING_PROTOCOL.md) -->
+    <string name="pair_menu">Pair with another device</string>
+    <string name="pair_settings_subtitle">Move keys or a full backup to PGPony Desktop or another phone on the same network.</string>
+    <string name="pair_title">Pair with another device</string>
+    <string name="pair_back_cd">Back</string>
+    <string name="pair_intro">Move keys or a full backup between this phone and PGPony Desktop or another phone on the same network. One device waits, the other connects, and you compare a code on both screens. Nothing is kept after you leave this screen.</string>
+    <string name="pair_offline">Pairing uses your local network, and Offline mode is on. Turn Offline mode off in Settings to pair.</string>
+    <string name="pair_host">Wait for the other device</string>
+    <string name="pair_join">Connect to the other device</string>
+    <string name="pair_host_waiting">On the other device, choose Connect and scan this code, or type the address below.</string>
+    <string name="pair_invite_cd">Pairing QR code</string>
+    <string name="pair_host_closes">This window stays open until %1$s.</string>
+    <string name="pair_copy_invite">Copy invite</string>
+    <string name="pair_no_address">This phone has no Wi-Fi or Ethernet address another device can reach. Join the same network as the other device and try again.</string>
+    <string name="pair_join_intro">On the other device, choose Wait. Then scan the QR code it shows, or type its address.</string>
+    <string name="pair_scan">Scan QR code</string>
+    <string name="pair_join_label">Address shown on the other device</string>
+    <string name="pair_bad_address">Type the address and port exactly as shown, for example 192.168.1.20:49152.</string>
+    <string name="pair_bad_invite">This invite cannot be read. Scan it again, or type the address instead.</string>
+    <string name="pair_connect">Connect</string>
+    <string name="pair_working">Working…</string>
+    <string name="pair_peer_address">Other device\'s address: %1$s</string>
+    <string name="pair_host_connected">A device at %1$s connected. Setting up the pairing…</string>
+    <string name="pair_compare_body">Does the other device show the same code? If the codes are different, someone may be between the two devices. Choose Different and start again.</string>
+    <string name="pair_codes_match">Same code</string>
+    <string name="pair_codes_differ">Different</string>
+    <string name="pair_waiting_other">Waiting for the other device…</string>
+    <string name="pair_compare_host_body">Type the code the other device shows. If it shows no code or an error, choose Cancel: another device may have connected instead.</string>
+    <string name="pair_typed_code_label">Code shown on the other device</string>
+    <string name="pair_typed_code_confirm">Pair</string>
+    <string name="pair_typed_code_wrong">That code does not match. Check the other screen and type it again.</string>
+    <string name="pair_compare_host_own">The other device checks its code against this one:</string>
+    <string name="pair_cancel">Cancel</string>
+    <string name="pair_paired_with">Paired with %1$s</string>
+    <string name="pair_paired_unnamed">Paired with the other device</string>
+    <string name="pair_send_heading">Send to the other device</string>
+    <string name="pair_group_keypairs">Key pairs</string>
+    <string name="pair_group_public">Public keys</string>
+    <string name="pair_group_backup">Everything</string>
+    <string name="pair_item_backup">Full backup</string>
+    <string name="pair_transfer_pass_note">Some key pairs you picked have no passphrase. They travel protected by this transfer passphrase, and the other device needs it to use them.</string>
+    <string name="pair_transfer_pass">Transfer passphrase</string>
+    <string name="pair_transfer_pass_repeat">Repeat transfer passphrase</string>
+    <string name="pair_send">Send</string>
+    <string name="pair_biometric_title">Send private keys</string>
+    <string name="pair_biometric_subtitle">Confirm it is you before key pairs or a backup leave this phone.</string>
+    <string name="pair_waiting_answer">Waiting for the other device to accept…</string>
+    <string name="pair_sending">Sending %1$s…</string>
+    <string name="pair_receiving">Receiving %1$s: %2$d%%</string>
+    <string name="pair_backup_code_tell">Tell the other device\'s user this recovery code. It is needed to open the backup there.</string>
+    <string name="pair_copy">Copy</string>
+    <string name="pair_incoming_heading">%1$s wants to send:</string>
+    <string name="pair_incoming_heading_unnamed">The other device wants to send:</string>
+    <string name="pair_kind_keypair">%1$s (key pair)</string>
+    <string name="pair_kind_public">%1$s (public key)</string>
+    <string name="pair_incoming_fingerprint">Fingerprint %1$s</string>
+    <string name="pair_backup_code_label">Recovery code shown on the other device</string>
+    <string name="pair_accept">Accept selected</string>
+    <string name="pair_decline">Decline</string>
+    <string name="pair_received_public">Add this public key from the other device?</string>
+    <string name="pair_received_keypair">Add this key pair from the other device?</string>
+    <string name="pair_received_in_keyring">This key is already in your keyring. Adding it merges anything new.</string>
+    <string name="pair_received_backup">Restore the backup from the other device? Its keys are added to your keyring. Trust levels and settings are not taken from it.</string>
+    <string name="pair_received_add">Add</string>
+    <string name="pair_received_restore">Restore</string>
+    <string name="pair_received_skip">Skip</string>
+    <string name="pair_skipped_reason">skipped by the other user</string>
+    <string name="pair_import_added">added to your keyring</string>
+    <string name="pair_import_updated">updated in your keyring</string>
+    <string name="pair_import_already">already in your keyring</string>
+    <string name="pair_ended">The session has ended. Its keys are wiped.</string>
+    <string name="pair_again">Start again</string>
+    <string name="pair_fail_refused">The other device said the codes are different. Nothing was paired.</string>
+    <string name="pair_fail_you_refused">You said the codes are different, so nothing was paired. If you did not expect that, check that no one else is on your network and start again.</string>
+    <string name="pair_fail_you_cancelled">You cancelled the pairing, so nothing was paired.</string>
+    <string name="pair_fail_typed_wrong">The code you typed did not match, so nothing was paired. If you typed it correctly, someone may be between the two devices. Start again.</string>
+    <string name="pair_fail_handshake">The pairing could not be verified. Nothing was paired; start again.</string>
+    <string name="pair_fail_timeout">The other device stopped answering.</string>
+    <string name="pair_fail_version">The other device runs a PGPony that pairs differently. Update both and start again.</string>
+    <string name="pair_fail_protocol">The other side is not a PGPony pairing window, or it sent something unexpected.</string>
+    <string name="pair_fail_closed">The connection was lost.</string>
+    <string name="pair_fail_window_taken">The other device refused or cut the connection. Another device may have taken its pairing window. On the other device, cancel and open a new window.</string>
+    <string name="pair_err_window_expired">The pairing window closed before another device connected.</string>
+    <string name="pair_err_export">Could not export %1$s.</string>
+    <string name="pair_err_needs_passphrase">%1$s has no passphrase. Enter a transfer passphrase to send it.</string>
+    <string name="pair_err_too_large">%1$s is too large to send.</string>
+    <string name="pair_err_import">Could not import %1$s.</string>
+    <string name="pair_err_backup_code">Enter the recovery code shown on the other device.</string>
+    <string name="pair_err_no_fingerprint">%1$s was offered without a fingerprint.</string>
+    <string name="pair_err_not_one_key">%1$s does not hold exactly one key.</string>
+    <string name="pair_err_wrong_key">%1$s is not the key that was offered.</string>
+    <string name="pair_err_secret_in_public">%1$s was offered as a public key but holds a secret key.</string>
+    <string name="pair_err_no_secret">%1$s was offered as a key pair but holds no secret key.</string>
+    <string name="pair_err_unprotected">%1$s holds a secret key without a passphrase.</string>
+    <string name="pair_err_not_backup">%1$s is not a PGPony backup file.</string>
+    <string name="pair_rows_sent">Sent</string>
+    <string name="pair_rows_received">Received</string>
+    <string name="pair_row_waiting">Waiting for the other device to add it…</string>
+    <string name="pair_row_added_on">Added on %1$s</string>
+    <string name="pair_row_added_on_unnamed">Added on the other device</string>
+    <string name="pair_row_skipped_on">Skipped on %1$s</string>
+    <string name="pair_row_skipped_on_unnamed">Skipped on the other device</string>
+    <string name="pair_row_declined">Not accepted by the other device</string>
+    <string name="pair_row_failed">Not imported: %1$s</string>
+    <string name="pair_row_failed_plain">Not imported</string>
+    <string name="pair_row_no_answer">No answer before the session ended</string>
+    <string name="pair_row_skipped_here">Skipped</string>
+    <string name="pair_done">Done</string>
+    <string name="pair_finished_title">Pairing finished</string>
+    <string name="pair_finished_by_peer">The other device ended the session.</string>
+    <string name="pair_tally_sent">Sent</string>
+    <string name="pair_tally_received">Received</string>
+    <string name="pair_tally_skipped">Skipped</string>
+    <string name="pair_tally_failed">Failed</string>
+    <string name="pair_tally_unanswered">No answer</string>
+    <string name="pair_view_key">View key</string>
+    <string name="pair_view_keyring">View keyring</string>
+    <string name="pair_close">Close</string>
+    <plurals name="pair_restore_summary">
+        <item quantity="one">%1$d key added or updated</item>
+        <item quantity="other">%1$d keys added or updated</item>
+    </plurals>
+    <!-- 4.7.0 (items 15 and 38): several files at once. Bundle mode makes one package or handles each file on its own; several encrypted files decrypt one by one. -->
+    <string name="batch_output_title">Several files</string>
+    <string name="batch_output_package">One package</string>
+    <string name="batch_output_package_subtitle">All files and the message, encrypted together into one file</string>
+    <string name="batch_output_each">Each file on its own</string>
+    <string name="batch_output_each_subtitle">One output per file, saved to a folder or shared together</string>
+    <string name="batch_op_encrypt">Encrypt</string>
+    <string name="batch_op_encrypt_sign">Encrypt and sign</string>
+    <string name="batch_op_sign_only">Sign only</string>
+    <string name="batch_op_sign_only_subtitle">A detached .sig for each file. The files themselves stay as they are.</string>
+    <string name="batch_card_signing_unavailable">Signing each file with a hardware key would need a tap for every file. Choose a software key in Sign as, or use one package.</string>
+    <string name="batch_error_no_files">Add at least one file.</string>
+    <string name="batch_error_pick_signer">Choose a key in Sign as to sign the files.</string>
+    <string name="batch_error_no_matching_key">None of the keys stored in PGPony can decrypt this file. If it is encrypted to a hardware key, decrypt it on its own.</string>
+    <string name="batch_item_failed_unknown">This file could not be processed.</string>
+    <string name="batch_item_cancelled">Cancelled</string>
+    <string name="batch_item_skipped_passphrase">Skipped: no passphrase was entered</string>
+    <string name="batch_save_failed_item">Could not write this file to the folder.</string>
+    <string name="batch_save_folder_unusable">PGPony cannot write to that folder. Choose another one.</string>
+    <string name="batch_saved_summary_format">Saved %1$d of %2$d files to the folder.</string>
+    <string name="batch_title_encrypting">Encrypting files</string>
+    <string name="batch_title_signing">Signing files</string>
+    <string name="batch_title_decrypting">Decrypting files</string>
+    <string name="batch_title_done_format">%1$d of %2$d files done</string>
+    <string name="batch_progress_file_format">File %1$d of %2$d</string>
+    <string name="batch_passphrase_prompt">Enter the passphrase. It is used for every file in this batch.</string>
+    <string name="batch_passphrase_label">Passphrase</string>
+    <string name="batch_passphrase_continue">Continue</string>
+    <string name="batch_passphrase_skip">Skip the rest</string>
+    <string name="batch_item_output_format">Output: %1$s</string>
+    <string name="batch_item_saved_format">Saved as %1$s</string>
+    <string name="batch_save_to_folder">Save to a folder</string>
+    <string name="batch_share_all">Share all</string>
+    <string name="batch_share_chooser">Share files</string>
+    <string name="batch_share_failed">Could not share the files.</string>
+    <string name="batch_status_pending">Waiting</string>
+    <string name="batch_status_done">Done</string>
+    <string name="batch_status_failed">Failed</string>
+    <string name="share_files_choice_title">Some of these files are encrypted</string>
+    <string name="share_files_choice_message">%1$d of the %2$d files are encrypted messages. Decrypt those, or encrypt all of the files as one package?</string>
+    <string name="share_files_choice_decrypt_format">Decrypt %1$d</string>
+    <string name="share_files_choice_encrypt">Encrypt all</string>
+
+    <!-- 4.7.0 (item 37): saving a large file, with progress, kept going when the screen closes, and no unfinished file left behind. -->
+    <string name="save_progress_saving">Saving…</string>
+    <string name="save_progress_bytes_format">Saving %1$s of %2$s</string>
+    <string name="save_cancelled">Save cancelled. The unfinished file was removed.</string>
+    <string name="save_failed_generic">Couldn\'t save the file. Try again, or choose another place.</string>
+    <string name="save_failed_no_space">Not enough free space to save the file.</string>
+    <string name="save_toast_saved_format">Saved %1$s</string>
+    <string name="save_toast_failed_format">Couldn\'t save %1$s</string>
+    <string name="save_batch_item_cancelled">Not saved: the save was cancelled.</string>
+
+    <!-- 4.7.0 (item 40): subkeys added on a re-import of your own key pair, subkeys an import leaves out, and each subkey's status on Key Details. -->
+    <plurals name="import_result_subkeys_added">
+        <item quantity="one">Added %1$d subkey.</item>
+        <item quantity="other">Added %1$d subkeys.</item>
+    </plurals>
+    <string name="import_preview_left_out_title">Subkeys left out or not usable</string>
+    <string name="import_preview_left_out_row_format">%1$s %2$s: %3$s</string>
+    <string name="subkey_issue_weak_hash">Bound with SHA-1 after the Feb 2023 cutoff</string>
+    <string name="subkey_issue_no_binding">No valid binding signature</string>
+    <string name="subkey_issue_no_back_signature">Signing subkey without a valid back-signature</string>
+    <string name="subkey_issue_revoked">Revoked</string>
+    <string name="subkey_issue_expired">Expired</string>
+    <string name="key_detail_subkey_secret_on_device">Secret on this device</string>
+    <string name="key_detail_subkey_secret_offline">Secret offline (gpg stub)</string>
+    <string name="key_detail_subkey_secret_on_card">Secret on a card</string>
+    <string name="key_detail_subkey_secret_not_present">No secret on this device</string>
+
+    <!-- 4.7.0 (item 41): recipient review when a mail app asks to encrypt to an address PGPony has no usable key for. -->
+    <string name="provider_review_title">Review recipients</string>
+    <string name="provider_review_intro">PGPony has no usable key for some recipients of this message. Choose the keys to encrypt it to, or cancel to go back to your draft.</string>
+    <string name="provider_review_missing_format">%1$s: no key in PGPony</string>
+    <string name="provider_review_dont_use_format">%1$s: marked Don\'t use</string>
+    <string name="provider_review_dont_use_hint">Keys marked Don\'t use are not offered. Change the trust level in PGPony to encrypt to one.</string>
+    <string name="provider_review_no_keys">No keys in PGPony to choose from. Import the recipient\'s public key in PGPony first.</string>
+    <string name="provider_review_confirm">Encrypt to selected</string>
+    <string name="err_provider_review_key_unusable">A key chosen for this message cannot be used: %1$s. Send the message again and choose the recipients in PGPony.</string>
+    <!-- 4.7.0 (item 42): look up a GitHub user's OpenPGP keys on the Import screen. -->
+    <string name="import_method_github">GitHub</string>
+    <string name="import_github_label">GitHub user</string>
+    <string name="import_github_placeholder">username</string>
+    <string name="import_github_fetch_button">Fetch keys</string>
+    <string name="import_github_help">PGPony fetches the OpenPGP keys this user added to their GitHub account (github.com/username.gpg) through your proxy setting. Nothing is added until you check each fingerprint and tap Import Key.</string>
+    <string name="import_github_error_invalid">That is not a GitHub username. A username has 1 to 39 letters, digits or single hyphens, and does not start or end with a hyphen.</string>
+    <string name="import_github_error_no_keys_format">%1$s has no OpenPGP keys on GitHub.</string>
+    <string name="import_github_error_not_found_format">There is no GitHub user named %1$s.</string>
+    <string name="import_github_error_unreadable_format">GitHub answered for %1$s, but with no public key PGPony can read.</string>
+    <!-- 4.7.0 (item 32): PGPony PIN app lock, duress PIN and the wrong-PIN wipe -->
+    <string name="applock_pin_field_label">PIN</string>
+    <string name="applock_pin_confirm_label">Confirm PIN</string>
+    <string name="applock_new_pin_label">New PIN</string>
+    <string name="applock_wrong_pin">Wrong PIN.</string>
+    <string name="applock_wait_format">Too many wrong PINs. Try again in %1$d s.</string>
+    <string name="applock_unavailable">PGPony cannot read its PIN settings, so it cannot check a PIN and stays locked.</string>
+    <string name="applock_check_failed">The PIN could not be checked. Try again.</string>
+    <string name="applock_reset_button">Erase PGPony and start over</string>
+    <string name="applock_reset_confirm_title">Erase everything in PGPony?</string>
+    <string name="applock_reset_confirm_message">This deletes every key in PGPony, including Recently Deleted, and all settings and app approvals, the same as Clear All Data. Keys on a hardware security key and backups saved outside PGPony are not touched. This cannot be undone.</string>
+    <string name="applock_reset_confirm_button">Erase</string>
+    <string name="applock_fingerprint_reset_notice">Fingerprint unlock was turned off because the fingerprints on this phone changed. Use your PIN. You can turn it on again in Settings.</string>
+    <string name="applock_use_fingerprint">Use fingerprint</string>
+    <string name="applock_method_title">Lock method</string>
+    <string name="applock_method_device">Device unlock</string>
+    <string name="applock_method_pin">PGPony PIN</string>
+    <string name="applock_method_dialog_message">Device unlock uses your phone\'s fingerprint or screen lock. A PGPony PIN is a separate PIN of 6 to 16 digits that only PGPony asks for, and it can have a duress PIN.</string>
+    <string name="applock_set_pin_title">Set a PGPony PIN</string>
+    <string name="applock_set_pin_message">Choose 6 to 16 digits. PGPony keeps only a hash of it and cannot recover a forgotten PIN.</string>
+    <string name="applock_change_pin_title">Change PIN</string>
+    <string name="applock_change_pin_subtitle">Choose a new PGPony PIN</string>
+    <string name="applock_verify_title">Enter your PGPony PIN</string>
+    <string name="applock_verify_message">Enter your current PIN to change the app lock.</string>
+    <string name="applock_pin_format_error">Use 6 to 16 digits.</string>
+    <string name="applock_pin_mismatch">The PINs do not match.</string>
+    <string name="applock_pin_same_as_duress">The PIN must be different from the duress PIN.</string>
+    <string name="applock_duress_same_as_pin">The duress PIN must be different from your PIN.</string>
+    <string name="applock_duress_title">Duress PIN</string>
+    <string name="applock_duress_off">Off</string>
+    <string name="applock_duress_on">On</string>
+    <string name="applock_duress_info_title">Set up a duress PIN</string>
+    <string name="applock_duress_info_message">A duress PIN is a second PIN for when someone forces you to open PGPony. Entered on the lock screen, it erases every key in PGPony, including Recently Deleted, with all settings, app approvals and held passphrases, and PGPony opens as if it had just been installed. Nothing on screen says that this happened.\n\nThis cannot be undone. Never test the duress PIN by entering it: that erases everything.</string>
+    <string name="applock_not_touched">Not touched: keys on a hardware security key (it keeps its own PIN), backups you saved outside PGPony, and a copy of the phone\'s storage taken before the PIN was entered.</string>
+    <string name="applock_duress_set_title">Choose a duress PIN</string>
+    <string name="applock_duress_remove_title">Remove the duress PIN?</string>
+    <string name="applock_duress_remove_message">Your PGPony PIN stays. The old duress PIN then counts as a wrong PIN.</string>
+    <string name="applock_duress_remove_button">Remove</string>
+    <string name="applock_fingerprint_title">Unlock with fingerprint</string>
+    <string name="applock_fingerprint_subtitle">Allow a fingerprint instead of the PIN</string>
+    <string name="applock_fingerprint_advice_title">Turn off fingerprint unlock?</string>
+    <string name="applock_fingerprint_advice_message">A finger can be forced, and the duress PIN only helps when the PIN is what you are asked for. With fingerprint unlock off, PGPony asks only for the PIN. Recommended.</string>
+    <string name="applock_fingerprint_advice_turn_off">Turn off</string>
+    <string name="applock_fingerprint_advice_keep">Keep it on</string>
+    <string name="applock_wipe_after_title">Erase after wrong PINs</string>
+    <string name="applock_wipe_after_off">Off</string>
+    <string name="applock_wipe_after_format">After %1$d wrong PINs</string>
+    <string name="applock_wipe_after_message">After this many wrong PINs in a row, PGPony erases everything the way the duress PIN does. A correct PIN resets the count. This cannot be undone.</string>
+
+    <!-- 4.7.0 RC4 (item 45, #85): a User ID with many certifications shows the first three, then this row. -->
+    <plurals name="key_detail_cert_show_all">
+        <item quantity="one">Show all %1$d certification</item>
+        <item quantity="other">Show all %1$d certifications</item>
+    </plurals>
+    <string name="key_detail_cert_show_fewer">Show fewer</string>
+
+    <!-- 4.7.0 RC4 (item 48, #79): which key made a signature and which key decrypted, by 16-digit key ID. -->
+    <string name="verify_signing_key_format">Signing key %1$s</string>
+    <string name="verify_signing_subkey_format">Signing subkey %1$s of key %2$s</string>
+    <string name="encdec_decrypted_with_subkey_format">Decrypted with %1$s, subkey %2$s</string>
+
+    <!-- 4.7.0 RC4 (item 46, #82): Key Details, choose which signing subkey a key pair signs with. -->
+    <string name="key_detail_signing_subkey_title">Use for signing</string>
+    <string name="key_detail_signing_subkey_help">PGPony signs with the newest valid signing subkey unless you choose one here. A chosen subkey is used while it is valid; once it expires or is revoked, signing goes back to the automatic choice.</string>
+    <string name="key_detail_signing_subkey_automatic">Automatic</string>
+    <string name="key_detail_signing_subkey_automatic_format">Automatic (now %1$s)</string>
+    <string name="key_detail_signing_subkey_option_format">Subkey %1$s, %2$s, created %3$s</string>
+    <string name="key_detail_signing_subkey_primary_format">Primary key %1$s, %2$s</string>
+    <string name="key_detail_signing_subkey_pin_unusable">The subkey you chose can no longer sign, so PGPony signs with the automatic choice.</string>
+
+    <!-- 4.7.0 RC4 (item 47, #78): re-importing your own key pair with secret keys under a new passphrase. -->
+    <string name="import_replace_secrets_title">Use the secret keys from this file</string>
+    <plurals name="import_replace_secrets_body">
+        <item quantity="one">PGPony already holds this key pair. %1$d secret key in this file is protected differently than the stored one, for example after a passphrase change in gpg. Replace it with the one in this file, and use this file\'s passphrase from now on.</item>
+        <item quantity="other">PGPony already holds this key pair. %1$d secret keys in this file are protected differently than the stored ones, for example after a passphrase change in gpg. Replace them with the ones in this file, and use this file\'s passphrase from now on.</item>
+    </plurals>
+    <string name="import_replace_secrets_passphrase_label">Passphrase of this file</string>
+    <string name="import_replace_secrets_passphrase_help">Every secret key in the file has to unlock with it. Leave it empty if the file has no passphrase.</string>
+    <plurals name="import_result_secrets_replaced">
+        <item quantity="one">Replaced %1$d secret key.</item>
+        <item quantity="other">Replaced %1$d secret keys.</item>
+    </plurals>
+    <string name="err_replace_secrets_passphrase">The passphrase did not unlock every secret key in this file for %1$s. The stored secret keys were kept and nothing was imported.</string>
+    <string name="err_replace_secrets_unproven">The secret keys in this file could not be confirmed as the ones for %1$s. The stored secret keys were kept and nothing was imported.</string>
+
+    <!-- 4.7.0 RC4 (item 28, #36, #43): the card prompt a mail app opens also takes a key plugged in over USB. -->
+    <string name="provider_cardop_usb_hint">A key plugged in over USB works too: enter the PIN, then tap Use USB key.</string>
+    <string name="provider_cardop_use_usb">Use USB key</string>
+    <string name="provider_cardop_wrong_pin_usb">Wrong PIN. Tries remaining: %1$d. Check the PIN and try again.</string>
+    <string name="provider_cardop_usb_lost">The key was unplugged. Plug it back in and try again.</string>
+
+    <!-- 4.7.0 RC4 (item 34, #43): keys whose secret is on a security key (generated on it, or paired with it). -->
+    <string name="key_detail_type_key_pair_on_card">Key pair on a security key</string>
+    <string name="key_detail_primary_on_card">Primary key: on the security key\'s signature slot, where it signs and certifies.</string>
+
+    <!-- 4.7.0 RC4 (item 31, card): certifying with a key whose primary is on a security key. -->
+    <string name="certify_no_certifier_card">None of your key pairs can certify here. Certifying needs a key pair whose primary key can certify, with its secret on this device or on a security key. ML-DSA keys can\'t certify yet.</string>
+    <string name="certify_card_hint">After Certify, hold the security key against the phone or plug it in.</string>
+    <string name="err_certify_card_mismatch">This security key does not hold the key chosen to certify with</string>
+
+    <!-- 4.7.0 RC4 (item 13, #71): Move to Security Key, like gpg's keytocard. -->
+    <string name="move_to_card_menu">Move to security key</string>
+    <string name="move_to_card_title">Move to a security key</string>
+    <string name="move_to_card_intro">Writes keys of this key pair into the slots of an OpenPGP security key, the way gpg\'s keytocard does. Afterwards the security key signs and decrypts with them.</string>
+    <string name="move_to_card_nothing">None of this key pair\'s keys can go to a security key.</string>
+    <string name="move_to_card_slot_signature">Signature slot</string>
+    <string name="move_to_card_slot_decryption">Decryption slot</string>
+    <string name="move_to_card_slot_authentication">Authentication slot</string>
+    <string name="move_to_card_slot_leave">Leave this slot as it is</string>
+    <string name="move_to_card_key_primary_format">Primary key, %1$s, %2$s</string>
+    <string name="move_to_card_key_subkey_format">Subkey, %1$s, %2$s</string>
+    <string name="move_to_card_one_slot_each">Choose a different key for each slot.</string>
+    <string name="move_to_card_refused_title">Keys that cannot go to a security key:</string>
+    <string name="move_to_card_refused_v6">v6 keys do not fit on OpenPGP security keys</string>
+    <string name="move_to_card_refused_rsa_size">only RSA 2048, 3072 and 4096 can be moved</string>
+    <string name="move_to_card_refused_curve">this curve is not supported yet</string>
+    <string name="move_to_card_refused_algorithm">this key type cannot be moved</string>
+    <string name="move_to_card_backup_body">A key on a security key cannot be copied off it again. Save a backup of this key pair first, so the keys are not lost with the security key.</string>
+    <string name="move_to_card_backup_action">Save a backup first</string>
+    <string name="move_to_card_backup_confirm">I have a backup of this key pair</string>
+    <string name="move_to_card_remove_label">Remove the moved keys from this phone</string>
+    <string name="move_to_card_remove_hint">Like gpg, the phone keeps only a note that the keys are on the security key, and uses the security key from then on. Turn this off to keep a copy here as well.</string>
+    <string name="move_to_card_remove_unavailable">Only when every subkey of this key pair goes to the security key. The primary key may stay on this phone, as in gpg. Otherwise a copy stays here, which keeps using it.</string>
+    <string name="move_to_card_wrong_admin_pin">Wrong admin PIN. Tries remaining: %1$d. When none are left, the security key has to be reset.</string>
+    <string name="move_to_card_wrong_user_pin">Wrong user PIN. Tries remaining: %1$d. Nothing was written to the security key.</string>
+    <string name="move_to_card_replace_confirm">Replace keys already in the chosen slots</string>
+    <string name="move_to_card_slots_occupied">The security key already holds a different key in a slot you chose, so nothing was written. To overwrite it, check \"Replace keys already in the chosen slots\" and move again.</string>
+    <string name="move_to_card_admin_pin">Admin PIN of the security key</string>
+    <string name="move_to_card_user_pin">User PIN of the security key</string>
+    <string name="move_to_card_pins_hint">The admin PIN writes the keys. The user PIN is used once per slot afterwards, to check that the security key signs and decrypts with them before anything on the phone changes.</string>
+    <string name="move_to_card_action">Move</string>
+    <string name="move_to_card_waiting">Hold the security key against the phone or plug it in, and keep it there until this finishes.</string>
+    <string name="move_to_card_failed">Could not move the keys to the security key</string>
+    <string name="move_to_card_done_title">Keys moved</string>
+    <plurals name="move_to_card_done_removed">
+        <item quantity="one">%1$d key is on the security key now and was removed from this phone.</item>
+        <item quantity="other">%1$d keys are on the security key now and were removed from this phone.</item>
+    </plurals>
+    <plurals name="move_to_card_done_kept">
+        <item quantity="one">%1$d key is on the security key now. A copy stays on this phone, which keeps using it.</item>
+        <item quantity="other">%1$d keys are on the security key now. A copy stays on this phone, which keeps using it.</item>
+    </plurals>
+    <string name="err_card_expiry_primary_missing">The primary key is not in this security key\'s signature slot, so the expiry cannot be changed with it</string>
+    <string name="err_move_to_card_unsupported">This security key cannot hold one of the chosen keys. Choose another key or slot.</string>
+    <string name="err_move_to_card_check_failed">The security key did not pass the check after the keys were written, so nothing on this phone was changed. Do not rely on the keys on the security key.</string>
+    <!-- 4.7.0 RC5: expiry per key (item 53, #86) -->
+    <string name="key_detail_expiry_sheet_title_subkey">Edit subkey expiration</string>
+    <string name="key_detail_expiry_sheet_subtitle_subkey">Set a new expiration for subkey %1$s. The primary key and the other subkeys keep their dates.</string>
+    <string name="key_detail_expiry_also_subkeys">Also set it on subkeys that are still valid</string>
+    <string name="key_detail_expiry_also_subkeys_hint">Expired and revoked subkeys keep their dates.</string>
+    <string name="key_detail_subkey_change_expiry">Edit expiration…</string>
+    <!-- 4.7.0 RC5: a scanned security key without its public key (item 54, #71) -->
+    <string name="key_detail_card_no_cert_title">Public key needed</string>
+    <string name="key_detail_card_no_cert_body">This security key holds the private keys, but not the rest of the key: its User IDs and signatures. Import the matching public key (an export, a backup or a key server copy) and PGPony pairs it with this security key, so you can sign and decrypt with it.</string>
+    <!-- 4.7.0 RC5: Key Details additions (items 57 to 59) -->
+    <string name="key_detail_key_id_copied">Key ID copied</string>
+    <string name="key_detail_copy_key_id_cd">Copy key ID</string>
+    <string name="key_detail_detail_usage">Usage</string>
+    <string name="key_detail_cert_trust_full">trusted introducer, depth %1$d</string>
+    <string name="key_detail_cert_trust_partial">partly trusted introducer, depth %1$d</string>
+    <string name="key_detail_cert_trust_amount">trust %1$d, depth %2$d</string>
+    <string name="key_detail_cert_trust_limited">limited to some User IDs</string>
+    <string name="key_detail_last_checked_found_format">%1$s, found on %2$s</string>
+    <string name="key_detail_last_checked_not_found_format">%1$s, not on %2$s</string>
+    <string name="kd_vm_check_found_on">This key is published on %1$s.</string>
+    <string name="kd_vm_check_not_found_on">This key is not on %1$s.</string>
+    <string name="key_detail_cert_look_up">Look up</string>
+    <string name="certifier_lookup_title">Look up certifier</string>
+    <string name="certifier_lookup_found_body">Importing this key adds it to your keyring, so its certification can be checked. Its identity is not vetted by this: only the math is. Check who it belongs to before relying on it.</string>
+    <string name="certifier_lookup_not_found_title">Certifier not found</string>
+    <string name="certifier_lookup_not_found_body_format">No key was found for %1$s on any of your configured key servers. The certifier may not have published their key.</string>
+    <string name="certifier_lookup_imported_body">Its certifications on this key are checked again.</string>
+    <string name="key_detail_refresh_sigs_menu">Refresh self-signatures</string>
+    <string name="key_detail_refresh_sigs_title">Refresh self-signatures</string>
+    <string name="key_detail_refresh_sigs_body">Signs this key\'s User IDs and subkey bindings again with SHA-256. Every expiry date stays as it is. A subkey left out because its binding used SHA-1 comes back if its secret key is on this phone. Publish the key afterwards so others get the new signatures.</string>
+    <string name="key_detail_refresh_sigs_action">Refresh</string>
+    <string name="key_detail_refresh_sigs_done">Self-signatures refreshed.</string>
+    <plurals name="key_detail_refresh_sigs_done_restored">
+        <item quantity="one">Self-signatures refreshed. %1$d subkey is back.</item>
+        <item quantity="other">Self-signatures refreshed. %1$d subkeys are back.</item>
+    </plurals>
+    <!-- 4.7.0 RC5: select keys on the Keyring and export them (item 63, #93) -->
+    <string name="keyring_select_menu">Select keys</string>
+    <string name="keyring_select_done_cd">Stop selecting</string>
+    <string name="keyring_select_all_cd">Select all</string>
+    <string name="keyring_export_selected_cd">Export public keys</string>
+    <string name="keyring_export_selected_copied">Public keys copied</string>
+    <plurals name="keyring_selected_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <plurals name="keyring_export_selected_label">
+        <item quantity="one">%1$d public key</item>
+        <item quantity="other">%1$d public keys</item>
+    </plurals>
+    <!-- 4.7.0 RC6: confirm before an expiry change or a refresh (item 66, #86) -->
+    <string name="key_detail_expiry_confirm_title">Change the expiration?</string>
+    <string name="key_detail_expiry_confirm_current">Current expiration: %1$s</string>
+    <string name="key_detail_expiry_confirm_new">New expiration: %1$s</string>
+    <string name="key_detail_expiry_confirm_subkey_only">Only the binding of subkey %1$s is signed again.</string>
+    <plurals name="key_detail_expiry_confirm_user_ids">
+        <item quantity="one">%1$d User ID is signed again.</item>
+        <item quantity="other">%1$d User IDs are signed again.</item>
+    </plurals>
+    <plurals name="key_detail_expiry_confirm_subkeys">
+        <item quantity="one">%1$d subkey that is still valid is signed again too.</item>
+        <item quantity="other">%1$d subkeys that are still valid are signed again too.</item>
+    </plurals>
+    <string name="key_detail_expiry_confirm_publish">Others see the new date only after you publish the key.</string>
+    <string name="key_detail_expiry_confirm_action">Change expiration</string>
+    <string name="key_detail_resign_biometric_title">Confirm the new signatures</string>
+    <string name="key_detail_resign_biometric_subtitle">Authenticate to sign this key again</string>
+    <!-- 4.7.0 RC6: the recipient review shows keys the request already includes (item 67, #25) -->
+    <string name="provider_review_included_format">Already included for %1$s</string>
+    <!-- 4.7.0 RC7: Show Key with a key too large for a QR code (item 69, #100) -->
+    <string name="exchange_qr_too_large_inline">This key is too large for a QR code. Use Copy Key or Upload below instead.</string>
 </resources>

@@ -155,6 +155,7 @@ object CompositeKeyGen {
 
         // 4. Binding signature from the primary.
         val primarySec = secretRing.secretKey
+        com.pgpony.android.crypto.OfflineStub.requireSecret(primarySec) // 4.7.0 (item 22)
         val primaryPriv = primarySec.extractPrivateKey(
             com.pgpony.android.crypto.SecretKeyUnlock.decryptor(passphrase)
         )
@@ -271,6 +272,7 @@ object CompositeKeyGen {
 
         // 2. v4 subkey binding signature from the primary (Ed25519, hand-rolled).
         val primarySec = baseSecretRing.secretKey
+        com.pgpony.android.crypto.OfflineStub.requireSecret(primarySec) // 4.7.0 (item 22)
         val primaryPub = baseSecretRing.publicKey
         val primaryPriv = primarySec.extractPrivateKey(
             com.pgpony.android.crypto.SecretKeyUnlock.decryptor(passphrase)

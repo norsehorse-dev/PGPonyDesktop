@@ -539,6 +539,9 @@ pgpony.app</string>
     <!-- ── Preview card ─────────────────────────────────────────────── -->
     <string name="import_preview_type_key_pair">Par de claves (pública + privada)</string>
     <string name="import_preview_type_public_only">Solo clave pública</string>
+    <string name="import_preview_type_key_pair_offline_primary">Par de claves (clave principal sin conexión)</string>
+    <string name="import_preview_offline_primary_note">Este archivo tiene los secretos de las subclaves pero no el de la clave principal, tal como lo genera gpg --export-secret-subkeys. Las subclaves funcionan con normalidad; para editar la clave se necesita la clave principal.</string>
+    <string name="import_preview_offline_primary_note_card">El secreto de la clave principal está en una llave de hardware, no en este archivo. Las subclaves funcionan con normalidad; para editar la clave se necesita la llave de hardware.</string>
     <string name="import_preview_detail_user_label">Usuario</string>
     <string name="import_preview_detail_user_empty">(ninguno)</string>
     <string name="import_preview_detail_fingerprint_label">Huella digital</string>
@@ -696,6 +699,11 @@ pgpony.app</string>
     <string name="trust_level_unverified_description">Añadida pero no verificada — proceda con precaución</string>
     <string name="trust_level_verified_description">Huella digital comparada por un canal de confianza</string>
     <string name="trust_level_ultimate_description">Tu propia clave, o una que controlas por completo</string>
+    <string name="trust_level_dont_use_name">No usar</string>
+    <string name="trust_level_dont_use_description">Comprometida o retirada; PGPony pregunta antes de cifrar para ella o firmar con ella</string>
+    <string name="dont_use_confirm_title">¿Usar una clave marcada como \"No usar\"?</string>
+    <string name="dont_use_confirm_body">Marcada como \"No usar\": %1$s. ¿Continuar de todos modos?</string>
+    <string name="dont_use_confirm_continue">Usar de todos modos</string>
 
     <!-- ── TrustLevelSheet ──────────────────────────────────────────── -->
     <string name="trust_sheet_title">Nivel de confianza</string>
@@ -950,6 +958,7 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="contacts_trust_unverified_cd">No verificada</string>
     <string name="contacts_trust_verified_cd">Verificada</string>
     <string name="contacts_trust_ultimate_cd">Confianza máxima</string>
+    <string name="contacts_trust_dont_use_cd">No usar</string>
 
     <!-- ── Row icons ────────────────────────────────────────────────── -->
     <string name="contacts_linked_cd">Vinculado</string>
@@ -1278,6 +1287,8 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="settings_card_pin_cache_countdown_format">PIN recordado — se borra en %1$s</string>
     <string name="settings_card_pin_cache_none_held">No hay ningún PIN recordado actualmente.</string>
     <string name="settings_card_pin_cache_clear">Borrar ahora</string>
+    <string name="settings_passphrase_cache_cleared_toast">Frases de contraseña recordadas borradas</string>
+    <string name="settings_card_pin_cache_cleared_toast">PIN de la tarjeta borrado</string>
     <!-- 3.1.0 Phase 8 (E4/E5) — email send + sign by default -->
     <string name="result_send_email_button">Enviar por correo</string>
     <string name="settings_sign_by_default_title">Firmar por defecto</string>
@@ -1295,6 +1306,7 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="settings_share_format_subtitle">Cómo empaqueta el botón Compartir un resultado cifrado o firmado.</string>
     <!-- 3.1.0 Phase 8 Fix1 — file import read error -->
     <string name="keyring_error_file_read">No se pudo leer el archivo. Guárdalo en el almacenamiento local (app Archivos) e intenta importarlo de nuevo.</string>
+    <string name="keyring_error_file_too_large">Ese archivo es demasiado grande para ser una clave. Elige el archivo de clave .asc, .gpg o .pgp.</string>
     <!-- 3.1.0 Phase 8 Fix2 — file import diagnostic -->
     <string name="keyring_error_parse_diag">Couldn\'t read a key from the file — got %1$d bytes starting with \"%2$s\"</string>
     <!-- 3.1.0 Phase 8 Fix3 — richer file import diagnostic -->
@@ -1458,6 +1470,8 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="import_paste_from_clipboard">Pegar del portapapeles</string>
     <string name="import_preview_source_keyserver">Encontrada en tus servidores de claves</string>
     <string name="import_result_already_in_keyring">Esta clave ya está en tu llavero.</string>
+    <string name="import_result_own_key_updated">Tu par de claves se actualizó con las autofirmas más recientes de esta copia (preferencias, caducidad o vinculaciones).</string>
+    <string name="import_duplicate_own_key_note">Este es tu par de claves. Una importación solo añade autofirmas más recientes que las que ya tienes, y esta copia no tiene ninguna.</string>
     <string name="import_result_merged">Esta clave ya estaba en tu llavero. Se ha actualizado con el material de clave más reciente.</string>
     <string name="kd_vm_refresh_failed_format">Falló la actualización desde el servidor de claves: %1$s</string>
     <string name="kd_vm_refresh_merged">Actualizada. Esta clave se ha actualizado con el material más reciente del servidor de claves.</string>
@@ -1476,9 +1490,47 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="key_detail_expiry_failed">No se pudo actualizar la caducidad. Inténtalo de nuevo.</string>
     <string name="key_detail_expiry_passphrase_label">Frase de contraseña de la clave (si tiene)</string>
     <string name="key_detail_expiry_pick_date">Elegir una fecha</string>
-    <string name="key_detail_expiry_sheet_subtitle">Establece una nueva caducidad para %1$s. Se vuelven a firmar la clave y sus subclaves; la huella digital no cambia.</string>
+    <string name="key_detail_expiry_sheet_subtitle">Establece una nueva caducidad para %1$s. Se vuelve a firmar la clave principal. Las subclaves conservan sus propias fechas y la huella digital no cambia.</string>
     <string name="key_detail_expiry_sheet_title">Editar caducidad</string>
     <string name="key_detail_userids_primary">Principal</string>
+    <string name="key_detail_userid_weak_hash_badge">Hash débil</string>
+    <string name="key_detail_userid_weak_hash_note">Vinculado con SHA-1, que ya no se considera seguro. El nombre se conserva, pero no hace que la clave quede verificada.</string>
+    <string name="key_detail_offline_primary_title">Clave principal sin conexión</string>
+    <string name="key_detail_offline_primary_body">El secreto de la clave principal no está en este dispositivo. Las subclaves almacenadas aquí funcionan con normalidad. Para cambiar los ID de usuario, las subclaves o la caducidad, y para revocar la clave, se necesita la clave principal: haz esos cambios donde se guarda y luego vuelve a importar la clave aquí.</string>
+    <string name="key_detail_offline_primary_body_card">El secreto de la clave principal está en una llave de hardware, no en este dispositivo. Las subclaves almacenadas aquí funcionan con normalidad. Para cambiar los ID de usuario, las subclaves o la caducidad, y para revocar la clave, se necesita la llave de hardware: haz esos cambios en GnuPG y luego vuelve a importar la clave aquí.</string>
+    <string name="key_detail_action_certify">Certificar…</string>
+    <string name="certify_sheet_title">Certificar esta clave</string>
+    <string name="certify_sheet_subtitle">Certificar indica que comprobaste que esta clave pertenece a la persona que figura en cada ID de usuario que elijas. Antes, compara la huella digital completa con la de su propietario.</string>
+    <string name="certify_userids_label">ID de usuario que certificar</string>
+    <string name="certify_certifier_label">Certificar con</string>
+    <string name="certify_level_label">Con qué cuidado lo comprobaste</string>
+    <string name="certify_level_no_claim">Sin indicar</string>
+    <string name="certify_level_persona">Sin comprobación</string>
+    <string name="certify_level_casual">Comprobación somera</string>
+    <string name="certify_level_positive">Comprobación cuidadosa</string>
+    <string name="certify_expiry_label">Caducidad de la certificación</string>
+    <string name="certify_local_only_label">Solo local</string>
+    <string name="certify_local_only_hint">Se queda en este dispositivo. Nunca se incluye cuando la clave se comparte, se exporta, se sube o se transfiere por emparejamiento.</string>
+    <string name="certify_fingerprint_confirm">He comparado esta huella digital con la copia del propietario</string>
+    <string name="certify_apply">Certificar</string>
+    <string name="certify_failed">No se pudo certificar esta clave</string>
+    <string name="certify_done_title">Clave certificada</string>
+    <string name="certify_done_body">Envía la clave certificada de vuelta a su propietario para que otros puedan ver tu certificación. keys.openpgp.org descarta las certificaciones hechas por otras personas, así que envíala directamente o a través de otro servidor de claves.</string>
+    <string name="certify_done_body_local">Tu certificación local se queda en este dispositivo.</string>
+    <string name="certify_done_mark_verified">Marcar como Verificada</string>
+    <string name="passphrase_hold_channel_name">Frase de contraseña recordada para apps de correo</string>
+    <string name="passphrase_hold_title">PGPony está recordando una frase de contraseña</string>
+    <string name="passphrase_hold_text">Las apps de correo pueden usarla sin volver a pedirla. Toca Borrar para olvidarla ahora.</string>
+    <string name="passphrase_hold_clear">Borrar</string>
+    <string name="key_detail_cert_by">Certificado por %1$s</string>
+    <string name="key_detail_cert_unknown_issuer">la clave %1$s, que no está en tu llavero</string>
+    <string name="key_detail_cert_local">local</string>
+    <string name="key_detail_cert_revoked">revocada</string>
+    <string name="key_detail_cert_expired">caducada</string>
+    <string name="key_detail_cert_failed">no válida</string>
+    <string name="key_detail_cert_revoke_title">¿Retirar tu certificación?</string>
+    <string name="key_detail_cert_revoke_body_local">Tu certificación local de %1$s se elimina de este dispositivo.</string>
+    <string name="key_detail_cert_revoke_body">Se añade a la clave una revocación de tu certificación de %1$s. Vuelve a compartir la clave para que otros la vean.</string>
     <string name="key_detail_userids_title">ID de usuario</string>
     <string name="key_refresh_notif_expired_body">La clave de %1$s ha caducado según un servidor de claves.</string>
     <string name="key_refresh_notif_expired_title">Una clave ha caducado</string>
@@ -1575,9 +1627,23 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="provider_keypicker_for_format">Para %1$s</string>
     <string name="provider_keypicker_none">Sin clave: no firmar</string>
     <string name="provider_keypicker_title">Elegir clave de firma</string>
-    <string name="provider_passphrase_body_format">Introduce la frase de contraseña de %1$s para firmar este mensaje. PGPony la recuerda durante 5 minutos, solo en este dispositivo.</string>
     <string name="provider_passphrase_hint">Frase de contraseña</string>
     <string name="provider_passphrase_title">Desbloquear clave de firma</string>
+    <string name="provider_passphrase_title_decrypt">Desbloquear clave de descifrado</string>
+    <string name="provider_passphrase_title_ssh">Desbloquear clave SSH</string>
+    <string name="provider_passphrase_action_sign">Introduce la frase de contraseña de %1$s para firmar este mensaje.</string>
+    <string name="provider_passphrase_action_decrypt">Introduce la frase de contraseña de %1$s para descifrar este mensaje.</string>
+    <string name="provider_passphrase_action_ssh">Introduce la frase de contraseña de %1$s para iniciar sesión por SSH.</string>
+    <plurals name="provider_passphrase_keep_minutes">
+        <item quantity="one">PGPony la recuerda durante %1$d minuto, solo en este dispositivo.</item>
+        <item quantity="other">PGPony la recuerda durante %1$d minutos, solo en este dispositivo.</item>
+    </plurals>
+    <plurals name="provider_passphrase_keep_hours">
+        <item quantity="one">PGPony la recuerda durante %1$d hora, solo en este dispositivo.</item>
+        <item quantity="other">PGPony la recuerda durante %1$d horas, solo en este dispositivo.</item>
+    </plurals>
+    <string name="provider_passphrase_keep_until_cleared">PGPony la recuerda solo en este dispositivo, hasta que la borres en Ajustes.</string>
+    <string name="provider_passphrase_keep_until_locked">PGPony la recuerda solo en este dispositivo, hasta que se bloquee el teléfono.</string>
     <string name="provider_passphrase_unlock">Desbloquear</string>
     <string name="provider_passphrase_wrong">Frase de contraseña incorrecta: inténtalo de nuevo.</string>
     <string name="publish_action">Publicar</string>
@@ -1726,6 +1792,12 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="recycle_bin_restore">Restaurar</string>
     <string name="recycle_bin_delete_now">Eliminar permanentemente</string>
     <string name="recycle_bin_deleted_on">Eliminada %1$s</string>
+    <!-- 4.6.4 (#58): time left before a deleted key is destroyed -->
+    <plurals name="recycle_bin_days_left">
+        <item quantity="one">Queda %1$d día</item>
+        <item quantity="other">Quedan %1$d días</item>
+    </plurals>
+    <string name="recycle_bin_less_than_a_day_left">Queda menos de un día</string>
     <string name="recycle_bin_purge_confirm_body">¿Destruir esta clave permanentemente? No se puede deshacer.</string>
     <string name="recycle_bin_empty_confirm_body">¿Destruir todas las claves de la papelera? No se puede deshacer.</string>
     <string name="recycle_bin_restored">Clave restaurada</string>
@@ -1833,12 +1905,13 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="settings_more_vaultpony_subtitle">Cajas fuertes cifradas compatibles con VeraCrypt, todo en tu dispositivo</string>
     <string name="settings_passphrase_cache_countdown_format">Frase de contraseña recordada: se borra en %1$s</string>
     <string name="settings_passphrase_cache_held_until_cleared">Frase de contraseña recordada hasta que la borres.</string>
-    <string name="settings_passphrase_cache_none_held">No hay ninguna frase de contraseña recordada actualmente.</string>
+    <string name="settings_passphrase_cache_none_held">PGPony no recuerda ninguna por sí misma. Las frases de contraseña escritas para apps de correo y otras apps conectadas se guardan aparte, y Borrar ahora también las olvida.</string>
     <string name="settings_passphrase_cache_subtitle">Mantén en memoria, durante el tiempo elegido, las frases de contraseña escritas para apps conectadas. Nunca se guardan en disco; se borran con una frase incorrecta o al cerrar la app.</string>
     <string name="settings_passphrase_cache_title">Recordar frases de contraseña</string>
     <string name="sign_file_save_button">Guardar en Archivos</string>
     <string name="sign_verify_error_file_unreadable">No se pudo leer el archivo seleccionado. Selecciónalo de nuevo.</string>
     <string name="verify_file_error_sig_not_signature">Ese archivo es demasiado grande para ser una firma separada. Elige el archivo .asc o .sig, no el contenido firmado.</string>
+    <string name="verify_error_signature_damaged">El bloque de firma está dañado, así que no se puede comprobar. Consigue una copia nueva del archivo de firma.</string>
 
     <!-- 4.2.0 RC4 workstream O8: strings added by O3/O5. -->
     <string name="key_detail_fallbacks_strict_title">Usar solo las claves de reserva activadas</string>
@@ -1947,7 +2020,6 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="key_detail_subkey_remove_biometric_subtitle">Autentícate para quitar esta subclave</string>
     <string name="kd_vm_status_subkey_removed">Subclave quitada</string>
     <string name="verify_banner_unknown_signer_subtitle_offline_format">%1$s</string>
-    <string name="share_encrypt_text_label">Cifrar en PGPony</string>
     <string name="bundle_result_section_email">Enviar como correo</string>
     <string name="bundle_result_section_file">Enviar como archivo</string>
     <string name="settings_argon2_title">Protección de frase de contraseña más fuerte (Argon2)</string>
@@ -2030,10 +2102,10 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="share_target_action_import_encrypt_subtitle">Comprueba su huella y toca Cifrar a esta clave</string>
     <string name="share_target_action_verify">Verificar firma</string>
     <string name="share_target_action_verify_subtitle">Mira quién la firmó. Este mensaje está firmado, no cifrado</string>
+    <string name="share_target_action_encrypt_all">Cifrar todo</string>
+    <string name="share_target_action_encrypt_all_subtitle">Abrir todo el texto compartido, bloque PGP incluido, en la pantalla Cifrar para recortarlo y cifrarlo</string>
     <string name="share_target_action_sign">Firmar, o cifrar y firmar</string>
     <string name="share_target_action_sign_subtitle">Abrir este texto en la pantalla Cifrar de PGPony</string>
-    <string name="share_target_action_encrypt_other">Cifrar el resto del texto</string>
-    <string name="share_target_action_encrypt_other_subtitle">Cifrar el texto compartido junto al bloque PGP</string>
     <string name="share_target_decrypt_result_unknown_signer">Firmado con una clave que no está en tu llavero</string>
     <!-- 4.6.0 (item 16): SSH authentication -->
     <string name="ssh_cardop_body">PGPony firmará un inicio de sesión SSH con la ranura de autenticación de tu llave de hardware. Introduce el PIN de la tarjeta y acerca la llave a la parte trasera del teléfono.</string>
@@ -2086,6 +2158,7 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
         <item quantity="other">Esto también contiene %1$d claves más. También se importarán:</item>
     </plurals>
     <string name="verify_banner_verified_unconfirmed_title">Firmado, clave no verificada</string>
+    <string name="verify_banner_verified_dont_use_title">Firmado, clave marcada como \"No usar\"</string>
     <string name="restore_settings_ask">Esta copia también contiene ajustes de proxy y de servidores de claves. ¿Aplicarlos? Una restauración nunca desactiva un proxy existente, y los niveles de confianza no se restauran.</string>
     <string name="restore_settings_apply">Aplicar ajustes</string>
     <string name="restore_settings_skip">Conservar los míos</string>
@@ -2437,6 +2510,15 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="err_secret_mpi_truncated">MPI secreto truncado</string>
     <string name="err_security_key_was_disconnected_plug_back">La llave de seguridad se desconectó. Vuelve a conectarla e inténtalo de nuevo.</string>
     <string name="err_select_openpgp_application_failed">Falló SELECT de la aplicación OpenPGP (%1$s)</string>
+    <string name="err_malformed_signed_message">El mensaje firmado está mal formado y no se abrió.</string>
+    <string name="err_nfc_openpgp_unavailable">Esta llave no abrió su aplicación OpenPGP por NFC. Algunas llaves, como la Nitrokey 3, desactivan OpenPGP por NFC. Si tu llave tiene USB, conéctala e inténtalo de nuevo.</string>
+    <string name="err_offline_primary_sign">El secreto de la clave principal no está en este dispositivo (clave principal sin conexión). Firma con una subclave de firma.</string>
+    <string name="err_signing_keys_expired">Todas las claves de firma de este par de claves han caducado o se han revocado</string>
+    <string name="err_offline_primary_edit">El secreto de la clave principal no está en este dispositivo (clave principal sin conexión). Haz este cambio donde se guarda la clave principal y luego vuelve a importar la clave aquí.</string>
+    <string name="err_provider_recipient_dont_use">La clave del destinatario está marcada como \"No usar\" en PGPony: %1$s. Cambia su nivel de confianza en PGPony para cifrar para ella.</string>
+    <string name="err_provider_signer_dont_use">La clave de firma está marcada como \"No usar\" en PGPony. Elige otra clave de firma en tu app de correo o cambia su nivel de confianza en PGPony.</string>
+    <string name="err_certify_certifier">Esta clave no puede certificar otras claves</string>
+    <string name="err_certify_target">Esta clave no se puede certificar aquí</string>
     <string name="err_session_key_block_too_short">bloque de clave de sesión demasiado corto</string>
     <string name="err_session_key_checksum_mismatch">la suma de comprobación de la clave de sesión no coincide</string>
     <string name="err_short_form_apdu_data_limited_255">Los datos de una APDU de formato corto están limitados a 255 bytes (había %1$s). Usa el encadenamiento de comandos o establece extended = true para cargas más grandes.</string>
@@ -2530,4 +2612,437 @@ Opcionalmente, bloquea la app con tu huella digital o cara para mayor tranquilid
     <string name="err_wrapped_session_key_length_out_range">longitud de la clave de sesión envuelta fuera de rango</string>
     <string name="err_wrong_pin_no_tries_remaining_pin">PIN incorrecto. No quedan intentos; el PIN está ahora bloqueado</string>
     <string name="err_wrong_pin_remaining">PIN incorrecto. Intentos restantes: %1$s</string>
+    <!-- 4.6.3: pair with another device (docs/PAIRING_PROTOCOL.md) -->
+    <string name="pair_menu">Vincular con otro dispositivo</string>
+    <string name="pair_settings_subtitle">Pasa claves o una copia de seguridad completa a PGPony Desktop o a otro teléfono en la misma red.</string>
+    <string name="pair_title">Vincular con otro dispositivo</string>
+    <string name="pair_back_cd">Atrás</string>
+    <string name="pair_intro">Pasa claves o una copia de seguridad completa entre este teléfono y PGPony Desktop u otro teléfono en la misma red. Un dispositivo espera, el otro se conecta y comparas un código en ambas pantallas. No se guarda nada al salir de esta pantalla.</string>
+    <string name="pair_offline">La vinculación usa tu red local y el modo sin conexión está activado. Desactiva el modo sin conexión en Ajustes para vincular.</string>
+    <string name="pair_host">Esperar al otro dispositivo</string>
+    <string name="pair_join">Conectar con el otro dispositivo</string>
+    <string name="pair_host_waiting">En el otro dispositivo, elige Conectar y escanea este código, o escribe la dirección de abajo.</string>
+    <string name="pair_invite_cd">Código QR de vinculación</string>
+    <string name="pair_host_closes">Esta ventana queda abierta hasta las %1$s.</string>
+    <string name="pair_copy_invite">Copiar invitación</string>
+    <string name="pair_no_address">Este teléfono no tiene una dirección Wi-Fi o Ethernet a la que otro dispositivo pueda llegar. Conéctate a la misma red que el otro dispositivo e inténtalo de nuevo.</string>
+    <string name="pair_join_intro">En el otro dispositivo, elige Esperar. Después escanea el código QR que muestra o escribe su dirección.</string>
+    <string name="pair_scan">Escanear código QR</string>
+    <string name="pair_join_label">Dirección que muestra el otro dispositivo</string>
+    <string name="pair_bad_address">Escribe la dirección y el puerto tal como aparecen, por ejemplo 192.168.1.20:49152.</string>
+    <string name="pair_bad_invite">No se puede leer esta invitación. Escanéala de nuevo o escribe la dirección.</string>
+    <string name="pair_connect">Conectar</string>
+    <string name="pair_working">Procesando…</string>
+    <string name="pair_peer_address">Dirección del otro dispositivo: %1$s</string>
+    <string name="pair_host_connected">Se conectó un dispositivo en %1$s. Preparando la vinculación…</string>
+    <string name="pair_compare_body">¿El otro dispositivo muestra el mismo código? Si los códigos son distintos, puede que alguien esté entre los dos dispositivos. Elige Distinto y empieza de nuevo.</string>
+    <string name="pair_codes_match">Mismo código</string>
+    <string name="pair_codes_differ">Distinto</string>
+    <string name="pair_waiting_other">Esperando al otro dispositivo…</string>
+    <string name="pair_compare_host_body">Escribe el código que muestra el otro dispositivo. Si no muestra ningún código o muestra un error, elige Cancelar: puede que se haya conectado otro dispositivo.</string>
+    <string name="pair_typed_code_label">Código que muestra el otro dispositivo</string>
+    <string name="pair_typed_code_confirm">Vincular</string>
+    <string name="pair_typed_code_wrong">Ese código no coincide. Revisa la otra pantalla y escríbelo de nuevo.</string>
+    <string name="pair_compare_host_own">El otro dispositivo compara su código con este:</string>
+    <string name="pair_cancel">Cancelar</string>
+    <string name="pair_paired_with">Vinculado con %1$s</string>
+    <string name="pair_paired_unnamed">Vinculado con el otro dispositivo</string>
+    <string name="pair_send_heading">Enviar al otro dispositivo</string>
+    <string name="pair_group_keypairs">Pares de claves</string>
+    <string name="pair_group_public">Claves públicas</string>
+    <string name="pair_group_backup">Todo</string>
+    <string name="pair_item_backup">Copia de seguridad completa</string>
+    <string name="pair_transfer_pass_note">Algunos pares de claves que elegiste no tienen frase de contraseña. Viajan protegidos con esta frase de transferencia, y el otro dispositivo la necesita para usarlos.</string>
+    <string name="pair_transfer_pass">Frase de contraseña de transferencia</string>
+    <string name="pair_transfer_pass_repeat">Repite la frase de contraseña de transferencia</string>
+    <string name="pair_send">Enviar</string>
+    <string name="pair_biometric_title">Enviar claves privadas</string>
+    <string name="pair_biometric_subtitle">Confirma que eres tú antes de que los pares de claves o una copia de seguridad salgan de este teléfono.</string>
+    <string name="pair_waiting_answer">Esperando a que el otro dispositivo acepte…</string>
+    <string name="pair_sending">Enviando %1$s…</string>
+    <string name="pair_receiving">Recibiendo %1$s: %2$d %%</string>
+    <string name="pair_backup_code_tell">Dile a la persona del otro dispositivo este código de recuperación. Lo necesita allí para abrir la copia de seguridad.</string>
+    <string name="pair_copy">Copiar</string>
+    <string name="pair_incoming_heading">%1$s quiere enviar:</string>
+    <string name="pair_incoming_heading_unnamed">El otro dispositivo quiere enviar:</string>
+    <string name="pair_kind_keypair">%1$s (par de claves)</string>
+    <string name="pair_kind_public">%1$s (clave pública)</string>
+    <string name="pair_incoming_fingerprint">Huella digital %1$s</string>
+    <string name="pair_backup_code_label">Código de recuperación que muestra el otro dispositivo</string>
+    <string name="pair_accept">Aceptar lo seleccionado</string>
+    <string name="pair_decline">Rechazar</string>
+    <string name="pair_received_public">¿Añadir esta clave pública del otro dispositivo?</string>
+    <string name="pair_received_keypair">¿Añadir este par de claves del otro dispositivo?</string>
+    <string name="pair_received_in_keyring">Esta clave ya está en tu llavero. Al añadirla se combina todo lo nuevo.</string>
+    <string name="pair_received_backup">¿Restaurar la copia de seguridad del otro dispositivo? Sus claves se añaden a tu llavero. No se toman de ella los niveles de confianza ni los ajustes.</string>
+    <string name="pair_received_add">Añadir</string>
+    <string name="pair_received_restore">Restaurar</string>
+    <string name="pair_received_skip">Omitir</string>
+    <string name="pair_skipped_reason">omitido por la otra persona</string>
+    <string name="pair_import_added">añadido a tu llavero</string>
+    <string name="pair_import_updated">actualizado en tu llavero</string>
+    <string name="pair_import_already">ya estaba en tu llavero</string>
+    <string name="pair_ended">La sesión ha terminado. Sus claves se han borrado.</string>
+    <string name="pair_again">Empezar de nuevo</string>
+    <string name="pair_fail_refused">El otro dispositivo indicó que los códigos son distintos. No se vinculó nada.</string>
+    <string name="pair_fail_you_refused">Indicaste que los códigos son distintos, así que no se vinculó nada. Si no lo esperabas, comprueba que nadie más esté en tu red y empieza de nuevo.</string>
+    <string name="pair_fail_you_cancelled">Cancelaste la vinculación, así que no se vinculó nada.</string>
+    <string name="pair_fail_typed_wrong">El código que escribiste no coincidía, así que no se vinculó nada. Si lo escribiste bien, puede que alguien esté entre los dos dispositivos. Empieza de nuevo.</string>
+    <string name="pair_fail_handshake">No se pudo verificar la vinculación. No se vinculó nada; empieza de nuevo.</string>
+    <string name="pair_fail_timeout">El otro dispositivo dejó de responder.</string>
+    <string name="pair_fail_version">El otro dispositivo usa un PGPony que vincula de otra forma. Actualiza ambos y empieza de nuevo.</string>
+    <string name="pair_fail_protocol">El otro lado no es una ventana de vinculación de PGPony o envió algo inesperado.</string>
+    <string name="pair_fail_closed">Se perdió la conexión.</string>
+    <string name="pair_fail_window_taken">El otro dispositivo rechazó o cortó la conexión. Puede que otro dispositivo haya ocupado su ventana de vinculación. En el otro dispositivo, cancela y abre una ventana nueva.</string>
+    <string name="pair_err_window_expired">La ventana de vinculación se cerró antes de que se conectara otro dispositivo.</string>
+    <string name="pair_err_export">No se pudo exportar %1$s.</string>
+    <string name="pair_err_needs_passphrase">%1$s no tiene frase de contraseña. Introduce una frase de transferencia para enviarlo.</string>
+    <string name="pair_err_too_large">%1$s es demasiado grande para enviarlo.</string>
+    <string name="pair_err_import">No se pudo importar %1$s.</string>
+    <string name="pair_err_backup_code">Introduce el código de recuperación que muestra el otro dispositivo.</string>
+    <string name="pair_err_no_fingerprint">%1$s se ofreció sin huella digital.</string>
+    <string name="pair_err_not_one_key">%1$s no contiene exactamente una clave.</string>
+    <string name="pair_err_wrong_key">%1$s no es la clave que se ofreció.</string>
+    <string name="pair_err_secret_in_public">%1$s se ofreció como clave pública pero contiene una clave secreta.</string>
+    <string name="pair_err_no_secret">%1$s se ofreció como par de claves pero no contiene ninguna clave secreta.</string>
+    <string name="pair_err_unprotected">%1$s contiene una clave secreta sin frase de contraseña.</string>
+    <string name="pair_err_not_backup">%1$s no es un archivo de copia de seguridad de PGPony.</string>
+    <string name="pair_rows_sent">Enviado</string>
+    <string name="pair_rows_received">Recibido</string>
+    <string name="pair_row_waiting">Esperando a que el otro dispositivo lo añada…</string>
+    <string name="pair_row_added_on">Añadido en %1$s</string>
+    <string name="pair_row_added_on_unnamed">Añadido en el otro dispositivo</string>
+    <string name="pair_row_skipped_on">Omitido en %1$s</string>
+    <string name="pair_row_skipped_on_unnamed">Omitido en el otro dispositivo</string>
+    <string name="pair_row_declined">No aceptado por el otro dispositivo</string>
+    <string name="pair_row_failed">No importado: %1$s</string>
+    <string name="pair_row_failed_plain">No importado</string>
+    <string name="pair_row_no_answer">Sin respuesta antes de que terminara la sesión</string>
+    <string name="pair_row_skipped_here">Omitido</string>
+    <string name="pair_done">Listo</string>
+    <string name="pair_finished_title">Vinculación terminada</string>
+    <string name="pair_finished_by_peer">El otro dispositivo terminó la sesión.</string>
+    <string name="pair_tally_sent">Enviados</string>
+    <string name="pair_tally_received">Recibidos</string>
+    <string name="pair_tally_skipped">Omitidos</string>
+    <string name="pair_tally_failed">Fallidos</string>
+    <string name="pair_tally_unanswered">Sin respuesta</string>
+    <string name="pair_view_key">Ver clave</string>
+    <string name="pair_view_keyring">Ver llavero</string>
+    <string name="pair_close">Cerrar</string>
+    <plurals name="pair_restore_summary">
+        <item quantity="one">%1$d clave añadida o actualizada</item>
+        <item quantity="other">%1$d claves añadidas o actualizadas</item>
+    </plurals>
+
+    <!-- 4.7.0 RC3 and earlier gaps, translated Oct 2026 -->
+    <string name="batch_output_title">Varios archivos</string>
+    <string name="batch_output_package">Un solo paquete</string>
+    <string name="batch_output_package_subtitle">Todos los archivos y el mensaje, cifrados juntos en un solo archivo</string>
+    <string name="batch_output_each">Cada archivo por separado</string>
+    <string name="batch_output_each_subtitle">Un resultado por archivo; se guardan en una carpeta o se comparten juntos</string>
+    <string name="batch_op_encrypt">Cifrar</string>
+    <string name="batch_op_encrypt_sign">Cifrar y firmar</string>
+    <string name="batch_op_sign_only">Solo firmar</string>
+    <string name="batch_op_sign_only_subtitle">Una firma .sig separada para cada archivo. Los archivos en sí no se modifican.</string>
+    <string name="batch_card_signing_unavailable">Firmar cada archivo con una llave de hardware exigiría acercarla una vez por archivo. Elige una clave de software en Firmar como, o usa un solo paquete.</string>
+    <string name="batch_error_no_files">Añade al menos un archivo.</string>
+    <string name="batch_error_pick_signer">Elige una clave en Firmar como para firmar los archivos.</string>
+    <string name="batch_error_no_matching_key">Ninguna de las claves guardadas en PGPony puede descifrar este archivo. Si está cifrado para una llave de hardware, descífralo por separado.</string>
+    <string name="batch_item_failed_unknown">No se pudo procesar este archivo.</string>
+    <string name="batch_item_cancelled">Cancelado</string>
+    <string name="batch_item_skipped_passphrase">Omitido: no se introdujo ninguna frase de contraseña</string>
+    <string name="batch_save_failed_item">No se pudo escribir este archivo en la carpeta.</string>
+    <string name="batch_save_folder_unusable">PGPony no puede escribir en esa carpeta. Elige otra.</string>
+    <string name="batch_saved_summary_format">Se guardaron %1$d de %2$d archivos en la carpeta.</string>
+    <string name="batch_title_encrypting">Cifrando archivos</string>
+    <string name="batch_title_signing">Firmando archivos</string>
+    <string name="batch_title_decrypting">Descifrando archivos</string>
+    <string name="batch_title_done_format">%1$d de %2$d archivos listos</string>
+    <string name="batch_progress_file_format">Archivo %1$d de %2$d</string>
+    <string name="batch_passphrase_prompt">Introduce la frase de contraseña. Se usará para todos los archivos de este lote.</string>
+    <string name="batch_passphrase_label">Frase de contraseña</string>
+    <string name="batch_passphrase_continue">Continuar</string>
+    <string name="batch_passphrase_skip">Omitir el resto</string>
+    <string name="batch_item_output_format">Salida: %1$s</string>
+    <string name="batch_item_saved_format">Guardado como %1$s</string>
+    <string name="batch_save_to_folder">Guardar en una carpeta</string>
+    <string name="batch_share_all">Compartir todo</string>
+    <string name="batch_share_chooser">Compartir archivos</string>
+    <string name="batch_share_failed">No se pudieron compartir los archivos.</string>
+    <string name="batch_status_pending">En espera</string>
+    <string name="batch_status_done">Listo</string>
+    <string name="batch_status_failed">Fallido</string>
+    <string name="share_files_choice_title">Algunos de estos archivos están cifrados</string>
+    <string name="share_files_choice_message">%1$d de los %2$d archivos son mensajes cifrados. ¿Descifrarlos, o cifrar todos los archivos en un solo paquete?</string>
+    <string name="share_files_choice_decrypt_format">Descifrar %1$d</string>
+    <string name="share_files_choice_encrypt">Cifrar todo</string>
+    <string name="save_progress_saving">Guardando…</string>
+    <string name="save_progress_bytes_format">Guardando %1$s de %2$s</string>
+    <string name="save_cancelled">Guardado cancelado. Se eliminó el archivo incompleto.</string>
+    <string name="save_failed_generic">No se pudo guardar el archivo. Inténtalo de nuevo o elige otra ubicación.</string>
+    <string name="save_failed_no_space">No hay suficiente espacio libre para guardar el archivo.</string>
+    <string name="save_toast_saved_format">Se guardó %1$s</string>
+    <string name="save_toast_failed_format">No se pudo guardar %1$s</string>
+    <string name="save_batch_item_cancelled">No guardado: se canceló el guardado.</string>
+    <plurals name="import_result_subkeys_added">
+    <item quantity="one">Se añadió %1$d subclave.</item>
+    <item quantity="many">Se añadieron %1$d subclaves.</item>
+    <item quantity="other">Se añadieron %1$d subclaves.</item>
+</plurals>
+    <string name="import_preview_left_out_title">Subclaves omitidas o no utilizables</string>
+    <string name="import_preview_left_out_row_format">%1$s %2$s: %3$s</string>
+    <string name="subkey_issue_weak_hash">Vinculada con SHA-1 después de la fecha límite de febrero de 2023</string>
+    <string name="subkey_issue_no_binding">Sin firma de vinculación válida</string>
+    <string name="subkey_issue_no_back_signature">Subclave de firma sin una firma inversa válida</string>
+    <string name="subkey_issue_revoked">Revocada</string>
+    <string name="subkey_issue_expired">Caducada</string>
+    <string name="key_detail_subkey_secret_on_device">Secreto en este dispositivo</string>
+    <string name="key_detail_subkey_secret_offline">Secreto sin conexión (stub de gpg)</string>
+    <string name="key_detail_subkey_secret_on_card">Secreto en una tarjeta</string>
+    <string name="key_detail_subkey_secret_not_present">Sin secreto en este dispositivo</string>
+    <string name="provider_review_title">Revisar destinatarios</string>
+    <string name="provider_review_intro">PGPony no tiene una clave utilizable para algunos destinatarios de este mensaje. Elige las claves para las que cifrarlo, o cancela para volver a tu borrador.</string>
+    <string name="provider_review_missing_format">%1$s: no hay ninguna clave en PGPony</string>
+    <string name="provider_review_dont_use_format">%1$s: clave marcada como \"No usar\"</string>
+    <string name="provider_review_dont_use_hint">Las claves marcadas como \"No usar\" no se ofrecen. Cambia el nivel de confianza en PGPony para cifrar para una de ellas.</string>
+    <string name="provider_review_no_keys">No hay claves en PGPony para elegir. Importa primero la clave pública del destinatario en PGPony.</string>
+    <string name="provider_review_confirm">Cifrar para las seleccionadas</string>
+    <string name="err_provider_review_key_unusable">No se puede usar una clave elegida para este mensaje: %1$s. Vuelve a enviar el mensaje y elige los destinatarios en PGPony.</string>
+    <string name="import_method_github">GitHub</string>
+    <string name="import_github_label">Usuario de GitHub</string>
+    <string name="import_github_placeholder">nombre de usuario</string>
+    <string name="import_github_fetch_button">Obtener claves</string>
+    <string name="import_github_help">PGPony obtiene las claves OpenPGP que este usuario añadió a su cuenta de GitHub (github.com/usuario.gpg) según tu ajuste de proxy. No se añade nada hasta que compruebes cada huella digital y toques Importar clave.</string>
+    <string name="import_github_error_invalid">Ese no es un nombre de usuario de GitHub. Un nombre de usuario tiene de 1 a 39 letras, dígitos o guiones sueltos, y no empieza ni termina con guion.</string>
+    <string name="import_github_error_no_keys_format">%1$s no tiene claves OpenPGP en GitHub.</string>
+    <string name="import_github_error_not_found_format">No existe ningún usuario de GitHub llamado %1$s.</string>
+    <string name="import_github_error_unreadable_format">GitHub respondió para %1$s, pero sin ninguna clave pública que PGPony pueda leer.</string>
+    <string name="applock_pin_field_label">PIN</string>
+    <string name="applock_pin_confirm_label">Confirmar PIN</string>
+    <string name="applock_new_pin_label">PIN nuevo</string>
+    <string name="applock_wrong_pin">PIN incorrecto.</string>
+    <string name="applock_wait_format">Demasiados PIN incorrectos. Inténtalo de nuevo en %1$d s.</string>
+    <string name="applock_unavailable">PGPony no puede leer sus ajustes de PIN, así que no puede comprobar ningún PIN y permanece bloqueado.</string>
+    <string name="applock_check_failed">No se pudo comprobar el PIN. Inténtalo de nuevo.</string>
+    <string name="applock_reset_button">Borrar PGPony y empezar de cero</string>
+    <string name="applock_reset_confirm_title">¿Borrar todo en PGPony?</string>
+    <string name="applock_reset_confirm_message">Esto elimina todas las claves de PGPony, incluidas las de Eliminados recientemente, y todos los ajustes y aprobaciones de apps, igual que Borrar todos los datos. Las claves de una llave de seguridad y las copias de seguridad guardadas fuera de PGPony no se tocan. No se puede deshacer.</string>
+    <string name="applock_reset_confirm_button">Borrar</string>
+    <string name="applock_fingerprint_reset_notice">El desbloqueo con huella digital se desactivó porque cambiaron las huellas registradas en este teléfono. Usa tu PIN. Puedes volver a activarlo en Ajustes.</string>
+    <string name="applock_use_fingerprint">Usar huella digital</string>
+    <string name="applock_method_title">Método de bloqueo</string>
+    <string name="applock_method_device">Desbloqueo del dispositivo</string>
+    <string name="applock_method_pin">PIN de PGPony</string>
+    <string name="applock_method_dialog_message">El desbloqueo del dispositivo usa la huella digital o el bloqueo de pantalla de tu teléfono. Un PIN de PGPony es un PIN aparte de 6 a 16 dígitos que solo pide PGPony, y puede tener un PIN de coacción.</string>
+    <string name="applock_set_pin_title">Establecer un PIN de PGPony</string>
+    <string name="applock_set_pin_message">Elige de 6 a 16 dígitos. PGPony solo guarda un hash del PIN y no puede recuperarlo si lo olvidas.</string>
+    <string name="applock_change_pin_title">Cambiar PIN</string>
+    <string name="applock_change_pin_subtitle">Elige un nuevo PIN de PGPony</string>
+    <string name="applock_verify_title">Introduce tu PIN de PGPony</string>
+    <string name="applock_verify_message">Introduce tu PIN actual para cambiar el bloqueo de la app.</string>
+    <string name="applock_pin_format_error">Usa de 6 a 16 dígitos.</string>
+    <string name="applock_pin_mismatch">Los PIN no coinciden.</string>
+    <string name="applock_pin_same_as_duress">El PIN debe ser distinto del PIN de coacción.</string>
+    <string name="applock_duress_same_as_pin">El PIN de coacción debe ser distinto de tu PIN.</string>
+    <string name="applock_duress_title">PIN de coacción</string>
+    <string name="applock_duress_off">Desactivado</string>
+    <string name="applock_duress_on">Activado</string>
+    <string name="applock_duress_info_title">Configurar un PIN de coacción</string>
+    <string name="applock_duress_info_message">Un PIN de coacción es un segundo PIN para cuando alguien te obligue a abrir PGPony. Si se introduce en la pantalla de bloqueo, borra todas las claves de PGPony, incluidas las de Eliminados recientemente, junto con todos los ajustes, las aprobaciones de apps y las frases de contraseña recordadas, y PGPony se abre como si se acabara de instalar. Nada en la pantalla indica que haya ocurrido.\n\nNo se puede deshacer. Nunca pruebes el PIN de coacción introduciéndolo: eso lo borra todo.</string>
+    <string name="applock_not_touched">No se tocan: las claves de una llave de seguridad (tiene su propio PIN), las copias de seguridad que guardaste fuera de PGPony y una copia del almacenamiento del teléfono hecha antes de introducir el PIN.</string>
+    <string name="applock_duress_set_title">Elige un PIN de coacción</string>
+    <string name="applock_duress_remove_title">¿Quitar el PIN de coacción?</string>
+    <string name="applock_duress_remove_message">Tu PIN de PGPony se mantiene. El antiguo PIN de coacción pasa a contar como un PIN incorrecto.</string>
+    <string name="applock_duress_remove_button">Quitar</string>
+    <string name="applock_fingerprint_title">Desbloquear con huella digital</string>
+    <string name="applock_fingerprint_subtitle">Permitir una huella digital en lugar del PIN</string>
+    <string name="applock_fingerprint_advice_title">¿Desactivar el desbloqueo con huella digital?</string>
+    <string name="applock_fingerprint_advice_message">Se puede forzar a alguien a poner el dedo, y el PIN de coacción solo sirve cuando lo que te piden es el PIN. Con el desbloqueo con huella digital desactivado, PGPony solo pide el PIN. Recomendado.</string>
+    <string name="applock_fingerprint_advice_turn_off">Desactivar</string>
+    <string name="applock_fingerprint_advice_keep">Mantenerlo activado</string>
+    <string name="applock_wipe_after_title">Borrar tras PIN incorrectos</string>
+    <string name="applock_wipe_after_off">Desactivado</string>
+    <string name="applock_wipe_after_format">Tras %1$d PIN incorrectos</string>
+    <string name="applock_wipe_after_message">Tras este número de PIN incorrectos seguidos, PGPony lo borra todo igual que el PIN de coacción. Un PIN correcto reinicia el contador. No se puede deshacer.</string>
+
+    <!-- 4.7.0 RC4, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 45, #85): a User ID with many certifications shows the first three, then this row. -->
+    <plurals name="key_detail_cert_show_all">
+        <item quantity="one">Mostrar %1$d certificación</item>
+        <item quantity="many">Mostrar las %1$d certificaciones</item>
+        <item quantity="other">Mostrar las %1$d certificaciones</item>
+    </plurals>
+    <string name="key_detail_cert_show_fewer">Mostrar menos</string>
+
+    <!-- 4.7.0 RC4 (item 48, #79): which key made a signature and which key decrypted, by 16-digit key ID. -->
+    <string name="verify_signing_key_format">Clave de firma %1$s</string>
+    <string name="verify_signing_subkey_format">Subclave de firma %1$s de la clave %2$s</string>
+    <string name="encdec_decrypted_with_subkey_format">Descifrado con %1$s, subclave %2$s</string>
+
+    <!-- 4.7.0 RC4 (item 46, #82): Key Details, choose which signing subkey a key pair signs with. -->
+    <string name="key_detail_signing_subkey_title">Uso para firmar</string>
+    <string name="key_detail_signing_subkey_help">PGPony firma con la subclave de firma válida más reciente, salvo que elijas una aquí. La subclave elegida se usa mientras sea válida; cuando caduca o se revoca, PGPony pasa a firmar con la elección automática.</string>
+    <string name="key_detail_signing_subkey_automatic">Automática</string>
+    <string name="key_detail_signing_subkey_automatic_format">Automática (ahora %1$s)</string>
+    <string name="key_detail_signing_subkey_option_format">Subclave %1$s, %2$s, creada el %3$s</string>
+    <string name="key_detail_signing_subkey_primary_format">Clave principal %1$s, %2$s</string>
+    <string name="key_detail_signing_subkey_pin_unusable">La subclave que elegiste ya no puede firmar, así que PGPony firma con la elección automática.</string>
+
+    <!-- 4.7.0 RC4 (item 47, #78): re-importing your own key pair with secret keys under a new passphrase. -->
+    <string name="import_replace_secrets_title">Usar las claves privadas de este archivo</string>
+    <plurals name="import_replace_secrets_body">
+        <item quantity="one">PGPony ya tiene este par de claves. %1$d clave privada de este archivo está protegida de forma distinta a la almacenada, por ejemplo tras cambiar la frase de contraseña en gpg. Sustitúyela por la de este archivo y usa la frase de contraseña de este archivo a partir de ahora.</item>
+        <item quantity="many">PGPony ya tiene este par de claves. %1$d claves privadas de este archivo están protegidas de forma distinta a las almacenadas, por ejemplo tras cambiar la frase de contraseña en gpg. Sustitúyelas por las de este archivo y usa la frase de contraseña de este archivo a partir de ahora.</item>
+        <item quantity="other">PGPony ya tiene este par de claves. %1$d claves privadas de este archivo están protegidas de forma distinta a las almacenadas, por ejemplo tras cambiar la frase de contraseña en gpg. Sustitúyelas por las de este archivo y usa la frase de contraseña de este archivo a partir de ahora.</item>
+    </plurals>
+    <string name="import_replace_secrets_passphrase_label">Frase de contraseña de este archivo</string>
+    <string name="import_replace_secrets_passphrase_help">Todas las claves privadas del archivo tienen que desbloquearse con ella. Déjala vacía si el archivo no tiene frase de contraseña.</string>
+    <plurals name="import_result_secrets_replaced">
+        <item quantity="one">Se sustituyó %1$d clave privada.</item>
+        <item quantity="many">Se sustituyeron %1$d claves privadas.</item>
+        <item quantity="other">Se sustituyeron %1$d claves privadas.</item>
+    </plurals>
+    <string name="err_replace_secrets_passphrase">La frase de contraseña no desbloqueó todas las claves privadas de este archivo para %1$s. Se conservaron las claves privadas almacenadas y no se importó nada.</string>
+    <string name="err_replace_secrets_unproven">No se pudo confirmar que las claves privadas de este archivo sean las de %1$s. Se conservaron las claves privadas almacenadas y no se importó nada.</string>
+
+    <!-- 4.7.0 RC4 security key work, translated Oct 2026 -->
+    <!-- 4.7.0 RC4 (item 28, #36, #43): the card prompt a mail app opens also takes a key plugged in over USB. -->
+    <string name="provider_cardop_usb_hint">También funciona una llave conectada por USB: introduce el PIN y luego toca Usar llave USB.</string>
+    <string name="provider_cardop_use_usb">Usar llave USB</string>
+    <string name="provider_cardop_wrong_pin_usb">PIN incorrecto. Intentos restantes: %1$d. Comprueba el PIN e inténtalo de nuevo.</string>
+    <string name="provider_cardop_usb_lost">La llave se desconectó. Vuelve a conectarla e inténtalo de nuevo.</string>
+
+    <!-- 4.7.0 RC4 (item 34, #43): keys whose secret is on a security key (generated on it, or paired with it). -->
+    <string name="key_detail_type_key_pair_on_card">Par de claves en una llave de seguridad</string>
+    <string name="key_detail_primary_on_card">Clave principal: en la ranura de firma de la llave de seguridad, donde firma y certifica.</string>
+
+    <!-- 4.7.0 RC4 (item 31, card): certifying with a key whose primary is on a security key. -->
+    <string name="certify_no_certifier_card">Ninguno de tus pares de claves puede certificar aquí. Para certificar se necesita un par de claves cuya clave principal pueda certificar, con su secreto en este dispositivo o en una llave de seguridad. Las claves ML-DSA aún no pueden certificar.</string>
+    <string name="certify_card_hint">Después de tocar Certificar, acerca la llave de seguridad al teléfono o conéctala.</string>
+    <string name="err_certify_card_mismatch">Esta llave de seguridad no contiene la clave elegida para certificar</string>
+
+    <!-- 4.7.0 RC4 (item 13, #71): Move to Security Key, like gpg's keytocard. -->
+    <string name="move_to_card_menu">Mover a una llave de seguridad</string>
+    <string name="move_to_card_title">Mover a una llave de seguridad</string>
+    <string name="move_to_card_intro">Escribe claves de este par de claves en las ranuras de una llave de seguridad OpenPGP, como hace keytocard de gpg. Después, la llave de seguridad firma y descifra con ellas.</string>
+    <string name="move_to_card_nothing">Ninguna de las claves de este par de claves puede ir a una llave de seguridad.</string>
+    <string name="move_to_card_slot_signature">Ranura de firma</string>
+    <string name="move_to_card_slot_decryption">Ranura de descifrado</string>
+    <string name="move_to_card_slot_authentication">Ranura de autenticación</string>
+    <string name="move_to_card_slot_leave">Dejar esta ranura como está</string>
+    <string name="move_to_card_key_primary_format">Clave principal, %1$s, %2$s</string>
+    <string name="move_to_card_key_subkey_format">Subclave, %1$s, %2$s</string>
+    <string name="move_to_card_one_slot_each">Elige una clave distinta para cada ranura.</string>
+    <string name="move_to_card_refused_title">Claves que no pueden ir a una llave de seguridad:</string>
+    <string name="move_to_card_refused_v6">las claves v6 no caben en las llaves de seguridad OpenPGP</string>
+    <string name="move_to_card_refused_rsa_size">solo se pueden mover RSA 2048, 3072 y 4096</string>
+    <string name="move_to_card_refused_curve">esta curva aún no es compatible</string>
+    <string name="move_to_card_refused_algorithm">este tipo de clave no se puede mover</string>
+    <string name="move_to_card_backup_body">Una clave que está en una llave de seguridad no se puede volver a copiar fuera de ella. Guarda primero una copia de seguridad de este par de claves, para que las claves no se pierdan con la llave de seguridad.</string>
+    <string name="move_to_card_backup_action">Guardar primero una copia de seguridad</string>
+    <string name="move_to_card_backup_confirm">Tengo una copia de seguridad de este par de claves</string>
+    <string name="move_to_card_remove_label">Quitar de este teléfono las claves movidas</string>
+    <string name="move_to_card_remove_hint">Como gpg, el teléfono conserva solo una nota de que las claves están en la llave de seguridad y, a partir de entonces, usa la llave de seguridad. Desactívalo para conservar también una copia aquí.</string>
+    <string name="move_to_card_remove_unavailable">Solo cuando todas las subclaves de este par de claves vayan a la llave de seguridad. La clave principal puede quedarse en este teléfono, como en gpg. De lo contrario, queda una copia aquí y el teléfono la sigue usando.</string>
+    <string name="move_to_card_wrong_admin_pin">PIN de administrador incorrecto. Intentos restantes: %1$d. Cuando no quede ninguno, habrá que restablecer la llave de seguridad.</string>
+    <string name="move_to_card_wrong_user_pin">PIN de usuario incorrecto. Intentos restantes: %1$d. No se escribió nada en la llave de seguridad.</string>
+    <string name="move_to_card_replace_confirm">Reemplazar las claves que ya haya en las ranuras elegidas</string>
+    <string name="move_to_card_slots_occupied">La llave de seguridad ya contiene una clave distinta en una de las ranuras elegidas, así que no se escribió nada. Para sobrescribirla, marca \"Reemplazar las claves que ya haya en las ranuras elegidas\" y vuelve a tocar Mover.</string>
+    <string name="move_to_card_admin_pin">PIN de administrador de la llave de seguridad</string>
+    <string name="move_to_card_user_pin">PIN de usuario de la llave de seguridad</string>
+    <string name="move_to_card_pins_hint">El PIN de administrador escribe las claves. Después, el PIN de usuario se usa una vez por ranura para comprobar que la llave de seguridad firma y descifra con ellas antes de que cambie nada en el teléfono.</string>
+    <string name="move_to_card_action">Mover</string>
+    <string name="move_to_card_waiting">Acerca la llave de seguridad al teléfono o conéctala, y mantenla ahí hasta que esto termine.</string>
+    <string name="move_to_card_failed">No se pudieron mover las claves a la llave de seguridad</string>
+    <string name="move_to_card_done_title">Claves movidas</string>
+    <plurals name="move_to_card_done_removed">
+        <item quantity="one">%1$d clave está ahora en la llave de seguridad y se quitó de este teléfono.</item>
+        <item quantity="many">%1$d claves están ahora en la llave de seguridad y se quitaron de este teléfono.</item>
+        <item quantity="other">%1$d claves están ahora en la llave de seguridad y se quitaron de este teléfono.</item>
+    </plurals>
+    <plurals name="move_to_card_done_kept">
+        <item quantity="one">%1$d clave está ahora en la llave de seguridad. Queda una copia en este teléfono, que la sigue usando.</item>
+        <item quantity="many">%1$d claves están ahora en la llave de seguridad. Queda una copia en este teléfono, que la sigue usando.</item>
+        <item quantity="other">%1$d claves están ahora en la llave de seguridad. Queda una copia en este teléfono, que la sigue usando.</item>
+    </plurals>
+    <string name="err_card_expiry_primary_missing">La clave principal no está en la ranura de firma de esta llave de seguridad, así que no se puede cambiar la caducidad con ella</string>
+    <string name="err_move_to_card_unsupported">Esta llave de seguridad no puede contener una de las claves elegidas. Elige otra clave u otra ranura.</string>
+    <string name="err_move_to_card_check_failed">La llave de seguridad no superó la comprobación después de escribir las claves, así que no se cambió nada en este teléfono. No confíes en las claves de la llave de seguridad.</string>
+    <!-- 4.7.0 RC5, translated Oct 2026 -->
+    <string name="key_detail_expiry_sheet_title_subkey">Editar caducidad de la subclave</string>
+    <string name="key_detail_expiry_sheet_subtitle_subkey">Establece una nueva caducidad para la subclave %1$s. La clave principal y las demás subclaves conservan sus fechas.</string>
+    <string name="key_detail_expiry_also_subkeys">Aplicar también a las subclaves que siguen siendo válidas</string>
+    <string name="key_detail_expiry_also_subkeys_hint">Las subclaves caducadas y revocadas conservan sus fechas.</string>
+    <string name="key_detail_subkey_change_expiry">Editar caducidad…</string>
+    <string name="key_detail_card_no_cert_title">Se necesita la clave pública</string>
+    <string name="key_detail_card_no_cert_body">Esta llave de seguridad contiene las claves privadas, pero no el resto de la clave: sus ID de usuario y firmas. Importa la clave pública correspondiente (de una exportación, una copia de seguridad o un servidor de claves) y PGPony la emparejará con esta llave de seguridad para que puedas firmar y descifrar con ella.</string>
+    <!-- 4.7.0 RC5 batch 2, translated Oct 2026 -->
+    <string name="key_detail_key_id_copied">ID de clave copiado</string>
+    <string name="key_detail_copy_key_id_cd">Copiar el ID de clave</string>
+    <string name="key_detail_detail_usage">Uso</string>
+    <string name="key_detail_cert_trust_full">introductor de confianza, profundidad %1$d</string>
+    <string name="key_detail_cert_trust_partial">introductor de confianza parcial, profundidad %1$d</string>
+    <string name="key_detail_cert_trust_amount">confianza %1$d, profundidad %2$d</string>
+    <string name="key_detail_cert_trust_limited">limitada a algunos ID de usuario</string>
+    <string name="key_detail_last_checked_found_format">%1$s, encontrada en %2$s</string>
+    <string name="key_detail_last_checked_not_found_format">%1$s, no está en %2$s</string>
+    <string name="kd_vm_check_found_on">Esta clave está publicada en %1$s.</string>
+    <string name="kd_vm_check_not_found_on">Esta clave no está en %1$s.</string>
+    <string name="key_detail_cert_look_up">Buscar</string>
+    <string name="certifier_lookup_title">Buscar certificador</string>
+    <string name="certifier_lookup_found_body">Al importarla, la clave se añade a tu llavero para que se pueda comprobar su certificación. Esto no valida su identidad: solo se comprueba la matemática. Comprueba a quién pertenece antes de fiarte de ella.</string>
+    <string name="certifier_lookup_not_found_title">Certificador no encontrado</string>
+    <string name="certifier_lookup_not_found_body_format">No se encontró ninguna clave para %1$s en los servidores de claves que tienes configurados. Es posible que el certificador no haya publicado su clave.</string>
+    <string name="certifier_lookup_imported_body">Se vuelven a comprobar las certificaciones que hizo sobre esta clave.</string>
+    <string name="key_detail_refresh_sigs_menu">Renovar autofirmas</string>
+    <string name="key_detail_refresh_sigs_title">Renovar autofirmas</string>
+    <string name="key_detail_refresh_sigs_body">Vuelve a firmar con SHA-256 los ID de usuario y las vinculaciones de subclaves de esta clave. Todas las fechas de caducidad se mantienen. Una subclave que se omitió porque su vinculación usaba SHA-1 se recupera si su secreto está en este teléfono. Después, publica la clave para que otros reciban las nuevas firmas.</string>
+    <string name="key_detail_refresh_sigs_action">Renovar</string>
+    <string name="key_detail_refresh_sigs_done">Autofirmas renovadas.</string>
+    <plurals name="key_detail_refresh_sigs_done_restored">
+        <item quantity="one">Autofirmas renovadas. Se ha recuperado %1$d subclave.</item>
+        <item quantity="many">Autofirmas renovadas. Se han recuperado %1$d subclaves.</item>
+        <item quantity="other">Autofirmas renovadas. Se han recuperado %1$d subclaves.</item>
+    </plurals>
+    <!-- 4.7.0 RC5 batch 3, translated Oct 2026 -->
+    <string name="keyring_select_menu">Seleccionar claves</string>
+    <string name="keyring_select_done_cd">Dejar de seleccionar</string>
+    <string name="keyring_select_all_cd">Seleccionar todo</string>
+    <string name="keyring_export_selected_cd">Exportar claves públicas</string>
+    <string name="keyring_export_selected_copied">Claves públicas copiadas</string>
+    <plurals name="keyring_selected_count">
+        <item quantity="one">%1$d seleccionada</item>
+        <item quantity="many">%1$d seleccionadas</item>
+        <item quantity="other">%1$d seleccionadas</item>
+    </plurals>
+    <plurals name="keyring_export_selected_label">
+        <item quantity="one">%1$d clave pública</item>
+        <item quantity="many">%1$d claves públicas</item>
+        <item quantity="other">%1$d claves públicas</item>
+    </plurals>
+    <!-- 4.7.0 RC6, translated Oct 2026 -->
+    <!-- 4.7.0 RC6: confirm before an expiry change or a refresh (item 66, #86) -->
+    <string name="key_detail_expiry_confirm_title">¿Cambiar la caducidad?</string>
+    <string name="key_detail_expiry_confirm_current">Caducidad actual: %1$s</string>
+    <string name="key_detail_expiry_confirm_new">Nueva caducidad: %1$s</string>
+    <string name="key_detail_expiry_confirm_subkey_only">Solo se vuelve a firmar la vinculación de la subclave %1$s.</string>
+    <plurals name="key_detail_expiry_confirm_user_ids">
+        <item quantity="one">Se vuelve a firmar %1$d ID de usuario.</item>
+        <item quantity="many">Se vuelven a firmar %1$d ID de usuario.</item>
+        <item quantity="other">Se vuelven a firmar %1$d ID de usuario.</item>
+    </plurals>
+    <plurals name="key_detail_expiry_confirm_subkeys">
+        <item quantity="one">También se vuelve a firmar %1$d subclave que sigue siendo válida.</item>
+        <item quantity="many">También se vuelven a firmar %1$d subclaves que siguen siendo válidas.</item>
+        <item quantity="other">También se vuelven a firmar %1$d subclaves que siguen siendo válidas.</item>
+    </plurals>
+    <string name="key_detail_expiry_confirm_publish">Los demás solo verán la nueva fecha cuando publiques la clave.</string>
+    <string name="key_detail_expiry_confirm_action">Cambiar caducidad</string>
+    <string name="key_detail_resign_biometric_title">Confirmar las nuevas firmas</string>
+    <string name="key_detail_resign_biometric_subtitle">Autentícate para volver a firmar esta clave</string>
+    <!-- 4.7.0 RC6: the recipient review shows keys the request already includes (item 67, #25) -->
+    <string name="provider_review_included_format">Ya incluida para %1$s</string>
+    <!-- 4.7.0 RC7, translated Oct 2026 -->
+    <string name="exchange_qr_too_large_inline">Esta clave es demasiado grande para un código QR. En su lugar, usa los botones Copiar clave o Subir de abajo.</string>
 </resources>

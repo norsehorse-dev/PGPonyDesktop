@@ -17,6 +17,10 @@ interface CardTransport {
      * (response data followed by the 2-byte status word). Implementations
      * should throw [OpenPgpCardException.Communication] /
      * [OpenPgpCardException.TagLost] on link failure.
+     *
+     * 4.7.0 RC4: the session wipes [commandApdu] as soon as this returns (it
+     * can carry a PIN or private key bytes), so an implementation must not
+     * keep a reference to it; copy it if it is needed later.
      */
     @Throws(OpenPgpCardException::class)
     fun transceive(commandApdu: ByteArray): ByteArray

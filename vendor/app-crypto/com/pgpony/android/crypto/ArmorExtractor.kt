@@ -37,4 +37,21 @@ object ArmorExtractor {
         val chosen = if (keys.isNotEmpty()) keys else all
         return chosen.joinToString("\n\n") { it.text }
     }
+
+    /**
+     * 4.7.2 RC3: the first PGP MESSAGE block of [input], for decrypt. The decrypt reads the
+     * armor to the end of the input, and after the END line Bouncy Castle's armor reader goes
+     * on looking for another block: the first line starting with a dash is taken as its armor
+     * header. A pasted email signature below the message (a row of dashes, or the "-- "
+     * separator) therefore failed as a malformed message, and the same line above the BEGIN
+     * line would too. Everything outside the BEGIN and END markers is dropped.
+     *
+     * [input] comes back unchanged when it holds no complete PGP MESSAGE block, so an
+     * incomplete paste still reports as incomplete, and when the block is already all there
+     * is, so an ordinary message reaches the parser byte for byte as before.
+     */
+    fun messageOnly(input: String): String {
+        val block = blocks(input).firstOrNull { it.type == "MESSAGE" } ?: return input
+        return if (input.trim() == block.text) input else block.text + "\n"
+    }
 }

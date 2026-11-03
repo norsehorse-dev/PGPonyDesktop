@@ -49,6 +49,7 @@ object OpenPgpCard {
     const val INS_INTERNAL_AUTHENTICATE: Int = 0x88        // 4.6.0 (item 16): auth slot, SSH
     const val INS_GENERATE_ASYMMETRIC_KEY_PAIR: Int = 0x47
     const val INS_PUT_DATA: Int = 0xDA                     // Phase B1: write DOs
+    const val INS_PUT_DATA_ODD: Int = 0xDB                 // 4.7.0 (item 13): private key import
     // ── Phase B2: admin-PIN lifecycle ──────────────────────────────────
     const val INS_RESET_RETRY_COUNTER: Int = 0x2C   // unblock PW1
     const val INS_TERMINATE_DF: Int = 0xE6          // factory reset (step 1)
