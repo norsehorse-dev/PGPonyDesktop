@@ -30,6 +30,18 @@ object FreetypePreload {
     const val GUARD = "PGPONY_FT_PRELOADED"
     const val OPT_OUT = "PGPONY_NO_FT_PRELOAD"
 
+    /**
+     * Set by the jpackage launcher in its own process. A launcher that starts with it set takes
+     * itself for the launcher's second stage and hands its arguments to the JVM as JVM options, so
+     * the second launch must not inherit it: with it, the restart printed `java`'s usage text and
+     * exited (3.1.0 test on Debian, before release).
+     */
+    const val JPACKAGE_ENV = "_JPACKAGE_LAUNCHER"
+
+    /** The environment for the second launch: this one, minus the launcher's own state, plus the preload. */
+    internal fun childEnvironment(parent: Map<String, String>, ldPreload: String): Map<String, String> =
+        parent.filterKeys { it != JPACKAGE_ENV } + mapOf("LD_PRELOAD" to ldPreload, GUARD to "1")
+
     /** The command and environment for the second launch, or null when this launch can go on as it is. */
     internal data class Plan(val command: List<String>, val ldPreload: String)
 
@@ -68,8 +80,10 @@ object FreetypePreload {
         ) ?: return
         val process = runCatching {
             ProcessBuilder(plan.command).inheritIO().also { pb ->
-                pb.environment()["LD_PRELOAD"] = plan.ldPreload
-                pb.environment()[GUARD] = "1"
+                val env = pb.environment()
+                val wanted = childEnvironment(HashMap(env), plan.ldPreload)
+                env.clear()
+                env.putAll(wanted)
             }.start()
         }.getOrNull() ?: return
         exitProcess(runCatching { process.waitFor() }.getOrDefault(0))

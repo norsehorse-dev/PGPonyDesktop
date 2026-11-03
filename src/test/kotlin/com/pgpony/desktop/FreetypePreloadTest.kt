@@ -92,4 +92,16 @@ class FreetypePreloadTest {
             plan(files = mapOf("/usr/lib64/libfreetype.so.6" to x64, "/usr/lib/libfreetype.so.6" to i386))?.ldPreload
         )
     }
+
+    @Test
+    fun theSecondLaunchDoesNotInheritTheJpackageLauncherState() {
+        val env = FreetypePreload.childEnvironment(
+            mapOf("_JPACKAGE_LAUNCHER" to "12345", "HOME" to "/home/u", "LD_PRELOAD" to "/old.so"),
+            "/usr/lib/x86_64-linux-gnu/libfreetype.so.6:/old.so"
+        )
+        assertNull(env["_JPACKAGE_LAUNCHER"], "with it set, the launcher hands its arguments to the JVM")
+        assertEquals("/home/u", env["HOME"])
+        assertEquals("/usr/lib/x86_64-linux-gnu/libfreetype.so.6:/old.so", env["LD_PRELOAD"])
+        assertEquals("1", env[FreetypePreload.GUARD])
+    }
 }

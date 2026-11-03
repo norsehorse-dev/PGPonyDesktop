@@ -345,8 +345,14 @@ object DesktopAppLock {
     fun relaunchFresh(): Nothing {
         val launcher = System.getProperty("jpackage.app-path")
         if (!launcher.isNullOrBlank()) runCatching { relaunchCommand(launcher, relaunchArgs()) }
-            .onSuccess { cmd -> ProcessBuilder(cmd).redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                .redirectError(ProcessBuilder.Redirect.DISCARD).start() }
+            .onSuccess { cmd ->
+                // Not the jpackage launcher's own state (FreetypePreload.JPACKAGE_ENV): a launcher
+                // started with it set never opens the app.
+                ProcessBuilder(cmd).redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .also { it.environment().remove(FreetypePreload.JPACKAGE_ENV) }
+                    .start()
+            }
         exitProcess(0)
     }
 
