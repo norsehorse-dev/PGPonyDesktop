@@ -1,6 +1,6 @@
 name: Build
 
-# Every push and pull request: compile, run the full unit suite, and audit the six locales.
+# Every push and pull request: compile, run the full unit suite, and audit the eleven locales.
 # RelayPonyDesktop has no equivalent lane — it only builds on a tag — which means a broken main
 # there is invisible until release day. PGPony carries a 444-test suite and a strict i18n audit,
 # so both run on every change instead.
@@ -45,6 +45,12 @@ jobs:
       # binary, live keyservers and real network traffic, none of which belong in a per-push lane.
       - name: i18n audit
         run: python3 tools/i18n-audit.py --layer i18n --strict
+
+      # 3.1.0 (plan 3b): the vendored Android strings too. Not strict: a key Android has not
+      # translated yet falls back to English and is fixed upstream, so it warns. A placeholder
+      # mismatch, a duplicate or a stray key still fails the build.
+      - name: i18n audit (vendored Android strings)
+        run: python3 tools/i18n-audit.py --layer vendor
 
       # Test XML carries whatever a test printed in <system-out>, which is the cheapest way to
       # diagnose a failure that does not reproduce locally.

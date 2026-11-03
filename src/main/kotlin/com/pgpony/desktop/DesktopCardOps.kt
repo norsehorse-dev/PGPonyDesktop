@@ -148,7 +148,7 @@ fun CardOpDialog(request: CardOpRequest, onDone: (ok: Boolean, message: String?)
                 working = false
             } catch (t: Throwable) {
                 working = false
-                onDone(false, t.message ?: t::class.simpleName)
+                onDone(false, errorText(t))
             }
         }
     }

@@ -8,6 +8,7 @@
 package com.pgpony.android.network
 
 import com.pgpony.android.PGPonyApp
+import com.pgpony.desktop.tr
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
@@ -62,7 +63,7 @@ object HttpClientFactory {
     private val onionGuard = createClientPlugin("PGPonyOnionGuard") {
         onRequest { request, _ ->
             if (request.url.host.trimEnd('.').lowercase().endsWith(".onion")) {
-                throw java.io.IOException("An .onion address can only be reached through Tor, and no proxy is set, so nothing was sent")
+                throw java.io.IOException(tr("d_net_err_onion_no_proxy"))
             }
         }
     }
@@ -100,14 +101,14 @@ object HttpClientFactory {
         // proxy. Fail closed instead: every request errors, nothing leaves.
         closeBridge()
         if (cfg.enabled && cfg.host.isNullOrBlank()) {
-            return failClosedClient("A proxy is turned on but no proxy host is set, so nothing was sent")
+            return failClosedClient { tr("err_proxy_turned_but_no_proxy_host") }
         }
         val proxied = cfg.enabled && cfg.host != null
         val via = if (proxied) {
             try {
                 SocksBridge(cfg.host!!, cfg.port, cfg.username, cfg.password, TOR_CONNECT_TIMEOUT_MS)
             } catch (e: java.io.IOException) {
-                return failClosedClient("The proxy connection could not be set up, so nothing was sent")
+                return failClosedClient { tr("d_net_err_proxy_setup_failed") }
             }
         } else {
             null
@@ -142,12 +143,13 @@ object HttpClientFactory {
         }
     }
 
-    // A client that sends nothing: every request fails with [reason].
-    private fun failClosedClient(reason: String): HttpClient = HttpClient(Android) {
+    // A client that sends nothing: every request fails with [reason]. 3.1.0 (plan 3b): the reason
+    // is looked up per request, so it follows the language the app is in at the time.
+    private fun failClosedClient(reason: () -> String): HttpClient = HttpClient(Android) {
         install(offlineGuard)
         install(createClientPlugin("PGPonyProxyMissing") {
             onRequest { _, _ ->
-                throw java.io.IOException(reason)
+                throw java.io.IOException(reason())
             }
         })
     }

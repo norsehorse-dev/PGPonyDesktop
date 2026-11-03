@@ -111,7 +111,6 @@
     <string name="d_crypto_tab_message">メッセージ</string>
     <string name="d_crypto_fileop_sign">署名（分離）</string>
     <string name="d_crypto_fileop_verify">検証（分離）</string>
-    <string name="d_crypto_err_generic">操作に失敗しました</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">ファイルを追加…</string>
@@ -974,4 +973,12 @@
     <string name="d_applock_idle_never">起動時、コンピューターのロック時、手動でロックしたときのみ</string>
     <string name="d_applock_not_touched">影響を受けないもの: ハードウェアキー上の鍵（キー独自の PIN もそのまま残ります）、PGPony の外に保存したバックアップ、PIN の入力前に取得されたこのコンピューターのディスクのコピー。</string>
     <string name="d_applock_disk_note">SSD やコピーオンライト方式のファイルシステム（APFS、btrfs）では、ファイルを上書きしても古いデータが消えるとは限りません。そのため、パスフレーズのない秘密鍵は、ディスクを入手した人に復元される可能性があります。パスフレーズのある鍵は、引き続きパスフレーズで保護されます。</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">予期しない問題が発生しました。もう一度お試しください。繰り返し発生する場合は報告してください。</string>
+    <string name="d_net_err_onion_no_proxy">.onion アドレスには Tor 経由でしか接続できませんが、プロキシが設定されていないため、何も送信されませんでした。</string>
+    <string name="d_net_err_proxy_setup_failed">プロキシ接続を確立できなかったため、何も送信されませんでした。</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">ハードウェアキーの署名スロットが RSA モジュラスを返しませんでした。</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">ハードウェアキーの署名スロットが RSA 指数を返しませんでした。</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">ハードウェアキーの復号スロットが RSA モジュラスを返しませんでした。</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">ハードウェアキーの復号スロットが RSA 指数を返しませんでした。</string>
 </resources>

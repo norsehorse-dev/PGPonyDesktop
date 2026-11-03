@@ -31,9 +31,13 @@ What it checks, per layer, per locale, against that layer's English base:
 Exit status is 0 when nothing worse than `missing` was found, 1 otherwise, so it can gate a
 build. --strict promotes `missing` to an error too.
 
+Keys marked translatable="false" in a base (product names, wire values) are not expected in any
+translation and are left out of `missing`; a translation that carries one anyway is not an error.
+
 Usage:
     tools/i18n-audit.py                     both layers
-    tools/i18n-audit.py --layer i18n        one layer
+    tools/i18n-audit.py --layer i18n        one layer (desktop-owned)
+    tools/i18n-audit.py --layer vendor      one layer (vendor/app-strings; "android" works too)
     tools/i18n-audit.py --strict            missing translations fail the run
     tools/i18n-audit.py --quiet             findings only, no per-locale summary
 """
@@ -51,6 +55,11 @@ LAYERS = [
     ("vendor/app-strings", "vendored Android (fix upstream, never here)"),
     ("i18n", "desktop-owned"),
 ]
+
+# Short names --layer accepts besides the paths. 3.1.0 (plan 3b): the D11 notes gave
+# `--layer vendor`, which matched no layer, so the vendor audit printed "0 error(s)" and checked
+# nothing. An unknown name is now an error instead of a silent pass.
+LAYER_ALIASES = {"vendor": "vendor/app-strings", "android": "vendor/app-strings", "desktop": "i18n"}
 
 # The locale set both layers ship. "values" is the English base.
 LOCALE_DIRS = ["values", "values-de", "values-es", "values-fr", "values-ja", "values-ko", "values-pt-rBR", "values-ru",
@@ -101,6 +110,7 @@ def parse_file(path):
     except ET.ParseError as e:
         return entries, dupes, ["not well-formed XML: %s" % e]
     root = tree.getroot()
+    fixed = set()
 
     def add(key, text):
         if key in entries:
@@ -111,6 +121,8 @@ def parse_file(path):
         name = el.get("name")
         if not name:
             continue
+        if el.get("translatable") == "false":
+            fixed.add(name)
         if el.tag == "string":
             add(name, "".join(el.itertext()))
         elif el.tag == "plurals":
@@ -118,6 +130,7 @@ def parse_file(path):
                 q = item.get("quantity")
                 if q:
                     add("%s/%s" % (name, q), "".join(item.itertext()))
+    parse_file.fixed = fixed
     return entries, dupes, errors
 
 
@@ -145,6 +158,10 @@ def audit_layer(layer, note, strict, quiet):
 
     errors = warnings = 0
     base, base_dupes, base_errs = parse_file(base_path)
+    # Not for translation: drop from the base, so they are neither missing nor extra.
+    fixed = {k for k in base if k.split("/")[0] in parse_file.fixed}
+    for k in fixed:
+        del base[k]
     for e in base_errs:
         print("  ERROR %s/values/strings.xml: %s" % (layer, e))
         errors += 1
@@ -192,7 +209,7 @@ def audit_layer(layer, note, strict, quiet):
                 name, q = k.rsplit("/", 1)
                 return name in base_plural_names and q in cldr_quantities
             return False
-        extra = sorted(k for k in entries if not _is_declared(k))
+        extra = sorted(k for k in entries if not _is_declared(k) and k not in fixed)
 
         # `one` may legitimately be absent (ja); `other` may not.
         plural_names = {k.split("/")[0] for k in base if "/" in k}
@@ -263,7 +280,13 @@ def main():
     ap.add_argument("--quiet", action="store_true", help="findings only, no per-locale summary")
     args = ap.parse_args()
 
-    layers = [(l, n) for l, n in LAYERS if not args.layer or l in args.layer]
+    wanted = [LAYER_ALIASES.get(l.rstrip("/"), l.rstrip("/")) for l in (args.layer or [])]
+    unknown = [l for l in wanted if l not in {name for name, _ in LAYERS}]
+    if unknown:
+        print("unknown layer: %s (layers: %s; short names: %s)" % (
+            ", ".join(unknown), ", ".join(n for n, _ in LAYERS), ", ".join(sorted(LAYER_ALIASES))))
+        return 2
+    layers = [(l, n) for l, n in LAYERS if not wanted or l in wanted]
     total_e = total_w = 0
     for layer, note in layers:
         print("\n%s — %s" % (layer, note))

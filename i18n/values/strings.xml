@@ -163,7 +163,6 @@
     <string name="d_crypto_tab_message">Message</string>
     <string name="d_crypto_fileop_sign">Sign (detached)</string>
     <string name="d_crypto_fileop_verify">Verify (detached)</string>
-    <string name="d_crypto_err_generic">Operation failed</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">Add files…</string>
@@ -1134,4 +1133,12 @@
     <string name="d_applock_idle_never">Only at launch, when the computer locks, or by hand</string>
     <string name="d_applock_not_touched">Not touched: keys on a hardware security key (it keeps its own PIN), backups you saved outside PGPony, and copies of this computer\'s disk made before the PIN was entered.</string>
     <string name="d_applock_disk_note">On an SSD or a copy-on-write file system (APFS, btrfs), overwriting a file does not guarantee the old data is gone, so a secret key without a passphrase may be recoverable by someone who has the disk. Keys with a passphrase stay protected by it.</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">Something unexpected went wrong. Try again, and if it keeps happening, please report it.</string>
+    <string name="d_net_err_onion_no_proxy">An .onion address can only be reached through Tor, and no proxy is set, so nothing was sent.</string>
+    <string name="d_net_err_proxy_setup_failed">The proxy connection could not be set up, so nothing was sent.</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">The security key\'s signature slot returned no RSA modulus.</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">The security key\'s signature slot returned no RSA exponent.</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">The security key\'s decryption slot returned no RSA modulus.</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">The security key\'s decryption slot returned no RSA exponent.</string>
 </resources>

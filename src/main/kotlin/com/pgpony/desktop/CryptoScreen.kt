@@ -322,7 +322,7 @@ fun CryptoScreen(state: DesktopState) {
             try {
                 block()
             } catch (t: Throwable) {
-                banner = Banner.Bad(t.message ?: t::class.simpleName ?: tr("d_crypto_err_generic"))
+                banner = Banner.Bad(errorText(t))
             } finally {
                 busy = false
             }

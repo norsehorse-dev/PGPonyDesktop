@@ -111,7 +111,6 @@
     <string name="d_crypto_tab_message">메시지</string>
     <string name="d_crypto_fileop_sign">서명(분리)</string>
     <string name="d_crypto_fileop_verify">검증(분리)</string>
-    <string name="d_crypto_err_generic">작업 실패</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">파일 추가…</string>
@@ -974,4 +973,12 @@
     <string name="d_applock_idle_never">실행할 때, 컴퓨터가 잠길 때, 직접 잠글 때만</string>
     <string name="d_applock_not_touched">영향을 받지 않는 것: 하드웨어 보안 키에 있는 키(자체 PIN이 있음), PGPony 밖에 저장한 백업, PIN을 입력하기 전에 만들어진 이 컴퓨터 디스크의 사본.</string>
     <string name="d_applock_disk_note">SSD나 copy-on-write 파일 시스템(APFS, btrfs)에서는 파일을 덮어써도 이전 데이터가 사라진다고 보장할 수 없으므로, 비밀구절이 없는 개인 키는 디스크를 손에 넣은 사람이 복구할 수 있습니다. 비밀구절이 있는 키는 계속 비밀구절로 보호됩니다.</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">예상하지 못한 문제가 발생했습니다. 다시 시도해 보시고, 계속 발생하면 신고해 주세요.</string>
+    <string name="d_net_err_onion_no_proxy">.onion 주소는 Tor를 통해서만 접속할 수 있는데 프록시가 설정되어 있지 않아 아무것도 보내지 않았습니다.</string>
+    <string name="d_net_err_proxy_setup_failed">프록시 연결을 설정할 수 없어 아무것도 보내지 않았습니다.</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">하드웨어 키의 서명 슬롯이 RSA 모듈러스를 반환하지 않았습니다.</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">하드웨어 키의 서명 슬롯이 RSA 지수를 반환하지 않았습니다.</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">하드웨어 키의 복호화 슬롯이 RSA 모듈러스를 반환하지 않았습니다.</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">하드웨어 키의 복호화 슬롯이 RSA 지수를 반환하지 않았습니다.</string>
 </resources>

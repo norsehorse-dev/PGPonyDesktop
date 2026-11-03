@@ -162,7 +162,7 @@ fun ImportLinkDialog(onDismiss: () -> Unit, onFetched: (armored: String, finalUr
                     is UrlKeyFetcher.Result.Failed -> error = tr("import_url_error_failed_format", r.message)
                 }
             } catch (t: Throwable) {
-                error = tr("import_url_error_failed_format", t.message ?: t::class.simpleName.orEmpty())
+                error = tr("import_url_error_failed_format", errorText(t))
             } finally {
                 fetching = false
             }

@@ -61,6 +61,12 @@ Desktop-side changes it needed:
 - `CertificationService.kt`, `card/KeyToCardService.kt` and the other 4.7.x additions compile here; the
   desktop UI does not call them yet (plan section 3).
 
+Recorded exception, 2026-11-02 (desktop 3.1.0): `app-strings/` re-synced with `tools/sync-strings.sh` from
+PGPonyAndroid main at af491ba, ahead of the 4.8.0 tag, for resources only (the same exception 3.0.0 made). Desktop
+3.1.0 ships before Android 4.8.0, and af491ba fills the 389 Korean error messages Android was missing. The only file
+it changed is `app-strings/values-ko/strings.xml`. Every compiled tree stays at `v4.7.3`; the `literalExtra` engine
+change in the same commit comes with the 4.8.0 tag.
+
 Earlier: 2026-09-30 (desktop 3.0.0, F1 for phones): the pair tree added. Every other tree was
 byte-identical to the PGPonyAndroid working tree before it, so the sync changed nothing else.
 

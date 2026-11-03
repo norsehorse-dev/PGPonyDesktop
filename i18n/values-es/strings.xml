@@ -112,7 +112,6 @@
     <string name="d_crypto_tab_message">Mensaje</string>
     <string name="d_crypto_fileop_sign">Firmar (firma separada)</string>
     <string name="d_crypto_fileop_verify">Verificar (firma separada)</string>
-    <string name="d_crypto_err_generic">La operación falló</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">Añadir archivos…</string>
@@ -1003,4 +1002,12 @@
     <string name="d_applock_idle_never">Solo al iniciar, cuando se bloquea el ordenador o manualmente</string>
     <string name="d_applock_not_touched">No se tocan: las claves de una llave de seguridad (tiene su propio PIN), las copias de seguridad que guardaste fuera de PGPony y las copias del disco de este ordenador hechas antes de introducir el PIN.</string>
     <string name="d_applock_disk_note">En un SSD o en un sistema de archivos copy-on-write (APFS, btrfs), sobrescribir un archivo no garantiza que los datos antiguos desaparezcan, así que alguien que tenga el disco podría recuperar una clave secreta sin frase de contraseña. Las claves con frase de contraseña siguen protegidas por ella.</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">Algo salió mal de forma inesperada. Inténtalo de nuevo y, si sigue pasando, informa del problema.</string>
+    <string name="d_net_err_onion_no_proxy">Una dirección .onion solo se puede alcanzar a través de Tor y no hay ningún proxy configurado, así que no se envió nada.</string>
+    <string name="d_net_err_proxy_setup_failed">No se pudo establecer la conexión con el proxy, así que no se envió nada.</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">La ranura de firma de la llave de seguridad no devolvió ningún módulo RSA.</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">La ranura de firma de la llave de seguridad no devolvió ningún exponente RSA.</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">La ranura de descifrado de la llave de seguridad no devolvió ningún módulo RSA.</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">La ranura de descifrado de la llave de seguridad no devolvió ningún exponente RSA.</string>
 </resources>

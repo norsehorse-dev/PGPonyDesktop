@@ -11,7 +11,8 @@ Split from 3.1.0 on Nov 2, when 3.1.0 grew too large for a minor version. 3.1.0 
 Android v4.7.3, #14 (ML-DSA large files), portable mode, and the app lock with the duress PIN. 4.0.0 takes the
 items that change how keys are held and how the app is installed: keys generated in the computer's TPM or Secure
 Enclave (section 1), key files wrapped with an OS-held key (section 2), an apt repository (section 3), and the
-desktop screens for the Android 4.7.0 engine that 3.1.0 already carries (section 4).
+desktop screens for the Android 4.7.0 engine that 3.1.0 already carries (section 4). It does not wait for Android
+4.8.0 (see "Not in 4.0.0").
 
 ## 0. Rules for this cycle
 
@@ -136,12 +137,30 @@ Each matches Android's screen and wording (the strings are already in `vendor/ap
 Test: per item, the Android 4.7.0 test cases replayed on desktop, plus the round trip with PGPony Android
 (certify on one, see it on the other).
 
-## 5. Questions for Kevin
+## 5. Not in 4.0.0: waits for the Android 4.8.0 tag
+
+4.0.0 does not wait for Android 4.8.0, so this lands in the first desktop release after that tag, with the vendor
+sync to it.
+
+### SOP: v5 signatures in encrypted messages with several signers (S, from 3.1.0 3d)
+
+`pgpony sop decrypt --verify-with` cannot check a LibrePGP v5 signature on its own when an encrypted message has
+several signers: a v5 signature hashes the literal data fields, which sit inside the encryption. PGPonyAndroid
+af491ba (4.8.0) returns them as `DecryptResult.literalExtra` (and on the streaming and card results).
+
+Work: after the vendor sync to the 4.8.0 tag, `SopLibrePgpV5` checks every v5 packet in `signaturePackets` with
+`literalExtra` instead of taking the engine's graded result, so each v5 signer gets its VERIFICATIONS line.
+
+Test: an encrypted message signed by a GnuPG v5 (Ed448) key and a v4 key gives two VERIFICATIONS lines; a tampered
+literal date fails the v5 one only.
+
+## 6. Questions for Kevin
 
 None yet.
 
-## 6. Status of this document
+## 7. Status of this document
 
+Nov 2: section 5 added: 3.1.0 3d, parked until the Android 4.8.0 tag (neither 3.1.0 nor 4.0.0 waits for it).
 Rev 0 (Nov 2): split from 3.1.0. Section 1 is 3.1.0 section 3c with its number, the Q6 answer and one
 cross-reference updated; sections 2 and 3
 are 3.1.0 Q2 and Q4 written out; section 4 is the UI half of 3.1.0 section 3.

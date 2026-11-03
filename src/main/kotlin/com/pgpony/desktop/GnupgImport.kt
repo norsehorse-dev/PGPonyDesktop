@@ -759,7 +759,7 @@ fun GnupgImportDialog(state: DesktopState, onDismiss: () -> Unit) {
             else runCatching {
                 val sc = GnupgImport.scan(home, cancelled = cancelled)
                 Triple(sc, if (sc.gpg == null) GnupgImport.prepare(sc, cancelled) else null, null as String?)
-            }.getOrElse { Triple(null, null, it.message ?: it.javaClass.simpleName) }
+            }.getOrElse { Triple(null, null, errorText(it)) }
         }
         scan = s
         plan = p
@@ -782,7 +782,7 @@ fun GnupgImportDialog(state: DesktopState, onDismiss: () -> Unit) {
             try {
                 plan = withContext(Dispatchers.IO) { GnupgImport.prepare(s) }
             } catch (e: Exception) {
-                scanError = e.message ?: e.javaClass.simpleName
+                scanError = errorText(e)
             } finally {
                 working = false
             }
@@ -800,7 +800,7 @@ fun GnupgImportDialog(state: DesktopState, onDismiss: () -> Unit) {
                 }
                 state.reload()
             } catch (e: Exception) {
-                scanError = e.message ?: e.javaClass.simpleName
+                scanError = errorText(e)
             } finally {
                 working = false
             }

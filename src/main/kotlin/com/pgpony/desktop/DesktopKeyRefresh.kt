@@ -93,7 +93,7 @@ class DesktopKeyRefresh(
             } catch (e: Exception) {
                 if (firstFailure == null) {
                     firstFailure =
-                        tr("d_refresh_err_server_prefix", server.label, e.message ?: e.javaClass.simpleName)
+                        tr("d_refresh_err_server_prefix", server.label, errorText(e))
                 }
                 continue
             }

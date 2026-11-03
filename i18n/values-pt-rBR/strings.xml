@@ -112,7 +112,6 @@
     <string name="d_crypto_tab_message">Mensagem</string>
     <string name="d_crypto_fileop_sign">Assinar (assinatura separada)</string>
     <string name="d_crypto_fileop_verify">Verificar (assinatura separada)</string>
-    <string name="d_crypto_err_generic">A operação falhou</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">Adicionar arquivos…</string>
@@ -1003,4 +1002,12 @@
     <string name="d_applock_idle_never">Só ao abrir, quando o computador é bloqueado ou manualmente</string>
     <string name="d_applock_not_touched">Não são afetados: chaves em uma chave de segurança de hardware (ela tem o próprio PIN), backups que você salvou fora do PGPony e cópias do disco deste computador feitas antes de o PIN ser digitado.</string>
     <string name="d_applock_disk_note">Em um SSD ou em um sistema de arquivos copy-on-write (APFS, btrfs), sobrescrever um arquivo não garante que os dados antigos sumam, então uma chave secreta sem frase-senha pode ser recuperada por alguém que tenha o disco. Chaves com frase-senha continuam protegidas por ela.</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">Algo inesperado deu errado. Tente de novo e, se continuar acontecendo, relate o problema.</string>
+    <string name="d_net_err_onion_no_proxy">Um endereço .onion só pode ser acessado pelo Tor, e nenhum proxy está definido, então nada foi enviado.</string>
+    <string name="d_net_err_proxy_setup_failed">Não foi possível configurar a conexão com o proxy, então nada foi enviado.</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">O slot de assinatura da chave de segurança não retornou nenhum módulo RSA.</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">O slot de assinatura da chave de segurança não retornou nenhum expoente RSA.</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">O slot de descriptografia da chave de segurança não retornou nenhum módulo RSA.</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">O slot de descriptografia da chave de segurança não retornou nenhum expoente RSA.</string>
 </resources>

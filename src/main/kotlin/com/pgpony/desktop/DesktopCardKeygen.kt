@@ -68,10 +68,10 @@ object DesktopCardKeygen {
 
         val signMaterial = session.generateKeyOnCard(CardSlot.SIGNATURE)
         val decMaterial = session.generateKeyOnCard(CardSlot.DECRYPTION)
-        val signN = signMaterial.modulus ?: throw OpenPgpCardException.Malformed("Signature slot returned no RSA modulus")
-        val signE = signMaterial.exponent ?: throw OpenPgpCardException.Malformed("Signature slot returned no RSA exponent")
-        val decN = decMaterial.modulus ?: throw OpenPgpCardException.Malformed("Decryption slot returned no RSA modulus")
-        val decE = decMaterial.exponent ?: throw OpenPgpCardException.Malformed("Decryption slot returned no RSA exponent")
+        val signN = signMaterial.modulus ?: throw OpenPgpCardException.Malformed(tr("d_card_err_sign_slot_no_rsa_modulus"))
+        val signE = signMaterial.exponent ?: throw OpenPgpCardException.Malformed(tr("d_card_err_sign_slot_no_rsa_exponent"))
+        val decN = decMaterial.modulus ?: throw OpenPgpCardException.Malformed(tr("d_card_err_dec_slot_no_rsa_modulus"))
+        val decE = decMaterial.exponent ?: throw OpenPgpCardException.Malformed(tr("d_card_err_dec_slot_no_rsa_exponent"))
 
         val primaryBody = RsaCardPackets.buildRsaPublicKeyBody(creationTime, signN, signE)
         val subkeyBody = RsaCardPackets.buildRsaPublicKeyBody(creationTime, decN, decE)

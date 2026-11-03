@@ -117,7 +117,7 @@ fun CardsScreen(state: DesktopState) {
                 if (newInfo != null) info = newInfo
                 doneMsg?.let { message = it; messageIsError = false }
             } catch (t: Throwable) {
-                message = t.message ?: t::class.simpleName
+                message = errorText(t)
                 messageIsError = true
             } finally {
                 busy = false
@@ -250,7 +250,7 @@ fun CardsScreen(state: DesktopState) {
                                     )
                                     messageIsError = false
                                 } catch (t: Throwable) {
-                                    message = t.message ?: t::class.simpleName
+                                    message = errorText(t)
                                     messageIsError = true
                                 } finally {
                                     busy = false
@@ -397,7 +397,7 @@ fun CardsScreen(state: DesktopState) {
                         )
                         messageIsError = false
                     } catch (t: Throwable) {
-                        message = t.message ?: t::class.simpleName
+                        message = errorText(t)
                         messageIsError = true
                     } finally {
                         busy = false
@@ -428,7 +428,7 @@ fun CardsScreen(state: DesktopState) {
                         message = tr("d_cards_move_done", entity.userID.ifBlank { entity.shortFingerprint })
                         messageIsError = false
                     } catch (t: Throwable) {
-                        message = t.message ?: t::class.simpleName
+                        message = errorText(t)
                         messageIsError = true
                     } finally {
                         busy = false

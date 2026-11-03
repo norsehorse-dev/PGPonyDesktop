@@ -104,7 +104,7 @@ fun SearchKeyServersDialog(state: DesktopState, onDismiss: () -> Unit) {
                     result = hit
                 }
             } catch (t: Throwable) {
-                message = tr("d_search_failed", t.message ?: t::class.simpleName.orEmpty())
+                message = tr("d_search_failed", errorText(t))
             } finally {
                 searching = false
             }

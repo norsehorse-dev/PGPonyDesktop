@@ -111,7 +111,6 @@
     <string name="d_crypto_tab_message">消息</string>
     <string name="d_crypto_fileop_sign">签名（分离）</string>
     <string name="d_crypto_fileop_verify">验证（分离）</string>
-    <string name="d_crypto_err_generic">操作失败</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">添加文件…</string>
@@ -974,4 +973,12 @@
     <string name="d_applock_idle_never">仅在启动时、电脑锁定时或手动锁定</string>
     <string name="d_applock_not_touched">不受影响的内容：硬件密钥上的密钥（它有自己的 PIN）、你存储在 PGPony 之外的备份，以及在输入 PIN 之前制作的此电脑磁盘副本。</string>
     <string name="d_applock_disk_note">在 SSD 或写时复制文件系统（APFS、btrfs）上，覆盖文件并不能保证旧数据被清除，因此拿到磁盘的人可能恢复没有口令的私钥。有口令的密钥仍受口令保护。</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">发生了意外错误。请重试，如果问题反复出现，请报告此问题。</string>
+    <string name="d_net_err_onion_no_proxy">.onion 地址只能通过 Tor 访问，但未设置代理，因此未发送任何内容。</string>
+    <string name="d_net_err_proxy_setup_failed">无法建立代理连接，因此未发送任何内容。</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">硬件密钥的签名插槽未返回 RSA 模数。</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">硬件密钥的签名插槽未返回 RSA 指数。</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">硬件密钥的解密插槽未返回 RSA 模数。</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">硬件密钥的解密插槽未返回 RSA 指数。</string>
 </resources>

@@ -1,6 +1,6 @@
 # PGPony Desktop 3.1.0 Planning
 
-Status: Rev 2, 2026-11-02 (Rev 0 seed 2026-10-08). Base: 3.0.2.
+Status: Rev 3, 2026-11-02 (Rev 0 seed 2026-10-08). Base: 3.0.2.
 Split Nov 2: TPM and Secure Enclave keys (was 3c), OS key wrap (Q2), the apt repository (Q4) and the desktop
 screens for the Android 4.7.0 engine moved to 4.0.0 (PLANNING_DESKTOP_4_0_0.md).
 Release model: as 3.0.0, no release candidates; each stage is self-tested on the Mac, the Windows VM and Linux.
@@ -115,6 +115,15 @@ Work: make the fix independent of the launcher. On Linux, at the top of main, wh
 libfreetype, find the system one the way the wrapper does and re-exec the same command with it set (a guard
 variable stops a loop; skipped for CLI verbs that never open a window). Keep the wrappers as the first line.
 
+Nov 2: built. `FreetypePreload.kt` runs just before a GUI launch takes the single-instance guard: on Linux, when
+LD_PRELOAD names no libfreetype, it finds the system copy with PcscLibrary's search (distribution directories, a
+64-bit ELF file for this architecture) and starts the same launcher (`jpackage.app-path`) again with LD_PRELOAD
+set, then exits with its exit code. `PGPONY_FT_PRELOADED` marks the second process; `PGPONY_NO_FT_PRELOAD`
+turns it off. Skipped under Flatpak and for the CLI, the shim and SOP. The wrapper and AppRun now take this
+architecture's entry from `ldconfig -p` and search the architecture's own directories first (the old glob reached
+`i386-linux-gnu` before `x86_64-linux-gnu`). Tests: `FreetypePreloadTest`. Still to do: the antiX VM check with a
+shortcut straight at PGPony.bin, and a reply on #12 once a build is out.
+
 ## 3b. Translations: close the remaining gaps (S to M)
 
 Every language is already complete. Desktop ships the same eleven languages as Android and iOS, the
@@ -147,11 +156,28 @@ Work:
 Test: strict audit green on both layers and I18nTest green; an .onion key server with no proxy and a card error
 show in the selected language.
 
+Nov 2: built, except item 1.
+1. The v4.7.3 re-sync did not bring Korean: Android's own Korean was missing 389 `err_*` messages. Fixed upstream
+   (PGPonyAndroid af491ba, four translators and two readers) and synced here from main ahead of the 4.8.0 tag, a
+   recorded exception for resources only (vendor/README.md). Every locale is now complete in both layers.
+2. `errorText(t)` in Strings.kt replaces the 21 `message ?: simpleName` sites in the GUI and services (CLI, SOP,
+   selftest and the PC/SC cause chain stay English on purpose): the message when there is one, else
+   `d_err_unexpected`, with the class name in the debug log. The three network refusals (one reuses Android's
+   `err_proxy_turned_but_no_proxy_host`) and the four card keygen errors go through `tr()`. `d_crypto_err_generic`
+   is gone (its one caller uses `errorText` now). Seven new keys in all eleven languages, two agents.
+3. The audit takes `vendor` (or `android`, `desktop`) as a short layer name, refuses an unknown one, and skips
+   `translatable="false"` keys. build.yml audits the vendor layer (not strict, so Android's missing Korean warns)
+   and says eleven locales; the D11 notes carry a correction.
+4. Done with section 2 (13 keys, two agents).
+
 ## 3c. Keys generated in the computer's TPM or Secure Enclave
 
 Moved to 4.0.0 (PLANNING_DESKTOP_4_0_0.md section 1) on Nov 2.
 
 ## 3d. SOP: v5 signatures in encrypted messages with several signers (left from 3.0.3)
+
+Deferred on Nov 2: 3.1.0 ships before Android 4.8.0, which carries the engine change, and 4.0.0 does not wait for it
+either. It lands in the first desktop release after the 4.8.0 tag (PLANNING_DESKTOP_4_0_0.md, "Not in 4.0.0").
 
 3.0.3 checks LibrePGP v5 signatures in `pgpony sop` (SopLibrePgpV5.kt). A v5 signature over an inline message
 hashes the literal data packet's format, file name and date. `inline-verify` reads those from the message, but
@@ -163,6 +189,15 @@ engine graded that one. A single v5 signer, which is what GnuPG writes, always g
 Work: have DecryptResult carry the literal data fields (format, raw file name, date). That is an upstream change
 in PGPonyAndroid, so it comes with the sync, then SopLibrePgpV5 checks every v5 packet with its block. Small (S)
 once upstream has it.
+
+Nov 2: v4.7.3 does not have it. The engine already builds the bytes while it decrypts (`st.literalExtra` in
+`PGPCryptoService`, from `LibrePgpV5Sig.literalExtra(format, rawFileName, modificationTime)`) and uses them for its
+own v5 check, but `DecryptResult` and `DecryptStreamResult` do not return them. The upstream change is one additive
+field on each (`literalExtra: ByteArray? = null`), set from `st.literalExtra`. Blocked on PGPonyAndroid (4.8.0) and a
+tag; the desktop side is then a few lines in `SopLibrePgpV5`.
+
+Nov 2, later: done upstream in PGPonyAndroid af491ba (DecryptResult, DecryptStreamResult and CardDecryptResult carry
+`literalExtra`, tested on every decrypt path), for the 4.8.0 tag.
 
 
 ## 3e. Portable mode: run from a USB drive (M, user request, see Q7)
@@ -307,6 +342,8 @@ Tests: `MlDsaFileStreamingTest` (file, folder, detached, tamper; a gated 600 MB 
 
 ## 5. Status of this document
 
+Rev 3 (Nov 2): 3a and 3b built; 3d deferred to the first desktop release after the Android 4.8.0 tag; Korean
+strings synced from Android main as a recorded exception.
 Rev 2 (Nov 2): split into 3.1.0 and 4.0.0; section 2 built (2.4); 3.1.0's new strings in all eleven languages.
 Rev 1 (Nov 2): Q1 to Q7 answered. Rev 0 was the seed with the duress PIN request.
 Oct 23: section 3b added (remaining translation gaps; every language, Russian included, is already complete).

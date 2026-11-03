@@ -114,7 +114,6 @@
     <string name="d_crypto_tab_message">Сообщение</string>
     <string name="d_crypto_fileop_sign">Подписать (отсоединённая подпись)</string>
     <string name="d_crypto_fileop_verify">Проверить (отсоединённая подпись)</string>
-    <string name="d_crypto_err_generic">Операция не удалась</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">Добавить файлы…</string>
@@ -1061,4 +1060,12 @@
     <string name="d_applock_idle_never">Только при запуске, при блокировке компьютера или вручную</string>
     <string name="d_applock_not_touched">Не затрагиваются: ключи на аппаратном ключе безопасности (у него свой PIN), резервные копии, сохранённые вами вне PGPony, и копии диска этого компьютера, снятые до ввода PIN.</string>
     <string name="d_applock_disk_note">На SSD или в файловой системе с копированием при записи (APFS, btrfs) перезапись файла не гарантирует, что старые данные исчезли, поэтому закрытый ключ без парольной фразы может восстановить тот, у кого окажется диск. Ключи с парольной фразой по-прежнему защищены ею.</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">Произошла непредвиденная ошибка. Попробуйте снова, а если она повторяется, сообщите о ней.</string>
+    <string name="d_net_err_onion_no_proxy">Адрес .onion доступен только через Tor, а прокси не задан, поэтому ничего не отправлено.</string>
+    <string name="d_net_err_proxy_setup_failed">Не удалось установить соединение через прокси, поэтому ничего не отправлено.</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">Слот подписи ключа безопасности не вернул модуль RSA.</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">Слот подписи ключа безопасности не вернул экспоненту RSA.</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">Слот расшифровки ключа безопасности не вернул модуль RSA.</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">Слот расшифровки ключа безопасности не вернул экспоненту RSA.</string>
 </resources>

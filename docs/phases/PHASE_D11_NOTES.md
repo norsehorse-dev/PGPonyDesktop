@@ -128,6 +128,9 @@ llavero / trousseau / 鍵束 / chaveiro · key pair = Schlüsselpaar / Par de cl
 2. `python3 tools/i18n-audit.py --layer i18n --strict` → `0 error(s), 0 untranslated key(s)`,
    458/458 per locale.
 3. `python3 tools/i18n-audit.py --layer vendor` → findings here are upstream bugs, not ours.
+   (3.1.0 correction: until 3.1.0 this name matched no layer and the audit checked nothing. The
+   audit now takes `vendor` as a short name for `vendor/app-strings` and refuses an unknown name,
+   and CI runs this step.)
 4. Launch, Settings → Appearance, switch through all six languages. The whole window should
    re-render without a restart, including the menu bar and the tray menu.
 5. **de/ja layout pass** — in German and then Japanese, walk: keyring (sort menu, badges, meta

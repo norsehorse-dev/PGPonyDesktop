@@ -356,6 +356,17 @@ object I18n {
 fun tr(key: String): String = I18n.template(key) ?: key
 
 /**
+ * 3.1.0 (plan 3b): the text a person sees for a failure. Its message when it has one (the
+ * vendored engine's messages are already translated); otherwise one translated sentence, never a
+ * class name such as IOException. The class name goes to the debug log (-Dpgpony.debug=true).
+ */
+fun errorText(t: Throwable): String {
+    t.message?.takeIf { it.isNotBlank() }?.let { return it }
+    android.util.Log.e("PGPony", "failure with no message: ${t.javaClass.name}", t)
+    return tr("d_err_unexpected")
+}
+
+/**
  * Look up [key] and format it with [args] in the current locale — so a German build groups
  * thousands as `1.234` and a Japanese build formats dates the Japanese way, which
  * `String.format` without a Locale would not do (it would use the JVM default, which the

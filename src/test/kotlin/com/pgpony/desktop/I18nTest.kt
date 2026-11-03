@@ -398,6 +398,19 @@ class I18nTest {
         assertEquals("no_such_plural", trQuantity("no_such_plural", 2))
     }
 
+    // 3.1.0 (plan 3b): a failure shows its message, or one translated sentence, never a class name.
+    @Test
+    fun errorTextNeverShowsAClassName() {
+        I18n.selectLanguage("de")
+        assertEquals("Schlüssel nicht gefunden", errorText(IllegalStateException("Schlüssel nicht gefunden")))
+        val bare = errorText(java.io.IOException())
+        assertEquals(tr("d_err_unexpected"), bare)
+        assertTrue("IOException" !in bare && bare != "d_err_unexpected", bare)
+        assertEquals(tr("d_err_unexpected"), errorText(RuntimeException("  ")), "a blank message counts as none")
+        I18n.selectLanguage("en")
+        assertTrue(errorText(NullPointerException()).startsWith("Something unexpected went wrong"))
+    }
+
     // ── Language selection ─────────────────────────────────────────────────
 
     @Test

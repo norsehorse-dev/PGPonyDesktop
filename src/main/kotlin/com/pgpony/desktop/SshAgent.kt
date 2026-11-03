@@ -320,7 +320,7 @@ object SshAgentService {
             t.name = "pgpony-ssh-agent"
             t.start()
         } catch (e: Exception) {
-            lastError = e.message ?: e.javaClass.simpleName
+            lastError = errorText(e)
             runCatching { channel?.close() }
             channel = null
         }

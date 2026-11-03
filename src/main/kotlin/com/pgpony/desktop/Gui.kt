@@ -352,13 +352,13 @@ class DesktopState(private val scope: CoroutineScope) {
                         )
                     }
                 } catch (t: Throwable) {
-                    status = tr("keyring_generate_ssh_auth_failed", t.message ?: t::class.simpleName.orEmpty())
+                    status = tr("keyring_generate_ssh_auth_failed", errorText(t))
                 }
             }
             refresh()
             onDone(repository.byFingerprint(entity.fingerprint) ?: entity)
         } catch (t: Throwable) {
-            status = tr("d_status_generate_failed", t.message ?: t::class.simpleName.orEmpty())
+            status = tr("d_status_generate_failed", errorText(t))
         } finally {
             busy = false
         }
@@ -428,7 +428,7 @@ class DesktopState(private val scope: CoroutineScope) {
             refresh()
             onDone()
         } catch (t: Throwable) {
-            onError(tr("settings_data_clear_error_format", t.message ?: t::class.simpleName.orEmpty()))
+            onError(tr("settings_data_clear_error_format", errorText(t)))
         } finally {
             busy = false
         }
@@ -470,7 +470,7 @@ class DesktopState(private val scope: CoroutineScope) {
             else tr("d_status_expiration_updated")
             refresh()
         } catch (t: Throwable) {
-            status = tr("d_status_expiration_failed", t.message ?: t::class.simpleName.orEmpty())
+            status = tr("d_status_expiration_failed", errorText(t))
         }
     }
 
@@ -489,7 +489,7 @@ class DesktopState(private val scope: CoroutineScope) {
             refresh()
             onDone()
         } catch (t: Throwable) {
-            status = tr("kd_vm_error_revocation_failed_format", t.message ?: t::class.simpleName.orEmpty())
+            status = tr("kd_vm_error_revocation_failed_format", errorText(t))
         } finally {
             busy = false
         }

@@ -444,7 +444,7 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
                 log += tr("d_pair_result_ok", item.name, summary)
                 PairResult(item.id, true)
             } catch (e: Exception) {
-                val why = e.message ?: e.javaClass.simpleName
+                val why = errorText(e)
                 log += tr("d_pair_result_failed", item.name, why)
                 PairResult(item.id, false, why)
             }
@@ -490,7 +490,7 @@ private fun SessionPane(state: DesktopState, controller: PairController, session
                     try {
                         received += withContext(Dispatchers.IO) { controller.check(item, m.bytes) }
                     } catch (e: Exception) {
-                        val why = e.message ?: e.javaClass.simpleName
+                        val why = errorText(e)
                         log += tr("d_pair_result_failed", item.name, why)
                         sendResult(PairResult(item.id, false, why))
                     }
@@ -630,7 +630,7 @@ private fun SendPane(controller: PairController, peer: PairInfo?, onPrepared: (P
             try {
                 onPrepared(withContext(Dispatchers.IO) { controller.prepare(picked.toList(), pass.takeIf { needsPass }) })
             } catch (e: Exception) {
-                error = e.message ?: e.javaClass.simpleName
+                error = errorText(e)
             } finally {
                 working = false
             }

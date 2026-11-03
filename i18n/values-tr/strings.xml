@@ -112,7 +112,6 @@
     <string name="d_crypto_tab_message">Mesaj</string>
     <string name="d_crypto_fileop_sign">İmzala (ayrık)</string>
     <string name="d_crypto_fileop_verify">Doğrula (ayrık)</string>
-    <string name="d_crypto_err_generic">İşlem başarısız oldu</string>
 
     <!-- ── Files pane ──────────────────────────────────────────────────── -->
     <string name="d_crypto_add_files">Dosya ekle…</string>
@@ -1003,4 +1002,12 @@
     <string name="d_applock_idle_never">Yalnızca açılışta, bilgisayar kilitlendiğinde veya elle</string>
     <string name="d_applock_not_touched">Dokunulmayanlar: donanım güvenlik anahtarındaki anahtarlar (kendi PIN\'i vardır), PGPony dışına kaydettiğiniz yedekler ve PIN girilmeden önce alınmış bu bilgisayarın disk kopyaları.</string>
     <string name="d_applock_disk_note">SSD\'de veya yazarken kopyalayan (copy-on-write) bir dosya sisteminde (APFS, btrfs) bir dosyanın üzerine yazmak eski verilerin gittiğini garanti etmez; bu yüzden parola ifadesi olmayan bir gizli anahtar, diski eline geçiren biri tarafından kurtarılabilir. Parola ifadesi olan anahtarlar onunla korunmaya devam eder.</string>
+    <!-- 3.1.0 (plan 3b): English that used to skip tr(). -->
+    <string name="d_err_unexpected">Beklenmedik bir sorun oluştu. Yeniden deneyin, sorun devam ederse lütfen bildirin.</string>
+    <string name="d_net_err_onion_no_proxy">Bir .onion adresine yalnızca Tor üzerinden ulaşılabilir ancak proxy belirlenmemiş, bu yüzden hiçbir şey gönderilmedi.</string>
+    <string name="d_net_err_proxy_setup_failed">Proxy bağlantısı kurulamadı, bu yüzden hiçbir şey gönderilmedi.</string>
+    <string name="d_card_err_sign_slot_no_rsa_modulus">Güvenlik anahtarının imza yuvası RSA modülü döndürmedi.</string>
+    <string name="d_card_err_sign_slot_no_rsa_exponent">Güvenlik anahtarının imza yuvası RSA üssü döndürmedi.</string>
+    <string name="d_card_err_dec_slot_no_rsa_modulus">Güvenlik anahtarının şifre çözme yuvası RSA modülü döndürmedi.</string>
+    <string name="d_card_err_dec_slot_no_rsa_exponent">Güvenlik anahtarının şifre çözme yuvası RSA üssü döndürmedi.</string>
 </resources>
