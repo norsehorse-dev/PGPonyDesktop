@@ -1,6 +1,6 @@
 # PGPony Desktop 3.1.0 Planning
 
-Status: Rev 0 (seed), 2026-10-08. Base: 3.0.2.
+Status: Rev 1, 2026-11-02 (Rev 0 seed 2026-10-08). Base: 3.0.2.
 Release model: as 3.0.0, no release candidates; each stage is self-tested on the Mac, the Windows VM and Linux.
 
 Size tags: S (an evening), M (a few evenings), L (a week or more of evenings).
@@ -239,8 +239,10 @@ with an OS-held key (Q2), if that is adopted.
 - Windows: the release job zips the installed msi image (both launchers, same files as the msi) with a
   `PGPony-data` folder as `PGPony-windows-portable.zip`, then unzips it, runs `pgpony-cli list-keys` and fails
   if anything appears in `%APPDATA%\PGPony` or the Java preferences key in the registry.
-- Linux: no new file. The tarball and AppImage gain the folder check; the docs say to make `PGPony-data` beside
-  them. (A portable tarball with the folder inside would be a third Linux tarball for one empty folder.)
+- Linux (Q7): a portable tarball per architecture, `PGPony-linux-x86_64-portable.tar.gz` and
+  `PGPony-linux-aarch64-portable.tar.gz`: the wrapped app from the plain tarball in a `PGPony-portable` folder beside
+  `PGPony-data`. CI unpacks it, runs `list-keys` and fails if `~/.local/share/pgpony` or `~/.java` appears. The
+  plain tarball and the AppImage also turn portable with a `PGPony-data` folder beside them.
 - macOS: `PGPony-macOS-portable.zip` and `PGPony-macOS-intel-portable.zip`, each the notarized app plus an empty
   `PGPony-data`, made from the release dmgs by `packaging/release/make-portable-macos.sh` (stapled again as an
   app, Gatekeeper-checked). Gatekeeper runs a quarantined app from a hidden read-only copy (App
@@ -271,7 +273,7 @@ files. Leaving no trace on the host is a different product (Tails).
 - `desktop.json` gets a `portable` block (Windows and both macOS zips, with sha256), `/desktop` a portable section
   with the Linux instructions, and the mirror copies the zips. A new download type needs both the
   `track-click.php` allowlist and the DB ENUM migration (PonyHTML/DEPLOY.md).
-- RELEASING.md: the zips join `FILES` (12 files, 13 signatures with SHA256SUMS). The macOS zips are made after
+- RELEASING.md: the portable files join `FILES` (14 files, 15 signatures with SHA256SUMS). The macOS zips are made after
   the stapler check, from the stapled app.
 - winget and AUR unchanged.
 
@@ -304,25 +306,29 @@ Tests: `MlDsaFileStreamingTest` (file, folder, detached, tamper; a gated 600 MB 
 ## 4. Questions for Kevin
 
 - Q1. While PGPony is locked, should the ssh-agent and git shim refuse (and say "PGPony is locked"), keep working
-  with passphrases already held, or keep working as now?
+  with passphrases already held, or keep working as now? Answered Nov 2: they refuse while locked.
 - Q2. Worth wrapping the key files with an OS-held key (macOS Keychain, Windows DPAPI, libsecret) so a duress wipe
   can destroy that one key and make the files unreadable at once, whatever the disk does? A larger change; could
-  be its own item later.
+  be its own item later. Answered Nov 2: in 3.1.0, for installed copies only (a portable copy cannot hold an
+  OS key, so it keeps the passphrase-only rule of 3e.5).
 - Q4. An apt repository on pgpony.app, signed with the release key, so `apt upgrade` picks up new .deb releases
   (#12: the in-app update notice sends Linux users to download the .deb by hand)? Worth it now, or later?
-- Q3. Does the CLI (`pgpony` and SOP) ask for the PGPony PIN when the lock is on, or stay outside it?
+  Answered Nov 2: in 3.1.0.
+- Q3. Does the CLI (`pgpony` and SOP) ask for the PGPony PIN when the lock is on, or stay outside it? Answered
+  Nov 2: `pgpony` asks; `pgpony sop` stays outside (it never touches the keyring).
 - Q5. TPM / Secure Enclave keys (3c) are an L item. Keep them in 3.1.0 after the app lock, or move them to the
-  next cycle so 3.1.0 stays app lock, duress and Android 4.7.0?
+  next cycle so 3.1.0 stays app lock, duress and Android 4.7.0? Answered Nov 2: keep them in 3.1.0.
 - Q6. Linux TPM route: tpm2-pkcs11 through SunPKCS11 (less code, user installs and sets up a token) or libtss2
-  through JNA (more code, works with just the `tss` group)?
+  through JNA (more code, works with just the `tss` group)? Answered Nov 2: libtss2 through JNA.
 - Q7. Portable mode (3e): ship zips for Windows and both Macs and only instructions for Linux, as above, or a
-  portable Linux tarball too?
+  portable Linux tarball too? Answered Nov 2: a portable Linux tarball too (3e.4).
 
 ## 5. Status of this document
 
-Rev 0 seed with the duress PIN request. Goes to Rev 1 when Q1 to Q3 are answered and Android 4.7.0's scope settles.
+Rev 1 (Nov 2): Q1 to Q7 answered. Rev 0 was the seed with the duress PIN request.
 Oct 23: section 3b added (remaining translation gaps; every language, Russian included, is already complete).
 Oct 23: section 3c added (keys generated in the TPM / Secure Enclave, user request), with Q5 and Q6.
 Nov 1: section 3e added (portable mode, user request): all three platforms, 3.1.0, unprotected secret keys refused; Q7.
 Nov 2: section 3 synced (vendor at v4.7.3), 3f added and done (#14), 3e built (portable mode; translocation by
 mount table instead of JNA).
+Nov 2: Q1 to Q7 answered (section 4); Linux portable tarballs added to 3e.4 and the release workflow.

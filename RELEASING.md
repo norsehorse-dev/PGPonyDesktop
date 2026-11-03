@@ -149,7 +149,8 @@ zsh packaging/release/make-portable-macos.sh ~/pgpony-release/PGPony-macOS-intel
 
 Both runs must print `accepted` and `source=Notarized Developer ID`. CI builds the Windows portable
 zip itself (from the installed msi image, then checks that nothing lands in `%APPDATA%` or the
-registry). Linux needs no file of its own: the tarball and the AppImage turn portable when a
+registry), and a portable tarball per Linux architecture (checking nothing lands in
+`~/.local/share/pgpony` or `~/.java`). The plain tarball and the AppImage also turn portable when a
 `PGPony-data` folder sits beside them.
 
 ## 4. Assemble, sign, publish
@@ -169,9 +170,11 @@ FILES=(
   PGPony-macOS-intel-portable.zip
   PGPony-linux.deb
   PGPony-linux-x86_64.tar.gz
+  PGPony-linux-x86_64-portable.tar.gz
   PGPony-x86_64.AppImage
   PGPony-linux-arm64.deb
   PGPony-linux-aarch64.tar.gz
+  PGPony-linux-aarch64-portable.tar.gz
   PGPony-aarch64.AppImage
   PGPony-windows.msi
   PGPony-windows-portable.zip
@@ -273,8 +276,8 @@ filename made of all three names joined, and every command in this block then fa
 that looks like the files are missing. An array expands to separate words in zsh.
 
 The explicit `-u` is not decoration either: a bare `gpg --detach-sign` failed with "no default
-secret key" during the 1.0.1 cycle. Thirteen signatures since 3.1.0 (twelve files and
-SHA256SUMS): check the `gpg --verify` loop printed thirteen `Good signature` lines before going
+secret key" during the 1.0.1 cycle. Fifteen signatures since 3.1.0 (fourteen files and
+SHA256SUMS): check the `gpg --verify` loop printed fifteen `Good signature` lines before going
 any further.
 
 Verify before publishing, not after. A signature that does not check out is worse than none.

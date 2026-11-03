@@ -57,6 +57,7 @@ jobs:
             debarch: amd64
             deb: PGPony-linux.deb
             tarball: PGPony-linux-x86_64.tar.gz
+            portable: PGPony-linux-x86_64-portable.tar.gz
             appimage: PGPony-x86_64.AppImage
             artifact: linux-x86_64
           - arch: aarch64
@@ -64,6 +65,7 @@ jobs:
             debarch: arm64
             deb: PGPony-linux-arm64.deb
             tarball: PGPony-linux-aarch64.tar.gz
+            portable: PGPony-linux-aarch64-portable.tar.gz
             appimage: PGPony-aarch64.AppImage
             artifact: linux-aarch64
     steps:
@@ -178,6 +180,34 @@ jobs:
           echo "bin/PGPony version -> $out"
           test -n "$out"
 
+      # 3.1.0 (plan 3e): the portable tarball. The same wrapped app as the tarball above, inside a
+      # PGPony-portable folder beside a PGPony-data folder, which is what switches portable mode on
+      # (PortableMode: the folder beside the PGPony/ app folder). Then the proof that portable
+      # means portable: run the CLI from an unpacked copy and check the keyring landed in
+      # PGPony-data while neither ~/.local/share/pgpony nor the Java preferences under ~/.java
+      # appeared. Java takes user.home from the password database, not $HOME, so the checks look
+      # at the runner's real home.
+      - name: Build and verify the portable tarball
+        run: |
+          rm -rf portable-src && mkdir -p portable-src/PGPony-portable/PGPony-data
+          cp -r tarball-src/PGPony portable-src/PGPony-portable/PGPony
+          printf '%s\n' \
+            'PGPony keeps its keys and settings in this folder while it runs from here.' \
+            "Delete or rename the folder and PGPony uses the computer's own folders again." \
+            'To update, replace the PGPony folder with the new version and keep this folder.' \
+            > portable-src/PGPony-portable/PGPony-data/README.txt
+          tar -czf ${{ matrix.portable }} -C portable-src PGPony-portable
+          home=$(getent passwd "$(id -un)" | cut -d: -f6)
+          rm -rf "$home/.local/share/pgpony" "$home/.java/.userPrefs/app"
+          rm -rf /tmp/portcheck && mkdir -p /tmp/portcheck
+          tar -xzf ${{ matrix.portable }} -C /tmp/portcheck
+          out=$(/tmp/portcheck/PGPony-portable/PGPony/bin/PGPony list-keys 2>&1 || true)
+          echo "portable list-keys -> $out"
+          test -f /tmp/portcheck/PGPony-portable/PGPony-data/pgpony.db
+          test ! -e "$home/.local/share/pgpony"
+          test ! -e "$home/.java/.userPrefs/app"
+          echo 'portable: keyring in PGPony-data, nothing in ~/.local/share or ~/.java'
+
       # appimagetool and the type2 runtime it puts at the front of every AppImage are fetched at
       # the versions pinned in packaging/appimage/tools.pin and refused unless their sha256 matches
       # the pin. The runtime is the first code that runs on a user's machine, so it is passed in
@@ -246,6 +276,7 @@ jobs:
           path: |
             ${{ matrix.deb }}
             ${{ matrix.tarball }}
+            ${{ matrix.portable }}
             ${{ matrix.appimage }}
 
   windows:
@@ -413,9 +444,11 @@ jobs:
           mkdir -p dist
           mv artifacts/linux-x86_64/PGPony-linux.deb dist/
           mv artifacts/linux-x86_64/PGPony-linux-x86_64.tar.gz dist/
+          mv artifacts/linux-x86_64/PGPony-linux-x86_64-portable.tar.gz dist/
           mv artifacts/linux-x86_64/PGPony-x86_64.AppImage dist/
           mv artifacts/linux-aarch64/PGPony-linux-arm64.deb dist/
           mv artifacts/linux-aarch64/PGPony-linux-aarch64.tar.gz dist/
+          mv artifacts/linux-aarch64/PGPony-linux-aarch64-portable.tar.gz dist/
           mv artifacts/linux-aarch64/PGPony-aarch64.AppImage dist/
           mv artifacts/msi/PGPony-windows.msi dist/
           mv artifacts/msi/PGPony-windows-portable.zip dist/
@@ -460,9 +493,11 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             dist/PGPony-linux.deb \
             dist/PGPony-linux-x86_64.tar.gz \
+            dist/PGPony-linux-x86_64-portable.tar.gz \
             dist/PGPony-x86_64.AppImage \
             dist/PGPony-linux-arm64.deb \
             dist/PGPony-linux-aarch64.tar.gz \
+            dist/PGPony-linux-aarch64-portable.tar.gz \
             dist/PGPony-aarch64.AppImage \
             dist/PGPony-windows.msi \
             dist/PGPony-windows-portable.zip \
