@@ -36,8 +36,11 @@ object PcscLibrary {
         else -> null
     }
 
-    /** Where distributions put the runtime library, most specific first. */
-    internal fun candidates(arch: String): List<String> {
+    /**
+     * Where distributions put the runtime library, most specific first. [soname] lets
+     * FreetypePreload (3.1.0, #12) search the same directories for libfreetype.so.6.
+     */
+    internal fun candidates(arch: String, soname: String = SONAME): List<String> {
         val triplet = when (machine(arch)) {
             0x3E -> "x86_64-linux-gnu"
             0xB7 -> "aarch64-linux-gnu"
@@ -53,7 +56,7 @@ object PcscLibrary {
             add("/usr/local/lib64")
             add("/usr/local/lib")
         }
-        return dirs.map { "$it/$SONAME" }
+        return dirs.map { "$it/$soname" }
     }
 
     /** True when [header] (the first 20 bytes of a file) is a 64-bit ELF file for [machine]. */
@@ -70,13 +73,18 @@ object PcscLibrary {
     }
 
     /** The library to use, or null to leave the JDK's own search alone. */
-    internal fun choose(osName: String, arch: String, readHeader: (String) -> ByteArray?): String? {
+    internal fun choose(
+        osName: String,
+        arch: String,
+        readHeader: (String) -> ByteArray?,
+        soname: String = SONAME
+    ): String? {
         if (!osName.lowercase().startsWith("linux")) return null
         val machine = machine(arch) ?: return null
-        return candidates(arch).firstOrNull { path -> readHeader(path)?.let { matches(it, machine) } == true }
+        return candidates(arch, soname).firstOrNull { path -> readHeader(path)?.let { matches(it, machine) } == true }
     }
 
-    private fun header(path: String): ByteArray? = runCatching {
+    internal fun header(path: String): ByteArray? = runCatching {
         val file = File(path)
         if (!file.isFile) null
         else RandomAccessFile(file, "r").use { r -> ByteArray(20).also { r.readFully(it) } }

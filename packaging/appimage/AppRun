@@ -15,16 +15,22 @@
 # every widget fails with "error occurred in libfreetype", and the picker opens blank. Preloading
 # the system libfreetype.so.6 makes the JVM and GTK share one FreeType. Skiko links its own copy
 # statically, so the main UI is unaffected. ldconfig is not on a typical login PATH, so it is tried
-# by absolute path first, then a glob of the multiarch library dirs as a fallback.
+# by absolute path first, then the library dirs as a fallback. 3.1.0 (#12): both lookups take this
+# machine's architecture only (tools/linux-wrap-launcher.sh says why).
 HERE="$(dirname "$(readlink -f "$0")")"
 
+case "$(uname -m)" in
+  x86_64|amd64) FT_TAG="x86-64"; FT_TRIPLET="x86_64-linux-gnu" ;;
+  aarch64|arm64) FT_TAG="AArch64"; FT_TRIPLET="aarch64-linux-gnu" ;;
+  *) FT_TAG=""; FT_TRIPLET="" ;;
+esac
 SYS_FT=""
 for LDC in /sbin/ldconfig /usr/sbin/ldconfig ldconfig; do
-  SYS_FT="$("$LDC" -p 2>/dev/null | awk '/libfreetype\.so\.6/ {print $NF; exit}')"
+  SYS_FT="$("$LDC" -p 2>/dev/null | awk -v t="$FT_TAG" '/libfreetype\.so\.6 / && (t == "" || index($0, "," t)) {print $NF; exit}')"
   [ -n "$SYS_FT" ] && break
 done
 if [ -z "$SYS_FT" ]; then
-  for d in /usr/lib/*/ /usr/lib/ /lib/*/ /lib/; do
+  for d in /usr/lib64/ ${FT_TRIPLET:+/usr/lib/$FT_TRIPLET/ /lib/$FT_TRIPLET/} /usr/lib/ /lib/; do
     if [ -e "${d}libfreetype.so.6" ]; then SYS_FT="${d}libfreetype.so.6"; break; fi
   done
 fi

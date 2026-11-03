@@ -113,6 +113,7 @@ fun main(argv: Array<String>) {
             System.err.println(OPEN_USAGE)
             exitProcess(ExitCode.USAGE)
         }
+        FreetypePreload.reexecIfNeeded(argv)
         if (!SingleInstance.acquire(request)) return
         sweepSopScratch()
         cmdGui()
@@ -132,6 +133,9 @@ fun main(argv: Array<String>) {
 
     // GUI launch (bare, `gui`, or with file arguments). The single-instance guard forwards the
     // files to an already-running window when there is one; otherwise this becomes the primary.
+    // 3.1.0 (#12): first, on Linux, a launch that skipped the launcher wrapper starts again with
+    // the system libfreetype preloaded (FreetypePreload.kt), before it can take the guard.
+    FreetypePreload.reexecIfNeeded(argv)
     if (!SingleInstance.acquire(OpenRequest(fileArgs))) {
         return // forwarded to the running instance — exit quietly
     }

@@ -17,6 +17,11 @@
 # PGPony.bin (config renamed to match) and a shell PGPony takes its place. ldconfig is not on a
 # typical login PATH, so it is tried by absolute path first, then a glob of the multiarch library
 # dirs as a fallback. Idempotent: re-running on an already-wrapped image is a no-op.
+#
+# 3.1.0 (#12): both lookups take this machine's architecture only. `ldconfig -p` can list an i386
+# libfreetype first on a multiarch system, and the old glob of /usr/lib/*/ reached i386-linux-gnu
+# before x86_64-linux-gnu; a 32-bit library in LD_PRELOAD is skipped by the loader, so the preload
+# silently did nothing there. A launch that skips this wrapper is covered by FreetypePreload.kt.
 set -eu
 
 APP="${1:?usage: linux-wrap-launcher.sh <app-image-root>}"
@@ -38,13 +43,18 @@ mv "$CFG" "$APP/lib/app/PGPony.bin.cfg"
 cat > "$BIN" <<'WRAP'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
+case "$(uname -m)" in
+  x86_64|amd64) FT_TAG="x86-64"; FT_TRIPLET="x86_64-linux-gnu" ;;
+  aarch64|arm64) FT_TAG="AArch64"; FT_TRIPLET="aarch64-linux-gnu" ;;
+  *) FT_TAG=""; FT_TRIPLET="" ;;
+esac
 SYS_FT=""
 for LDC in /sbin/ldconfig /usr/sbin/ldconfig ldconfig; do
-  SYS_FT="$("$LDC" -p 2>/dev/null | awk '/libfreetype\.so\.6/ {print $NF; exit}')"
+  SYS_FT="$("$LDC" -p 2>/dev/null | awk -v t="$FT_TAG" '/libfreetype\.so\.6 / && (t == "" || index($0, "," t)) {print $NF; exit}')"
   [ -n "$SYS_FT" ] && break
 done
 if [ -z "$SYS_FT" ]; then
-  for d in /usr/lib/*/ /usr/lib/ /lib/*/ /lib/; do
+  for d in /usr/lib64/ ${FT_TRIPLET:+/usr/lib/$FT_TRIPLET/ /lib/$FT_TRIPLET/} /usr/lib/ /lib/; do
     if [ -e "${d}libfreetype.so.6" ]; then SYS_FT="${d}libfreetype.so.6"; break; fi
   done
 fi
