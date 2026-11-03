@@ -1,0 +1,5 @@
+# Test fixtures are byte-exact: signatures and expected outputs cover their bytes, so git must never
+# convert their line endings. Git for Windows checks text out with CRLF by default (core.autocrlf),
+# which broke the GnuPG v5 tests on a Windows checkout (3.1.0).
+vendor/app-test-resources/** -text
+src/test/resources/** -text

@@ -209,7 +209,8 @@ class GnupgImportTest {
 
     @Test
     fun gnupg8FixedInstallLocationsComeBeforePath() {
-        val unix = GnupgImport.gpgCandidates(false, "bin:/home/u/bin::/usr/local/sbin", { null }).map { it.toString() }
+        // Path prints with backslashes when the test itself runs on Windows; the rule is the same.
+        val unix = GnupgImport.gpgCandidates(false, "bin:/home/u/bin::/usr/local/sbin", { null }).map { it.toString().replace('\\', '/') }
         assertEquals("/usr/bin/gpg", unix.first())
         assertTrue(unix.indexOf("/home/u/bin/gpg") > unix.indexOf("/opt/local/bin/gpg"), "PATH comes after the fixed places")
         assertTrue(unix.none { !it.startsWith("/") }, "relative PATH entries are skipped: $unix")

@@ -342,6 +342,12 @@ Tests: `MlDsaFileStreamingTest` (file, folder, detached, tamper; a gated 600 MB 
 
 ## 5. Status of this document
 
+Nov 3: first run of the test suite on Windows (23 failures, none seen on macOS or Linux). The app lock store's
+atomic write used File.renameTo, which cannot replace an existing file on Windows, so every save after the first PIN
+failed there: fixed upstream (PGPonyAndroid, Files.move with ATOMIC_MOVE) and taken ahead of the tag as a recorded
+exception. Git for Windows checked the GnuPG fixtures out with CRLF line endings: .gitattributes keeps test fixtures
+byte-exact. The portable-mode and GnuPG-import tests spelled paths POSIX-style: now real paths for the OS running them.
+The duress relaunch and the #12 restart drop the jpackage launcher's _JPACKAGE_LAUNCHER variable (Debian run).
 Rev 3 (Nov 2): 3a and 3b built; 3d deferred to the first desktop release after the Android 4.8.0 tag; Korean
 strings synced from Android main as a recorded exception.
 Rev 2 (Nov 2): split into 3.1.0 and 4.0.0; section 2 built (2.4); 3.1.0's new strings in all eleven languages.

@@ -61,6 +61,12 @@ Desktop-side changes it needed:
 - `CertificationService.kt`, `card/KeyToCardService.kt` and the other 4.7.x additions compile here; the
   desktop UI does not call them yet (plan section 3).
 
+Recorded exception, 2026-11-03 (desktop 3.1.0): `app-lock/com/pgpony/android/lock/AppLockCore.kt` taken from
+PGPonyAndroid main ahead of the 4.8.0 tag, the whole file, byte-identical to the Android tree. Its atomic write used
+`File.renameTo`, which fails on Windows when the target exists, so the app lock saved its first PIN and then failed
+every later save there (found by the first Windows run of the test suite). The fix replaces the rename with an atomic
+`Files.move` and lands upstream first; the next sync to a tag supersedes this.
+
 Recorded exception, 2026-11-02 (desktop 3.1.0): `app-strings/` re-synced with `tools/sync-strings.sh` from
 PGPonyAndroid main at af491ba, ahead of the 4.8.0 tag, for resources only (the same exception 3.0.0 made). Desktop
 3.1.0 ships before Android 4.8.0, and af491ba fills the 389 Korean error messages Android was missing. The only file

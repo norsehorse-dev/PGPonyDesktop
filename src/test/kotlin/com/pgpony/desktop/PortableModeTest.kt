@@ -21,54 +21,60 @@ import kotlin.test.assertTrue
 
 class PortableModeTest {
 
+    // The folder rule is tested with real absolute paths for whichever OS runs the test (a drive
+    // root on Windows), so the same tests pass on a Windows checkout too. Only the macOS
+    // translocation cases need POSIX paths: they parse `mount` output.
+    private val root: Path = Path.of(System.getProperty("java.io.tmpdir")).toAbsolutePath().root
+    private fun at(rel: String): Path = root.resolve(rel)
+    private val posix = java.io.File.separatorChar == '/'
+
     private fun resolve(
         flag: Path? = null,
-        appPath: String? = null,
-        appImage: String? = null,
+        appPath: Path? = null,
+        appImage: Path? = null,
         os: String,
-        dirs: Set<String> = emptySet(),
+        dirs: Set<Path> = emptySet(),
         mounts: String? = null
-    ) = PortableMode.resolve(flag, appPath, appImage, os, { it.toString() in dirs }, { mounts })
+    ) = PortableMode.resolve(flag, appPath?.toString(), appImage?.toString(), os, { it in dirs }, { mounts })
 
     // ── The folder rule ───────────────────────────────────────────────────
 
     @Test
     fun windowsLooksBesidePgponyExe() {
-        // Run on any OS, so the drive is spelled as a POSIX path here; the rule is the same.
-        val r = resolve(appPath = "/E/PGPony/PGPony.exe", os = "Windows 11", dirs = setOf("/E/PGPony/PGPony-data"))
-        assertEquals(PortableMode.Resolution.Portable(Path.of("/E/PGPony/PGPony-data"), fromFlag = false), r)
+        val r = resolve(appPath = at("E/PGPony/PGPony.exe"), os = "Windows 11", dirs = setOf(at("E/PGPony/PGPony-data")))
+        assertEquals(PortableMode.Resolution.Portable(at("E/PGPony/PGPony-data"), fromFlag = false), r)
         assertEquals(PortableMode.Resolution.Installed,
-            resolve(appPath = "/C/Program Files/PGPony/PGPony.exe", os = "Windows 11"))
+            resolve(appPath = at("Program Files/PGPony/PGPony.exe"), os = "Windows 11"))
     }
 
     @Test
     fun linuxTarballLooksBesideTheAppFolder() {
-        val r = resolve(appPath = "/media/usb/PGPony/bin/PGPony", os = "Linux", dirs = setOf("/media/usb/PGPony-data"))
-        assertEquals(PortableMode.Resolution.Portable(Path.of("/media/usb/PGPony-data"), false), r)
-        assertEquals(PortableMode.Resolution.Installed, resolve(appPath = "/opt/pgpony/bin/PGPony", os = "Linux"))
+        val r = resolve(appPath = at("media/usb/PGPony/bin/PGPony"), os = "Linux", dirs = setOf(at("media/usb/PGPony-data")))
+        assertEquals(PortableMode.Resolution.Portable(at("media/usb/PGPony-data"), false), r)
+        assertEquals(PortableMode.Resolution.Installed, resolve(appPath = at("opt/pgpony/bin/PGPony"), os = "Linux"))
     }
 
     @Test
     fun appImageLooksBesideTheAppImageFile() {
-        val r = resolve(appPath = "/tmp/.mount_PGPonyXYZ/bin/PGPony", appImage = "/media/usb/PGPony-x86_64.AppImage",
-            os = "Linux", dirs = setOf("/media/usb/PGPony-data"))
-        assertEquals(PortableMode.Resolution.Portable(Path.of("/media/usb/PGPony-data"), false), r)
+        val r = resolve(appPath = at("tmp/.mount_PGPonyXYZ/bin/PGPony"), appImage = at("media/usb/PGPony-x86_64.AppImage"),
+            os = "Linux", dirs = setOf(at("media/usb/PGPony-data")))
+        assertEquals(PortableMode.Resolution.Portable(at("media/usb/PGPony-data"), false), r)
     }
 
     @Test
     fun macLooksBesideTheBundle() {
-        val r = resolve(appPath = "/Volumes/USB/PGPony.app/Contents/MacOS/PGPony", os = "Mac OS X",
-            dirs = setOf("/Volumes/USB/PGPony-data"))
-        assertEquals(PortableMode.Resolution.Portable(Path.of("/Volumes/USB/PGPony-data"), false), r)
+        val r = resolve(appPath = at("Volumes/USB/PGPony.app/Contents/MacOS/PGPony"), os = "Mac OS X",
+            dirs = setOf(at("Volumes/USB/PGPony-data")))
+        assertEquals(PortableMode.Resolution.Portable(at("Volumes/USB/PGPony-data"), false), r)
         assertEquals(PortableMode.Resolution.Installed,
-            resolve(appPath = "/Applications/PGPony.app/Contents/MacOS/PGPony", os = "Mac OS X"))
+            resolve(appPath = at("Applications/PGPony.app/Contents/MacOS/PGPony"), os = "Mac OS X"))
     }
 
     @Test
     fun theFlagBeatsTheFolder() {
-        val r = resolve(flag = Path.of("/elsewhere/keys"), appPath = "/media/usb/PGPony/bin/PGPony", os = "Linux",
-            dirs = setOf("/media/usb/PGPony-data"))
-        assertEquals(PortableMode.Resolution.Portable(Path.of("/elsewhere/keys"), fromFlag = true), r)
+        val r = resolve(flag = at("elsewhere/keys"), appPath = at("media/usb/PGPony/bin/PGPony"), os = "Linux",
+            dirs = setOf(at("media/usb/PGPony-data")))
+        assertEquals(PortableMode.Resolution.Portable(at("elsewhere/keys"), fromFlag = true), r)
     }
 
     @Test
@@ -87,28 +93,31 @@ class PortableModeTest {
     // ── macOS App Translocation ───────────────────────────────────────────
 
     private val translocated =
-        "/private/var/folders/ab/xyz/T/AppTranslocation/1A2B-3C4D/d/PGPony.app/Contents/MacOS/PGPony"
+        Path.of("/private/var/folders/ab/xyz/T/AppTranslocation/1A2B-3C4D/d/PGPony.app/Contents/MacOS/PGPony")
 
     @Test
     fun aTranslocatedBundleIsFoundThroughTheMountTable() {
+        org.junit.Assume.assumeTrue("macOS paths", posix)
         val mounts = """
             /dev/disk3s1s1 on / (apfs, sealed, local, read-only, journaled)
             /dev/disk5s1 on /Volumes/USB (exfat, local, nodev, nosuid, noowners, mounted by me)
             /Volumes/USB/PGPony.app on /private/var/folders/ab/xyz/T/AppTranslocation/1A2B-3C4D (nullfs, local, nodev, nosuid, read-only, nobrowse, mounted by me)
         """.trimIndent()
-        val r = resolve(appPath = translocated, os = "Mac OS X", dirs = setOf("/Volumes/USB/PGPony-data"), mounts = mounts)
+        val r = resolve(appPath = translocated, os = "Mac OS X", dirs = setOf(Path.of("/Volumes/USB/PGPony-data")), mounts = mounts)
         assertEquals(PortableMode.Resolution.Portable(Path.of("/Volumes/USB/PGPony-data"), false), r)
     }
 
     @Test
     fun aTranslocatedBundleWithAFolderMountIsFoundToo() {
+        org.junit.Assume.assumeTrue("macOS paths", posix)
         val mounts = "/Volumes/USB on /private/var/folders/ab/xyz/T/AppTranslocation/1A2B-3C4D/d (nullfs, local, read-only)"
-        val r = resolve(appPath = translocated, os = "Mac OS X", dirs = setOf("/Volumes/USB/PGPony-data"), mounts = mounts)
+        val r = resolve(appPath = translocated, os = "Mac OS X", dirs = setOf(Path.of("/Volumes/USB/PGPony-data")), mounts = mounts)
         assertEquals(PortableMode.Resolution.Portable(Path.of("/Volumes/USB/PGPony-data"), false), r)
     }
 
     @Test
     fun aTranslocatedBundleThatCannotBeTracedIsReported() {
+        org.junit.Assume.assumeTrue("macOS paths", posix)
         val r = resolve(appPath = translocated, os = "Mac OS X", mounts = null)
         assertTrue(r is PortableMode.Resolution.TranslocatedUnresolved, r.toString())
     }
