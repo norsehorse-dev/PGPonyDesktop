@@ -125,7 +125,7 @@ follows the JDK's architecture. One-time setup: Rosetta 2, and an x86_64 JDK 17 
 
 ```sh
 source ~/.pgpony-release-env
-X64_JDK=~/jdks/jdk-17-x64/Contents/Home packaging/macos/build-intel-dmg.sh notarizeDmg -Pcompose.desktop.mac.notarization.teamID="$NOTARIZATION_TEAM_ID"
+X64_JDK=~/jdks/jdk-17.0.20.1+1/Contents/Home packaging/macos/build-intel-dmg.sh notarizeDmg -Pcompose.desktop.mac.notarization.teamID="$NOTARIZATION_TEAM_ID"
 xcrun stapler validate ~/pgpony-release/PGPony-macOS-intel.dmg
 ```
 
@@ -155,8 +155,13 @@ registry), and a portable tarball per Linux architecture (checking nothing lands
 
 ## 4. Assemble, sign, publish
 
-Pull CI's two installers down beside your dmg, then sign all three together so `SHA256SUMS`
+Pull CI's files down beside the four Mac files, then sign all fourteen together so `SHA256SUMS`
 covers the exact bytes that ship.
+
+Start from a clean `~/pgpony-release` (3.1.0): the previous release's `.asc` files, `SHA256SUMS` and
+`ci` folder collide with the download and make gpg stop to ask about every signature. Archive the
+old folder as `~/pgpony-release-<old version>` before section 3, or move the four new Mac files
+out of it, archive it, and move them back.
 
 ```sh
 mkdir -p ~/pgpony-release && cd ~/pgpony-release
@@ -210,7 +215,7 @@ cd PGPonyDesktop
 ./gradlew createDistributable
 tar -czf ../local.tar.gz -C build/compose/binaries/main/app PGPony
 # copy CI's PGPony-linux-aarch64.tar.gz, PGPony-linux-arm64.deb and PGPony-aarch64.AppImage
-# into this folder, then
+# into this folder (scp from the Mac, which is the .1 address on the VM's VMware network), then
 packaging/release/compare-builds.sh PGPony-linux-aarch64.tar.gz ../local.tar.gz
 packaging/release/compare-builds.sh PGPony-linux-aarch64.tar.gz PGPony-linux-arm64.deb
 packaging/release/compare-builds.sh PGPony-linux-aarch64.tar.gz PGPony-aarch64.AppImage
@@ -282,6 +287,16 @@ any further.
 
 Verify before publishing, not after. A signature that does not check out is worse than none.
 
+Check the upload before publishing, too. In 3.1.0 `gh release upload` hit "connection reset by
+peer" on the first dmg, the next lines published the release anyway, and the four Mac files were
+missing from a public release for hours. Run the upload on its own, then count the assets: 30
+since 3.1.0 (fourteen files, their fourteen `.asc`, `SHA256SUMS` and `SHA256SUMS.asc`). A reset
+upload is safe to repeat with `--clobber`.
+
+```sh
+gh release view v1.0.3 --repo norsehorse-dev/PGPonyDesktop --json assets --jq '.assets | length'
+```
+
 ```sh
 gh release upload v1.0.3 PGPony-macOS.dmg PGPony-macOS-intel.dmg PGPony-macOS-portable.zip PGPony-macOS-intel-portable.zip *.asc SHA256SUMS \
   --repo norsehorse-dev/PGPonyDesktop
@@ -300,15 +315,19 @@ Keep `~/pgpony-release` until the site steps below are done — the checksums ar
 None of this is automated, and all of it is easy to forget. `/desktop` shows "publishing in
 progress" until the checksums land, so the page stays honest if you stop halfway.
 
-1. **Fill `downloads/desktop.json`** — `version`, `released`, `tag`, `notes`, and the three
-   `sha256` values, copied out of `SHA256SUMS`. The readiness gate keys on those being 64 hex
-   characters; anything else and the page keeps showing the holding text. `tag` is what builds
-   the GitHub download URLs, so a stale `tag` means dead links.
+1. **Fill `downloads/desktop.json`**: `version`, `released`, `tag`, `notes`, and every
+   `sha256`: the four in `artifacts`, the five in `linux_extra` and, since 3.1.0, the five in
+   `portable`. Take them from `SHA256SUMS` with a script, not by hand (3.1.0 used a one-off
+   script that refuses a missing or malformed checksum). The readiness gate keys on the
+   `artifacts` checksums being 64 hex characters; anything else and the page keeps showing the
+   holding text. The other two lists are gated row by row. `tag` is what builds the GitHub
+   download URLs, so a stale `tag` means dead links.
 2. **Upload the mirror.** Clearnet visitors get GitHub, but the `.onion` and `.i2p` front doors
    are served local copies, because sending a Tor user to a clearnet host defeats the point.
-   Copy all three installers, their `.asc` files and `SHA256SUMS` into
-   `/var/www/pgpony/downloads/`. Roughly 300 MB per release.
-3. **Deploy.** The local `PonyHTML/pgpony` tree is a clone, not the server:
+   Copy all fourteen files, their `.asc` files, `SHA256SUMS` and `SHA256SUMS.asc` into the local
+   clone's `downloads/` and from there to `/var/www/pgpony/downloads/` through `/tmp`
+   (`sudo install -m 644` for each file). About 1.9 GB per release since 3.1.0.
+3. **Deploy.** The local site tree (`~/pgpony`) is a clone, not the server:
 
 ```sh
 chmod 644 downloads/desktop.json
@@ -318,12 +337,10 @@ ssh apps 'sudo cp /tmp/desktop.json /var/www/pgpony/downloads/desktop.json \
   && rm -f /tmp/desktop.json'
 ```
 
-4. **Check `/desktop`** flips from the holding text to three working download buttons with
-   checksums beneath them.
-5. **Update the winget manifests** in `winget/<version>/` — `InstallerSha256` from `SHA256SUMS`,
-   and `ProductCode` from the built msi. `ProductCode` is NOT the `upgradeUuid` in
-   `build.gradle.kts`; that is the UpgradeCode, a different GUID. Run `winget validate` and a
-   real `winget install --manifest` before opening the PR to `microsoft/winget-pkgs`.
+4. **Check `/desktop`** flips from the holding text to four working download buttons with
+   checksums beneath them, and the Linux and portable tables below them.
+5. **winget:** PGPony has never been submitted to winget. `winget/1.0.0` is a draft from 1.0.0
+   that was never sent; there is no winget step in a release.
 
 ## 6. Verification checklist
 

@@ -20,22 +20,23 @@ rules (no AI attribution, command blocks with only runnable commands) apply thro
    teamID property, `stapler validate`, then `spctl -a -t exec` on the app inside the
    mounted dmg. Must say `Notarized Developer ID`. Minutes of silence at notarization is
    Apple, not a hang. Gotchas in §3 (identity by name, single cert in keychain).
-5. **Assemble and publish** in `~/pgpony-release` (§4): download the draft assets, copy the
-   dmg in as `PGPony-macOS.dmg`, build the 8-name `FILES` **zsh array** (never a string),
-   `shasum -a 256` into `SHA256SUMS`, sign all nine with
-   `gpg -u A0CBC8F65AACE56F1C5B767753F9798E4919DE62`, verify nine Good signatures, upload,
-   then `gh release edit --draft=false --latest`. `--latest` is load-bearing: the stable
+5. **Assemble and publish** in a clean `~/pgpony-release` (§4): download the draft assets beside
+   the four Mac files, build the 14-name `FILES` **zsh array** (never a string),
+   `shasum -a 256` into `SHA256SUMS`, sign all fifteen with
+   `gpg -u A0CBC8F65AACE56F1C5B767753F9798E4919DE62`, verify fifteen Good signatures, upload,
+   check the release holds 30 assets (a reset upload in 3.1.0 published without the Mac
+   files), then `gh release edit --draft=false --latest`. `--latest` is load-bearing: the stable
    `releases/latest/download/` URLs follow the flag, not the newest tag.
 6. **Release notes** are drafted to `_to_delete/RELEASE_NOTES_X_Y_Z.md` and passed via
    `--notes-file`. Draft them per the `my-writing-style` skill (hard rule: no em dashes).
-7. **The site:** update `PonyHTML/pgpony/downloads/desktop.json` (drives `/desktop`, the
+7. **The site:** update `~/pgpony/downloads/desktop.json` (drives `/desktop`, the
    download buttons, the checksums, and the app's own update check). Readiness gate: every
    `sha256` must be 64 hex chars or the page shows holding text. Prepend the outgoing
-   version to `previous`. Then the onion/i2p mirror: all installers, `.asc` files and
-   `SHA256SUMS` (~300 MB) into `/var/www/pgpony/downloads/` via the `/tmp` + `sudo`
-   pattern. Full site procedure: `PonyHTML/DEPLOY.md`.
-8. **winget** manifests in `winget/<version>/`: `InstallerSha256` from `SHA256SUMS`, and
-   `ProductCode` read from the built msi (it is NOT the `upgradeUuid` in build.gradle.kts).
+   version to `previous`. Since 3.1.0 it also has a `portable` list. Then the onion/i2p
+   mirror: all fourteen files, their `.asc` files and `SHA256SUMS` (~1.9 GB) into
+   `/var/www/pgpony/downloads/` via the `/tmp` + `sudo` pattern. Full site procedure:
+   `PonyHTML/DEPLOY.md`.
+8. **No winget.** PGPony has never been submitted there; `winget/1.0.0` is an unsent draft.
 9. **AUR last** (§7): bump `packaging/aur/PKGBUILD` and `.SRCINFO`, push to the AUR repo's
    **master** branch. Last because the PKGBUILD 404s while the release is a draft.
    `pcsclite` is a hard dependency there.

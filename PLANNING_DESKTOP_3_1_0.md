@@ -293,6 +293,11 @@ files. Leaving no trace on the host is a different product (Tails).
   the stapler check, from the stapled app.
 - winget and AUR unchanged.
 
+Nov 3: done with the release. `/desktop` has a "Portable (run from a USB drive)" table (five builds, each row behind its
+own checksum, mirror-aware on the onion and i2p sites), `desktop.json` a `portable` list, and clicks file under three new
+values (`desktop_portable_macos`, `_windows`, `_linux`; `api/migrate_add_desktop_portable.php`). The plain Linux tarball
+is now labelled "Tarball" beside them. The two Linux portable tarballs counted as `desktop_linux_tar` until then.
+
 ### 3e.7 Tests
 
 - Unit: the folder rule for each build type (fake `jpackage.app-path` / `APPIMAGE`), `--data-dir` precedence, the
@@ -342,6 +347,9 @@ Tests: `MlDsaFileStreamingTest` (file, folder, detached, tamper; a gated 600 MB 
 
 ## 5. Status of this document
 
+Nov 3: released as 3.1.0 (tag v3.1.0, 14 files, GitHub, pgpony.app with its portable section, the onion and i2p
+mirror, AUR). The Mac files went up a second time after a reset upload; RELEASING.md now checks the asset count before
+publishing.
 Nov 3: first run of the test suite on Windows (23 failures, none seen on macOS or Linux). The app lock store's
 atomic write used File.renameTo, which cannot replace an existing file on Windows, so every save after the first PIN
 failed there: fixed upstream (PGPonyAndroid, Files.move with ATOMIC_MOVE) and taken ahead of the tag as a recorded
