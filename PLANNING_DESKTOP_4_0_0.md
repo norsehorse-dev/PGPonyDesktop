@@ -1,6 +1,6 @@
 # PGPony Desktop 4.0.0 Planning
 
-Status: Rev 0, 2026-11-02. Base: 3.1.0.
+Status: Rev 1, 2026-11-04. Base: 3.1.0, plus the vendor sync to the Android v4.8.0 tag.
 Release model: as 3.0.0, no release candidates; each stage is self-tested on the Mac, the Windows VM and Linux.
 
 Size tags: S (an evening), M (a few evenings), L (a week or more of evenings).
@@ -11,8 +11,11 @@ Split from 3.1.0 on Nov 2, when 3.1.0 grew too large for a minor version. 3.1.0 
 Android v4.7.3, #14 (ML-DSA large files), portable mode, and the app lock with the duress PIN. 4.0.0 takes the
 items that change how keys are held and how the app is installed: keys generated in the computer's TPM or Secure
 Enclave (section 1), key files wrapped with an OS-held key (section 2), an apt repository (section 3), and the
-desktop screens for the Android 4.7.0 engine that 3.1.0 already carries (section 4). It does not wait for Android
-4.8.0 (see "Not in 4.0.0").
+desktop screens for the Android 4.7.0 engine that 3.1.0 already carries (section 4).
+
+Nov 4: Android 4.8.0 now ships first, so 4.0.0 vendors from the v4.8.0 tag and waits for it (this reverses the
+Nov 2 call that 4.0.0 would not wait). The item parked for 4.8.0 comes back in (section 5), and 4.0.0 gains the new
+recipient picker and recipient groups (section 6), which Android builds first in 4.8.0.
 
 ## 0. Rules for this cycle
 
@@ -137,10 +140,11 @@ Each matches Android's screen and wording (the strings are already in `vendor/ap
 Test: per item, the Android 4.7.0 test cases replayed on desktop, plus the round trip with PGPony Android
 (certify on one, see it on the other).
 
-## 5. Not in 4.0.0: waits for the Android 4.8.0 tag
+## 5. Vendor sync to Android v4.8.0, and the SOP v5 signers
 
-4.0.0 does not wait for Android 4.8.0, so this lands in the first desktop release after that tag, with the vendor
-sync to it.
+Back in 4.0.0 on Nov 4 (it was parked on Nov 2 while 4.0.0 was not going to wait for 4.8.0). The vendor sync moves
+`vendor/` from v4.7.3 to the v4.8.0 tag. What each 4.8.0 item needs on the desktop side is noted per item in
+PGPonyAndroid's docs/planning/PLANNING_4.8.0.md ("Desktop takes it from the sync" or "desktop changes it itself").
 
 ### SOP: v5 signatures in encrypted messages with several signers (S, from 3.1.0 3d)
 
@@ -154,11 +158,43 @@ Work: after the vendor sync to the 4.8.0 tag, `SopLibrePgpV5` checks every v5 pa
 Test: an encrypted message signed by a GnuPG v5 (Ed448) key and a v4 key gives two VERIFICATIONS lines; a tampered
 literal date fails the v5 one only.
 
-## 6. Questions for Kevin
+## 6. Recipient picker and recipient groups (M, Nov 4)
+
+Every usable key is a checkbox row, in full, on Encrypt text, Encrypt files and the watch folder rule editor, which
+gets cluttered past 8 to 10 keys. Decided Nov 4:
+
+- Picker: Android's design. Chips for the selected recipients (click one to remove it) and a Choose recipients
+  button that opens a dialog with a search field (focused on open; matches name, email and fingerprint), Select All
+  and Clear over the filtered list. Used in all three places. Its strings are already in `vendor/app-strings/` in
+  all eleven languages.
+- Order: your own keys first, then everyone else A to Z by name (email when there is no name). Android's picker
+  changes to the same order.
+- Groups: built in PGPonyAndroid 4.8.0 (item 4n there) and taken from the sync. A group is a named set of keys,
+  stored by primary fingerprint. Groups show at the top of the picker dialog and search matches their names.
+  Picking a group adds its usable keys as chips and names the ones it left out (revoked, expired, or a card row
+  without its public certificate).
+- Managing groups: "Save as group" in the picker turns the current selection into one; a Groups section on the Keys
+  screen creates, renames, edits members and deletes; key details list the groups the key is in, with add and
+  remove.
+- Deleted keys: a key in Recently Deleted stays a member but cannot be picked, and restoring it puts it back; a key
+  deleted for good leaves every group.
+- Moving: the full backup and the full-backup pairing transfer carry groups; public-key-only transfers do not.
+- Command line: `pgpony encrypt -r @name` takes a group, adds its usable keys, and names any left out on stderr.
+  A missing group is an error. `pgpony sop` is not affected (SOP takes certificates, not names).
+- Portable mode: groups live in the data folder with the keyring.
+
+Test: 30 keys, search by part of a name, an email and a fingerprint; a group with one revoked and one Recently
+Deleted member; `-r @name` with a missing group; a full backup with groups restored on Android and on desktop;
+groups through pairing both ways.
+
+## 7. Questions for Kevin
 
 None yet.
 
-## 7. Status of this document
+## 8. Status of this document
+
+Rev 1 (Nov 4): Android 4.8.0 ships first, so 4.0.0 vendors from its tag; section 5 (the parked 3.1.0 3d) is back
+in, and section 6 (recipient picker and groups) is added.
 
 Nov 2: section 5 added: 3.1.0 3d, parked until the Android 4.8.0 tag (neither 3.1.0 nor 4.0.0 waits for it).
 Rev 0 (Nov 2): split from 3.1.0. Section 1 is 3.1.0 section 3c with its number, the Q6 answer and one
