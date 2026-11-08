@@ -187,12 +187,23 @@ Test: 30 keys, search by part of a name, an email and a fingerprint; a group wit
 Deleted member; `-r @name` with a missing group; a full backup with groups restored on Android and on desktop;
 groups through pairing both ways.
 
-## 7. Questions for Kevin
+## 7. Encrypted packages that Android opens (M, #15, Nov 7)
+
+Desktop decrypts a package made by PGPony Android's bundle mode ("All files and the message, encrypted together
+into one file", Android 4.7.0 items 15 and 38), but cannot make one, so the round trip only works from Android to
+desktop. Decided Nov 7: in 4.0.0. The Files tab gets Android's package output for several files, in Android's
+format, taken from the vendored code where it lives there, so a package made on either platform opens on the other.
+
+Test: a package of several files made on desktop opens on Android and on desktop, and one made on Android still
+opens on desktop; signed and unsigned; a package over 512 MB.
+
+## 8. Questions for Kevin
 
 None yet.
 
-## 8. Status of this document
+## 9. Status of this document
 
+Nov 7: section 7 (#15, encrypted packages that Android opens) added.
 Rev 1 (Nov 4): Android 4.8.0 ships first, so 4.0.0 vendors from its tag; section 5 (the parked 3.1.0 3d) is back
 in, and section 6 (recipient picker and groups) is added.
 
